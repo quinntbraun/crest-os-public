@@ -1,16 +1,17 @@
+import {captureSaveReview} from '../support/save-review-layout.mjs';
 // Genuine HTTPS + compiled Next/Node + real disposable Auth/PG. No traces,
 // HAR, video, storageState exports or credential-bearing failure artifacts.
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
-import {readFile,chmod} from 'node:fs/promises';
-import {join} from 'node:path';
+import {mkdir} from 'node:fs/promises';
+import AxeBuilder from '@axe-core/playwright';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
 import {rolldown} from 'rolldown';
 import {leadConversionToWire} from '../../src/customer/lead-conversion-command-contract.ts';
 import {URI,TOTP} from 'otpauth';
+import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
@@ -18,7 +19,7 @@ import {startRealAuthService,authResult} from '../support/real-auth-service.mjs'
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false,browserClient='';
 const sessionName='__Host-crest_session';
 before(async()=>{
-  assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
+  assert(['linux','win32'].includes(process.platform),'supported disposable TLS/Auth browser fixture required');
   process.env.NODE_ENV='production';
   for(const [input,name] of [['src/client/leads.ts','crestLeadFixture'],['src/client/lead-conversions.ts','crestConversionFixture']]){
     const bundle=await rolldown({input,platform:'browser',onwarn(warning){throw new Error('LEAD_CLIENT_FIXTURE_BUILD_FAILED:'+warning.code);}});
@@ -44,18 +45,14 @@ before(async()=>{
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor]);await client.query('COMMIT');
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_OWNER_FAILED');}
-  const keyPath=join(sandbox.workspace,'ephemeral.key'),certPath=join(sandbox.workspace,'ephemeral.pem');
-  await chmod(sandbox.workspace,0o700);
-  try{execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-noenc','-keyout',keyPath,'-out',certPath,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{stdio:'ignore',timeout:15000});}
-  catch{throw new Error('SYNTHETIC_TLS_FIXTURE_FAILED');}
-  await chmod(keyPath,0o600);
+  const tls=await browserTestTls();
   const reservation=createServer();await new Promise(resolve=>reservation.listen(0,'127.0.0.1',resolve));const port=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));origin=`https://127.0.0.1:${port}`;
   // Normal Node resolution: react-server is only a build-time marker condition.
   const {createCrestApplication,createAuthenticationRuntime}=await import('../../.local/server/application.mjs');
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},leads:true,leadConversions:true,customers:true,vehicles:true,operationResolution:true});
+  app=await createCrestApplication({origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:business},leads:true,leadConversions:true,customers:true,vehicles:true,operationResolution:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 });
@@ -143,42 +140,73 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     proof=(await send(page,'auth/session')).body;const context=await send(page,'business/customers/context',{},proof.csrfToken);assert.equal(context.status,200);
     const ref={operationId:randomUUID(),recoveryEpoch:context.body.recoveryEpoch,customerId:randomUUID(),expectedVersion:'0'},key='crest.customer.pending-reference.v1';
     const pending={schemaVersion:1,businessId:business,binding:context.binding,reference:ref};await page.evaluate(({key,pending})=>sessionStorage.setItem(key,JSON.stringify(pending)),{key,pending});
-    await page.goto(origin+'/save-review');await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toBeVisible();await page.getByLabel('Reason for retiring this original save',{exact:true}).fill('Owner reviewed lost synthetic draft é 😀\nKeep exact original reference.');
-    await page.getByRole('button',{name:'Review retirement',exact:true}).click();await expect(page.getByRole('heading',{name:'Confirm retirement',exact:true})).toBeVisible();
+    await page.goto(origin+'/save-review');
+    await page.getByRole('button',{name:'Check original resolution',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'No completed save found',exact:true})).toBeVisible();await captureSaveReview(page,name,'absent');
+    await expect(page.getByRole('status')).toContainText('The original save may still run');
+    await expect(page.locator('.save-review-time time')).toHaveAttribute('datetime',/^\d{4}-/);
+    assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);
+    let returnWrites=0;const observeReturn=request=>{if(['/api/business/customers/save','/api/business/original-operations/retire'].includes(new URL(request.url()).pathname))returnWrites++;};page.on('request',observeReturn);try{const countBeforeReturn=(await client.query('SELECT count(*)::int AS n FROM crest.customers WHERE business_id=$1',[business])).rows[0].n;await page.getByRole('link',{name:'Return to Customers',exact:true}).click();await expect(page).toHaveURL(origin+'/customers');assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);await page.goBack();await expect(page.getByRole('button',{name:'Check original resolution',exact:true})).toBeEnabled();assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest.customers WHERE business_id=$1',[business])).rows[0].n,countBeforeReturn);}finally{page.off('request',observeReturn);}assert.equal(returnWrites,0,'directory return never retries or retires the original save');await page.getByRole('button',{name:'Check original resolution',exact:true}).click();await expect(page.getByRole('status')).toContainText('The original save may still run');
+    await page.getByRole('button',{name:'Load original save review',exact:true}).click();
+    await page.getByRole('button',{name:'Retirement options',exact:true}).click();await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toBeVisible();await page.getByLabel('Reason for retiring this original save',{exact:true}).fill('Owner reviewed lost synthetic draft é 😀\nKeep exact original reference.');
+    await page.getByRole('button',{name:'Review retirement',exact:true}).click();await expect(page.getByRole('heading',{name:'Confirm retirement',exact:true})).toBeVisible();await captureSaveReview(page,name,'confirm');
     let calls=0;const pattern='**/api/business/original-operations/retire',drop=async route=>{calls++;assert.equal((await route.fetch()).status(),200);await route.abort('failed');};await page.route(pattern,drop);
     try{await page.getByRole('button',{name:'Confirm retirement of this original save',exact:true}).click();await expect(page.getByRole('status')).toContainText('The outcome could not be verified');}finally{await page.unroute(pattern,drop);}
     assert.equal(calls,1);assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);assert.equal((await client.query('SELECT command_type FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,ref.operationId])).rows[0].command_type,'operation.retire');assert.equal((await client.query('SELECT count(*)::int AS n FROM crest.customers WHERE id=$1',[ref.customerId])).rows[0].n,0);
     await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,active_epoch=$2,version=version+1 WHERE business_id=$1',[business,randomUUID()]);
     try{
      await page.getByRole('button',{name:'Check original resolution',exact:true}).click();await expect(page.getByRole('status')).toContainText('The original save is retired');assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);
+     await expect(page.locator('.save-review-time')).toContainText('Retirement recorded');
      await page.getByRole('button',{name:'Acknowledge retirement and release local reference',exact:true}).click();await expect(page.getByRole('status')).toContainText('The retired save reference is released');assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
     }finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);}
+    await page.reload();await expect(page.getByRole('heading',{name:'No save to review in this tab',exact:true})).toBeVisible();await expect(page.getByRole('link',{name:'Return to Customers',exact:true})).toHaveAttribute('href','/customers');await captureSaveReview(page,name,'no-reference');
     proof=(await send(page,'auth/session')).body;
    });
    await t.test('owner review of a recorded conversion verifies the actual typed original receipt before release',async()=>{
     proof=(await send(page,'auth/session')).body;const context=await send(page,'business/customers/context',{},proof.csrfToken);assert.equal(context.status,200);
     const key='crest.lead-conversion.pending-reference.v1',pending={schemaVersion:1,businessId:business,binding:context.binding,reference:reference(original)};await page.evaluate(({key,pending})=>sessionStorage.setItem(key,JSON.stringify(pending)),{key,pending});
-    await page.goto(origin+'/save-review');await page.getByLabel('Interrupted save type',{exact:true}).selectOption('crm.lead.convert');await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toBeVisible();
-    await page.getByRole('button',{name:'Check original resolution',exact:true}).click();await expect(page.getByRole('status')).toContainText('The original request was recorded');assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);
+    await page.route('**/api/auth/session',route=>route.fulfill({status:400,contentType:'application/json',body:'{}'}),{times:1});
+    await page.goto(origin+'/save-review?kind=crm.lead.convert');
+    await expect(page.getByRole('heading',{name:'Sign in to continue',exact:true})).toBeVisible();await captureSaveReview(page,name,'access-lost');
+    const signIn=page.getByRole('link',{name:'Sign in and resume',exact:true});
+    await expect(signIn).toHaveAttribute('href','/sign-in?resumeSave=crm.lead.convert');
+    await signIn.click();
+    await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
+    await page.getByRole('link',{name:'Return to interrupted save',exact:true}).click();
+    await expect(page).toHaveURL(origin+'/save-review?kind=crm.lead.convert');
+    await expect(page.getByLabel('Interrupted save type',{exact:true})).toHaveValue('crm.lead.convert');
+    assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);
+    await expect(page.getByRole('button',{name:'Check original resolution',exact:true})).toBeEnabled();await captureSaveReview(page,name,'ready');
+    await page.getByRole('button',{name:'Check original resolution',exact:true}).click();await expect(page.getByRole('status')).toContainText('The original request was recorded');await captureSaveReview(page,name,'recorded');assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);
     const verified=page.waitForResponse(response=>response.url()===origin+'/api/business/leads/conversion-operation'&&response.request().method()==='POST');
     await page.getByRole('button',{name:'Verify original save receipt',exact:true}).click();assert.equal((await verified).status(),200);await expect(page.getByRole('status')).toContainText('The original save receipt is verified');assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
+    await expect(page.getByRole('heading',{name:'Confirmed saved',exact:true})).toBeVisible();await captureSaveReview(page,name,'verified',[320,390,768,1440,1920]);
+    await expect(page.getByRole('link',{name:'Open saved lead',exact:true})).toHaveAttribute('href','/leads?lead='+original.leadId);
+    await mkdir('.local/review',{recursive:true});
+    for(const width of [360,390,768,1440]){
+     await page.setViewportSize({width,height:900});
+     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(issue=>issue.id),[]);
+     if(width===390||width===1440)await page.screenshot({path:'.local/review/save-review-confirmed-'+name+'-'+width+'.png'});
+    }
+    await page.setViewportSize(viewport);
     assert.equal((await client.query('SELECT command_type FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,original.operationId])).rows[0].command_type,'crm.lead.convert');proof=(await send(page,'auth/session')).body;
    });
    await t.test('changed recovery authority blocks a reviewed retirement until fresh owner review without rebasing the original',async()=>{
     proof=(await send(page,'auth/session')).body;const context=await send(page,'business/customers/context',{},proof.csrfToken);assert.equal(context.status,200);
     const key='crest.customer.pending-reference.v1',ref={operationId:randomUUID(),recoveryEpoch:context.body.recoveryEpoch,customerId:randomUUID(),expectedVersion:'0'},pending={schemaVersion:1,businessId:business,binding:context.binding,reference:ref};
     await page.evaluate(({key,pending})=>sessionStorage.setItem(key,JSON.stringify(pending)),{key,pending});await page.goto(origin+'/save-review');
-    await page.getByLabel('Reason for retiring this original save',{exact:true}).fill('Private discarded review reason');await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));
+    await page.getByRole('button',{name:'Retirement options',exact:true}).click();await page.getByLabel('Reason for retiring this original save',{exact:true}).fill('Private discarded review reason');await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));
     await expect(page.getByRole('status')).toContainText('Private review details were cleared');await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toHaveCount(0);assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);
-    await page.getByRole('button',{name:'Load original save review',exact:true}).click();await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toHaveValue('');await page.getByLabel('Reason for retiring this original save',{exact:true}).fill('Reason before recovery change');await page.getByRole('button',{name:'Review retirement',exact:true}).click();await expect(page.getByRole('heading',{name:'Confirm retirement',exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'Load original save review',exact:true}).click();await page.getByRole('button',{name:'Retirement options',exact:true}).click();await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toHaveValue('');await page.getByLabel('Reason for retiring this original save',{exact:true}).fill('Reason before recovery change');await page.getByRole('button',{name:'Review retirement',exact:true}).click();await expect(page.getByRole('heading',{name:'Confirm retirement',exact:true})).toBeVisible();await captureSaveReview(page,name,'confirm');
     await client.query('UPDATE crest_private.business_recovery_authorities SET active_epoch=$2,version=version+1 WHERE business_id=$1',[business,randomUUID()]);
     let requests=0;const count=request=>{if(request.url()===origin+'/api/business/original-operations/retire')requests++;};page.on('request',count);
     try{await page.getByRole('button',{name:'Confirm retirement of this original save',exact:true}).click();await expect(page.getByRole('status')).toContainText('Access or recovery changed after review');assert.equal(requests,0);}finally{page.off('request',count);}
     assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)),pending);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,ref.operationId])).rows[0].n,0);
-    await page.getByRole('button',{name:'Load original save review',exact:true}).click();await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toHaveValue('');
+    await page.getByRole('button',{name:'Load original save review',exact:true}).click();await page.getByRole('button',{name:'Retirement options',exact:true}).click();await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toHaveValue('');
     await page.getByLabel('Reason for retiring this original save',{exact:true}).fill('Fresh owner review of the same original');await page.getByRole('button',{name:'Review retirement',exact:true}).click();await page.getByRole('button',{name:'Confirm retirement of this original save',exact:true}).click();await expect(page.getByRole('status')).toContainText('The original save is retired');
     assert.deepEqual(JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),key)).reference,ref);await page.getByRole('button',{name:'Acknowledge retirement and release local reference',exact:true}).click();await expect(page.getByRole('status')).toContainText('The retired save reference is released');
-    await page.getByRole('link',{name:'Load current customers',exact:true}).click();await expect(page.getByRole('button',{name:'Add customer',exact:true})).toBeVisible();proof=(await send(page,'auth/session')).body;
+    await page.getByRole('link',{name:'Return to Customers',exact:true}).click();await expect(page.getByRole('button',{name:'Add customer',exact:true})).toBeVisible();proof=(await send(page,'auth/session')).body;
    });
    await t.test('fabricated authority and revoked sessions return no conversion or financial/customer evidence',async()=>{
     const invalid={...leadConversionToWire(original),businessId:randomUUID()};assert.equal((await send(page,root+'convert',invalid,proof.csrfToken)).status,400);

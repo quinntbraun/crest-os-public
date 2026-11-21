@@ -97,6 +97,7 @@ export function createLeadSourceEditorController(deps:Dependencies){
   function suspend(){if(!alive)return;active?.abort();active=null;clearPrivate();phase='review';message='Private lead source details were cleared. Load current lead sources before continuing; any pending reference has been kept.';emit();}
   return Object.freeze({load,query,open,moreHistory,save,check,retry,view,suspend,
     create(){if(alive&&!active&&phase==='ready'){selected=null;history=null;draft=emptyLeadSourceDraft;message='Enter a source label and kind. A referral customer is optional.';emit();}},
+    close(){if(alive&&!active&&phase==='ready'&&draft){selected=null;draft=null;history=null;message='Returned to lead sources.';emit();}},
     edit(value:LeadSourceDraft){if(alive&&!active&&phase==='ready'&&draft){draft=Object.freeze({...value});emit();}},
     dispose(){alive=false;active?.abort();active=null;clearPrivate();pending=null;}
   });

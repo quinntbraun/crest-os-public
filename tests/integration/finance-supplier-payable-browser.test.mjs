@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {readFile} from 'node:fs/promises';
+import {mkdir,readFile} from 'node:fs/promises';
 import {strFromU8,unzipSync} from 'fflate';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 import {test} from 'node:test';
@@ -8,6 +8,11 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
+import {reviewSupplierRegister} from '../support/supplier-register-layout.mjs';
+import {reviewSupplierDraft} from '../support/supplier-draft-layout.mjs';
+import {reviewSupplierDirectory} from '../support/supplier-directory-layout.mjs';
+import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
+import {captureDuringAction} from '../support/quote-browser-response.mjs';
 
 const financeRoute='/api/business/finance-accounts/';
 const beginFinanceCalls=page=>page.evaluate(async prefix=>{
@@ -59,6 +64,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.getByRole('button',{name:'Sign in',exact:true}).click();
    await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
    await page.goto(fixture.origin+'/expenses');
+   await page.getByRole('button',{name:'Suppliers',exact:true}).click();
    await page.getByText('Unpaid supplier bills',{exact:true}).click();
    const draft=page.getByRole('form',{name:'Supplier bill draft',exact:true});
    const {rows:[{day}]}=await fixture.client.query("SELECT (clock_timestamp() AT TIME ZONE 'America/Indiana/Indianapolis')::date::text AS day");
@@ -74,17 +80,68 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await draft.getByLabel('Amount for split 1 (USD)',{exact:true}).fill('150.25');
    await draft.getByRole('button',{name:'Save supplier bill draft',exact:true}).click();
    await expect(page.getByText('Supplier bill draft saved.',{exact:true})).toBeVisible();
+   const bills=page.getByRole('region',{name:'Unpaid supplier bill drafts',exact:true});
+   const editor=bills.locator('details.supplier-bill-editor');
+   if(await editor.count())await editor.locator(':scope > summary').press('Enter');
+   await draft.getByLabel('Business purpose',{exact:true}).fill('Unsaved supplier bill change');
+   const facts=async()=>{const result={};for(const table of ['supplier_bill_draft_revisions','financial_events','journal_entries','journal_lines'])
+    result[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.'+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;
+    result.audit=(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows;return result;};
+   const draftLayoutFindings=[];
+   draftLayoutFindings.push(...await reviewSupplierDraft(page,name,'dirty-editor',facts));
+   const beforeDirtyReview=await facts();let dirtyReviewRequests=0;const trackDirtyReview=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))dirtyReviewRequests++;};page.on('request',trackDirtyReview);
+   try{
+    await expect(page.getByText('Preview the payable entry',{exact:true})).toHaveAttribute('aria-disabled','true');
+    await page.getByText('Preview the payable entry',{exact:true}).press('Enter');
+    await expect(page.getByRole('form',{name:'Supplier payable entry preview'})).toBeHidden();
+    await expect(bills.getByText('Unsaved edits are separate from the saved bill. Save or discard them before reviewing the payable.',{exact:true})).toBeVisible();
+    assert.equal(dirtyReviewRequests,0);assert.deepEqual(await facts(),beforeDirtyReview);
+   }finally{page.off('request',trackDirtyReview);}
+   await bills.getByRole('button',{name:'Discard draft edits',exact:true}).click();
+   await expect(draft.getByLabel('Business purpose',{exact:true})).toHaveValue('Fictional workshop supplies');
+   await expect(draft.getByLabel('Incurred date',{exact:true})).toBeFocused();
+   await editor.locator(':scope > summary').press('Enter');
+   const selected=bills.getByRole('region',{name:'Selected supplier bill',exact:true});
+   await expect(selected.getByRole('heading',{name:'Fictional workshop supplier',exact:true})).toBeVisible();
+   await expect(selected.getByText('Saved bill record · Revision 1',{exact:true})).toBeVisible();
+   await expect(selected.getByText('$150.25',{exact:true})).toBeVisible();
+   for(const width of [360,390,768,1100,1440]){
+    await page.setViewportSize({width,height:900});
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(issue=>issue.id),[]);
+    await mkdir('.local/review',{recursive:true});
+    await selected.screenshot({path:'.local/review/finance-supplier-selected-'+name+'-'+width+'.png'});
+    await bills.screenshot({path:'.local/review/finance-supplier-workspace-'+name+'-'+width+'.png'});
+   }
+   draftLayoutFindings.push(...await reviewSupplierDraft(page,name,'selected',facts));
    await page.getByText('Preview the payable entry',{exact:true}).click();
    const review=page.getByRole('form',{name:'Supplier payable entry preview'});
+   await editor.locator(':scope > summary').press('Enter');
+   await expect(draft.getByLabel('Business purpose',{exact:true})).toBeDisabled();
+   await expect(bills.getByRole('button',{name:'Enter another supplier bill',exact:true})).toBeDisabled();
+   await editor.locator(':scope > summary').press('Enter');
    await review.getByLabel('Purchase tax treatment').selectOption('none');
    await review.getByLabel('Reason for the review').fill('Fictional purchase tax review');
    await review.getByRole('button',{name:'Review expense and payable amounts'}).click();
    await expect(page.getByText('A verified original is required for this revision.',{exact:true})).toBeVisible();
+   draftLayoutFindings.push(...await reviewSupplierDraft(page,name,'original-required',facts));
+   await page.getByText('Preview the payable entry',{exact:true}).click();
+   await editor.locator(':scope > summary').press('Enter');
+   await expect(draft.getByLabel('Business purpose',{exact:true})).toBeEnabled();
+   await editor.locator(':scope > summary').press('Enter');
+   await page.getByText('Preview the payable entry',{exact:true}).click();
+   await expect(review.getByLabel('Purchase tax treatment')).toHaveValue('none');
+   await expect(review.getByLabel('Reason for the review')).toHaveValue('Fictional purchase tax review');
    const register=page.getByRole('region',{name:'Recorded supplier payables',exact:true});
+   const loadRegister=async()=>{
+    const response=await captureDuringAction(page,financeRoute+'supplier-payable-register',()=>register.getByRole('button',{name:'Load supplier payables',exact:true}).click());
+    assert.equal(response.status,200);return response.body;
+   };
    await register.getByText('Recorded supplier payables',{exact:true}).click();
-   await register.getByRole('button',{name:'Load supplier payables',exact:true}).click();
+   const emptyRegister=await loadRegister();
    await expect(register.getByRole('status')).toHaveText('No supplier payables were recorded through that date.');
    await expect(register).toContainText('$0.00 outstanding');
+   await reviewSupplierRegister(page,name,'empty',emptyRegister,facts);
    assert.equal((await fixture.client.query('SELECT count(*)::int AS count FROM crest.financial_events WHERE business_id=$1',
     [fixture.business])).rows[0].count,0);
    if(fixture.preparePayable){
@@ -108,13 +165,15 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await originalForm.getByRole('button',{name:'Upload and verify original',exact:true}).click();
     assert.equal(await verification.promise,200,'verification must commit before simulating the lost reply');
     await expect(page.getByText('Verification could not be confirmed.',{exact:false})).toBeVisible();
+    await reviewFinancialRecovery(page,fixture,name,'supplier_upload',bills);
     await page.getByRole('button',{name:'Check original upload',exact:true}).click();
     await expect(page.getByText('Original bill verified.',{exact:true})).toBeVisible();
     const {rows:[original]}=await fixture.client.query('SELECT id AS original_id FROM crest.supplier_bill_originals WHERE business_id=$1',
      [fixture.business]);
     const originalId=original.original_id;
     await review.getByRole('button',{name:'Review expense and payable amounts'}).click();
-    await expect(page.getByRole('heading',{name:'Proposed entry for Fictional workshop supplier'})).toBeVisible();
+   await expect(page.getByRole('heading',{name:'Proposed entry for Fictional workshop supplier'})).toBeVisible();
+   draftLayoutFindings.push(...await reviewSupplierDraft(page,name,'entry-ready',facts));
     await expect(page.getByText('Credit accounts payable $150.25',{exact:true})).toBeVisible();
     await page.route('**/api/business/supplier-original/preview',async route=>{
      const response=await route.fetch();
@@ -151,10 +210,12 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await postButton.click();
     await expect(page.getByText('The outcome is unconfirmed.',{exact:false})).toBeVisible();
     assert.equal(interruptedStatus,200);
+    await reviewFinancialRecovery(page,fixture,name,'supplier_posting',bills);
     await page.getByRole('button',{name:'Check original posting request',exact:true}).click();
     await expect(page.getByText('Supplier bill posted. Reload Recorded supplier payables.',{exact:true})).toBeVisible();
-    await register.getByRole('button',{name:'Load supplier payables',exact:true}).click();
+    const postedRegister=await loadRegister();
     await expect(register).toContainText('$150.25 outstanding');
+    await reviewSupplierRegister(page,name,'posted',postedRegister,facts);
     await register.getByText('Record supplier payment',{exact:true}).click();
     const payment=register.getByRole('form',{name:'Confirm supplier payment'});
     await payment.getByLabel('Actual payment date',{exact:true}).fill(day);
@@ -174,22 +235,29 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     await paymentButton.click();
     await expect(register.getByText('The outcome is unconfirmed.',{exact:false})).toBeVisible();
     assert.equal(interruptedPaymentStatus,200);
-    await register.getByRole('button',{name:'Check original posting request',exact:true}).click();
+    await expect(register.getByLabel('Through date (optional)',{exact:true})).toBeDisabled();
+    await expect(register.getByRole('button',{name:'Load supplier payables',exact:true})).toBeDisabled();
+    await expect(register.getByText('Check the original payment result below before changing this register’s date.',{exact:true})).toBeVisible();
+    await expect(payment).toBeVisible();
+    await reviewFinancialRecovery(page,fixture,name,'supplier_payment',register);
+    const refreshedRegister=await captureDuringAction(page,financeRoute+'supplier-payable-register',()=>register.getByRole('button',{name:'Check original posting request',exact:true}).click());
     await expect(register.getByText('Verified supplier payment recorded.',{exact:true})).toBeVisible();
+    assert.equal(refreshedRegister.status,200);
+    const partiallyPaidRegister=refreshedRegister.body;
     const {rows:[paymentEvidence]}=await fixture.client.query(`SELECT s.id AS settlement_id,s.payable_id,m.id AS movement_id,v.version::text AS channel_version
      FROM crest.supplier_payable_settlements s JOIN crest.financial_events e ON (e.business_id,e.supplier_payable_settlement_id)=(s.business_id,s.id)
      JOIN crest.money_movements m ON (m.business_id,m.event_id)=(e.business_id,e.id)
      JOIN crest.money_channel_versions v ON (v.business_id,v.id)=(s.business_id,s.channel_version_id) WHERE s.business_id=$1`,[fixture.business]);
     assert.equal(paymentEvidence.channel_version,'1');
-    await expect(register).toContainText('$150.25 bill · $100.25 paid · $50.00 outstanding');
+    await expect(register.locator('.supplier-payable-amounts dd')).toHaveText(['$150.25','$100.25','$50.00']);
     await expect(register).toContainText('The register agrees with the ledger.');
+    await expect(register.getByLabel('Through date (optional)',{exact:true})).toBeEnabled();
+    await reviewSupplierRegister(page,name,'partially-paid',partiallyPaidRegister,facts);
     const {rows:totals}=await fixture.client.query(`SELECT e.template,count(*)::int AS count FROM crest.financial_events e
      WHERE e.business_id=$1 GROUP BY e.template ORDER BY e.template`,[fixture.business]);
     assert.deepEqual(totals,[{template:'P14',count:1},{template:'P15',count:1}]);
 
     await page.goto(fixture.origin+'/settings/accounts');
-    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
-    await page.getByText('Fictional trial balance',{exact:true}).first().click();
     const trial=page.getByRole('region',{name:'Fictional trial balance',exact:true});
     await trial.getByLabel('Through date (optional)',{exact:true}).fill(day);
     const trialReply=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/trial-balance'));
@@ -211,16 +279,23 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      assert(journalCsv.includes(expected));
     }
 
-    await page.getByText('Income statement',{exact:true}).click();
+    await page.getByRole('group',{name:'Choose a report',exact:true}).getByRole('button',{name:'Income',exact:true}).click();
     const income=page.getByRole('region',{name:'Recorded income statement',exact:true});
     await income.getByLabel('From date',{exact:true}).fill(day);
     await income.getByLabel('Through date',{exact:true}).fill(day);
     await income.getByRole('button',{name:'Load income statement',exact:true}).click();
     await expect(income.getByRole('row',{name:/Recorded-book net income/})).toContainText('-$150.25');
     await page.goto(fixture.origin+'/export-files');
-    await page.getByRole('button',{name:'Prepare posted finance CSV',exact:true}).click();
-    const save=page.getByRole('button',{name:'Save ZIP',exact:true});
+    const financeExport=page.getByRole('region',{name:'Posted finance export',exact:true});
+    await expect(financeExport).toContainText('CSV files in one ZIP');
+    await financeExport.getByRole('button',{name:'Prepare posted finance CSV',exact:true}).click();
+    const save=financeExport.getByRole('button',{name:'Save ZIP',exact:true});
     await expect(save).toBeVisible();
+    await expect(financeExport.locator('.export-save-row[data-prepared="true"]')).toContainText('crest-posted-finance.zip');
+    await expect(save).toBeInViewport();
+    assert.deepEqual((await new AxeBuilder({page}).include('.export-finance').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+    await mkdir('.local/review',{recursive:true});
+    await page.screenshot({path:'.local/review/export-finance-ready-'+name+'.png'});
     const [download]=await Promise.all([page.waitForEvent('download'),save.click()]);
     assert.equal(download.suggestedFilename(),'crest-posted-finance.zip');
     const {['manifest.json']:manifest,['export_delivery.json']:delivery,...files}=unzipSync(await readFile(await download.path()));
@@ -239,6 +314,21 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa']).analyze();
     assert.deepEqual(audit.violations.map(entry=>entry.id),[]);
    }
+   assert.equal(draftLayoutFindings.length,0,'Supplier draft layout findings are retained in state/engine observation reports');
+   const directoryAuth=await beginFinanceCalls(page);
+   for(let index=1;index<=8;index++){
+    const seeded=await financeCall(page,directoryAuth.headers,'supplier-bill-draft-save',{
+     reference:{billId:randomUUID(),recoveryEpoch:directoryAuth.context.recoveryEpoch,operationId:randomUUID(),expectedRevision:'0'},
+     payload:{incurredOn:day,dueOn:day,unknownDueReason:null,vendor:'Fictional directory supplier '+index,unknownVendorReason:null,
+      documentReference:'Directory bill '+index,grossCents:'2500',purchaseTaxCents:'0',purpose:'Fictional directory supplies',
+      missingReceiptReason:'Synthetic directory evidence',splits:[{category:'supplies',grossCents:'2500'}],changeReason:null},
+    });
+    assert.equal(seeded.status,200);assert.equal(seeded.body.state,'committed');
+   }
+   await page.goto(fixture.origin+'/expenses');
+   await page.getByRole('button',{name:'Suppliers',exact:true}).click();
+   await page.getByText('Unpaid supplier bills',{exact:true}).click();
+   await reviewSupplierDirectory(page,name,facts);
   }finally{
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{

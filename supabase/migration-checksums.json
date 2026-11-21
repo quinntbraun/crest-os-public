@@ -600,6 +600,26 @@
       "version": "20270113180000",
       "file": "20270113180000_record_job_history.sql",
       "sha256": "8fd6865c260f1b85d1b894e0d5dd51dadf5f802ef24e5a531b21426edf3492e1"
+    },
+    {
+      "version": "20270114180000",
+      "file": "20270114180000_customer_profile.sql",
+      "sha256": "4c9c3ac08e5c121f0af03bb9bbb9322501839f78af8ceaa65fee31c8efaa99c9"
+    },
+    {
+      "version": "20270115180000",
+      "file": "20270115180000_invoice_outstanding.sql",
+      "sha256": "a31c29b9e597c130ef8d14831b0edf6473e920e45aa024ba15caecaefeb91f30"
+    },
+    {
+      "version": "20270116180000",
+      "file": "20270116180000_finance_mapping_recording_history.sql",
+      "sha256": "a655e25d1c0a030e7babd4766b1726353abcdcfecfe6b00bcffe4a3450f3c2d0"
+    },
+    {
+      "version": "20270117180000",
+      "file": "20270117180000_finance_history_recording.sql",
+      "sha256": "80e002a2bd865e06ad95717e04dff462900ed368aaca7a484f9622125bae8c17"
     }
   ]
 }

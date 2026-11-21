@@ -3,7 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 
 test('interrupted-save review remains private, accessible and closed by default',async({page,request})=>{
  const response=await page.goto('/save-review');expect(response?.headers()['cache-control']).toContain('no-store');await expect(page.getByRole('heading',{name:'Interrupted save review',exact:true})).toBeVisible();
- await expect(page.getByRole('status')).toContainText('The outcome could not be verified');await expect(page.getByLabel('Interrupted save type')).toBeVisible();await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Confirm retirement of this original save',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('status')).toContainText('The outcome could not be verified');await page.getByText('Review a different save',{exact:true}).click();await expect(page.getByLabel('Interrupted save type')).toBeVisible();await expect(page.getByLabel('Reason for retiring this original save',{exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Confirm retirement of this original save',exact:true})).toHaveCount(0);
  for(const route of ['retire','resolution']){const denied=await request.post('/api/business/original-operations/'+route,{data:{},headers:{origin:'http://127.0.0.1:3000'}});expect(denied.status()).toBe(503);expect(await denied.json()).toEqual({error:'ORIGINAL_OPERATION_REQUEST_FAILED'});expect(denied.headers()['cache-control']).toContain('no-store');}
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
 });
@@ -11,7 +11,8 @@ test('interrupted-save review remains private, accessible and closed by default'
 test("workspace honestly reports unconfigured access at desktop and 360px width", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible();
-  await expect(page.getByRole('link',{name:'Crest OS home',exact:true})).toHaveText('CREST OS');
+  await expect(page.getByRole('link',{name:'Crest OS home',exact:true})).toHaveText('Crest OS');
+  await expect(page.getByRole('link',{name:'Crest OS home',exact:true})).toHaveAttribute('href','/');
   await expect(page.getByRole('banner').getByText('Test workspace · Use fictional records only',{exact:true})).toBeVisible();
   await expect(page.getByRole('status')).toContainText('Workspace access could not be verified');
   await expect(page.getByText('No current business information is shown until access is confirmed.')).toBeVisible();
@@ -68,7 +69,7 @@ test('address screen is private, accessible and closed without configured authen
  await expect(page.getByRole('status')).toContainText('Address access could not be verified');await expect(page.getByRole('form',{name:'Address editor',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Add address',exact:true})).toHaveCount(0);
  const denied=await request.post('/api/business/customers/addresses/list',{data:{customerId:'22222222-2222-4222-8222-222222222222'},headers:{origin:'http://127.0.0.1:3000'}});expect(denied.status()).toBe(503);expect(await denied.json()).toEqual({error:'ADDRESS_REQUEST_FAILED'});expect(denied.headers()['cache-control']).toContain('no-store');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
- await page.goto('/addresses?customer=invalid');await expect(page.getByRole('status')).toContainText('Choose a customer');await expect(page.getByRole('button',{name:'Add address',exact:true})).toHaveCount(0);
+ await page.goto('/addresses?customer=invalid');await expect(page.getByRole('status',{name:'Address editor status',exact:true})).toContainText('Choose a customer');await expect(page.getByRole('status',{name:'Address customer search status',exact:true})).toContainText('Search saved customers');await expect(page.getByRole('button',{name:'Add address',exact:true})).toHaveCount(0);
 });
 
 test('vehicle screen is private, accessible and closed without its explicit runtime',async({page,request})=>{

@@ -50,6 +50,10 @@
   font-weight: 600;
 }
 
+.reviewHeading {
+  width: fit-content;
+}
+
 .preview {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

@@ -1,19 +1,21 @@
 'use client';
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {authentication,AuthenticationError} from '../../client/authentication';
 import type {Proof,LoginInput} from '../../client/authentication';
 
-type View={phase:'checking'|'form'|'signed'|'unavailable'|'uncertain';message:string;busy:boolean;retryEmail?:string};
+type View={phase:'checking'|'form'|'signed'|'unavailable'|'uncertain';message:string;busy:boolean;retryEmail?:string;feedback?:'error'|'success'};
 function PasswordInput(){
   const [visible,setVisible]=useState(false);
   return <div className="password-control"><input id="password" name="password" type={visible?'text':'password'} autoComplete="current-password" maxLength={1024} required/><button type="button" className="secondary" aria-controls="password" aria-pressed={visible} onClick={()=>setVisible(value=>!value)}>{visible?'Hide password':'Show password'}</button></div>;
 }
-export function SignIn(){
+export function SignIn({resume=null}:{resume?:{href:string;label:string}|null}={}){
   const [view,setView]=useState<View>({phase:'checking',message:'Checking this device’s session…',busy:true});
   const current=useRef<Proof|null>(null),operation=useRef<{id:number;controller:AbortController}|null>(null),sequence=useRef(0),mounted=useRef(false);
-  const recheckOnFocus=useRef(false);
+  const recheckOnFocus=useRef(false),focusAfterAction=useRef(false);
+  const [codeIssue,setCodeIssue]=useState(false);
   const status=useRef<HTMLParagraphElement>(null);
+  const credentialForm=useRef<HTMLFormElement>(null);
   const run=useCallback(async(kind:'session'|'login'|'logout',input?:LoginInput)=>{
     if(!mounted.current||operation.current)return;
     const id=++sequence.current,controller=new AbortController(),previous=current.current;operation.current={id,controller};current.current=null;
@@ -27,15 +29,20 @@ export function SignIn(){
       }else{
         const proof=kind==='login'&&input?await authentication.login(input,controller.signal):await authentication.session(controller.signal);
         if(mounted.current&&sequence.current===id)current.current=proof;
-        next={phase:'signed',message:'Signed in on this device.',busy:false};
+        next={phase:'signed',message:'Signed in on this device.',busy:false,feedback:'success'};
       }
     }catch(error){
       const reason=error instanceof AuthenticationError?error.kind:'uncertain';
       next=reason==='unavailable'?{phase:'unavailable',message:'Sign-in is not available while setup is in progress. Check again later.',busy:false}
-        :reason==='denied'&&kind!=='logout'?{phase:'form',message:kind==='login'?'Sign-in failed. Check your email and password, then enter a fresh code. If codes keep failing, check that your phone’s date and time are set automatically.':'Sign in to continue.',busy:false,retryEmail:input?.email??''}
+        :reason==='denied'&&kind!=='logout'?{phase:'form',message:kind==='login'?'Sign-in failed. Check your email and password, then enter a fresh code. If codes keep failing, check that your phone’s date and time are set automatically.':previous?'Your session has ended. Sign in again.':'Sign in to continue.',busy:false,retryEmail:input?.email??'',...kind==='login'||previous?{feedback:'error' as const}:{}}
         :{phase:'uncertain',message:kind==='logout'?'Sign-out could not be confirmed. Check this device’s session before trying again.':'The session could not be confirmed. Check this device’s session before trying again.',busy:false};
     }
-    if(mounted.current&&sequence.current===id){operation.current=null;recheckOnFocus.current=next.phase==='signed'||next.phase==='uncertain';setView(next);if(kind!=='session')requestAnimationFrame(()=>{if(mounted.current&&sequence.current===id)status.current?.focus();});}
+    if(mounted.current&&sequence.current===id){
+      operation.current=null;
+      recheckOnFocus.current=next.phase==='signed'||next.phase==='uncertain';
+      focusAfterAction.current=kind!=='session';
+      setView(next);
+    }
   },[]);
   useEffect(()=>{
     mounted.current=true;void run('session');
@@ -45,26 +52,44 @@ export function SignIn(){
     return ()=>{mounted.current=false;operation.current?.controller.abort();operation.current=null;current.current=null;recheckOnFocus.current=false;
       window.removeEventListener('focus',check);window.removeEventListener('pageshow',check);document.removeEventListener('visibilitychange',check);};
   },[run]);
+  useLayoutEffect(()=>{
+    if(!focusAfterAction.current)return;
+    focusAfterAction.current=false;
+    if(view.phase==='form'&&credentialForm.current?.contains(document.activeElement))return;
+    status.current?.focus();
+  },[view]);
   function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();if(operation.current)return;
     const form=event.currentTarget,data=new FormData(form);
     const input={email:String(data.get('email')??''),password:String(data.get('password')??''),code:String(data.get('code')??''),trusted:data.get('trusted')==='on'};
     // Clear sensitive DOM values immediately; a failed request is never replayed.
     for(const name of ['password','code']){const field=form.elements.namedItem(name);if(field instanceof HTMLInputElement)field.value='';}
-    void run('login',input);
+    setCodeIssue(false);void run('login',input);
   }
-  return <section aria-label="Device sign-in" aria-busy={view.busy}>
-    <p ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
-    {view.phase==='form'&&<form onSubmit={submit}>
+  const tone=view.feedback??(['unavailable','uncertain'].includes(view.phase)?'error':'neutral');
+  return <section className="sign-in-state" aria-label="Device sign-in">
+    <p ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true" className="sign-in-feedback" data-tone={tone}>{view.message}</p>
+    {view.busy&&<div className="sign-in-loading" aria-hidden="true">
+      <span className="workspace-skeleton"/><span className="workspace-skeleton"/><span className="workspace-skeleton"/>
+    </div>}
+    {view.phase==='form'&&<form ref={credentialForm} onSubmit={submit}>
       <label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={320} defaultValue={view.retryEmail} required/>
       <label htmlFor="password">Password</label><PasswordInput/>
-      <label htmlFor="code">Authenticator code</label><input id="code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} required aria-describedby="code-help"/>
+      <label htmlFor="code">Authenticator code</label><input id="code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} required aria-describedby={codeIssue?'code-help code-invalid':'code-help'} aria-invalid={codeIssue||undefined}
+       onInvalid={()=>setCodeIssue(true)} onChange={()=>setCodeIssue(false)}/>
+      {codeIssue&&<p id="code-invalid" className="sign-in-code-error" role="alert">Enter all six digits from your authenticator app.</p>}
       <p id="code-help" className="field-help">Use the current six-digit code from Passwords or your authenticator app.</p>
       <button type="submit">Sign in</button>
       <details className="sign-in-device-options"><summary>Personal device options</summary><label className="trust"><input name="trusted" type="checkbox"/><span>Trust this personal device</span></label><p className="field-help">Stay signed in for up to 30 days, with a seven-day inactivity limit. Leave unchecked on a shared device.</p></details>
     </form>}
-    {view.phase==='signed'&&<><h2>Session verified</h2><p>Your device is signed in. Workspace tools check your business access before loading records.</p><a className="primary-action" href="/">Open workspace</a><a href="/customers">Customers</a><a href="/leads">Leads</a><a href="/settings">Business settings</a><button type="button" className="secondary" onClick={()=>void run('logout')}>Sign out on this device</button></>}
-    {!view.busy&&<button className="secondary" type="button" onClick={()=>void run('session')}>Check session</button>}
-    <p className="field-help">Session checks do not extend your sign-in. Account setup and recovery are not available here yet.</p>
+    {view.phase==='signed'&&<div className="sign-in-session">
+      <h2>Session verified</h2>
+      <a className="primary-action" href={resume?.href??'/'}>{resume?.label??'Open workspace'}</a>
+      <nav aria-label="Workspace links"><a href="/customers">Customers</a><a href="/leads">Leads</a><a href="/settings">Business settings</a></nav>
+      <button type="button" className="secondary" onClick={()=>void run('logout')}>Sign out on this device</button>
+    </div>}
+    {!view.busy&&view.phase!=='form'&&<div className="sign-in-session-check">
+      <button className="secondary" type="button" onClick={()=>void run('session')}>Check session</button>
+    </div>}
   </section>;
 }

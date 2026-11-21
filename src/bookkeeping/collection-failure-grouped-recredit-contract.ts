@@ -186,3 +186,19 @@ export function parseGroupedRecreditOptions(value: unknown, businessId: string, 
   return {state: 'ready', failedOn: value.failedOn, actualOn, failureId, originalPaymentId: value.originalPaymentId,
     openPeriod: value.openPeriod, fundsMapping: mapping, components, channels} as const;
 }
+
+// Migration101 adds validated read metadata independently of the write capability.
+// Keep the browser contract closed when restored-tip actions are disabled.
+export function groupedRecreditOptionsForCapability(value:unknown,businessId:string,customerId:string,failureId:string,actualOn:string,tipReinstatements=false){
+ const metadata=value!==null&&typeof value==='object'&&'components' in value&&Array.isArray(value.components)
+  &&value.components.some((row:unknown)=>row!==null&&typeof row==='object'&&Object.hasOwn(row,'tipReinstatement'));
+ const parsed=parseGroupedRecreditOptions(value,businessId,customerId,failureId,actualOn,tipReinstatements||metadata);
+ if(tipReinstatements||!metadata||parsed.state==='absent')return value;
+ check(value!==null&&typeof value==='object'&&'components' in value&&Array.isArray(value.components));
+ const response={...value,components:value.components.map((row:unknown)=>{
+  check(row!==null&&typeof row==='object'&&!Array.isArray(row));
+  return Object.fromEntries(Object.entries(row).filter(([key])=>key!=='tipReinstatement'));
+ })};
+ parseGroupedRecreditOptions(response,businessId,customerId,failureId,actualOn,false);
+ return response;
+}

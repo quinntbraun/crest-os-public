@@ -1,5 +1,6 @@
 'use client';
 
+import {DocumentBrand} from '../../document-brand';
 import { useEffect, useId, useRef, useState } from 'react';
 import { clearPendingInvoiceIssue, downloadFinanceHistory, financeAccounts, readPendingInvoiceIssue,
   retainPendingInvoiceIssue } from '../../../client/finance-accounts';
@@ -18,6 +19,7 @@ import { ExcessReturn } from './excess-return';
 import { TipReturn } from './tip-return';
 import { CollectionFailure } from './collection-failure';
 import { RefundTransferAdjustment } from './refund-transfer-adjustment';
+import { InvoiceOutstanding } from './invoice-outstanding';
 
 type Readiness = Awaited<ReturnType<typeof financeAccounts.reviewInvoiceIssueTax>>;
 type Review = Readiness['tax'];
@@ -60,8 +62,8 @@ function IssueLineStatus({ line }: { line: Line }) {
   return <p>{lineMessages[line.state]}</p>;
 }
 
-export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,excessReturns,tipReturns,collectionFailures,refundTransfers }: {
-  invoice:IssuedInvoice;receiptBusinessId:string|undefined;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;
+export function IssuedInvoiceDetails({ invoice,businessId,receiptBusinessId,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,excessReturns,tipReturns,collectionFailures,refundTransfers }: {
+  invoice:IssuedInvoice;businessId:string;receiptBusinessId:string|undefined;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;
   invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;
 }) {
   const tax = invoice.lines.reduce((sum,line)=>sum+BigInt(line.taxCents),0n);
@@ -69,10 +71,13 @@ export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrecti
   const showAdjustments=paymentCorrections||collectionFailures||invoiceCredits||paidInvoiceCredits;
   const showRefunds=serviceRefunds||excessReturns||tipReturns||refundTransfers;
   return <div className="issued-invoice-details">
+    <article className="issued-invoice-document" aria-labelledby={actionsId+'-document'}>
+    <DocumentBrand/>
     <header className="issued-invoice-heading">
-      <h4>Invoice {invoice.invoiceNumber}</h4>
-      <p><span>Total</span> <strong>{quoteMoney(invoice.totalCents)}</strong></p>
+      <div><p className="invoice-document-state">Issued · {invoice.currency}</p><h4 id={actionsId+'-document'}>Invoice {invoice.invoiceNumber}</h4></div>
+      <p className="invoice-document-amount"><span>Original total</span> <strong>{quoteMoney(invoice.totalCents)}</strong></p>
     </header>
+    <InvoiceOutstanding key={businessId+':'+invoice.invoiceId} businessId={businessId} invoice={invoice}/>
     <dl className="customer-values">
       <dt>Customer</dt><dd>{invoice.customer.displayName}</dd>
       <dt>Issued</dt><dd>{formatDate(invoice.issuedOn)}</dd>
@@ -86,12 +91,13 @@ export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrecti
       ...invoice.lines.map(line=>[invoice.invoiceNumber,invoice.customer.displayName,invoice.issuedOn,invoice.dueOn,invoice.currency,
         line.description,line.grossInclusiveCents,line.discountInclusiveCents,line.netCents,line.taxCents,line.inclusiveCents]),
     ])}>Download invoice (CSV)</button>
+    </article>
     {receiptBusinessId&&<>
-      {(showAdjustments||showRefunds)&&<nav className="invoice-action-links" aria-label="Invoice actions">
+      <nav className="invoice-action-links" aria-label="Invoice actions">
         <a href={'#'+actionsId+'-payments'}>Payments</a>
         {showAdjustments&&<a href={'#'+actionsId+'-adjustments'}>Corrections and credits</a>}
         {showRefunds&&<a href={'#'+actionsId+'-refunds'}>Refunds</a>}
-      </nav>}
+      </nav>
       <section className="invoice-action-section" aria-labelledby={actionsId+'-payments'}>
         <h5 id={actionsId+'-payments'} tabIndex={-1}>Payments</h5>
         <DirectReceipt key={invoice.invoiceId} businessId={receiptBusinessId} customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>
@@ -328,7 +334,7 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
   return <details onToggle={event => { if (!event.currentTarget.open) clear(); }}>
     <summary>Review invoice tax</summary>
     {issued ? <section aria-label="Issued invoice">
-      <IssuedInvoiceDetails invoice={issued} receiptBusinessId={directReceipts?businessId:undefined}
+      <IssuedInvoiceDetails invoice={issued} businessId={businessId} receiptBusinessId={directReceipts?businessId:undefined}
         paymentCorrections={paymentCorrections===true} fundApplications={fundApplications===true} heldTips={heldTips===true}
         invoiceCredits={invoiceCredits===true} paidInvoiceCredits={paidInvoiceCredits===true} serviceRefunds={serviceRefunds===true}
         excessReturns={excessReturns===true} tipReturns={tipReturns===true} collectionFailures={collectionFailures===true} refundTransfers={refundTransfers===true}/>

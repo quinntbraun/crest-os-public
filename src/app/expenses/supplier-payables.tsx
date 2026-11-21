@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {financeAccounts} from '../../client/finance-accounts';
 import type {FinanceAccountContext} from '../../client/finance-accounts';
@@ -22,7 +22,7 @@ const reviewMessages={
 };
 const dollars=(value:string)=>value.startsWith('-')?'−$'+expenseDollars(value.slice(1)):'$'+expenseDollars(value);
 
-export function SupplierPayableEntryReview({context,bill,lockDraft}:{context:FinanceAccountContext;bill:SupplierBillDraftRevision;lockDraft:(locked:boolean)=>void}){
+export function SupplierPayableEntryReview({context,bill,lockDraft,draftDirty=false,draftNoticeId}:{context:FinanceAccountContext;bill:SupplierBillDraftRevision;lockDraft:(locked:boolean)=>void;draftDirty?:boolean;draftNoticeId?:string}){
  const active=useRef<AbortController|null>(null);
  const [busy,setBusy]=useState(false),[reason,setReason]=useState('');
  const [tax,setTax]=useState<SupplierPayableReviewRequest['taxTreatment']|''>('');
@@ -30,11 +30,13 @@ export function SupplierPayableEntryReview({context,bill,lockDraft}:{context:Fin
  const [choices,setChoices]=useState<Extract<Review,{state:'select_original'}>['originals']>([]);
  const [status,setStatus]=useState(''),[confirming,setConfirming]=useState(false),[uploading,setUploading]=useState(false);
  const [submittedReview,setSubmittedReview]=useState<SupplierPayableReviewRequest|null>(null);
+ const [reviewOpen,setReviewOpen]=useState(false);
+ useLayoutEffect(()=>{lockDraft(reviewOpen||busy||confirming||uploading);},[reviewOpen,busy,confirming,uploading,lockDraft]);
  useEffect(()=>()=>active.current?.abort(),[]);
 
  async function review(event:FormEvent<HTMLFormElement>){
   event.preventDefault();
-  if(active.current||confirming||uploading||!tax||!reason.trim())return;
+  if(active.current||confirming||uploading||draftDirty||!tax||!reason.trim())return;
   const request=new AbortController();active.current=request;setBusy(true);setResult(null);setStatus('');
   try{
    const input={billId:bill.billId,revision:bill.revision,originalId:original,taxTreatment:tax,reason:reason.trim()};
@@ -51,14 +53,18 @@ export function SupplierPayableEntryReview({context,bill,lockDraft}:{context:Fin
   finally{if(active.current===request){active.current=null;setBusy(false);}}
  }
 
- return <details>
-  <summary>Preview the payable entry</summary>
+ return <details className="supplier-payable-task" onToggle={event=>{
+  if(event.target!==event.currentTarget)return;
+  setReviewOpen(event.currentTarget.open);
+ }}>
+  <summary aria-disabled={draftDirty||undefined} aria-describedby={draftDirty?draftNoticeId:undefined}
+   onClick={event=>{if(draftDirty)event.preventDefault();}}>Preview the payable entry</summary>
   {context.supplierOriginalUploads&&bill.payload.documentReference&&result?.state!=='posted'&&
    <SupplierOriginalUpload context={context} bill={bill} disabled={busy||confirming}
-    lockDraft={locked=>{setUploading(locked);lockDraft(locked);}}
+    lockDraft={setUploading}
     onAvailable={id=>{setOriginal(id);setChoices([]);setResult(null);setStatus('The verified document is ready for entry review.');}}/>}
   <form aria-label="Supplier payable entry preview" onSubmit={review}>
-   <fieldset className="expense-form" disabled={busy||confirming||uploading}>
+   <fieldset className="expense-form" disabled={busy||confirming||uploading||draftDirty}>
     <legend>Saved draft revision {bill.revision}</legend>
     <label>Purchase tax treatment <select value={tax} required onChange={event=>{
      const value=event.target.value;setTax(value==='none'||value==='verified_nonrecoverable'?value:'');setResult(null);setStatus('');
@@ -90,9 +96,9 @@ export function SupplierPayableEntryReview({context,bill,lockDraft}:{context:Fin
    </li>)}</ul></>}
    {context.supplierPayablePosting&&submittedReview&&!uploading&&<SupplierAccrualConfirmation key={result.plan.sha256}
     context={context} review={submittedReview} result={result}
-    lockReview={locked=>{setConfirming(locked);lockDraft(locked);}}
+    lockReview={setConfirming}
     onRefresh={()=>{setResult(null);setStatus('Review the bill again before posting.');}}
-    onPosted={()=>{setConfirming(false);lockDraft(false);setResult(null);setStatus('Supplier bill posted. Reload Recorded supplier payables.');}}/>}
+    onPosted={()=>{setConfirming(false);setResult(null);setStatus('Supplier bill posted. Reload Recorded supplier payables.');}}/>}
   </div>}
  </details>;
 }
@@ -118,30 +124,45 @@ export function SupplierPayableRegister({context}:{context:FinanceAccountContext
   }catch{if(!request.signal.aborted)setStatus('The supplier payable register could not be loaded.');}
   finally{if(active.current===request){active.current=null;setBusy(false);}}
  }
- return <section className="expense-editor" aria-label="Recorded supplier payables">
+ return <section className="expense-editor supplier-payable-register" aria-label="Recorded supplier payables" aria-busy={busy}>
   <details>
    <summary>Recorded supplier payables</summary>
-   <form onSubmit={event=>{event.preventDefault();if(!lockedPayable)void load();}}>
-    <fieldset className="expense-form" disabled={busy}>
+   <form className="supplier-payable-filter" onSubmit={event=>{event.preventDefault();if(!lockedPayable)void load();}}>
+    <fieldset className="expense-form" disabled={busy||!!lockedPayable}>
      <legend>Payables balance</legend>
      <label>Through date (optional) <input type="date" min="1900-01-01" value={throughOn} onChange={event=>{
+      if(lockedPayable)return;
       setThroughOn(event.target.value);setReport(null);setStatus('');
      }}/></label>
      <button type="submit">Load supplier payables</button>
     </fieldset>
    </form>
+   {lockedPayable&&<p className="field-help">Check the original payment result below before changing this register’s date.</p>}
    <p role="status">{status}</p>
    {report&&<>
-    <p>Through {report.throughOn} · {report.openCount} open · {dollars(report.outstandingCents)} outstanding</p>
-    <p>{report.ledgerAgrees?'The register agrees with the ledger.':'Review the difference against the ledger balance of '+dollars(report.ledgerPayableCents)+'.'}</p>
-    {report.rows.map(row=><article key={row.payableId} className="review-card">
-     <h4>{row.vendor}</h4><p>Incurred {row.incurredOn} · due {row.dueOn}{row.overdueDays>0?' · '+row.overdueDays+' days overdue':''}</p>
-     <p>{dollars(row.grossCents)} bill · {dollars(row.paidCents)} paid · {dollars(row.remainingCents)} outstanding</p>
+    <header className="supplier-payable-summary">
+     <div><p>Recorded balances · USD</p><h3>{dollars(report.outstandingCents)} outstanding</h3>
+      <p>Through <time dateTime={report.throughOn}>{report.throughOn}</time></p></div>
+     <dl><div><dt>Open bills</dt><dd>{report.openCount}</dd></div><div><dt>Recorded bills</dt><dd>{report.rowCount}</dd></div></dl>
+    </header>
+    <p className="supplier-payable-ledger" data-agrees={report.ledgerAgrees}>{report.ledgerAgrees?'The register agrees with the ledger.':'Review the difference against the ledger balance of '+dollars(report.ledgerPayableCents)+'.'}</p>
+    <p className="field-help">Showing {report.rows.length} of {report.rowCount} recorded bills through {report.throughOn}. The balance above covers the full register for that date.</p>
+    <div className="supplier-payable-list">
+    {report.rows.map(row=><article key={row.payableId} className="supplier-payable-row">
+     <div className="supplier-payable-record">
+      <h4>{row.vendor}</h4>
+      <p className="supplier-payable-dates">Incurred <time dateTime={row.incurredOn}>{row.incurredOn}</time> · due <time dateTime={row.dueOn}>{row.dueOn}</time></p>
+      {row.overdueDays>0&&<p className="supplier-payable-overdue">{row.overdueDays} days overdue through {report.throughOn}</p>}
+      <p className="supplier-payable-scope">Balances through {report.throughOn} · USD</p>
+      <dl className="supplier-payable-amounts"><div><dt>Bill total</dt><dd>{dollars(row.grossCents)}</dd></div>
+       <div><dt>Paid</dt><dd>{dollars(row.paidCents)}</dd></div><div><dt>Outstanding</dt><dd>{dollars(row.remainingCents)}</dd></div></dl>
+     </div>
      {context.supplierPayablePosting&&row.remainingCents!=='0'&&(!lockedPayable||lockedPayable===row.payableId)&&
       <SupplierSettlementConfirmation key={report.sourceSha256+':'+row.payableId} context={context} row={row} throughOn={report.throughOn}
        lockRegister={locked=>setLockedPayable(locked?row.payableId:null)} onRefresh={()=>void load()}
        onPosted={()=>{setLockedPayable(null);void load(false,'Verified supplier payment recorded.');}}/>}
     </article>)}
+    </div>
     {report.hasMore&&<button type="button" className="secondary" disabled={busy||!!lockedPayable} onClick={()=>void load(true)}>Load more payables</button>}
    </>}
   </details>

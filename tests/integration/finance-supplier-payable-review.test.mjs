@@ -18,7 +18,7 @@ import {parseSupplierPayableReview,parseSupplierPayableReviewRequest} from '../.
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
-import {backupDatabase,connect,keyPair,normalizedSchema,postgresTool,recoveryCluster,restoreDatabase} from '../support/recovery-drill.mjs';
+import {backupDatabase,backupLegacySupplierPayableDatabase,connect,keyPair,normalizedSchema,postgresTool,recoveryCluster,restoreDatabase,restoreLegacySupplierPayableDatabase} from '../support/recovery-drill.mjs';
 import {decryptor,encryptor,objectDirectory} from '../support/object-recovery-drill.mjs';
 
 async function call(connection,name,values){
@@ -498,7 +498,7 @@ test('held supplier accounting verifies originals, accrues once, and settles exa
     (SELECT jsonb_agg(to_jsonb(j) ORDER BY id) FROM crest.journal_lines j) AS journal
   `;
   const financeBefore=await admin.query(financeBeforeQuery);
-  const registered=await sandbox.apply(url);
+  const registered=await sandbox.apply(url,await sandbox.prefix(120));
   assert.equal(registered.history.length,120);
   assert.deepEqual(registered.history.slice(0,109),beforeContactMigration.history);
   assert.deepEqual((await admin.query(financeBeforeQuery)).rows,financeBefore.rows);
@@ -530,13 +530,16 @@ test('held supplier accounting verifies originals, accrues once, and settles exa
     seal:encryptor(backupKey.recipient),putVault:archiveVault.put,readVault:archiveVault.read,
    });},
   };
-  const combined=await backupDatabase(admin,url,combinedDirectory,backupKey.recipient,async()=>{},objectCapture);
+  // A current backup must still refuse this deliberately retained schema120.
+  await assert.rejects(backupDatabase(admin,url,combinedDirectory,backupKey.recipient,async()=>{},objectCapture),{code:'ERR_ASSERTION'});
+  const combined=await backupLegacySupplierPayableDatabase(admin,url,combinedDirectory,backupKey.recipient,async()=>{},objectCapture);
   assert.equal(combined.manifest.schemaVersion,120);
   const independent=await recoveryCluster();
   let recoveredConnection;
   try{
    const copiedUrl=await independent.database();
-   const copied=await restoreDatabase(combinedDirectory,backupKey.path,copiedUrl,async archive=>{
+   await assert.rejects(restoreDatabase(combinedDirectory,backupKey.path,copiedUrl),{message:'SYNTHETIC_RECOVERY_RESTORE_FAILED:manifest'});
+   const copied=await restoreLegacySupplierPayableDatabase(combinedDirectory,backupKey.path,copiedUrl,async archive=>{
     assert.equal(archive.inventory.length,4);
     await restoreObjectArchive(archive.receipt,archive.inventory,{
      readVault:archiveVault.read,unseal:decryptor(backupKey.path),putDestination:restoredObjects.put,readDestination:restoredObjects.read,

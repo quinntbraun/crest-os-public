@@ -13,6 +13,7 @@ import {sessionCredentialHash} from '../security/session-credential.ts';
 import {createSessionLifecycle} from '../security/session-lifecycle.ts';
 import {customerUuid,customerVersion,customerInstant,exactCustomerObject as exact,parseCustomer,parseCustomerDraft,requireCustomer as check} from './customer-contract.ts';
 import type {CustomerDraft} from './customer-contract.ts';
+import {parseCustomerProfile,parseCustomerProfileRequest} from './customer-profile-contract.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
 import type {createProviderBoundary} from '../security/provider-auth.ts';
 import type {createProviderTokenStore} from '../security/provider-token-store.ts';
@@ -234,6 +235,17 @@ export function createCustomerDirectory(config:SessionDatabaseConfiguration,prov
           check(!bounded.aborted&&exact(value,['schemaVersion','businessId','customers','hasMore'])&&value.schemaVersion===1&&value.businessId===request.businessId&&Array.isArray(value.customers)&&value.customers.length<=request.pageSize&&typeof value.hasMore==='boolean');
           const customers=Array.from(value.customers,c=>parseCustomer(c,request.businessId));let previous=request.afterId;for(const c of customers){check(previous===null||c.id>previous);check(request.includeArchived||c.archived_at===null);previous=c.id;}check(!value.hasMore||customers.length===request.pageSize);
           return new PrivateValue(Object.freeze({schemaVersion:1 as const,businessId:request.businessId,customers:Object.freeze(customers),hasMore:value.hasMore}));});
+      }catch{throw new CustomerDirectoryError('CUSTOMER_REQUEST_FAILED');}
+    },
+    async profile(credential:string,businessId:string,input:ReturnType<typeof parseCustomerProfileRequest>,signal:AbortSignal){
+      try{
+        const request=parseCustomerProfileRequest(input);
+        return await authorized(credential,businessId,signal,async(args,bounded)=>{
+          const value=await database('SELECT crest_commands.read_customer_profile($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::integer) AS result',
+            [...args,request.customerId,request.afterAssociationId,request.pageSize],bounded);
+          bounded.throwIfAborted();
+          return new PrivateValue(parseCustomerProfile(value,businessId,request));
+        });
       }catch{throw new CustomerDirectoryError('CUSTOMER_REQUEST_FAILED');}
     },
     async history(credential:string,input:{businessId:string;customerId:string;afterVersion:string;pageSize:number},signal:AbortSignal){

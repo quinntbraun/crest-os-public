@@ -11,7 +11,8 @@ import {dropoffCustodyConflicts,dropoffCustodyKind,dropoffCustodyOriginal,parseD
 import type {DropoffCustody,DropoffCustodySave} from '../../operations/dropoff-custody-contract';
 import type {Proof} from '../../client/authentication';
 import {BookingInstantInput} from './booking-fields';
-import {DropoffPhotoPicker,DropoffPhotoViewer} from './dropoff-photo-fields';
+import {DropoffPhotoPicker} from './dropoff-photo-fields';
+import {CustodyEventTimeline} from './custody-event-timeline';
 import {exactCustomerObject as exact} from '../../customer/customer-contract';
 import {buildDropoffCustodyArchive} from '../../operations/dropoff-custody-archive';
 
@@ -208,13 +209,10 @@ export function DropoffCustodyHistory({businessId,jobId,jobVehicleId,vehicleId,t
    if(request.current===active){request.current=null;status.current?.focus();}
   }
  }
- function time(instant:string){
-  return new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:timezone}).format(new Date(instant));
- }
  const record=view.record;
  const release=record?.state==='awaiting_collection'||record?.state==='return_required';
  const maySave=canChange&&!view.pending&&record?.policy&&(!record.policy.conditionPhotoRequired||view.photos)&&(record.state==='expected'||release);
- return <section ref={anchor} aria-label="Vehicle custody" aria-busy={view.busy}>
+ return <section ref={anchor} className="custody-history-workspace" aria-label="Vehicle custody" aria-busy={view.busy}>
   <h4>Vehicle custody</h4>
   <p role="status" tabIndex={-1} ref={status}>{view.message}</p>
   {view.signedOut&&<a href="/sign-in">Sign in</a>}
@@ -236,17 +234,7 @@ export function DropoffCustodyHistory({businessId,jobId,jobVehicleId,vehicleId,t
     busy={view.busy} save={save} close={()=>setEditing(null)} photos={view.photos} businessId={businessId}
     jobVehicleId={jobVehicleId} caseId={editing}/>:<button type="button" disabled={view.busy}
      onClick={()=>setEditing(record.caseId??crypto.randomUUID())}>{release?'Record release…':'Record intake…'}</button>)}
-   {record.events.length>0&&<><p className="field-help">Time zone: {timezone}</p><ol>{record.events.map(event=><li key={event.eventId}>
-    <p><strong>{event.action==='received'?'Received':'Released'}</strong> · <time dateTime={event.effectiveAt}>{time(event.effectiveAt)}</time></p>
-    <dl className="customer-values"><dt>Person</dt><dd>{event.person.displayName}</dd><dt>Location</dt><dd>{event.location.locationText}
-    {event.location.instructions&&<p>{event.location.instructions}</p>}</dd><dt>Photo</dt>
-    <dd>{event.missingPhotoReason===null?<>{'Verified condition photo linked'}
-     {view.photos&&'conditionPhotoId'in event&&typeof event.conditionPhotoId==='string'&&
-      <DropoffPhotoViewer jobVehicleId={jobVehicleId} photoId={event.conditionPhotoId}/>}</>:<>Missing · {event.missingPhotoReason}</>}</dd>
-    {event.notes&&<><dt>Notes</dt><dd>{event.notes}</dd></>}
-    {event.acknowledgementConfirmed&&<><dt>Policy</dt><dd>Acknowledged</dd></>}
-    <dt>Recorded</dt><dd><time dateTime={event.recordedAt}>{time(event.recordedAt)}</time></dd></dl>
-   </li>)}</ol></>}
+   <CustodyEventTimeline record={record} timezone={timezone} photos={view.photos} jobVehicleId={jobVehicleId}/>
   </>}
  </section>;
 }

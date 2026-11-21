@@ -6,21 +6,50 @@ import {createFulfillmentModeController,initialFulfillmentModeView} from '../../
 import type {FulfillmentModeView} from '../../../client/fulfillment-mode-controller';
 import {createPendingSchedulingStore,pendingSchedulingKeys} from '../../../client/pending-scheduling';
 import {initialFulfillmentModes} from '../../../operations/fulfillment-mode-contract';
-import type {FulfillmentModePayload} from '../../../operations/fulfillment-mode-contract';
+import type {FulfillmentModePayload,FulfillmentModeVersion} from '../../../operations/fulfillment-mode-contract';
 import type {SchedulingOriginalKind} from '../../../operations/scheduling-original-contract';
+const arrangements=[
+ {key:'mobileEnabled',savedKey:'mobile_enabled',title:'Mobile detailing',explanation:'Detailing at the customer’s service location. Booking and scheduling checks still apply.'},
+ {key:'dropoffEnabled',savedKey:'dropoff_enabled',title:'Drop-off',explanation:'The customer brings the vehicle. Custody arrangements are reviewed separately.'},
+ {key:'pickupReturnEnabled',savedKey:'pickup_return_enabled',title:'Pickup and return',explanation:'Collection and return. Operating and transport approval is separate from this availability setting.'},
+] as const;
+
+function Availability({version}:{version:FulfillmentModeVersion|null}){
+ return <dl className="arrangement-availability">{arrangements.map(({key,savedKey,title})=>{
+  const enabled=version?version[savedKey]:initialFulfillmentModes[key];
+  return <div key={key}><dt>{title}</dt><dd data-enabled={enabled}>{enabled?'Enabled':'Disabled'}</dd></div>;
+ })}</dl>;
+}
+
 function SettingsForm({view,save}:{view:FulfillmentModeView;save:(payload:FulfillmentModePayload)=>Promise<void>}){
  const prefix=useId(),current=view.context!.context.modeVersion,initial=!current;
  const [payload,setPayload]=useState<FulfillmentModePayload>(()=>current?{mobileEnabled:current.mobile_enabled,dropoffEnabled:current.dropoff_enabled,pickupReturnEnabled:current.pickup_return_enabled,reason:null}:initialFulfillmentModes),[dirty,setDirty]=useState(false);
  useEffect(()=>{if(!dirty)return;const warn=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
  function change(patch:Partial<FulfillmentModePayload>){setPayload(previous=>({...previous,...patch}));setDirty(true);}
- return <form aria-label="Service arrangement settings" onSubmit={event=>{event.preventDefault();void save(payload);}}><fieldset disabled={view.busy||view.context!.context.writeState!=='ready'}><legend>{initial?'Approved initial arrangements':'Arrangements for new bookings'}</legend>
-  {initial?<p>No arrangements have been recorded yet. The approved defaults enable mobile and drop-off, with pickup/return disabled. Record these defaults first, then make any reviewed changes. Booking a first job also records these same defaults.</p>:<p>Saved version {current.sequence}. Changes apply to future booking checks; existing jobs and appointment history stay retained.</p>}
-  {([['mobileEnabled','Mobile detailing'],['dropoffEnabled','Drop-off'],['pickupReturnEnabled','Pickup and return']] as const).map(([key,title])=><div key={key}><label htmlFor={prefix+'-'+key}>{title}</label><select id={prefix+'-'+key} disabled={initial} value={payload[key]?'enabled':'disabled'} onChange={event=>change({[key]:event.target.value==='enabled'})}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></div>)}
+ return <section className="settings-card arrangement-summary" aria-labelledby={prefix+'-heading'}>
+  <header><h2 id={prefix+'-heading'}>Availability for new bookings</h2>
+   {current?<p>Saved version {current.sequence} · Recorded <time dateTime={current.created_at}>{when(current.created_at,view.context!.context.timezone)}</time></p>:<p>Approved defaults · Awaiting the first saved version</p>}
+   <p className="field-help">These settings affect future booking checks. Existing booked jobs keep their recorded service arrangement.</p>
+  </header>
+ <form className="arrangement-form arrangement-comparison-form" aria-label="Service arrangement settings" onSubmit={event=>{event.preventDefault();void save(payload);}}><fieldset disabled={view.busy||view.context!.context.writeState!=='ready'}><legend>{initial?'Approved initial arrangements':'Review proposed availability'}</legend>
+  {initial&&<p>No arrangements have been recorded yet. The approved defaults enable mobile and drop-off, with pickup/return disabled. Record these defaults first, then make any reviewed changes. Booking a first job also records these same defaults.</p>}
+  <div className="arrangement-comparison">{arrangements.map(({key,savedKey,title,explanation})=>{
+   const saved=current?current[savedKey]:initialFulfillmentModes[key],changed=saved!==payload[key];
+   return <section key={key} className="arrangement-setting-row" aria-label={title+' availability comparison'} data-changed={changed}>
+    <div><h3 id={prefix+'-'+key+'-title'}>{title}</h3><p id={prefix+'-'+key+'-help'} className="field-help">{explanation}</p></div>
+    <dl><dt>{initial?'Approved default':'Saved state'}</dt><dd data-enabled={saved}>{saved?'Enabled':'Disabled'}</dd></dl>
+    <div><p className="arrangement-state-label" id={prefix+'-'+key+'-state'}>{initial?'Initial state to record':'Proposed state'}</p>
+     <label className="visually-hidden" htmlFor={prefix+'-'+key}>{title}</label>
+     <select id={prefix+'-'+key} aria-describedby={prefix+'-'+key+'-state '+prefix+'-'+key+'-help '+prefix+'-'+key+'-comparison'} disabled={initial} value={payload[key]?'enabled':'disabled'} onChange={event=>change({[key]:event.target.value==='enabled'})}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select>
+     <p id={prefix+'-'+key+'-comparison'} className="arrangement-change-note">{initial?'Approved default':changed?'Change proposed':'Unchanged from saved'}</p>
+    </div>
+   </section>;
+  })}</div>
   {!payload.mobileEnabled&&!payload.dropoffEnabled&&!payload.pickupReturnEnabled&&<p className="notice">All arrangements are disabled. New visits cannot be booked until one is enabled. Existing records remain available.</p>}
-  <p className="field-help">Pickup and return requires separately approved operating and transport arrangements before real Crest use. Transport and custody workflows are still being connected; this workspace is for fictional testing.</p>
+  <p className="field-help">Pickup and return requires separately approved operating and transport arrangements before real Crest use. Enabling this setting does not confirm that approval.</p>
   {!initial&&<><label htmlFor={prefix+'-reason'}>Reason for changing service arrangements</label><textarea id={prefix+'-reason'} required rows={3} maxLength={1000} value={payload.reason??''} onChange={event=>change({reason:event.target.value.trim()?event.target.value:null})}/></>}
   <button type="submit">{initial?'Record approved initial arrangements':'Save service arrangements'}</button>
- </fieldset></form>;
+ </fieldset></form></section>;
 }
 function when(value:string,timezone:string){return new Intl.DateTimeFormat('en-US',{timeZone:timezone,year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(value));}
 export function FulfillmentModesScreen(){
@@ -32,11 +61,17 @@ export function FulfillmentModesScreen(){
  async function download(){const current=controller.current;if(!current||view.busy)return;let bytes:Uint8Array<ArrayBuffer>|undefined;setDownloadMessage('Checking retained service-arrangement history…');try{bytes=await current.archive();if(!bytes||current!==controller.current||current.view().phase!=='ready')throw Error();revoke();const copy=url.current=URL.createObjectURL(new Blob([bytes],{type:'application/zip'})),link=document.createElement('a');link.href=copy;link.download='crest-service-arrangements.zip';link.hidden=true;document.body.append(link);try{link.click();}finally{link.remove();setTimeout(()=>{if(url.current===copy)revoke();},1000);}setDownloadMessage('History download requested. Check your browser’s downloads. This is not a complete business export or backup.');}catch{if(current===controller.current)setDownloadMessage('No file could be prepared. Reload and try again. History retrieval is limited to 1,000 versions and 8 MiB.');}finally{bytes?.fill(0);}}
  return <section aria-label="Service arrangements workspace" aria-busy={view.busy}><p className="mode-status" ref={status} tabIndex={-1} role="status">{view.message}</p>
   {view.phase==='signed-out'&&<a className="primary-action" href="/sign-in">Sign in to review arrangements</a>}
-  {view.phase==='ready'&&view.context&&<><SettingsForm key={view.context.context.modeVersion?.id??'initial'} view={view} save={async payload=>{const current=controller.current;if(!current)return;setDownloadMessage('');await current.save(payload);if(current===controller.current)status.current?.focus();}}/>{view.context.dropoffCustodyAvailable===true&&view.context.context.modeVersion&&<DropoffPolicySettings businessId={view.context.context.businessId}
+  {view.phase==='ready'&&view.context&&<>
+   <SettingsForm key={view.context.context.modeVersion?.id??'initial'} view={view} save={async payload=>{const current=controller.current;if(!current)return;setDownloadMessage('');await current.save(payload);if(current===controller.current)status.current?.focus();}}/>{view.context.dropoffCustodyAvailable===true&&view.context.context.modeVersion&&<DropoffPolicySettings businessId={view.context.context.businessId}
    current={view.context.context.modeVersion} history={view.history} canWrite={!view.busy&&view.context.context.writeState==='ready'}
    revisionAvailable={view.context.dropoffPolicyRevisionAvailable===true} reloadModes={()=>action('load')}/>}
    {view.context.pickupPolicyAvailable===true&&view.context.context.modeVersion&&<PickupPolicySettings businessId={view.context.context.businessId}
-    timezone={view.context.context.timezone} canWrite={!view.busy&&view.context.context.writeState==='ready'}/>} {view.history.length>0&&<details><summary>Saved arrangement history · version {view.context.context.modeVersion!.sequence}</summary><ol>{view.history.map(row=><li key={row.id}><p><strong>Version {row.sequence}</strong> · <time dateTime={row.created_at}>{when(row.created_at,view.context!.context.timezone)}</time></p><p>Mobile: {row.mobile_enabled?'Enabled':'Disabled'} · Drop-off: {row.dropoff_enabled?'Enabled':'Disabled'} · Pickup/return: {row.pickup_return_enabled?'Enabled':'Disabled'}</p><p>{row.reason??'Approved initial defaults.'}</p></li>)}</ol>{view.hasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>void action('more')}>Load more arrangement versions</button>}<button type="button" className="secondary" disabled={view.busy} onClick={()=>void download()}>Download arrangement history</button></details>}</>}
+    timezone={view.context.context.timezone} canWrite={!view.busy&&view.context.context.writeState==='ready'}/>} {view.history.length>0&&<details className="arrangement-history"><summary>Saved arrangement history · version {view.context.context.modeVersion!.sequence}</summary><ol className="arrangement-timeline">
+     {view.history.map(row=><li key={row.id}>
+      <p><strong>Version {row.sequence}</strong> · <time dateTime={row.created_at}>{when(row.created_at,view.context!.context.timezone)}</time>{row.id===view.context!.context.modeVersion?.id?' · Current arrangement':''}</p>
+      <Availability version={row}/>
+      <p>{row.reason??'Approved initial defaults.'}</p>
+     </li>)}</ol>{view.hasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>void action('more')}>Load more arrangement versions</button>}<button type="button" className="secondary" disabled={view.busy} onClick={()=>void download()}>Download arrangement history</button></details>}</>}
   {view.phase==='committed'&&<><p>Confirmed saved version {view.savedSequence}.</p><button type="button" disabled={view.busy} onClick={()=>void action('load')}>Review saved arrangements</button></>}
   {view.phase==='pending'&&<><p>No settings retry automatically. Keep the original reference until its outcome is verified.</p>{view.savedSequence&&<p>Server-confirmed saved version {view.savedSequence}.</p>}{view.reference&&<p className="save-reference">Original settings reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check original settings request</button>{view.canRetry&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>void action('retry')}>Retry unchanged settings request</button>}{view.pendingKind&&<a href={'/save-review?kind='+view.pendingKind}>Review interrupted settings request</a>}</>}
   {['review','blocked','unavailable'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload service arrangements</button>}{downloadMessage&&<p role="status" aria-label="Arrangement download status">{downloadMessage}</p>}<nav aria-label="Service arrangement tools"><a href="/schedule">Schedule</a><a href="/save-review">Interrupted saves</a></nav>

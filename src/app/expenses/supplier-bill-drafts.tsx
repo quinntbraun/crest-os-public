@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect,useId,useRef,useState} from 'react';
+import {useEffect,useId,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {financeAccounts} from '../../client/finance-accounts';
 import type {FinanceAccountContext} from '../../client/finance-accounts';
@@ -17,6 +17,9 @@ type Pending={reference:SupplierBillDraftReference;payload:SupplierBillDraftPayl
 type Review=Extract<Awaited<ReturnType<typeof financeAccounts.reviewSupplierBillDraft>>,{state:'review_required'}>;
 const emptyForm=():Form=>({incurredOn:'',dueOn:'',unknownDueReason:'',vendor:'',unknownVendorReason:'',documentReference:'',
  gross:'',tax:'',purpose:'',documentStatus:'',changeReason:'',splits:[{key:'first',category:'',amount:''}]});
+const formSignature=(value:Form)=>JSON.stringify({...value,splits:value.splits.map(({category,amount})=>({category,amount}))});
+const dateFormat=new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
+const billDate=(value:string)=>dateFormat.format(new Date(value+'T12:00:00Z'));
 
 function cents(raw:string){
  const value=raw.trim();
@@ -30,23 +33,70 @@ function cents(raw:string){
 export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
  const id=useId(),controller=useRef<AbortController|null>(null);
  const [form,setForm]=useState<Form>(emptyForm);
+ const [baseline,setBaseline]=useState(()=>formSignature(emptyForm()));
+ const [editorOpen,setEditorOpen]=useState(true);
+ const [directoryOpen,setDirectoryOpen]=useState(false);
+ const directoryHeading=useRef<HTMLHeadingElement|null>(null),directoryTriggers=useRef(new Map<string,HTMLButtonElement>());
+ const listReturn=useRef<string|null>(null),listScroll=useRef(0),focusDirectory=useRef(false);
+ const recordHeading=useRef<HTMLHeadingElement|null>(null),focusRecord=useRef(false);
+ const incurredInput=useRef<HTMLInputElement|null>(null),focusEditor=useRef(false);
  const [editing,setEditing]=useState<SupplierBillDraftRevision|null>(null);
  const [rows,setRows]=useState<SupplierBillDraftRevision[]|null>(null);
  const [hasMore,setHasMore]=useState(false);
  const [pending,setPending]=useState<Pending|null>(null);
  const [review,setReview]=useState<Review|null>(null);
  const [status,setStatus]=useState(''),[busy,setBusy]=useState(false),[posting,setPosting]=useState(false);
+ const dirty=formSignature(form)!==baseline;
  useEffect(()=>()=>controller.current?.abort(),[]);
+ useEffect(()=>{if(!dirty)return;const warn=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
+ useLayoutEffect(()=>{
+  if(focusRecord.current&&editing&&!directoryOpen){focusRecord.current=false;recordHeading.current?.focus();}
+  if(focusEditor.current&&editorOpen&&!directoryOpen){focusEditor.current=false;incurredInput.current?.focus();}
+  if(focusDirectory.current&&directoryOpen){
+   focusDirectory.current=false;
+   const target=(listReturn.current?directoryTriggers.current.get(listReturn.current):null)??directoryHeading.current;
+   target?.focus({preventScroll:true});window.scrollTo(0,listScroll.current);
+  }
+ });
 
  function patch(values:Partial<Form>){setForm(previous=>({...previous,...values}));setReview(null);}
- function edit(row:SupplierBillDraftRevision){
+ function edit(row:SupplierBillDraftRevision,showEditor=true){
   const value=row.payload;
   setEditing(row);setReview(null);
-  setForm({incurredOn:value.incurredOn,dueOn:value.dueOn??'',unknownDueReason:value.unknownDueReason??'',
+  const next={incurredOn:value.incurredOn,dueOn:value.dueOn??'',unknownDueReason:value.unknownDueReason??'',
    vendor:value.vendor??'',unknownVendorReason:value.unknownVendorReason??'',documentReference:value.documentReference??'',
    gross:expenseDollars(value.grossCents),tax:value.purchaseTaxCents===null?'':expenseDollars(value.purchaseTaxCents),
    purpose:value.purpose,documentStatus:value.missingReceiptReason,changeReason:'',
-   splits:value.splits.map((split,index)=>({key:'saved-'+index,category:split.category,amount:expenseDollars(split.grossCents)}))});
+   splits:value.splits.map((split,index)=>({key:'saved-'+index,category:split.category,amount:expenseDollars(split.grossCents)}))};
+  setForm(next);setBaseline(formSignature(next));setEditorOpen(showEditor);focusRecord.current=true;
+ }
+ function select(row:SupplierBillDraftRevision){
+  if(busy||posting||pending)return;
+  if(editing?.billId===row.billId&&editing.revision===row.revision){
+   if(directoryOpen){listReturn.current=row.billId;listScroll.current=window.scrollY;}
+   setDirectoryOpen(false);
+   if(dirty){focusEditor.current=true;setEditorOpen(true);}
+   else{focusRecord.current=true;setEditorOpen(false);}
+   return;
+  }
+  if(dirty&&!window.confirm('Discard unsaved supplier bill edits and open this saved draft?'))return;
+  listReturn.current=row.billId;listScroll.current=window.scrollY;setDirectoryOpen(false);
+  edit(row,false);
+ }
+ function openDirectory(){
+  if(busy||posting||pending)return;
+  if(dirty&&!window.confirm('Discard unsaved supplier bill edits and return to saved drafts?'))return;
+  if(dirty){
+   if(editing)edit(editing,false);
+   else{const next=emptyForm();setForm(next);setBaseline(formSignature(next));}
+  }
+  focusRecord.current=false;focusEditor.current=false;focusDirectory.current=true;
+  setDirectoryOpen(true);setStatus('Choose a saved supplier bill to review.');
+ }
+ function enterAnother(){
+  if(busy||posting||pending)return;
+  if(dirty&&!window.confirm('Discard unsaved supplier bill edits and enter another bill?'))return;
+  const next=emptyForm();focusEditor.current=true;setDirectoryOpen(false);setEditing(null);setReview(null);setForm(next);setBaseline(formSignature(next));setEditorOpen(true);setStatus('');
  }
  async function run(work:(signal:AbortSignal)=>Promise<void>,failure:string){
   if(controller.current)return;
@@ -55,7 +105,7 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
   finally{if(controller.current===request){controller.current=null;setBusy(false);}}
  }
  function saved(row:SupplierBillDraftRevision){
-  edit(row);setPending(null);
+  setDirectoryOpen(false);edit(row,false);setPending(null);
   setRows(previous=>previous?.map(draft=>draft.billId===row.billId?row:draft)??null);
   setStatus('Supplier bill draft saved.');
  }
@@ -66,6 +116,7 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
    const page=await financeAccounts.listSupplierBillDrafts(context,after,signal);
    if(signal.aborted)return;
    setRows(previous=>next?[...(previous??[]),...page.drafts]:page.drafts);setHasMore(page.hasMore);
+   if(!editing&&!dirty)setDirectoryOpen(true);
    setStatus(page.drafts.length?'Saved supplier bills loaded.':'No supplier bill drafts found.');
   },'Saved supplier bills could not be loaded.');
  }
@@ -121,21 +172,63 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
   patch({splits:form.splits.map(row=>row.key===key?{...row,...values}:row)});
  }
 
- return <section className="expense-editor" aria-label="Unpaid supplier bill drafts">
+ return <section className="expense-editor supplier-draft-workspace" aria-label="Unpaid supplier bill drafts">
   <details>
    <summary>Unpaid supplier bills</summary>
    <p>Save details for a bill you still owe. Payable posting requires review of the original bill and its cost treatment.</p>
-   <button type="button" className="secondary" disabled={busy||posting||!!pending} onClick={()=>void load()}>Load saved supplier bills</button>
+   <button type="button" className="secondary supplier-bill-load" disabled={busy||posting||!!pending} onClick={()=>void load()}>Load saved supplier bills</button>
    <p role="status">{status}</p>
    {pending&&<div aria-label="Unconfirmed supplier bill save">
-    <button type="button" className="secondary" disabled={busy} onClick={()=>void checkSave()}>Check original supplier bill save</button>
+    <button type="button" disabled={busy} onClick={()=>void checkSave()}>Check original supplier bill save</button>
     <button type="button" className="secondary" disabled={busy||context.writeState!=='ready'} onClick={()=>void send(pending)}>Retry same supplier bill save</button>
    </div>}
-   <div className="expense-layout">
+   <div className="supplier-draft-workbench" data-directory={rows!==null} data-view={directoryOpen?'directory':'record'}>
+   {rows&&<section className="supplier-draft-directory" aria-label="Saved supplier drafts">
+    <h3 ref={directoryHeading} tabIndex={-1}>Saved supplier drafts</h3>
+    <p className="field-help">Showing {rows.length} loaded bills · USD. Choose a saved record to review its details.</p>
+    <button type="button" className="secondary" disabled={busy||posting||!!pending} onClick={enterAnother}>New supplier draft</button>
+    {rows.length===0&&<p>No saved supplier bill drafts found.</p>}
+    {rows.map(row=><article key={row.billId} className="supplier-draft-directory-row">
+     <h4 id={id+'-supplier-'+row.billId}>{row.payload.vendor??'Supplier unknown'}</h4>
+     <p><time dateTime={row.payload.incurredOn}>{billDate(row.payload.incurredOn)}</time><span>${expenseDollars(row.payload.grossCents)}</span></p>
+     <p>{row.payload.documentReference??row.payload.purpose}</p>
+     <button ref={node=>{if(node)directoryTriggers.current.set(row.billId,node);else directoryTriggers.current.delete(row.billId);}}
+      type="button" className="secondary" aria-current={editing?.billId===row.billId?'true':undefined} aria-describedby={id+'-supplier-'+row.billId}
+      disabled={busy||posting||!!pending} onClick={()=>select(row)}>Open supplier bill draft</button>
+    </article>)}
+    {hasMore&&<button type="button" className="secondary" disabled={busy||posting||!!pending} onClick={()=>void load(true)}>Load more supplier bills</button>}
+   </section>}
+   <div className="supplier-draft-inspector">
+   <section className="supplier-draft-introduction" hidden={!directoryOpen} aria-label="Supplier draft selection guidance">
+    <h3>Choose a saved bill</h3><p>Open a supplier draft to review its saved details, original document and payable entry.</p>
+    <p className="field-help">Selecting a bill does not post it or record a payment.</p>
+   </section>
+   <div className="supplier-draft-content">
+   {rows&&<button type="button" className="secondary supplier-draft-back" disabled={busy||posting||!!pending} onClick={openDirectory}>Back to supplier drafts</button>}
+   {editing&&<section className="supplier-bill-selected" aria-label="Selected supplier bill">
+    <header><div><p className="supplier-bill-stage">Saved bill record · Revision {editing.revision}</p>
+     <h3 ref={recordHeading} tabIndex={-1}>{editing.payload.vendor??'Supplier unknown'}</h3>
+     <p>{editing.payload.documentReference??'No bill reference recorded'}</p></div>
+     <p className="supplier-bill-total"><span>Saved bill total · USD</span><strong>${expenseDollars(editing.payload.grossCents)}</strong></p>
+    </header>
+    <dl className="supplier-bill-dates"><div><dt>Incurred</dt><dd><time dateTime={editing.payload.incurredOn}>{billDate(editing.payload.incurredOn)}</time></dd></div>
+     <div><dt>Due</dt><dd>{editing.payload.dueOn?<time dateTime={editing.payload.dueOn}>{billDate(editing.payload.dueOn)}</time>:'Date not recorded'}</dd></div></dl>
+    <p className="field-help">Payable review checks the original document and cost treatment for this saved revision.</p>
+    <details className="supplier-bill-facts"><summary>Saved bill details</summary><dl>
+     <dt>Business purpose</dt><dd>{editing.payload.purpose}</dd>
+     <dt>Recorded document note</dt><dd>{editing.payload.missingReceiptReason}</dd>
+     <dt>Included purchase tax</dt><dd>{editing.payload.purchaseTaxCents===null?'Not recorded':'$'+expenseDollars(editing.payload.purchaseTaxCents)}</dd>
+     {editing.payload.unknownVendorReason&&<><dt>Supplier not recorded</dt><dd>{editing.payload.unknownVendorReason}</dd></>}
+     {editing.payload.unknownDueReason&&<><dt>Due date not recorded</dt><dd>{editing.payload.unknownDueReason}</dd></>}
+    </dl><ul>{editing.payload.splits.map(split=><li key={split.category}>{split.category} · ${expenseDollars(split.grossCents)}</li>)}</ul></details>
+   </section>}
+   <div className="expense-layout supplier-bill-layout" data-editor-open={editorOpen}>
+    <details className="supplier-bill-editor" open={editorOpen} onToggle={event=>{if(event.target===event.currentTarget)setEditorOpen(event.currentTarget.open);}}>
+     <summary>{editing?'Edit saved draft':'New supplier bill draft'}</summary>
     <form aria-label="Supplier bill draft" onSubmit={submit}>
      <fieldset className="expense-form" disabled={busy||posting||!!pending||context.writeState!=='ready'}>
       <legend>{editing?'Edit supplier bill draft, revision '+editing.revision:'New supplier bill draft'}</legend>
-      <label>Incurred date <input type="date" min="1900-01-01" value={form.incurredOn} required onChange={e=>patch({incurredOn:e.target.value})}/></label>
+      <label>Incurred date <input ref={incurredInput} type="date" min="1900-01-01" value={form.incurredOn} required onChange={e=>patch({incurredOn:e.target.value})}/></label>
       <label>Due date <input type="date" value={form.dueOn} onChange={e=>patch({dueOn:e.target.value})}/></label>
       {!form.dueOn&&<label>Reason the due date is unknown <input value={form.unknownDueReason} maxLength={1000} required onChange={e=>patch({unknownDueReason:e.target.value})}/></label>}
       <label>Supplier <input value={form.vendor} maxLength={200} onChange={e=>patch({vendor:e.target.value})}/></label>
@@ -160,14 +253,17 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
        onClick={()=>patch({splits:[...form.splits,{key:crypto.randomUUID(),category:'',amount:''}]})}>Add bill split</button>}
       {editing&&<label>Reason for this revision <input value={form.changeReason} maxLength={1000} required onChange={e=>patch({changeReason:e.target.value})}/></label>}
       <button type="submit">{editing?'Save supplier bill revision':'Save supplier bill draft'}</button>
+      {editing&&dirty&&<button type="button" className="secondary" onClick={()=>{edit(editing);focusRecord.current=false;focusEditor.current=true;setStatus('Unsaved supplier bill edits discarded.');}}>Discard draft edits</button>}
      </fieldset>
     </form>
+    </details>
     <div className="expense-records">
-     {editing&&<>
-      <button type="button" className="secondary" disabled={busy||posting||!!pending} onClick={()=>void checkEvidence()}>Review saved bill evidence</button>
+     {dirty&&editing&&<p className="notice" id={id+'-draft-state'}>Unsaved edits are separate from the saved bill. Save or discard them before reviewing the payable.</p>}
+     {editing&&<div className="supplier-bill-controls">
+      <button type="button" className="secondary" disabled={busy||posting||!!pending||dirty} onClick={()=>void checkEvidence()}>Review saved bill evidence</button>
       <button type="button" className="secondary" disabled={busy||posting||!!pending}
-       onClick={()=>{setEditing(null);setReview(null);setForm(emptyForm());setStatus('');}}>Enter another supplier bill</button>
-     </>}
+       onClick={enterAnother}>Enter another supplier bill</button>
+     </div>}
      {review&&<div aria-label="Supplier bill evidence review">
       {!context.supplierPayableReview&&<p>The bill record still needs its original document.</p>}
       {review.vendorUnknown&&<p>The supplier is unknown.</p>}
@@ -178,16 +274,11 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
       {review.moreCandidates&&<p>More saved records need review.</p>}
      </div>}
      {context.supplierPayableReview&&editing&&!pending&&<SupplierPayableEntryReview
-      key={editing.billId+':'+editing.revision} context={context} bill={editing} lockDraft={setPosting}/>}
-     {rows&&<><h3>Saved supplier drafts</h3>
-      {rows.map(row=><article key={row.billId} className="review-card">
-       <p>{row.payload.vendor??'Supplier unknown'} · {row.payload.incurredOn} · ${expenseDollars(row.payload.grossCents)}</p>
-       <p>{row.payload.documentReference??row.payload.purpose}</p>
-       <button type="button" className="secondary" disabled={busy||posting||!!pending} onClick={()=>edit(row)}>Open supplier bill draft</button>
-      </article>)}
-      {hasMore&&<button type="button" className="secondary" disabled={busy||posting||!!pending} onClick={()=>void load(true)}>Load more supplier bills</button>}
-     </>}
+      key={editing.billId+':'+editing.revision} context={context} bill={editing} draftDirty={dirty} draftNoticeId={id+'-draft-state'} lockDraft={setPosting}/>}
     </div>
+   </div>
+   </div>
+   </div>
    </div>
   </details>
  </section>;

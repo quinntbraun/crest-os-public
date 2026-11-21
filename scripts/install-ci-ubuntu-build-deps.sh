@@ -28,7 +28,7 @@ chmod 755 "$source_directory"
 touch "$sources"
 chmod 644 "$sources"
 for archive in https://archive.ubuntu.com/ubuntu https://us.archive.ubuntu.com/ubuntu; do
-  sed "s|^$mirror_uri$|URIs: $archive|" "$runner_sources" > "$sources"
+  bash scripts/ci-ubuntu-package-sources.sh "$runner_sources" "$archive" > "$sources"
   if grep -q 'mirror+file:' "$sources"; then
     echo 'Unresolved Ubuntu archive mirror' >&2
     exit 1

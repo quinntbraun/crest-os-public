@@ -325,6 +325,39 @@ assert.equal(hash(legacy119Bytes),'cda4700579ee103af4a8e5664d885ae5b392d2570c135
 assert.deepEqual(registry.migrations.slice(0,119),legacy119.migrations);
 const legacy119Profile=Object.freeze({schemaVersion:119,registrySha256:hash(legacy119Bytes)});
 const legacy119Snapshot={profile:legacy119Profile,versions:legacy119.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:119}};
+const legacy120Bytes=await readFile(join(root,'tests/support/registered120-migration-checksums.json'));
+const legacy120=JSON.parse(legacy120Bytes);
+assert.equal(hash(legacy120Bytes),'397f83b17c84525b8f15ec05f7e7c9215c3f618692fdd420a11739e6d6428007');
+assert.deepEqual(registry.migrations.slice(0,120),legacy120.migrations);
+const legacy120Profile=Object.freeze({schemaVersion:120,registrySha256:hash(legacy120Bytes)});
+const legacy120Snapshot={profile:legacy120Profile,versions:legacy120.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:120}};
+const legacy121Bytes=await readFile(join(root,'tests/support/registered121-migration-checksums.json'));
+const legacy121=JSON.parse(legacy121Bytes);
+assert.equal(hash(legacy121Bytes),'a191fb766f88caf79a6c2eecd3459d001357e519da875117acf9549368d4f167');
+assert.deepEqual(registry.migrations.slice(0,121),legacy121.migrations);
+const legacy121CoverageBytes=await readFile(join(root,'tests/support/registered121-export-coverage.json'));
+assert.equal(hash(legacy121CoverageBytes),'1ce3baedfffa812a252249f770b31809e469995b20b3b36cd7f8f971d64e8aa0');
+const legacy121Coverage=JSON.parse(legacy121CoverageBytes);assert.equal(legacy121Coverage.migrationCount,121);
+const legacy121Profile=Object.freeze({schemaVersion:121,registrySha256:hash(legacy121Bytes)});
+const legacy121Snapshot={profile:legacy121Profile,versions:legacy121.migrations.map(row=>row.version),coverage:legacy121Coverage};
+const legacy122Bytes=await readFile(join(root,'tests/support/registered122-migration-checksums.json'));
+const legacy122=JSON.parse(legacy122Bytes);assert.equal(hash(legacy122Bytes),'b058f60826c57db95730b9b601572fea9db1f77340473debc6ee758527c04e3e');
+assert.deepEqual(registry.migrations.slice(0,122),legacy122.migrations);
+const legacy122CoverageBytes=await readFile(join(root,'tests/support/registered122-export-coverage.json'));
+assert.equal(hash(legacy122CoverageBytes),'d5d40657d1a76bfcc1fb9c369b8992469215b1823c1d2fcc6e1d98e8d55a34b4');
+const legacy122Coverage=JSON.parse(legacy122CoverageBytes);assert.equal(legacy122Coverage.migrationCount,122);
+const legacy122Profile=Object.freeze({schemaVersion:122,registrySha256:hash(legacy122Bytes)});
+const legacy122Snapshot={profile:legacy122Profile,versions:legacy122.migrations.map(row=>row.version),coverage:legacy122Coverage};
+const legacy123Bytes=await readFile(join(root,'tests/support/registered123-migration-checksums.json'));
+const legacy123=JSON.parse(legacy123Bytes);assert.equal(hash(legacy123Bytes),'aa6bb0581e624d755c845be9fee880ea5d918c4fb2e4145ca4fff977625ec33d');
+assert.deepEqual(registry.migrations.slice(0,123),legacy123.migrations);
+const legacy123CoverageBytes=await readFile(join(root,'tests/support/registered123-export-coverage.json'));
+assert.equal(hash(legacy123CoverageBytes),'e3a1c45b70a1d0e3ef6c1bdd71f921a7ea680184855ef0356cd43e3c97651999');
+const legacy123Coverage=JSON.parse(legacy123CoverageBytes);assert.equal(legacy123Coverage.migrationCount,123);
+const legacy123Profile=Object.freeze({schemaVersion:123,registrySha256:hash(legacy123Bytes)});
+const legacy123Snapshot={profile:legacy123Profile,versions:legacy123.migrations.map(row=>row.version),coverage:legacy123Coverage};
+
+
 const contactCandidateFiles=['legacy-contact-external-identities.sql','legacy-contact-application.sql','legacy-contact-application-source.sql'];
 const contactCandidateSources=await Promise.all(contactCandidateFiles.map(async file=>({file,sha256:hash(await readFile(join(root,'planning/proposals',file)))})));
 const contactCandidateTables={
@@ -1268,7 +1301,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy101Profile
       ||profile===legacy102Profile||profile===legacy103Profile||profile===legacy104Profile||profile===legacy105Profile||profile===legacy106Profile
       ||profile===legacy107Profile||profile===legacy108Profile||profile===legacy113Profile||profile===legacy114Profile
-      ||profile===legacy115Profile||profile===legacy116Profile||profile===legacy117Profile||profile===legacy118Profile||profile===legacy119Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
+      ||profile===legacy115Profile||profile===legacy116Profile||profile===legacy117Profile||profile===legacy118Profile||profile===legacy119Profile||profile===legacy120Profile||profile===legacy121Profile||profile===legacy122Profile||profile===legacy123Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
@@ -1331,6 +1364,14 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
 export async function restoreDatabase(...args){return restoreWithProfile(currentProfile,...args);}
+export async function backupLegacy121Database(client,url,directory,recipient,duringSnapshot,objectCapture){
+ return backupWithProfile(legacy121Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy121Snapshot);
+}
+export async function restoreLegacy121Database(...args){return restoreWithProfile(legacy121Profile,...args);}
+export async function backupLegacySupplierPayableDatabase(client,url,directory,recipient,duringSnapshot,objectCapture){
+ return backupWithProfile(legacy120Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy120Snapshot);
+}
+export async function restoreLegacySupplierPayableDatabase(...args){return restoreWithProfile(legacy120Profile,...args);}
 export async function backupLegacyLeadMatchDatabase(client,url,directory,recipient){
  return backupWithProfile(legacy119Profile,client,url,directory,recipient,undefined,undefined,legacy119Snapshot);
 }
@@ -1506,3 +1547,13 @@ export async function recoveryCluster(){
     },async close(){for(const c of clients)await c.end();if(owned){await run('docker',['rm','--force','--volumes',name]);owned=false;}}};
   }catch{for(const c of clients)await c.end().catch(()=>{});if(owned)await run('docker',['rm','--force','--volumes',name]);throw new Error('SYNTHETIC_RECOVERY_CLUSTER_FAILED');}
 }
+
+export async function backupLegacy122Database(client,url,directory,recipient,duringSnapshot,objectCapture){
+ return backupWithProfile(legacy122Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy122Snapshot);
+}
+export async function restoreLegacy122Database(...args){return restoreWithProfile(legacy122Profile,...args);}
+
+export async function backupLegacy123Database(client,url,directory,recipient,duringSnapshot,objectCapture){
+ return backupWithProfile(legacy123Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy123Snapshot);
+}
+export async function restoreLegacy123Database(...args){return restoreWithProfile(legacy123Profile,...args);}

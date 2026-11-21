@@ -3,6 +3,8 @@ import {test} from 'node:test';
 import {mkdir,readFile} from 'node:fs/promises';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {workTimeReplyDiagnostic,workTimeFailureDiagnostic} from '../support/work-time-diagnostic.mjs';
+import {gateEditorFocusFrames,releaseEditorFocusFrames} from '../support/editor-focus-frame.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
 const correctionRoute='**/api/business/scheduling/work-boundary-save';
@@ -16,6 +18,11 @@ function localTime(milliseconds){
  // datetime-local normalizes zero seconds away even when step is one second.
  return at.year+'-'+at.month+'-'+at.day+'T'+at.hour+':'+at.minute+(at.second==='00'?'':':'+at.second);
 }
+
+async function workFacts(fixture){return {
+ intervals:(await fixture.client.query('SELECT to_jsonb(v) AS value FROM crest.work_intervals v WHERE business_id=$1 ORDER BY to_jsonb(v)::text',[fixture.business])).rows,
+ audits:(await fixture.client.query('SELECT to_jsonb(v) AS value FROM crest_private.audit_events v WHERE business_id=$1 ORDER BY to_jsonb(v)::text',[fixture.business])).rows
+};}
 
 async function signInAndBook(page,fixture){
  await page.goto(fixture.origin+'/sign-in');
@@ -36,7 +43,7 @@ async function signInAndBook(page,fixture){
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' corrects a pause and recovers the committed original after a lost response',{timeout:300000},async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,workTime:true,workBoundary:true});
- let browser;
+ let browser,correctionReply;
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
@@ -44,14 +51,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const job=fixture.bookingRequest.jobId,work=fixture.origin+'/schedule/work?job='+job,time=fixture.origin+'/schedule/work/time?job='+job;
   await signInAndBook(page,fixture);
   await page.goto(work);
-  await page.getByLabel('What is happening?').selectOption('direct_arrive');
+  await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?').fill('Synthetic arrival without trip');
   await page.getByRole('button',{name:'Start work without recorded travel'}).click();
   await expect(page.getByText('Confirmed saved version 2.',{exact:true})).toBeVisible();
   await page.goto(time);
   const view=page.getByRole('region',{name:'Saved work time',exact:true}),status=view.getByRole('status');
   await expect(view.getByText('Work is in progress.',{exact:true})).toBeVisible();
-  await view.getByText('Saved intervals (1)',{exact:true}).click();
+  await expect(view.getByRole('region',{name:'Saved intervals',exact:true})).toBeVisible();
   const start=await view.locator('ol time').first().getAttribute('datetime');
   await expect.poll(()=>Date.now()-Date.parse(start)).toBeGreaterThan(3000);
   await page.goto(work);
@@ -68,23 +75,50 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const before=await download(),boundary=before.intervals[0].endedAt;
   const corrected=Math.floor((Date.parse(boundary)-1000)/1000)*1000;
   assert(corrected>Date.parse(start));
-  await view.getByText('Correct a pause or resume time',{exact:true}).click();
-  await view.getByLabel('Recorded transition').selectOption({index:1});
+  const interval=view.locator('.work-time-interval').filter({has:page.getByRole('heading',{name:'Active work',exact:true})});
+  await interval.getByText('Correct this pause time',{exact:true}).click();
   await view.getByLabel('Corrected local time').fill(localTime(corrected));
   await view.getByLabel('Correction reason').fill(reason);
+  const review=interval.getByRole('region',{name:'Work-time correction review',exact:true});
+  const beforeDecline=await workFacts(fixture),declineRequests=fixture.requests.length;
+  page.once('dialog',dialog=>dialog.dismiss());
+  await view.getByRole('button',{name:'Refresh totals',exact:true}).click();
+  await expect(view.getByLabel('Correction reason')).toHaveValue(reason);
+  page.once('dialog',dialog=>dialog.dismiss());
+  await view.getByRole('button',{name:'Download JSON',exact:true}).click();
+  await expect(view.getByLabel('Corrected local time')).toHaveValue(localTime(corrected));
+  assert.equal(fixture.requests.length,declineRequests,'Declining reload/export preserves the correction without a request');
+  assert.deepEqual(await workFacts(fixture),beforeDecline);
+  await gateEditorFocusFrames(page,'Review correction');
+  await interval.getByRole('button',{name:'Review correction',exact:true}).click();
+  await expect(review.getByRole('heading')).toBeFocused();
+  const backToFields=review.getByRole('button',{name:'Back to correction',exact:true});
+  await backToFields.focus();
+  await releaseEditorFocusFrames(page);
+  await expect(backToFields).toBeFocused();
+  await expect(review).toContainText(boundary);
+  await expect(review).toContainText(reason);
+  assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),storeKey),null);
+  await review.getByRole('button',{name:'Back to correction',exact:true}).press('Enter');
+  await expect(interval.getByRole('button',{name:'Review correction',exact:true})).toBeFocused();
+  await expect(interval.getByLabel('Correction reason')).toHaveValue(reason);
+  await interval.getByRole('button',{name:'Review correction',exact:true}).press('Enter');
   await mkdir('.local/review',{recursive:true});
-  for(const width of [360,390,768,1440]){
+  for(const width of [360,390,768,1100,1440]){
    await page.setViewportSize({width,height:900});
    await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
    assert(await page.locator('.skip-link').evaluate(link=>link.getBoundingClientRect().bottom<=0));
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-   assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(row=>row.id),[]);
+   assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(row=>row.id),[]);
    await page.screenshot({path:'.local/review/field-work-boundary-'+name+'-'+width+'.png',fullPage:true});
+   const comparison=review.locator('.work-time-comparison'),available=await comparison.boundingBox();
+   for(const fact of await comparison.locator(':scope > div').all()){const box=await fact.boundingBox();assert(box&&available&&box.width>=Math.min(210,available.width),'Saved and proposed times must remain readable in the correction pane');}
+   await review.screenshot({path:'.local/review/work-time-review-'+name+'-'+width+'.png',animations:'disabled'});
   }
   let committedStatus,requests=0;
   await page.route(correctionRoute,async route=>{
    requests++;
-   committedStatus=(await route.fetch()).status();
+   const response=await route.fetch();committedStatus=response.status();correctionReply=await workTimeReplyDiagnostic(response);
    await route.abort();
   });
   await view.getByRole('button',{name:'Save work-time correction'}).press('Enter');
@@ -105,13 +139,32 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.equal(after.intervalVersions.length,before.intervalVersions.length+2);
   for(const original of before.intervalVersions)
    assert.deepEqual(after.intervalVersions.find(version=>version.versionId===original.versionId),original);
- }finally{await browser?.close();await fixture.close();}
+  const retained=interval.locator('.work-interval-history'),current=after.intervals[0];
+  const inspectionFacts=await workFacts(fixture),inspectionRequests=fixture.requests.filter(row=>row.path.startsWith('/api/')).length;
+  await retained.locator(':scope > summary').click();
+  await expect(retained.getByText('Version '+current.sequence+' · Corrected',{exact:true})).toBeVisible();
+  const changed=retained.getByRole('region',{name:'Changes in interval version '+current.sequence,exact:true});
+  await expect(changed.getByText(current.endedAt,{exact:true})).toBeVisible();
+  const exact=retained.locator('.work-history-exact').filter({hasText:'Exact evidence for interval version '+current.sequence});
+  await exact.locator('summary').click();
+  await expect(exact.getByText(current.versionId,{exact:true})).toBeVisible();
+  await exact.locator('summary').click();
+  for(const width of [360,390,768,1100,1440]){
+   await page.setViewportSize({width,height:900});
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(row=>row.id),[]);
+   await changed.scrollIntoViewIfNeeded();
+   await page.screenshot({path:'.local/review/work-time-retained-'+name+'-'+width+'.png',animations:'disabled'});
+  }
+  assert.equal(fixture.requests.filter(row=>row.path.startsWith('/api/')).length,inspectionRequests,'Inspecting corrected history and exact evidence makes no API request');
+  assert.deepEqual(await workFacts(fixture),inspectionFacts,'Inspecting corrected history preserves work and audit records');
+ }catch(error){await workTimeFailureDiagnostic(fixture,name,correctionReply);throw error;}finally{await browser?.close();await fixture.close();}
 });
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' first work start form persists and recovers the exact lost acknowledgment',{timeout:300000},async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,workTime:true,workBoundary:true,workStart:true});
- let browser;
+ let browser,correctionReply;
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
@@ -123,31 +176,33 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(view.getByText('No work intervals have been recorded for this job.',{exact:true})).toBeVisible();
   await expect(view.getByText('Correct the first work start',{exact:true})).toHaveCount(0);
   await page.goto(work);
-  await page.getByLabel('What is happening?').selectOption('direct_arrive');
+  await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?').fill('Synthetic arrival without trip');
   await page.getByRole('button',{name:'Start work without recorded travel'}).click();
   await expect(page.getByText('Confirmed saved version 2.',{exact:true})).toBeVisible();
   await page.goto(time);
   await expect(status).toHaveText('Saved work time loaded.');
   await view.getByText('Correct the first work start',{exact:true}).click();
-  const form=view.locator('form').filter({has:page.getByRole('button',{name:'Save first-start correction',exact:true})});
+  const form=view.locator('.work-time-correction').filter({hasText:'Correct the first work start'}).locator('form');
   const original=await form.locator('time').first().getAttribute('datetime');
   const corrected=Math.floor((Date.parse(original)-1000)/1000)*1000;
   await form.getByLabel('Corrected first start').fill(localTime(corrected));
   await form.getByLabel('First-start correction reason').fill(reason);
+  await form.getByRole('button',{name:'Review correction',exact:true}).press('Enter');
+  await expect(form.getByRole('region',{name:'Work-time correction review',exact:true})).toContainText(original);
   await mkdir('.local/review',{recursive:true});
-  for(const width of [360,390,768,1440]){
+  for(const width of [360,390,768,1100,1440]){
    await page.setViewportSize({width,height:900});
    await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-   assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(row=>row.id),[]);
+   assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(row=>row.id),[]);
    await page.screenshot({path:'.local/review/field-work-start-'+name+'-'+width+'.png',fullPage:true});
   }
   const route='**/api/business/scheduling/work-start-save',key='crest.work-start.pending-reference.v1';
   let committedStatus,requests=0;
   await page.route(route,async intercepted=>{
    requests++;
-   committedStatus=(await intercepted.fetch()).status();
+   const response=await intercepted.fetch();committedStatus=response.status();correctionReply=await workTimeReplyDiagnostic(response);
    await intercepted.abort();
   });
   await form.getByRole('button',{name:'Save first-start correction',exact:true}).press('Enter');
@@ -170,14 +225,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.equal(Date.parse(downloaded.intervals[0].startedAt),corrected);
   assert.equal(downloaded.intervalVersions.length,2);
   assert.equal(downloaded.intervalVersions[0].startedAt,original);
- }finally{await browser?.close();await fixture.close();}
+ }catch(error){await workTimeFailureDiagnostic(fixture,name,correctionReply);throw error;}finally{await browser?.close();await fixture.close();}
 });
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' corrects completed work, verifies history and recovers the original save',{timeout:300000},async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,
   workTime:true,workBoundary:true,workStart:true,workEnd:true});
- let browser;
+ let browser,correctionReply;
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
@@ -186,7 +241,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const completion=fixture.origin+'/schedule/work/complete?job='+job;
   await signInAndBook(page,fixture);
   await page.goto(fixture.origin+'/schedule/work?job='+job);
-  await page.getByLabel('What is happening?').selectOption('direct_arrive');
+  await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?').fill('Synthetic arrival without trip');
   await page.getByRole('button',{name:'Start work without recorded travel'}).click();
   await expect(page.getByText('Confirmed saved version 2.',{exact:true})).toBeVisible();
@@ -195,9 +250,12 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const editor=view.getByText('Correct the completion time',{exact:true});
   await expect(status).toHaveText('Saved work time loaded.');
   await expect(editor).toHaveCount(0);
-  await view.getByText('Saved intervals (1)',{exact:true}).click();
+  await expect(view.getByRole('region',{name:'Saved intervals',exact:true})).toBeVisible();
   const start=await view.locator('ol time').first().getAttribute('datetime');
-  const corrected=Math.ceil(Date.parse(start)/1000)*1000;
+  const startFraction=start.match(/\.(\d{6})Z$/)?.[1];assert(startFraction,'saved start retains exact microseconds');
+  const exactStart=BigInt(Date.parse(start))*1000n+BigInt(startFraction.slice(3));
+  const corrected=(Math.floor(Date.parse(start)/1000)+1)*1000;
+  assert(BigInt(corrected)*1000n>exactStart,'completion fixture must be strictly after the exact saved start');
   await expect.poll(()=>Date.now()-corrected).toBeGreaterThan(1500);
   await page.goto(completion);
   await page.getByRole('button',{name:'Mark all items fulfilled',exact:true}).click();
@@ -207,26 +265,49 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.goto(time);
   await expect(status).toHaveText('Saved work time loaded.');
   await editor.click();
-  const form=view.locator('form').filter({has:page.getByRole('button',{name:'Save completion correction',exact:true})});
+  const form=view.locator('.work-time-correction').filter({hasText:'Correct the completion time'}).locator('form');
   const original=await form.locator('time').first().getAttribute('datetime');
   assert(Date.parse(original)>corrected);
   await form.getByLabel('Corrected completion time').fill(localTime(corrected));
   await form.getByLabel('Completion correction reason').fill(reason);
+  await form.getByRole('button',{name:'Review correction',exact:true}).press('Enter');
+  try{await expect(form.getByRole('region',{name:'Work-time correction review',exact:true})).toContainText(original);}
+  catch(error){
+   try{
+   const input=await form.getByLabel('Corrected completion time').evaluate(element=>({value:element.value,valid:element.validity.valid,
+    badInput:element.validity.badInput,stepMismatch:element.validity.stepMismatch,customError:element.validity.customError,
+    valueMissing:element.validity.valueMissing}));
+   const businessZone=(await fixture.client.query('SELECT timezone FROM crest.businesses WHERE id=$1',[fixture.business])).rows[0]?.timezone;
+   console.info('WORK_END_REVIEW_DIAGNOSTIC '+JSON.stringify({input,businessZone,fixtureZone:zone,original,proposed:new Date(corrected).toISOString(),
+    alerts:await form.getByRole('alert').allTextContents(),reviews:await form.getByRole('region',{name:'Work-time correction review',exact:true}).count()}));
+   }catch{console.info('WORK_END_REVIEW_DIAGNOSTIC '+JSON.stringify({unavailable:true}));}
+   throw error;
+  }
   await mkdir('.local/review',{recursive:true});
-  for(const width of [360,390,768,1440]){
+  for(const width of [360,390,768,1100,1440]){
    await page.setViewportSize({width,height:900});
    await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-   assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(row=>row.id),[]);
+   assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(row=>row.id),[]);
    await page.screenshot({path:'.local/review/field-work-end-'+name+'-'+width+'.png',fullPage:true});
   }
   const key='crest.work-end.pending-reference.v1';
   let savedStatus,submissions=0;
   await page.route('**/api/business/scheduling/work-end-save',async request=>{
    submissions++;
-   savedStatus=(await request.fetch()).status();
+   const response=await request.fetch();savedStatus=response.status();correctionReply=await workTimeReplyDiagnostic(response);
    await request.abort();
   });
+  await view.getByText('Correct the first work start',{exact:true}).click();
+  const otherDraft=view.locator('.work-time-correction').filter({hasText:'Correct the first work start'}).locator('form');
+  await otherDraft.getByLabel('First-start correction reason',{exact:true}).fill('Synthetic separate unfinished correction');
+  const beforeOther=await workFacts(fixture),otherRequests=fixture.requests.length;
+  page.once('dialog',dialog=>dialog.dismiss());
+  await form.getByRole('button',{name:'Save completion correction',exact:true}).click();
+  await expect(otherDraft.getByLabel('First-start correction reason',{exact:true})).toHaveValue('Synthetic separate unfinished correction');
+  assert.equal(fixture.requests.length,otherRequests,'A declined cross-draft save makes no request');
+  assert.deepEqual(await workFacts(fixture),beforeOther);
+  page.once('dialog',dialog=>dialog.accept());
   await form.getByRole('button',{name:'Save completion correction',exact:true}).press('Enter');
   await expect(status).toContainText('The correction could not be confirmed.');
   assert.equal(savedStatus,200);
@@ -248,5 +329,5 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert(downloaded.intervalVersions.some(row=>row.endedAt===original));
   await page.goto(completion);
   await expect(page.getByRole('heading',{name:'Full completion',exact:true})).toBeVisible();
- }finally{await browser?.close();await fixture.close();}
+ }catch(error){await workTimeFailureDiagnostic(fixture,name,correctionReply);throw error;}finally{await browser?.close();await fixture.close();}
 });

@@ -72,7 +72,7 @@ export function VehicleCustodyQueue({timezone,kind}:{timezone:string;kind:'picku
    <p className="field-help">{pickup?'All dates · Vehicles remain here until a handoff is saved.':
     'All dates · Completed work awaiting collection and cancelled jobs requiring return.'}</p>
    <p role="status" tabIndex={-1} ref={status}>{view.message}</p>
-   {view.signedOut?<a href="/sign-in">Sign in</a>:<button type="button" className={pickup?'secondary':undefined} disabled={view.busy} onClick={()=>void load()}>
+   {view.signedOut?<a href="/sign-in">Sign in</a>:<button type="button" className={pickup||view.loaded?'secondary':undefined} disabled={view.busy} onClick={()=>void load()}>
     {(view.loaded?'Reload ':'Load ')+action}</button>}
    {view.loaded&&view.loaded.rows.length>0&&<ul className="customer-list">{view.loaded.rows.map(row=><li key={row.caseId}>
     <p><strong>{row.customerName}</strong> · {row.vehicleLabel}</p>
@@ -82,7 +82,7 @@ export function VehicleCustodyQueue({timezone,kind}:{timezone:string;kind:'picku
     <a className={pickup?'primary-action':undefined} href={'/schedule?job='+encodeURIComponent(row.jobId)+(pickup?'&vehicle='+encodeURIComponent(row.jobVehicleId):'')}
      aria-label={pickup?'Open return for '+row.vehicleLabel:undefined}>{pickup?'Open return':'Open saved job and handoff'}</a>
    </li>)}</ul>}
-   {view.loaded?.hasMore&&<button type="button" disabled={view.busy} onClick={()=>void load(true)}>Load more {action}</button>}
+   {view.loaded?.hasMore&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void load(true)}>Load more {action}</button>}
   </section>
  </details>;
 }

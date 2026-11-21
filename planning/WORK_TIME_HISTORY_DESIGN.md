@@ -1,0 +1,26 @@
+# Work-time snapshot and interval history
+
+November18,2026. Implements the recorded-work-time direction in the latest end-to-end design audit. Existing chronological daily interval grouping, authoritative summaries and all correction/save/recovery rules remain. No migration, API contract, work-time arithmetic, posting or job transition changes.
+
+## Layout and evidence
+
+Desktop keeps the observed totals, actual read time/time zone, saved job version and fresh-read export actions beside the interval ledger. Tall desktop views retain that summary while the ledger scrolls. Phones keep interval cards and strong duration facts. Open durations explicitly say At last read and explain that only a new verified read updates them; no ticking timer or unsaved elapsed evidence is introduced.
+
+Each interval now owns its retained versions rather than sending the user to an unrelated flat earlier-version list. The presentation checks the actual interval identity, consecutive sequence and replacement references. Actual stored changeKind supplies Opened/Recorded/Closed/Corrected labels. Current saved version is explicit. Adjacent exact start/end/kind/pause-reason changes show Before/This version, while actual record reasons remain distinct. Earlier open versions have no invented closed duration or duration extended to today's read time. A current open version is measured only to the actual observedAt. Full six-digit UTC times and interval/version/replacement references stay available in native exact-evidence disclosures. Current totals and downloaded CSV/JSON still come from the unchanged validated source.
+
+Read-only history disclosures use spacing and rules instead of nested card borders. Saved/proposed correction facts use available pane width, stacking when needed so exact timestamps remain readable. Review and Back focus run after the actual DOM commit instead of delayed animation-frame focus.
+
+## Draft safety
+
+Each correction reports editing intent using its stable form identity. Before refresh or a fresh snapshot download replaces unfinished drafts, the user must explicitly confirm discard; declining preserves values and sends no request. Saving one correction also checks for other unfinished correction drafts before replacing the snapshot. It excludes only the explicitly submitted draft, never treats Save validity as proof that another draft is unchanged, and keeps the original fresh authorization/recovery fencing. A visible count explains unfinished drafts, and standard browser leave protection is registered. No private draft is persisted; existing suspension and failed-access clearing still take precedence.
+
+## Verification
+
+- Initial owned `.local/design-work-time-verified` passed all8 complete genuine Chromium/WebKit workflows with56 retained captures before final compact-history/narrow-pane refinements.
+- `.local/design-work-time-final` passed6/8. WebKit first-start correction received503 instead of the required committed200; the separate Chromium totals fixture failed before the application opened with SOURCE_EXPORT_JOURNAL_NOT_SUBMITTED.60 runtime-bounded captures and exact tracked source are retained. These request/setup causes remain unproven; they were not attributed to styling or declared repaired by later success.
+- Failure-only test diagnostics now retain fixed response/error categories, bounded provider categories and current-test-database activity counts. Successful receipts are not read for diagnostics; private bodies, reasons, credentials, IDs, raw provider messages and SQL text are excluded. Setup-journal failure logging is restricted to the work-time test fixture and fixed stage/not-submitted flags. Three focused tests verify reply redaction. No retries, changed timeouts, authority relaxation or assertion suppression were added.
+- Final `.local/design-work-time-diagnostic` passed8/8 complete genuine journeys, zero skips/failures, stable tracked source and owned-cluster cleanup.70 runtime-bounded final-source captures/hashes are retained. Representative phone corrected-history, wide ledger and1100px completion review were visually inspected. Both earlier failures remain recorded despite this fresh success.
+- Original active/pause/empty/refused-read, midnight grouping, exact durations/continuity, safe CSV/JSON, first-start/completion/boundary corrections and lost-acknowledgment original recovery assertions remain. Added no-request/no-write draft refusals, cross-draft save decisions, controlled delayed-frame focus release, exact corrected-history inspection with real work/audit snapshots, all-rule Axe, overflow and saved/proposed minimum readability are exercised at360/390/768/1100/1440px.
+- Seven focused presentation tests cover replacement identity/sequence, current-snapshot membership, exact null/subsecond changes and unchanged duration-display precision. Final types, full lint, production build and all8968 units/377 files passed.
+
+This establishes the local snapshot/interval-history refinement, not a retrospective transport fix, all large-history/loading/denied/stale variants, current full hosted acceptance, installed upgrade or physical iPhone behavior. The complete audit and approved V1 functional objective remain active. Installed schema109 remains unchanged.

@@ -4,6 +4,7 @@ import {createOriginalOperationReviewController} from '../../src/client/original
 import {originalOperationFixture,retiredOutcomeFixture} from '../support/original-operation-fixture';
 import type {Snapshot} from '../../src/client/business-settings';
 import type {originalOperations} from '../../src/client/original-operations';
+import {AuthenticationError} from '../../src/client/authentication';
 import {pendingCustomerKey} from '../../src/client/pending-customer-edit';
 
 function fixture(){
@@ -59,6 +60,16 @@ it.each([{state:'absent' as const},{state:'conflict' as const,reason:'operation'
 it('original_recorded requires explicit typed receipt verification rather than a generic observation',async()=>{
  const f=fixture();await f.c.load();f.api.lookup.mockResolvedValue({schemaVersion:1,state:'original_recorded',original:f.original});await f.c.lookup();expect(f.c.view()).toMatchObject({phase:'recorded',canReconcile:true,canAcknowledge:false});expect(f.memory.size).toBe(1);
  const fetcher=vi.fn().mockResolvedValue(response(receipt(f)));vi.stubGlobal('fetch',fetcher);await f.c.reconcile();expect(fetcher.mock.calls[0]![0]).toBe('/api/business/customers/operation');expect(f.memory.size).toBe(0);expect(f.resolved).toHaveBeenCalledTimes(1);expect(f.c.view().phase).toBe('complete');
+ if(f.original.commandType!=='crm.customer.save')throw new Error();
+ expect(f.c.view()).toMatchObject({record:{href:'/customers?customer='+f.original.reference.customerId,label:'Open saved customer'},checkedAt:expect.any(String)});
+ f.c.suspend();expect(f.c.view()).toMatchObject({record:null,checkedAt:null,retiredAt:null});
+});
+it('recommends sign-in only after the session explicitly denies review and preserves the original reference',async()=>{
+ const f=fixture();f.session.mockRejectedValueOnce(new AuthenticationError('denied'));
+ await f.c.load();expect(f.c.view()).toMatchObject({phase:'pending',needsSignIn:true,record:null,checkedAt:null});
+ expect(f.memory.get(pendingCustomerKey)).toBe(f.raw);
+ await f.c.load();expect(f.c.view()).toMatchObject({phase:'review',needsSignIn:false});
+ expect(f.api.lookup).not.toHaveBeenCalled();
 });
 it.each(['absent','wrong-receipt'])('keeps an original-recorded reference on typed %s',async which=>{
  const f=fixture();await f.c.load();f.api.lookup.mockResolvedValue({schemaVersion:1,state:'original_recorded',original:f.original});await f.c.lookup();

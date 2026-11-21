@@ -5,7 +5,15 @@ import {authentication} from '../../client/authentication';
 import type {Proof} from '../../client/authentication';
 
 type Kind='Customer'|'Lead'|'Vehicle';
-export type MatchRow={id:string;label:string;kind:Kind;reasons:string[];detail?:string|undefined};
+const matchFields={
+  phone:{label:'Phone',same:'Same phone'},
+  email:{label:'Email',same:'Same email'},
+  vin:{label:'VIN',same:'Same VIN'},
+  plate:{label:'Plate',same:'Same plate text'},
+  description:{label:'Year, make and model',same:'Same year, make and model'},
+} as const;
+type MatchField=keyof typeof matchFields;
+export type MatchRow={id:string;label:string;kind:Kind;matches:Partial<Record<MatchField,boolean>>;detail?:string|undefined};
 export type MatchResults={rows:MatchRow[];more:boolean};
 type Review={draft:object;state:'checking'|'failed'}|{draft:object;state:'matches';results:MatchResults};
 type Attempt={
@@ -56,7 +64,9 @@ export function useLeadMatchReview(draft:object|null){
   return {active,run,dismiss:()=>setReview(null)};
 }
 
-export function LeadMatchNotice({review,canSave,retry,edit,save}:{review:Review;canSave:boolean;retry:()=>void;edit:()=>void;save:()=>void}){
+export function LeadMatchNotice({review,fields,canSave,retry,edit,save}:{
+  review:Review;fields:readonly MatchField[];canSave:boolean;retry:()=>void;edit:()=>void;save:()=>void;
+}){
   const id=useId(),heading=useRef<HTMLHeadingElement>(null);
   useEffect(()=>{if(review.state!=='checking')heading.current?.focus();},[review]);
   if(review.state==='checking')return <p className="field-help" role="status">Checking for possible matches…</p>;
@@ -64,12 +74,25 @@ export function LeadMatchNotice({review,canSave,retry,edit,save}:{review:Review;
   const matched=review.state==='matches';
   return <section className="lead-match-notice" aria-labelledby={id}>
     <header><h3 id={id} ref={heading} tabIndex={-1}>{matched?'Possible matches':'Matches could not be checked'}</h3>
-    <p>{matched?'Review the matching details below. You can edit this draft or save it as entered.':'Retry the check or save your draft as entered.'}</p></header>
+    <p>{matched?'Compare the fields Crest checked. Choose Edit details to revise the draft.':'Retry the check or save your draft as entered.'}</p></header>
     {matched&&<>
-      <ul>{review.results.rows.map(row=><li key={row.kind+':'+row.id}>
-        <div><strong>{row.label}</strong><span>{row.kind}{row.detail?' · '+row.detail:''}</span></div>
-        <span className="lead-match-evidence">{row.reasons.join(' · ')}</span>
-      </li>)}</ul>
+      <ul className="lead-match-candidates">{review.results.rows.map((row,index)=>{
+        const firstUnconfirmed=fields.find(field=>!row.matches[field]);
+        const evidenceId=(field:MatchField)=>id+'-match-'+index+'-'+field;
+        return <li key={row.kind+':'+row.id}>
+          <div className="lead-match-record"><strong>{row.label}</strong><span>{row.kind}{row.detail?' · '+row.detail:''}</span></div>
+          <table className="lead-match-table" aria-label={'Match evidence for '+row.label}>
+            <thead><tr><th scope="col">Field</th><th scope="col">Your draft</th><th scope="col">Saved record</th></tr></thead>
+            <tbody>{fields.map(field=><tr key={field} id={evidenceId(field)} tabIndex={-1}>
+              <th scope="row">{matchFields[field].label}</th>
+              <td>Entered</td>
+              <td>{row.matches[field]?<strong className="lead-match-evidence">{matchFields[field].same}</strong>:'Unconfirmed'}</td>
+            </tr>)}</tbody>
+          </table>
+          {firstUnconfirmed&&<button type="button" className="secondary lead-match-jump"
+            onClick={()=>document.getElementById(evidenceId(firstUnconfirmed))?.focus()}>Jump to first unconfirmed field</button>}
+        </li>;
+      })}</ul>
       {review.results.more&&<p className="field-help">Additional matches are available in the directory.</p>}
     </>}
     <div className="lead-match-actions">

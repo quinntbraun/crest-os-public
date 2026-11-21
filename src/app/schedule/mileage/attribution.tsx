@@ -1,14 +1,47 @@
 'use client';
 import {useEffect,useId,useRef,useState} from 'react';
 import {customerDate} from '../../../customer/customer-contract';
+import {mileageShareFraction} from '../../../operations/mileage';
 import type {MileageJobChoices,MileageJobCursor} from '../../../client/mileage-controller';
 
 export type MileageShareDraft=Readonly<{jobId:string;label:string;percent:string}>;
 export type FindMileageJobs=(day:string,after:MileageJobCursor|null)=>Promise<MileageJobChoices|undefined>;
 
-export function MileageAttribution({jobId,day,timezone,shares,change,findJobs}:{
+const fullShare=100000000n;
+const scaled=(value:bigint,places:number)=>{
+ const unit=10n**BigInt(places),fraction=(value%unit).toString().padStart(places,'0').replace(/0+$/,'');
+ return (value/unit).toString()+(fraction?'.'+fraction:'');
+};
+function shareUnits(percent:string){
+ if(!percent.trim())return 0n;
+ try{return BigInt(mileageShareFraction(percent).replace('.',''));}
+ catch{return null;}
+}
+export function mileageDisplay(units:bigint){return scaled(units,4)+' mi';}
+function shareMiles(distance:bigint,share:bigint){
+ const numerator=distance*share;
+ const miles=mileageDisplay((numerator+fullShare/2n)/fullShare);
+ return numerator%fullShare===0n?miles:'≈ '+miles;
+}
+export function MileageAllocationTotals({shares,distance}:{shares:readonly string[];distance:bigint|null}){
+ let allocated=0n,invalid=false;
+ for(const share of shares){
+  const units=shareUnits(share);
+  if(units===null)invalid=true;
+  else allocated+=units;
+ }
+ const remaining=fullShare-allocated,over=remaining<0n;
+ return <section className="mileage-allocation-totals" aria-label="Allocation totals">
+  <dl>
+   <div><dt>Assigned</dt><dd>{scaled(allocated,6)}%{distance!==null&&<small>{shareMiles(distance,allocated)}</small>}</dd></div>
+   <div><dt>{over?'Over allocated':'Remaining'}</dt><dd>{scaled(over?-remaining:remaining,6)}%{distance!==null&&<small>{shareMiles(distance,over?-remaining:remaining)}</small>}</dd></div>
+  </dl>
+  {invalid&&<p className="field-help">One or more shares need a valid percentage.</p>}
+ </section>;
+}
+export function MileageAttribution({jobId,day,timezone,shares,distance,change,findJobs}:{
  jobId:string;day:string;timezone:string;shares:readonly MileageShareDraft[];
- change:(shares:readonly MileageShareDraft[])=>void;findJobs:FindMileageJobs;
+ distance:bigint|null;change:(shares:readonly MileageShareDraft[])=>void;findJobs:FindMileageJobs;
 }){
  const id=useId();
  const [date,setDate]=useState(day),[loadedDate,setLoadedDate]=useState('');
@@ -40,13 +73,14 @@ export function MileageAttribution({jobId,day,timezone,shares,change,findJobs}:{
  }
  return <fieldset className="mileage-split">
   <legend>{jobId?'Split this trip across jobs':'Allocate this trip to saved jobs'}</legend>
-  <p>Enter each job’s share as a percentage. The shares must total 100%. Crest counts the physical trip once.</p>
+  <p className="field-help">Assign 100% across the saved jobs.</p>
   {jobId&&!isChosen(jobId)&&<button type="button" className="secondary" onClick={()=>add(jobId,'This job')}>Add this job</button>}
-  <label htmlFor={id+'-date'}>Job date</label>
+  <div className="mileage-job-search"><div><label htmlFor={id+'-date'}>Job date</label>
   <input type="date" id={id+'-date'} value={date} onChange={event=>{
    setDate(event.target.value);setLoadedDate('');setResults(null);setSelected('');setMessage('');
-  }}/>
-  <button type="button" className="secondary" onClick={()=>void lookup(null)}>Find saved jobs</button>
+  }}/></div>
+   <button type="button" className="secondary" onClick={()=>void lookup(null)}>Find saved jobs</button>
+  </div>
   {results&&loadedDate===date&&<>
    {choices.length>0&&<>
     <label htmlFor={id+'-job'}>Saved job to add</label>
@@ -65,7 +99,10 @@ export function MileageAttribution({jobId,day,timezone,shares,change,findJobs}:{
    {results.jobs.length>0&&!choices.length&&<p>{jobId?'These jobs are already in the split.':'These jobs are already in the allocation.'}</p>}
   </>}
   {message&&<p role="status">{message}</p>}
-  {shares.map(share=><div className="mileage-share" key={share.jobId}>
+  <MileageAllocationTotals shares={shares.map(share=>share.percent)} distance={distance}/>
+  {shares.map(share=>{
+   const units=shareUnits(share.percent);
+   return <div className="mileage-share" key={share.jobId}>
    <label htmlFor={id+'-share-'+share.jobId}>{share.label} share (%)</label>
    <div className="mileage-share-controls">
     <input id={id+'-share-'+share.jobId} inputMode="decimal" value={share.percent} maxLength={10} required onChange={event=>
@@ -75,6 +112,8 @@ export function MileageAttribution({jobId,day,timezone,shares,change,findJobs}:{
      change(shares.filter(row=>row.jobId!==share.jobId))
     }>Remove</button>
    </div>
-  </div>)}
+    {distance!==null&&units!==null&&share.percent.trim()&&<p className="mileage-row-distance">{shareMiles(distance,units)}</p>}
+   </div>;
+  })}
  </fieldset>;
 }

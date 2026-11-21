@@ -1,23 +1,25 @@
+import {reviewRecordRecovery} from '../support/record-recovery-layout.mjs';
 // Genuine HTTPS + compiled Next/Node + real disposable Auth/PG. No traces,
 // HAR, video, storageState exports or credential-bearing failure artifacts.
 import assert from 'node:assert/strict';
-import {before,after,test} from 'node:test';
+import {test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
-import {readFile,chmod,mkdir} from 'node:fs/promises';
-import {join} from 'node:path';
+import {mkdir,writeFile} from 'node:fs/promises';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {reviewTextResize} from '../support/text-resize-layout.mjs';
 import {URI,TOTP} from 'otpauth';
+import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
 
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
-before(async()=>{
-  assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
+async function setupSignInFixture(){
+  app=undefined;service=undefined;client=undefined;sandbox=undefined;loginOwned=false;
+  assert(['linux','win32'].includes(process.platform),'supported disposable TLS/Auth browser fixture required');
   process.env.NODE_ENV='production';
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);
   await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
@@ -39,21 +41,17 @@ before(async()=>{
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor]);await client.query('COMMIT');
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_OWNER_FAILED');}
-  const keyPath=join(sandbox.workspace,'ephemeral.key'),certPath=join(sandbox.workspace,'ephemeral.pem');
-  await chmod(sandbox.workspace,0o700);
-  try{execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-noenc','-keyout',keyPath,'-out',certPath,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{stdio:'ignore',timeout:15000});}
-  catch{throw new Error('SYNTHETIC_TLS_FIXTURE_FAILED');}
-  await chmod(keyPath,0o600);
+  const tls=await browserTestTls();
   const reservation=createServer();await new Promise(resolve=>reservation.listen(0,'127.0.0.1',resolve));const port=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));origin=`https://127.0.0.1:${port}`;
   // Normal Node resolution: react-server is only a build-time marker condition.
   const {createCrestApplication,createAuthenticationRuntime}=await import('../../.local/server/application.mjs');
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},customers:true});
+  app=await createCrestApplication({origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:business},customers:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
-});
-after(async()=>{try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}});
+}
+async function closeSignInFixture(){try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}}
 
 async function checkSession(page){await page.getByRole('button',{name:'Check session',exact:true}).click();await expect(page.getByRole('status')).not.toContainText('Checking this device');}
 async function exerciseBusinessHttp(page,name){
@@ -69,9 +67,45 @@ async function exerciseBusinessHttp(page,name){
   assert.equal((await send('/api/business/rename',{...input,businessId:randomUUID()},csrf)).status,400);
   assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1 AND operation_id=$2',[business,input.operationId])).rows[0].n,1);
 }
-async function fill(page,{trusted=false,password=fixture.password}={}){
+async function captureSignInState(page,name,state){
+  const viewport=page.viewportSize();await mkdir('.local/review',{recursive:true});
+  if(state==='form')await reviewTextResize(page,name,'sign-in-form');
+  try{for(const width of [320,360,390,768,1440,1920]){
+    await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
+    await expect(page.getByRole('heading',{name:'Welcome back',exact:true})).toBeVisible();
+    await expect(page.locator('.sign-in-workspace img:visible')).toHaveCount(1);
+    assert(await page.locator('.sign-in-panel img').evaluate(image=>image.complete&&image.naturalWidth>0));
+    const crest=await page.locator('.sign-in-panel img').boundingBox();assert(crest);
+    assert(crest.width>=144&&crest.width<=192&&Math.abs(crest.width-crest.height)<1,'the supplied full crest stays prominent and square at ordinary text size');
+    const card=await page.locator('.sign-in-panel').boundingBox();assert(card);
+    if(width>=768){assert(card.width>=400&&card.width<=440,'sign-in stays within its focused desktop width');assert(Math.abs(card.x+card.width/2-width/2)<1,'sign-in stays centered');}
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+    if(state==='form'&&width===1440){
+      const typography=await page.evaluate(()=>({root:getComputedStyle(document.documentElement).fontFamily,
+        heading:getComputedStyle(document.querySelector('.sign-in-brand h1')).fontFamily,
+        label:getComputedStyle(document.querySelector('label[for="email"]')).fontFamily,
+        faces:Array.from(document.fonts).map(face=>({family:face.family,weight:face.weight,status:face.status}))}));
+      if(name==='chromium'){
+        const cdp=await page.context().newCDPSession(page);try{
+          await cdp.send('DOM.enable');await cdp.send('CSS.enable');const {root}=await cdp.send('DOM.getDocument');typography.glyphs=[];
+          for(const selector of ['.sign-in-brand h1','label[for="email"]','.sign-in-feedback']){
+            const {nodeId}=await cdp.send('DOM.querySelector',{nodeId:root.nodeId,selector});const fonts=await cdp.send('CSS.getPlatformFontsForNode',{nodeId});typography.glyphs.push({selector,fonts:fonts.fonts});
+          }
+        }finally{await cdp.detach();}
+      }
+      await writeFile('.local/review/device-sign-in-served-fonts-'+name+'.json',JSON.stringify(typography,null,2)+'\n');
+    }
+    await page.screenshot({path:'.local/review/device-sign-in-'+state+'-'+name+'-'+width+'.png',fullPage:true,
+      mask:[page.locator('#email,#password,#code')],maskColor:'#e8ecf5'});
+  }}finally{if(viewport)await page.setViewportSize(viewport);}
+}
+async function fill(page,{trusted=false,password=fixture.password,code}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
-  await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());if(trusted)await page.getByText('Personal device options',{exact:true}).click();await page.getByLabel('Trust this personal device').setChecked(trusted);
+  const input=page.getByLabel('Authenticator code',{exact:true});await input.fill(code??fixture.totp.generate());
+  assert.deepEqual(await input.evaluate(element=>({sixDigits:/^[0-9]{6}$/.test(element.value),valid:element.validity.valid})),{sixDigits:true,valid:true});
+  await expect(input).toBeFocused();
+  if(trusted)await page.getByText('Personal device options',{exact:true}).click();await page.getByLabel('Trust this personal device').setChecked(trusted);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
 }
 async function exerciseCustomerHttp(page,name){
@@ -102,7 +136,7 @@ async function customerEditorFlow(page,other,name){
   await expect(page.getByLabel('Phone value',{exact:true})).toHaveValue('(001) raw shared');await expect(page.getByLabel('Email value',{exact:true})).toHaveValue('');await expect(page.getByLabel('Contact preference',{exact:true})).toHaveValue('');await expect(page.getByLabel('Customer has opted out of outreach',{exact:true})).toBeChecked();await expect(page.getByLabel('Customer-since date',{exact:true})).toHaveValue('');
   await page.getByLabel('Archive customer',{exact:true}).check();await expect(page.getByRole('button',{name:'Save customer',exact:true})).toBeDisabled();await page.getByLabel('Archive reason',{exact:true}).fill('Synthetic retained archive reason');await page.getByRole('button',{name:'Save customer',exact:true}).click();await expect(page.getByRole('status')).toContainText('Customer saved');
   await page.getByRole('button',{name:'Load current customers',exact:true}).click();await findCustomer(page,label,true);await expect(page.getByLabel('Archive reason',{exact:true})).toHaveValue('Synthetic retained archive reason');await page.getByLabel('Archive customer',{exact:true}).uncheck();await page.getByRole('button',{name:'Save customer',exact:true}).click();await expect(page.getByRole('status')).toContainText('Customer saved');
-  await page.getByRole('button',{name:'Load current customers',exact:true}).click();await findCustomer(page,label);await expect(page.getByLabel('Customer history',{exact:true}).locator('details')).toHaveCount(3);await expect(page.getByLabel('Archive customer',{exact:true})).not.toBeChecked();
+  await page.getByRole('button',{name:'Load current customers',exact:true}).click();await findCustomer(page,label);await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'History',exact:true}).click();await expect(page.getByLabel('Customer history',{exact:true}).locator('details')).toHaveCount(3);await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByLabel('Archive customer',{exact:true})).not.toBeChecked();
   const row=(await client.query('SELECT * FROM crest.customers WHERE business_id=$1 AND display_name=$2',[business,label])).rows[0];assert.equal(row.version,'3');assert.equal(row.email_raw,null);assert.equal(row.contact_preference,null);assert.equal(row.notes,null);assert.equal(row.customer_since,null);assert.equal(row.archived_at,null);assert.equal(row.archived_reason,null);
   assert.equal((await client.query("SELECT count(*)::int AS n FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='customers' AND entity_id=$2",[business,row.id])).rows[0].n,3);assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.customer.pending-reference.v1')),null);
   await page.getByLabel('Customer name',{exact:true}).fill(label+' stale draft');
@@ -128,7 +162,7 @@ async function customerInterruptedFlow(page,name){
   const key='crest.customer.pending-reference.v1',read=()=>page.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),key),saveButton=()=>page.getByRole('button',{name:'Save customer',exact:true}),loadButton=()=>page.getByRole('button',{name:'Load current customers',exact:true});
   await openCustomers(page);await page.getByRole('button',{name:'Add customer',exact:true}).click();await page.getByLabel('Customer name',{exact:true}).fill(`Synthetic customer lost response ${name}`);let submitted,calls=0;
   const lost=async route=>{calls++;submitted=route.request().postDataJSON();const response=await route.fetch();assert.equal(response.status(),200);await response.body();await route.abort('failed');};
-  await page.route('**/api/business/customers/save',lost);await saveButton().click();await expect(page.getByRole('status')).toContainText('save could not be confirmed');await page.unroute('**/api/business/customers/save',lost);const original=await read();assert.equal(calls,1);assert.equal(original.reference.operationId,submitted.operationId);assert.equal(original.reference.customerId,submitted.customerId);assert.deepEqual(Object.keys(original).sort(),['binding','businessId','reference','schemaVersion']);assert(!JSON.stringify(original).includes(submitted.displayName));assert(!JSON.stringify(original).includes('csrfToken'));
+  await page.route('**/api/business/customers/save',lost);await saveButton().click();await expect(page.getByRole('status')).toContainText('save could not be confirmed');await page.unroute('**/api/business/customers/save',lost);const original=await read();await reviewRecordRecovery(page,{client,business},name,'customer',original.reference.operationId);assert.equal(calls,1);assert.equal(original.reference.operationId,submitted.operationId);assert.equal(original.reference.customerId,submitted.customerId);assert.deepEqual(Object.keys(original).sort(),['binding','businessId','reference','schemaVersion']);assert(!JSON.stringify(original).includes(submitted.displayName));assert(!JSON.stringify(original).includes('csrfToken'));
   await page.reload();await expect(page.getByRole('status')).toContainText('A pending customer save was found');await page.getByRole('button',{name:'Check customer save status',exact:true}).click();await expect(page.getByRole('status')).toContainText('original save is confirmed');assert.equal(await read(),null);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,original.reference.operationId])).rows[0].n,1);
   await loadButton().click();await page.getByRole('button',{name:'Add customer',exact:true}).click();await page.getByLabel('Customer name',{exact:true}).fill(`Synthetic customer explicit retry ${name}`);const notSent=route=>route.abort('failed');await page.route('**/api/business/customers/save',notSent);await saveButton().click();await expect(page.getByRole('status')).toContainText('save could not be confirmed');await page.unroute('**/api/business/customers/save',notSent);const retry=await read();await page.getByRole('button',{name:'Check customer save status',exact:true}).click();await expect(page.getByRole('status')).toContainText('does not prove an earlier request failed');
   const request=page.waitForRequest(r=>r.url().endsWith('/api/business/customers/save'));await page.getByRole('button',{name:'Retry original customer change',exact:true}).click();const retried=(await request).postDataJSON();for(const field of ['operationId','customerId','expectedVersion','recoveryEpoch'])assert.equal(retried[field],retry.reference[field]);await expect(page.getByRole('status')).toContainText('Customer saved');assert.equal(await read(),null);
@@ -183,8 +217,13 @@ async function settingsInterruptedFlow(page,name){
 }
 async function localCookie(context){return (await context.cookies(origin)).find(cookie=>cookie.name===sessionName);}
 async function row(cookie){assert(cookie,'session cookie required');const hash=createHash('sha256').update(cookie.value,'ascii').digest();return (await client.query('SELECT * FROM crest_private.app_sessions WHERE actor_id=$1 AND token_hash=$2',[actor,hash])).rows[0];}
-async function assertPrivate(page,context){
-  const cookie=await localCookie(context);assert(cookie,'HttpOnly cookie accepted');assert(cookie.secure&&cookie.httpOnly&&cookie.sameSite==='Lax'&&cookie.path==='/','cookie policy');
+async function assertPrivate(page,context,loginReply){
+  const cookie=await localCookie(context);assert(cookie,'HttpOnly cookie accepted');
+  assert(cookie.secure&&cookie.httpOnly&&cookie.path==='/','browser accepted a secure root-scoped HttpOnly cookie');
+  const fromServer=(await loginReply.headerValues('set-cookie')).find(value=>value.startsWith(sessionName+'='));
+  assert(fromServer,'server issued the session cookie');
+  const attributes=new Set(fromServer.split(';').slice(1).map(value=>value.trim().toLowerCase()));
+  assert(['secure','httponly','samesite=lax','path=/'].every(value=>attributes.has(value)),'session cookie attributes sent');
   assert.equal((await context.cookies(origin)).some(c=>c.name==='__Host-crest_login'),false,'pending login retired');
   const state=await page.evaluate(()=>({cookie:document.cookie,local:Object.keys(localStorage),session:Object.keys(sessionStorage),secure:isSecureContext,html:document.documentElement.outerHTML}));
   assert(state.secure,'real HTTPS secure context');assert(!state.cookie.includes('__Host-crest_'),'HttpOnly credentials invisible to scripts');assert.equal(state.local.length,0);assert.equal(state.session.length,0);
@@ -193,35 +232,100 @@ async function assertPrivate(page,context){
 }
 for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900}],['webkit',webkit,{width:360,height:780}]]){
   test(`${name}: genuine HTTPS sign-in, persistence, isolation and revocation`,{timeout:120000},async t=>{
-    const browser=await engine.launch();let first,second,page,other,untrusted,trusted,initial;
+    let browser,first,second,page,other,untrusted,trusted,initial;
     try{
+      await setupSignInFixture();browser=await engine.launch();
       // Fixture-only self-signed certificate acceptance; never changes system or
       // Node TLS trust. Public CA/deployed TLS acceptance is a separate gate.
       first=await browser.newContext({ignoreHTTPSErrors:true,viewport});page=await first.newPage();
       second=await browser.newContext({ignoreHTTPSErrors:true,viewport});other=await second.newPage();
       await t.test('accessible form, generic failure and one explicit untrusted sign-in',async()=>{
-        await page.goto(origin+'/sign-in');await expect(page.getByRole('status')).toHaveText('Sign in to continue.');
+        const missing=await page.goto(origin+'/fictional-missing-crest-page');
+        assert.equal(missing.status(),404);
+        const recovery=page.getByRole('region',{name:'Page not found',exact:true});
+        await expect(recovery.getByRole('link',{name:'Back to Today',exact:true})).toHaveAttribute('href','/');
+        const tool=recovery.getByRole('button',{name:'Find a tool',exact:true});
+        await mkdir('.local/review',{recursive:true});
+        for(const width of [360,390,768,1440]){
+          await page.setViewportSize({width,height:820});
+          await expect(tool).toBeInViewport();
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+          assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(issue=>issue.id),[]);
+          if(width===390||width===1440)await page.screenshot({path:'.local/review/missing-page-recovery-'+name+'-'+width+'.png'});
+        }
+        await page.setViewportSize(viewport);
+        await tool.press('Enter');
+        const dialog=page.getByRole('dialog',{name:'Find a tool',exact:true});
+        const query=dialog.getByRole('searchbox',{name:'Search workspace tools',exact:true});
+        await expect(query).toBeFocused();
+        await query.press('Escape');await expect(tool).toBeFocused();
+        await tool.press('Enter');await query.fill('sign in');await query.press('Enter');
+        await expect(page).toHaveURL(origin+'/sign-in');
+        const job=randomUUID();
+        await page.goto(origin+'/sign-in?returnTo=schedule&job='+job);
+        await expect(page.getByRole('status')).toHaveText('Sign in to continue.');
         await expect(page.getByLabel('Trust this personal device')).not.toBeChecked();
+        await captureSignInState(page,name,'form');
         const password=page.getByLabel('Password',{exact:true});let visibilityPosts=0;const visibilityRequest=request=>{if(request.method()==='POST'&&request.url().includes('/api/auth/'))visibilityPosts++;};page.on('request',visibilityRequest);
         await password.fill('synthetic-visibility-check');await page.getByRole('button',{name:'Show password',exact:true}).click();await expect(password).toHaveAttribute('type','text');await expect(password).toHaveValue('synthetic-visibility-check');await page.getByRole('button',{name:'Hide password',exact:true}).click();await expect(password).toHaveAttribute('type','password');assert.equal(visibilityPosts,0,'visibility control cannot submit credentials');page.off('request',visibilityRequest);await password.fill('');
         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow');
         for(const label of ['Email','Password','Authenticator code'])assert((await page.getByLabel(label,{exact:true}).boundingBox()).height>=44,'touch target');
         assert.equal((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.length,0,'accessible form');
+        const code=page.getByLabel('Authenticator code',{exact:true});
+        await expect(code).toHaveAttribute('inputmode','numeric');
+        await expect(code).toHaveAttribute('autocomplete','one-time-code');
+        for(const width of [360,390,768,1440]){
+          await page.setViewportSize({width,height:820});
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+          if(width===390||width===1440){
+            await page.evaluate(()=>{document.activeElement?.blur();window.scrollTo(0,0);});
+            await page.screenshot({path:'.local/review/device-sign-in-'+name+'-'+width+'.png'});
+          }
+        }
+        await page.setViewportSize({width:360,height:480});
+        await page.getByLabel('Email',{exact:true}).fill(fixture.email);
+        await password.fill('synthetic-format-validation');
+        await code.fill('123');
+        await page.getByRole('button',{name:'Sign in',exact:true}).click();
+        await expect(page.locator('#code-invalid')).toHaveText('Enter all six digits from your authenticator app.');
+        await expect(code).toBeFocused();
+        await expect(code).toHaveAttribute('aria-invalid','true');
+        await expect(password).toHaveValue('synthetic-format-validation');
+        await code.fill('123456');
+        await expect(page.locator('#code-invalid')).toHaveCount(0);
+        await expect(page.getByRole('button',{name:'Sign in',exact:true})).toBeInViewport();
+        await page.setViewportSize(viewport);
         if(name==='chromium'){
           await fill(page,{password:'synthetic-wrong-password'});await expect(page.getByRole('status')).toContainText('Sign-in failed.');
           await expect(page.getByRole('status')).toContainText('phone’s date and time are set automatically');
+          await expect(page.getByRole('status')).toBeFocused();
+          await expect(page.getByRole('status')).toHaveAttribute('data-tone','error');
           await expect(page.getByLabel('Email',{exact:true})).toHaveValue(fixture.email);
           assert.equal(await page.getByLabel('Password',{exact:true}).inputValue(),'');assert.equal(await page.getByLabel('Authenticator code',{exact:true}).inputValue(),'');assert.equal(await localCookie(first),undefined,'failed login issues no session');
         }
+        let wrongCode='000000';
+        while(fixture.totp.validate({token:wrongCode,window:2})!==null)wrongCode=String(Number(wrongCode)+1).padStart(6,'0');
+        await fill(page,{code:wrongCode});await expect(page.getByRole('status')).toContainText('Sign-in failed.');
+        await expect(page.getByLabel('Email',{exact:true})).toHaveValue(fixture.email);
+        assert.equal(await password.inputValue(),'');assert.equal(await code.inputValue(),'');
+        assert.equal(await localCookie(first),undefined,'wrong MFA code issues no session');
+        await captureSignInState(page,name,'wrong-code');
+        const loginReply=page.waitForResponse(response=>response.url()===origin+'/api/auth/login'&&response.status()===200);
         await fill(page);await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
-        untrusted=await assertPrivate(page,first);assert.equal(untrusted.expires,-1,'untrusted cookie is nonpersistent');
+        await expect(page.getByRole('status')).toBeFocused();
+        await expect(page.getByRole('link',{name:'Return to saved job',exact:true})).toHaveAttribute('href','/schedule?job='+job);
+        untrusted=await assertPrivate(page,first,await loginReply);assert.equal(untrusted.expires,-1,'untrusted cookie is nonpersistent');
         assert.equal((await row(untrusted)).trusted,false,'server persisted untrusted choice');
         assert.equal((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.length,0,'accessible signed-in state');
+        await captureSignInState(page,name,'verified');
+        await page.goto(origin+'/sign-in?returnTo=https%3A%2F%2Fexample.test');
+        await expect(page.getByRole('link',{name:'Open workspace',exact:true})).toHaveAttribute('href','/');
       });
       await t.test('separate trusted device, reload and proof checks preserve original deadlines',async()=>{
         await other.goto(origin+'/sign-in');await expect(other.getByRole('status')).toHaveText('Sign in to continue.');
+        const loginReply=other.waitForResponse(response=>response.url()===origin+'/api/auth/login'&&response.status()===200);
         await fill(other,{trusted:true});await expect(other.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
-        trusted=await assertPrivate(other,second);initial=await row(trusted);assert(initial.trusted&&trusted.expires>Date.now()/1000,'explicit persistent trust');
+        trusted=await assertPrivate(other,second,await loginReply);initial=await row(trusted);assert(initial.trusted&&trusted.expires>Date.now()/1000,'explicit persistent trust');
         assert(Math.abs(trusted.expires-initial.expires_at.getTime()/1000)<2,'cookie ends at original database deadline');assert(untrusted.value!==trusted.value,'independent device credentials');
         await other.reload();await expect(other.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();await checkSession(other);
         const checked=await row(trusted);for(const field of ['authenticated_at','last_active_at','expires_at'])assert.equal(checked[field].getTime(),initial[field].getTime(),'proof/reload cannot advance session time');
@@ -244,7 +348,8 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
       });
       await t.test('durable local revocation is observed after reload and cannot leave cached signed-in UI',async()=>{
         await client.query('BEGIN');try{await client.query('SET LOCAL ROLE crest_web');await client.query('SELECT crest_commands.revoke_app_session($1,$2)',[createHash('sha256').update(trusted.value,'ascii').digest(),randomUUID()]);await client.query('COMMIT');}catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_REVOCATION_FAILED');}
-        await checkSession(other);await expect(other.getByRole('status')).toHaveText('Sign in to continue.');await expect(other.getByRole('button',{name:'Sign out on this device',exact:true})).toHaveCount(0);
+        await checkSession(other);await expect(other.getByRole('status')).toHaveText('Your session has ended. Sign in again.');await expect(other.getByRole('button',{name:'Sign out on this device',exact:true})).toHaveCount(0);
+        await captureSignInState(other,name,'ended-session');
         await other.reload();await expect(other.getByRole('status')).toHaveText('Sign in to continue.');
       });
       await t.test('client-only fault injection: uncertain logout is never reported or replayed as success',async()=>{
@@ -274,6 +379,6 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
           await expect(page.getByRole('heading',{name:'Today',exact:true})).toBeVisible();assert.equal(loginCalls,1,'no replay after navigation/focus');
         }finally{release();}
       });
-    }finally{await first?.close();await second?.close();await browser.close();}
+    }finally{try{await first?.close();await second?.close();await browser?.close();}finally{await closeSignInFixture();}}
   });
 }

@@ -29,7 +29,7 @@ DPkg::Lock::Timeout "30";
 EOF
 chmod 644 "$config"
 for archive in https://archive.ubuntu.com/ubuntu https://us.archive.ubuntu.com/ubuntu; do
-  sed "s|^$mirror_uri$|URIs: $archive|" "$runner_sources" > "$sources"
+  bash scripts/ci-ubuntu-package-sources.sh "$runner_sources" "$archive" > "$sources"
   chmod 644 "$sources"
   if grep -q 'mirror+file:' "$sources"; then
     echo 'Unresolved Ubuntu archive mirror' >&2

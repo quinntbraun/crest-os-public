@@ -18,6 +18,15 @@ export type SupportTripSave=Readonly<{schemaVersion:1;businessId:string;operatio
  legId:string;expectedLegVersionId:string|null;body:SupportTripBody}>;
 export type SupportTrip=Readonly<Route&Interval&{legId:string;legVersionId:string;sequence:string;reason:string|null;recordedAt:string}>;
 export type SupportTripCursor=Readonly<{departedAt:string;legId:string}>;
+export function tripCursorBefore(anchor:SupportTripCursor):SupportTripCursor|null{
+ if(!uuid(anchor.legId)||!instant(anchor.departedAt))return null;
+ // The authorized trip readers sort descending by departure and UUID.
+ const next=BigInt('0x'+anchor.legId.replaceAll('-',''))+1n;
+ const hex=next.toString(16).padStart(32,'0');
+ if(hex.length!==32)return null;
+ const legId=[hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-');
+ return {departedAt:anchor.departedAt,legId};
+}
 export type SupportTripListQuery=Readonly<{businessId:string;after:SupportTripCursor|null;pageSize:number}>;
 export type SupportTripHistoryQuery=Readonly<{businessId:string;legId:string;afterVersion:string;throughVersion:string;pageSize:number}>;
 

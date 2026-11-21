@@ -10,10 +10,12 @@ import type {FinanceAccountContext} from '../../../../client/finance-accounts';
 import {financeAccountReviewReason,requireFinanceAccount as check} from '../../../../bookkeeping/finance-account-contract';
 import {financeTaxTreatmentLabels,parseFinanceTaxApproval} from '../../../../bookkeeping/finance-tax-contract';
 import type {FinanceTaxScope} from '../../../../bookkeeping/finance-tax-contract';
+import {customerDate} from '../../../../customer/customer-contract';
 import styles from '../screen.module.css';
 
 type Latest=Awaited<ReturnType<typeof financeAccounts.taxHistory>>['rows'][number];
 type Pending=NonNullable<ReturnType<typeof readPendingFinanceTax>>;
+export type TaxApprovalTaskState='idle'|'editing'|'pending'|'busy';
 type Reviewed={context:FinanceAccountContext;latest:Latest|null};
 const blankDraft={date:'',treatment:'',rate:'',evidence:'',reason:''};
 const dateFormat=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
@@ -28,14 +30,17 @@ function approvalFrom(scope:FinanceTaxScope,draft:typeof blankDraft,latest:Lates
  }catch{return null;}
 }
 
-export function TaxApprovalEditor({scope,disabled,onSaved}:{
- scope:FinanceTaxScope|null;disabled:boolean;onSaved:()=>void;
+export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved,onTaskStateChange}:{
+ scope:FinanceTaxScope|null;applicabilityLabel:string;disabled:boolean;onSaved:()=>void;onTaskStateChange?:(state:TaxApprovalTaskState)=>void;
 }){
  const [reviewed,setReviewed]=useState<Reviewed|null>(null),[draft,setDraft]=useState(blankDraft);
  const [pending,setPending]=useState<Pending|null>(null),[canClose,setCanClose]=useState(false);
  const [closeReason,setCloseReason]=useState(''),[message,setMessage]=useState('');
  const [busy,setBusy]=useState(false),[signedOut,setSignedOut]=useState(false);
  const active=useRef<AbortController|null>(null),status=useRef<HTMLParagraphElement>(null);
+ const taskState:TaxApprovalTaskState=busy?'busy':pending?'pending':reviewed?'editing':'idle';
+ useEffect(()=>{onTaskStateChange?.(taskState);},[onTaskStateChange,taskState]);
+ useEffect(()=>()=>onTaskStateChange?.('idle'),[onTaskStateChange]);
  const latest=reviewed?.latest;
  const approval=scope&&reviewed?approvalFrom(scope,draft,reviewed.latest):null;
  const clear=useCallback(()=>{
@@ -153,10 +158,9 @@ export function TaxApprovalEditor({scope,disabled,onSaved}:{
    {signedOut&&<a href="/sign-in">Sign in again</a>}
    {!reviewed&&<div className={styles.actions}>
     {!pending&&<button type="button" className="secondary" disabled={locked||!scope} onClick={()=>load()}>Load approval settings</button>}
-    <button type="button" className="secondary" disabled={locked} onClick={()=>load(true)}>Check interrupted approval</button>
+    <button type="button" className={pending?undefined:'secondary'} disabled={locked} onClick={()=>load(true)}>Check interrupted approval</button>
    </div>}
-   {reviewed&&!pending&&<form onSubmit={submit}>
-    {latest&&<p>Latest version {latest.version} · Effective {dateLabel(latest.effectiveFrom)}</p>}
+   {reviewed&&scope&&!pending&&<form className="mapping-lookup-form" onSubmit={submit}>
     <label htmlFor="tax-approval-date">Effective from</label>
     <input id="tax-approval-date" type="date" required value={draft.date} disabled={locked}
      aria-describedby={latest?'tax-approval-date-help':undefined} onChange={event=>change('date',event.target.value)}/>
@@ -181,18 +185,43 @@ export function TaxApprovalEditor({scope,disabled,onSaved}:{
     <label htmlFor="tax-approval-reason">Approval reason</label>
     <textarea id="tax-approval-reason" rows={2} maxLength={1000} required value={draft.reason} disabled={locked}
      onChange={event=>change('reason',event.target.value)}/>
+    <section aria-labelledby="tax-review-heading">
+     <h2 id="tax-review-heading">Review tax approval</h2>
+     <p>{scope.jurisdiction} · {applicabilityLabel}</p>
+     <div className="mapping-rule-comparison">
+      <section aria-label="Latest saved tax profile">
+       <strong>Latest saved profile</strong>
+       {latest?<dl>
+        <dt>Effective from</dt><dd><time dateTime={latest.effectiveFrom}>{dateLabel(latest.effectiveFrom)}</time></dd>
+        <dt>Treatment</dt><dd>{financeTaxTreatmentLabels[latest.treatment]}</dd>
+        {latest.rate!==null&&<><dt>Decimal rate</dt><dd>{latest.rate}</dd></>}
+        <dt>Version</dt><dd>{latest.version}</dd>
+       </dl>:<p>This selection has no saved approvals.</p>}
+      </section>
+      <section aria-label="Proposed tax profile">
+       <strong>Proposed approval</strong>
+       <dl>
+        <dt>Effective from</dt><dd>{customerDate(draft.date)?<time dateTime={draft.date}>{dateLabel(draft.date)}</time>:'Choose an effective date'}</dd>
+        <dt>Treatment</dt><dd>{Object.entries(financeTaxTreatmentLabels).find(([value])=>value===draft.treatment)?.[1]??'Choose a treatment'}</dd>
+        {draft.treatment==='inclusive_single'&&<><dt>Decimal rate</dt><dd>{approval?.rate??(draft.rate.trim()||'Enter the verified rate')}</dd></>}
+       </dl>
+      </section>
+     </div>
+    </section>
     <div className={styles.actions}>
      <button type="submit" disabled={locked||!approval}>Save tax approval</button>
      <button type="button" className="secondary" disabled={locked} onClick={()=>{
+      if(Object.entries(blankDraft).some(([field,value])=>draft[field as keyof typeof blankDraft]!==value)
+       &&!window.confirm('Discard this unsaved tax approval draft?'))return;
       setReviewed(null);setDraft(blankDraft);setMessage('Approval draft cleared.');status.current?.focus();
-     }}>Cancel</button>
+     }}>Cancel approval draft</button>
     </div>
    </form>}
    {pending&&canClose&&<form onSubmit={retire}>
     <label htmlFor="tax-approval-close-reason">Reason to close this attempt</label>
     <textarea id="tax-approval-close-reason" rows={2} maxLength={1000} required value={closeReason} disabled={locked}
      onChange={event=>setCloseReason(event.target.value)}/>
-    <div className={styles.actions}><button type="submit" disabled={locked||!financeAccountReviewReason(closeReason.trim())}>
+    <div className={styles.actions}><button type="submit" className="secondary" disabled={locked||!financeAccountReviewReason(closeReason.trim())}>
      Close interrupted attempt
     </button></div>
    </form>}

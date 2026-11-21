@@ -37,9 +37,21 @@ describe('same-origin browser authentication transport',()=>{
     expect(fetcher.mock.calls[0]![1]).toMatchObject({body:'{}',headers:{'x-crest-csrf':current.csrfToken}});
     await expect(authentication.logout(current,signal())).rejects.toMatchObject({kind:'uncertain'});expect(fetcher).toHaveBeenCalledTimes(2);
   });
-  it('passes cancellation to fetch without retrying or exposing its cause',async()=>{
+  it('does not dispatch an already-cancelled session, login or logout',async()=>{
     const controller=new AbortController();controller.abort();
-    const fetcher=vi.fn().mockImplementation((_path,init)=>{expect(init.signal.aborted).toBe(true);throw new Error('private');});vi.stubGlobal('fetch',fetcher);
-    const error=await authentication.session(controller.signal).catch((error:unknown)=>error);expect(error).toMatchObject({kind:'uncertain'});expect(error).not.toHaveProperty('cause');expect(fetcher).toHaveBeenCalledTimes(1);
+    const fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);
+    for(const action of [()=>authentication.session(controller.signal),()=>authentication.login({email:'synthetic@example.com',password:'synthetic',code:'123456',trusted:false},controller.signal),()=>authentication.logout(proof(),controller.signal)]){
+      await expect(action()).rejects.toMatchObject({kind:'uncertain',message:'AUTHENTICATION_FAILED'});
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it('passes in-flight cancellation to fetch without retrying or exposing its cause',async()=>{
+    const controller=new AbortController();
+    const fetcher=vi.fn().mockImplementation((_path,init)=>new Promise((_resolve,reject)=>{
+      init.signal.addEventListener('abort',()=>reject(new Error('private cancellation detail')),{once:true});
+    }));vi.stubGlobal('fetch',fetcher);
+    const request=authentication.session(controller.signal);controller.abort();
+    const error=await request.catch((error:unknown)=>error);expect(error).toMatchObject({kind:'uncertain',message:'AUTHENTICATION_FAILED'});expect(error).not.toHaveProperty('cause');expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls[0]![1].signal.aborted).toBe(true);
   });
 });

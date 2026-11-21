@@ -1,11 +1,13 @@
 // Genuine Next/Node/MFA browser acceptance for the isolated completion candidate.
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
+import {captureDuringAction} from '../support/quote-browser-response.mjs';
 
 const invoiceDrafts=true;
 const dollars=cents=>(cents/100n).toString()+'.'+(cents%100n).toString().padStart(2,'0');
@@ -14,7 +16,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
   financeAccounts:true,invoicePreparation:true,invoiceDrafts});
  let browser;
- const financeResponses=[];
+ const financeResponses=[],schedulingResponses=[];
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
@@ -22,6 +24,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   page.on('response',response=>{
    const path=new URL(response.url()).pathname;
    if(path.startsWith('/api/business/finance-accounts/'))financeResponses.push([path,response.status()]);
+   if(path.startsWith('/api/business/scheduling/'))schedulingResponses.push([path,response.status()]);
   });
   page.setDefaultTimeout(20000);
   const jobId=fixture.bookingRequest.jobId,job='/schedule?job='+jobId;
@@ -50,7 +53,15 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const booked=await post('book',booking);
   assert.equal(booked.status,200);
   assert.equal(booked.value.state,'committed');
-  await page.goto(fixture.origin+job);
+  await page.goto(fixture.origin+end);
+  await expect(status).toContainText('Open a supported active job');
+  const returnToJob=page.getByRole('link',{name:'Open saved job',exact:true});
+  await expect(returnToJob).toHaveAttribute('href',job);
+  await expect(page.getByRole('button',{name:'Reload saved work',exact:true})).toHaveClass('secondary');
+  await returnToJob.click();
+  await expect(page).toHaveURL(fixture.origin+job);
+  await expect(page.getByRole('heading',{name:'Job',exact:true})).toBeVisible();
+  await expect(page.getByRole('region',{name:'Saved visit',exact:true}).locator('.schedule-status')).toContainText('Saved job');
   const drafts=page.getByRole('region',{name:'Invoice drafts',exact:true});
   const draftStatus=drafts.getByRole('status');
   if(invoiceDrafts){
@@ -87,7 +98,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
    await expect(drafts.getByRole('button',{name:'Open invoice draft',exact:true})).toHaveCount(1);
   }
-  const recordWorkStatus=page.getByRole('button',{name:'Record work status…',exact:true});
+  const recordWorkStatus=page.getByRole('button',{name:'Record departure…',exact:true});
   const jobVehicles=page.getByRole('region',{name:'Vehicles for this job',exact:true});
   const workActionPosition=await recordWorkStatus.boundingBox(),vehiclesPosition=await jobVehicles.boundingBox();
   assert(workActionPosition&&vehiclesPosition&&workActionPosition.height>=44&&workActionPosition.y<vehiclesPosition.y);
@@ -95,7 +106,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await recordWorkStatus.scrollIntoViewIfNeeded();
   await page.screenshot({path:'.local/review/schedule-work-action-'+name+'-390.png'});
   await recordWorkStatus.click();
-  await page.getByLabel('What is happening?',{exact:true}).selectOption('direct_arrive');
+  await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?',{exact:true}).fill('Synthetic arrival without travel.');
   await page.getByRole('button',{name:'Start work without recorded travel',exact:true}).click();
   await expect(status).toContainText('Work status saved.');
@@ -107,6 +118,62 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.equal(loaded.status,200);
   const rows=loaded.value.assignments;
   assert(rows.length>=2);
+  const visit=page.locator('.completion-visit-heading');
+  await expect(visit.getByRole('heading')).toBeVisible();
+  const vehicleScope=page.getByRole('group',{name:'Synthetic lifecycle sedan',exact:true});
+  const visitScope=page.getByRole('group',{name:'Entire visit',exact:true});
+  await expect(vehicleScope.getByRole('group',{name:/Assigned item/})).toHaveCount(1);
+  await expect(visitScope.getByRole('group',{name:/Assigned item/})).toHaveCount(1);
+  await expect(vehicleScope).toContainText('0 of 1 ready');
+  await expect(visitScope).toContainText('0 of 1 ready');
+  const review=page.getByRole('complementary',{name:'Completion review',exact:true});
+  await expect(review).toContainText(rows.length+' items need review');
+  const firstEditor=page.getByRole('group',{name:'Assigned item 1',exact:true}).locator('details.completion-item-editor');
+  const previewFacts=async()=>({jobs:(await fixture.client.query('SELECT to_jsonb(j)::text AS value FROM crest.jobs j WHERE business_id=$1 ORDER BY to_jsonb(j)::text COLLATE "C"',[fixture.business])).rows,audit:(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows});
+  const beforeJump=await previewFacts(),jumpRequests=[],returnChecks=[];const observeJump=request=>{const path=new URL(request.url()).pathname;if(path.startsWith('/api/business/'))jumpRequests.push(request.method()+' '+path);};page.on('request',observeJump);
+  try{
+   await expect(firstEditor).toHaveJSProperty('open',true);
+   await firstEditor.locator(':scope > summary').press('Enter');await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeHidden();
+   await review.getByRole('button',{name:'End job',exact:true}).click();
+   await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeFocused();await expect(firstEditor).toHaveJSProperty('open',true);
+   await firstEditor.locator(':scope > summary').press('Enter');
+   await review.getByRole('region',{name:'Items needing review',exact:true}).getByRole('button',{name:'Item 1: Needs outcome',exact:true}).press('Enter');
+   await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeFocused();
+   await firstEditor.locator(':scope > summary').press('Enter');
+   await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
+   await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeFocused();
+   for(let index=0;index<rows.length;index++)await expect(page.getByLabel('Outcome for item '+(index+1),{exact:true})).toHaveValue('');
+   await expect(page.locator('details.completion-item-editor[open]')).toHaveCount(1);
+   await mkdir('.local/review',{recursive:true});
+   for(const width of [360,390,768,1100,1440]){
+    await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(issue=>issue.id),[]);
+    await review.screenshot({path:'.local/review/completion-unresolved-'+name+'-'+width+'.png'});
+   }
+   for(const width of [360,390,430,1440]){
+    await page.setViewportSize({width,height:900});
+    await page.getByRole('button',{name:'Review completion',exact:true}).press('Enter');
+    await expect(review.getByRole('button',{name:'End job',exact:true})).toBeFocused();
+    await expect(review.getByRole('button',{name:'End job',exact:true})).toBeInViewport({ratio:1});
+    const origin=review.getByRole('region',{name:'Items needing review',exact:true}).getByRole('button',{name:'Item 2: Needs outcome',exact:true});
+    await origin.scrollIntoViewIfNeeded();await origin.focus();await page.evaluate(()=>new Promise(requestAnimationFrame));
+    const position=await page.evaluate(()=>scrollY);if(width<768)assert(position>0,'Phone return must exercise a genuinely scrolled review');
+    await origin.press('Enter');await expect(page.getByLabel('Outcome for item 2',{exact:true})).toBeFocused();
+    await page.getByRole('group',{name:'Assigned item 2',exact:true}).getByRole('button',{name:'Back to completion review',exact:true}).press('Enter');
+    await expect(origin).toBeFocused();await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(position);
+    await expect(firstEditor).toHaveJSProperty('open',true);
+    for(let index=0;index<rows.length;index++)await expect(page.getByLabel('Outcome for item '+(index+1),{exact:true})).toHaveValue('');
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.screenshot({path:'.local/review/completion-review-return-'+name+'-'+width+'.png'});
+    returnChecks.push({width,mainActionReachable:true,exactFocusAndScrollReturn:true,nonzeroPhoneScroll:width<768?position>0:null});
+   }
+   await page.setViewportSize({width:1100,height:600});await review.getByRole('button',{name:'End job',exact:true}).scrollIntoViewIfNeeded();
+   await expect(review.getByRole('button',{name:'End job',exact:true})).toBeInViewport({ratio:1});
+   assert.deepEqual(await previewFacts(),beforeJump);assert.deepEqual(jumpRequests,[]);
+   await writeFile('.local/review/completion-review-return-'+name+'.json',JSON.stringify({engine:name,observations:returnChecks,businessRequests:jumpRequests.length,sourcePreserved:true},null,2)+'\n');
+  }finally{page.off('request',observeJump);await page.setViewportSize({width:390,height:844});}
+  await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
+  await expect(page.getByLabel('Outcome for item 1',{exact:true})).toBeFocused();
 
   const partial=name==='webkit';
   if(!partial)await page.getByRole('button',{name:'Mark all items fulfilled',exact:true}).click();
@@ -119,9 +186,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    firstGross=gross/2n;
    const firstDiscount=discount/2n;
    const group=page.getByRole('group',{name:'Assigned item '+(index+1),exact:true});
+   const editor=group.locator('details.completion-item-editor');if(!await editor.evaluate(element=>element.open))await editor.locator(':scope > summary').press('Enter');
    await group.getByLabel('Outcome for item '+(index+1),{exact:true}).selectOption('split');
-   split=group.getByRole('group',{name:'Portion 1',exact:true});
-   const deferred=group.getByRole('group',{name:'Portion 2',exact:true});
+   split=group.getByRole('group',{name:'Portion 1',exact:true,includeHidden:true});
+   const deferred=group.getByRole('group',{name:'Portion 2',exact:true,includeHidden:true});
    await split.getByLabel('Work in this portion',{exact:true}).fill('Synthetic interior surfaces fulfilled');
    await deferred.getByLabel('Work in this portion',{exact:true}).fill('Synthetic final pass deferred');
    await split.getByLabel('Gross amount in dollars',{exact:true}).fill(dollars(firstGross));
@@ -130,6 +198,25 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await deferred.getByLabel('Discount in dollars',{exact:true}).fill(dollars(discount-firstDiscount));
    const reason=deferred.getByLabel('Reason for unfinished portion',{exact:true});
    await reason.fill('Synthetic weather interruption.');
+   const beforeSwitch=await previewFacts(),switchRequests=[];const observeSwitch=request=>{const path=new URL(request.url()).pathname;if(path.startsWith('/api/business/'))switchRequests.push(request.method()+' '+path);};page.on('request',observeSwitch);
+   try{
+    const otherIndex=index===0?1:0,otherEditor=page.getByRole('group',{name:'Assigned item '+(otherIndex+1),exact:true}).locator('details.completion-item-editor');
+    await otherEditor.locator(':scope > summary').press('Enter');await expect(editor).toHaveJSProperty('open',false);await expect(otherEditor).toHaveJSProperty('open',true);
+    await expect(reason).toHaveValue('Synthetic weather interruption.');await expect(split.getByLabel('Gross amount in dollars',{exact:true})).toHaveValue(dollars(firstGross));
+    await editor.locator(':scope > summary').press('Enter');await expect(editor).toHaveJSProperty('open',true);await expect(otherEditor).toHaveJSProperty('open',false);
+    await expect(reason).toBeVisible();await expect(reason).toHaveValue('Synthetic weather interruption.');await expect(split.getByLabel('Work in this portion',{exact:true})).toHaveValue('Synthetic interior surfaces fulfilled');
+    await expect(page.locator('details.completion-item-editor[open]')).toHaveCount(1);
+    await page.getByRole('button',{name:'Review completion',exact:true}).press('Enter');
+    await expect(review.getByRole('button',{name:'End job',exact:true})).toBeFocused();
+    const returnTarget=review.getByRole('region',{name:'Items needing review',exact:true}).getByRole('button',{name:'Item '+(otherIndex+1)+': Needs outcome',exact:true});
+    await returnTarget.scrollIntoViewIfNeeded();await returnTarget.focus();await page.evaluate(()=>new Promise(requestAnimationFrame));
+    const returnY=await page.evaluate(()=>scrollY);await returnTarget.press('Enter');
+    await otherEditor.getByRole('button',{name:'Back to completion review',exact:true}).press('Enter');
+    await expect(returnTarget).toBeFocused();await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(returnY);
+    await expect(editor).toHaveJSProperty('open',true);await expect(otherEditor).toHaveJSProperty('open',false);
+    await expect(reason).toHaveValue('Synthetic weather interruption.');await expect(split.getByLabel('Gross amount in dollars',{exact:true})).toHaveValue(dollars(firstGross));
+    assert.deepEqual(await previewFacts(),beforeSwitch);assert.deepEqual(switchRequests,[]);
+   }finally{page.off('request',observeSwitch);}
    const outcomes=page.getByRole('group',{name:'Scope outcomes',exact:true});
    await expect(outcomes.getByRole('status')).toContainText(`${rows.length-1} of ${rows.length}`);
    const fillRemaining=outcomes.getByRole('button',{name:'Mark remaining items fulfilled',exact:true});
@@ -139,21 +226,37 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(group.getByLabel('Outcome for item '+(index+1),{exact:true})).toHaveValue('split');
    await expect(reason).toHaveValue('Synthetic weather interruption.');
    await expect(split.getByLabel('Gross amount in dollars',{exact:true})).toHaveValue(dollars(firstGross));
+   const description=split.getByLabel('Work in this portion',{exact:true});
+   await description.fill(' ');
+   await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
+   await expect(description).toBeFocused();
+   await description.fill('Synthetic interior surfaces fulfilled');
+   await reason.fill(' ');
+   await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
+   await expect(reason).toBeFocused();
+   await reason.fill('Synthetic weather interruption.');
    for(let position=0;position<rows.length;position++){
     if(position!==index)await expect(page.getByLabel('Outcome for item '+(position+1),{exact:true})).toHaveValue('completed');
    }
    await page.getByLabel('Walkthrough outcome',{exact:true}).selectOption('unavailable');
    await page.getByLabel('Why was the walkthrough unavailable?',{exact:true}).fill('Synthetic customer departed.');
   }
+  await expect(vehicleScope).toContainText('1 of 1 ready');
+  await expect(visitScope).toContainText('1 of 1 ready');
   await page.getByText('Completion note and review request',{exact:true}).click();
   await page.getByLabel('HTTPS review link',{exact:true}).fill('https://example.invalid/crest-review');
 
   async function capture(stage){
    await mkdir('.local/review',{recursive:true});
-   for(const width of [360,390,768,1440]){
+   for(const width of [320,360,390,768,1440]){
     await page.setViewportSize({width,height:900});
     await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    if(split&&width>=360&&stage==='editor'){
+     const amountInputs=split.locator('.completion-portion-amounts input');
+     const grossBox=await amountInputs.nth(0).boundingBox(),discountBox=await amountInputs.nth(1).boundingBox();
+     assert(grossBox&&discountBox&&Math.abs(grossBox.y-discountBox.y)<1,'Portion amounts align below wrapped labels');
+    }
     const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
     assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
     await page.screenshot({path:'.local/review/completion-'+stage+'-'+name+'-'+width+'.png',fullPage:true});
@@ -172,7 +275,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await split.getByLabel('Gross amount in dollars',{exact:true}).fill(dollars(firstGross+1n));
    await page.getByRole('button',{name:'End job',exact:true}).click();
    await expect(page.locator('form').getByRole('alert')).toContainText('Portion amounts must add up');
+   await expect(review).toContainText('1 item needs review');
    assert.equal(submissions,0);
+   await review.getByRole('button',{name:'Review next required field',exact:true}).press('Enter');
+   await expect(split.getByLabel('Gross amount in dollars',{exact:true})).toBeFocused();
    await split.getByLabel('Gross amount in dollars',{exact:true}).fill(dollars(firstGross));
   }
   await page.getByRole('button',{name:'End job',exact:true}).click();
@@ -186,6 +292,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const summary=page.getByRole('region',{name:'Saved completion',exact:true});
   await expect(summary.getByRole('heading',{name:partial?'Partial completion':'Full completion',exact:true})).toBeVisible();
   await expect(summary).toContainText('Invoice review · Open');
+  const preparationReadCount=()=>fixture.requests.filter(request=>request.path==='/api/business/finance-accounts/invoice-preparation').length;
+  const beforePreparationJump=preparationReadCount();
+  await summary.getByRole('button',{name:'Review completed work',exact:true}).press('Enter');
+  await expect(page.getByRole('heading',{name:'Invoice preparation',exact:true})).toBeFocused();
+  assert.equal(preparationReadCount(),beforePreparationJump,'The follow-up jump only changes focus; it does not load or write financial records');
   await expect(summary).toContainText('Text draft · Prepared');
   const reviewDraft=summary.getByRole('textbox',{name:'Prepared review draft',exact:true});
   await expect(reviewDraft).toHaveValue(/https:\/\/example\.invalid\/crest-review/);
@@ -266,26 +377,49 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(reviewDraft).toHaveValue(draftText);
   await capture('outcome');
   const historyDisclosure=summary.locator('details').filter({has:page.getByText('Review message history',{exact:true})});
-  const historyButton=historyDisclosure.locator('summary');
+  const historyButton=historyDisclosure.locator(':scope > summary');
   await expect(historyDisclosure.getByRole('listitem')).toHaveCount(0);
   let historyReads=0;
+  const countHistoryRequest=request=>{if(request.method()==='POST'&&new URL(request.url()).pathname==='/api/business/scheduling/review-history')historyReads++;};
+  page.on('request',countHistoryRequest);
+  let rejectedHistoryRead=false;
   await page.route('**/api/business/scheduling/review-history',async route=>{
-   historyReads++;
-   if(historyReads===1)await route.abort('failed');
+   if(!rejectedHistoryRead){rejectedHistoryRead=true;await route.abort('failed');}
    else await route.continue();
   });
   await historyButton.focus();
   await historyButton.press('Enter');
   await expect(historyDisclosure.getByRole('alert')).toHaveText('Couldn’t load saved message history.');
   assert.equal(historyReads,1);
-  await historyDisclosure.getByRole('button',{name:'Retry history',exact:true}).click();
+  // Buffer the one genuine server response before Chromium can retire its
+  // handle. Preserve the intentional failed first read and all source checks.
+  const historyResponse=await captureDuringAction(page,'/api/business/scheduling/review-history',()=>historyDisclosure.getByRole('button',{name:'Retry history',exact:true}).click(),{timeoutMs:20000});
+  assert.equal(historyResponse.status,200);
+  const historySource=historyResponse.body;
   const historyRows=historyDisclosure.getByRole('listitem');
   await expect(historyRows).toHaveCount(3);
   await expect(historyRows.nth(0)).toContainText('Owner-confirmed sent');
   await expect(historyRows.nth(1)).toContainText('Synthetic messaging app unavailable');
   await expect(historyRows.nth(2)).toContainText('Prepared');
+  for(let index=0;index<historySource.entries.length;index++){
+   const source=historySource.entries[index],row=historyRows.nth(index),times=row.locator('.review-history-time time');
+   await expect(times.nth(0)).toHaveAttribute('datetime',source.effectiveAt);
+   await expect(times.nth(0)).toHaveAttribute('title',source.effectiveAt);
+   const visibleTimes=await times.allTextContents();
+   assert.equal(new Set(visibleTimes).size,visibleTimes.length,'The event summary does not repeat an indistinguishable timestamp');
+   if(await times.count()===2){
+    await expect(times.nth(1)).toHaveAttribute('datetime',source.recordedAt);
+    await expect(times.nth(1)).toHaveAttribute('title',source.recordedAt);
+   }
+   const exact=row.locator('details.review-history-evidence');
+   await exact.locator('summary').press('Enter');
+   await expect(exact.locator('time').nth(0)).toHaveText(source.effectiveAt);
+   await expect(exact.locator('time').nth(1)).toHaveText(source.recordedAt);
+   await exact.locator('summary').press('Enter');
+  }
   await expect(historyDisclosure).not.toContainText('https://example.invalid/crest-review');
   assert.equal(historyReads,2);
+  page.off('request',countHistoryRequest);
   await capture('history');
   await historyButton.click();
   await expect(historyDisclosure.locator('li')).toHaveCount(0);
@@ -302,7 +436,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.goto(fixture.origin+'/customers');
   await page.getByRole('button',{name:customer.display_name,exact:true}).click();
   const customerHistory=page.locator('details').filter({has:page.getByText('Review message history',{exact:true})});
-  await customerHistory.locator('summary').click();
+  await customerHistory.locator(':scope > summary').click();
   await expect(customerHistory.getByRole('listitem')).toHaveCount(3);
   await expect(customerHistory.getByRole('listitem').nth(1)).toContainText('Synthetic messaging app unavailable');
   async function renewBrowserSession(){
@@ -316,7 +450,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    const fresh=fixture.credentials();
    await email.fill(fresh.email);
    await page.getByLabel('Password',{exact:true}).fill(fresh.password);
-   await page.getByLabel('Authenticator code',{exact:true}).fill(fresh.code);
+   const freshCode=page.getByLabel('Authenticator code',{exact:true});
+   await freshCode.fill(fresh.code);
+   assert.deepEqual(await freshCode.evaluate(element=>({sixDigits:/^[0-9]{6}$/.test(element.value),valid:element.validity.valid})),{sixDigits:true,valid:true});
+   await expect(freshCode).toBeFocused();
    await page.getByRole('button',{name:'Sign in',exact:true}).click();
    await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
    await page.goto(fixture.origin+end);
@@ -328,7 +465,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(status).toHaveText('Saved completion loaded.');
   await expect(summary.locator('details[open]').filter({has:page.getByText('Review message history',{exact:true})})).toHaveCount(0);
   await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
-  const scheduleStatus=page.getByRole('region',{name:'Saved schedule',exact:true}).getByRole('status').first();
+  const scheduleStatus=page.getByRole('region',{name:'Saved visit',exact:true}).getByRole('status').first();
   const requestOutcomes=[];
   const scheduleResponse=response=>{
    const path=new URL(response.url()).pathname;
@@ -425,7 +562,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(drafts.getByRole('region',{name:'Saved draft',exact:true})).toHaveCount(0);
   }
  }catch(error){
-  if(error instanceof Error)error.message+='\nRecent finance responses '+JSON.stringify(financeResponses.slice(-15));
+  if(error instanceof Error)error.message+='\nRecent finance responses '+JSON.stringify(financeResponses.slice(-15))
+   +'\nRecent scheduling responses '+JSON.stringify(schedulingResponses.slice(-12))
+   +'\nSession admission '+JSON.stringify(await sessionAdmissionDiagnostic(fixture));
   throw error;
  }finally{
   await browser?.close();

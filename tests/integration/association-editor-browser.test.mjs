@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {createServer} from 'node:net';
+import {mkdir} from 'node:fs/promises';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {setTimeout as delay} from 'node:timers/promises';
@@ -85,12 +86,13 @@ function observeCrmFailures(page, device, failures){
  page.on('requestfailed',request=>retain(request,'aborted'));
 }
 const customer=(name,epoch)=>({schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,customerId:randomUUID(),expectedVersion:'0',displayName:name,phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null});
-const vehicle=(name,epoch)=>({schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,vehicleId:randomUUID(),expectedVersion:'0',label:name,year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'customer_vehicle',notes:null,archived:false,archiveReason:null});
+const vehicleName='2021 Toyota Tacoma';
+const vehicle=(name,epoch)=>({schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,vehicleId:randomUUID(),expectedVersion:'0',label:name,year:2021,make:'Toyota',model:'Tacoma',color:'Magnetic Gray',vin:'FICTIONAL-001',plate:'CREST-21',kind:'customer_vehicle',notes:null,archived:false,archiveReason:null});
 const panel=page=>page.getByRole('region',{name:'Customers for this vehicle',exact:true});
 async function openPanel(page,car){
  await page.bringToFront();await page.goto(origin+'/vehicles');await expect(page.getByRole('button',{name:'Add vehicle',exact:true})).toBeVisible();
  await page.getByLabel('Vehicle search',{exact:true}).fill(car.label);await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toHaveText('Vehicle search complete.');
- await page.getByRole('button',{name:car.label,exact:true}).click();await expect(panel(page)).toBeVisible();
+ await page.getByRole('button',{name:vehicleName,exact:true}).click();await expect(panel(page)).toBeVisible();
  await panel(page).getByRole('button',{name:'Load current customer links',exact:true}).click();
 }
 async function reloadLinks(page){await panel(page).getByRole('button',{name:'Load current customer links',exact:true}).click();await expect(panel(page).getByRole('status')).toContainText('Review the retained customer links');}
@@ -121,12 +123,18 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
    await caseTest('mobile forms preserve explicit billing, exact periods, conflict review and complete ownership history',async()=>{
     await page.bringToFront();await page.goto(origin+'/customers?customer='+one.customerId);
     await expect(page.getByRole('form',{name:'Customer editor',exact:true}).getByLabel('Customer name',{exact:true})).toHaveValue(one.displayName);
+    await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Vehicles',exact:true}).click();
     const shortcut=page.getByRole('link',{name:'Link a vehicle',exact:true});
     await expect(shortcut).toHaveAttribute('href','/vehicles?linkCustomer='+one.customerId);
     await shortcut.focus();await page.keyboard.press('Enter');
     await expect(page.getByRole('button',{name:'Add vehicle',exact:true})).toBeVisible();
-    await page.getByRole('button',{name:car.label,exact:true}).click();
-    await expect(page.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();
+    await page.getByLabel('Vehicle search',{exact:true}).fill(car.label);
+    await page.getByRole('button',{name:'Search vehicles',exact:true}).click();
+    await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toHaveText('Vehicle search complete.');
+    await page.getByRole('button',{name:vehicleName,exact:true}).click();
+    await expect(page.getByRole('heading',{name:vehicleName,exact:true})).toBeFocused();
+    await expect(page.locator('.vehicle-profile')).toContainText(car.label);
+    await expect(page.locator('.vehicle-profile')).toContainText('CREST-21');
     const box=panel(page),start=box.getByRole('button',{name:'Start customer link',exact:true});
     await start.press('Enter');
     await expect(box.getByRole('status')).toContainText('Customer selected',{timeout:20000});
@@ -135,40 +143,61 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     await expect(box.getByLabel('Relationship',{exact:true})).toHaveValue('');
     await expect(box.getByLabel('Billing selection',{exact:true})).toHaveValue('');
     await expect(box.getByLabel('Effective time (UTC)',{exact:true})).toHaveValue('');
-    await expect(box.getByRole('button',{name:'Save customer link',exact:true})).toBeDisabled();
+    await expect(box.getByRole('button',{name:'Review customer-link change',exact:true})).toBeDisabled();
     assert.equal((await client.query('SELECT count(*)::int AS n FROM crest.customer_vehicles WHERE business_id=$1 AND vehicle_id=$2',[business,car.vehicleId])).rows[0].n,0);
     await box.getByLabel('Link evidence',{exact:true}).fill('Keep this unsaved field');
     page.once('dialog',dialog=>dialog.dismiss());
     await box.getByRole('button',{name:'Load current customer links',exact:true}).click();
     await expect(box.getByLabel('Link evidence',{exact:true})).toHaveValue('Keep this unsaved field');
-    await box.getByLabel('Relationship',{exact:true}).selectOption('keeper');await expect(box.getByRole('button',{name:'Save customer link',exact:true})).toBeDisabled();await box.getByLabel('Billing selection',{exact:true}).selectOption('no');await box.getByRole('button',{name:'Use current time',exact:true}).click();assert.match(await box.getByLabel('Effective time (UTC)',{exact:true}).inputValue(),/\.[0-9]{6}Z$/);
+    await box.getByLabel('Relationship',{exact:true}).selectOption('keeper');await expect(box.getByRole('button',{name:'Review customer-link change',exact:true})).toBeDisabled();await box.getByLabel('Billing selection',{exact:true}).selectOption('no');await box.getByRole('button',{name:'Use current time',exact:true}).click();assert.match(await box.getByLabel('Effective time (UTC)',{exact:true}).inputValue(),/\.[0-9]{6}Z$/);
     await box.getByLabel('Effective time (UTC)',{exact:true}).fill('2026-10-01T00:00:00.123456Z');await box.getByLabel('Link evidence',{exact:true}).fill('Synthetic screen retained é 😀');
+    const review=box.getByRole('region',{name:'Review customer-link change',exact:true});
+    const reviewButton=box.getByRole('button',{name:'Review customer-link change',exact:true});
+    await reviewButton.press('Enter');
+    await expect(review.getByRole('heading')).toBeFocused();
+    await expect(review).toContainText(one.displayName);
+    await expect(review).toContainText('Billing unselected');
+    await expect(review).toContainText('2026-10-01T00:00:00.123456Z');
+    assert.equal((await client.query('SELECT count(*)::int AS n FROM crest.customer_vehicles WHERE business_id=$1 AND vehicle_id=$2',[business,car.vehicleId])).rows[0].n,0);
+    await review.getByRole('button',{name:'Back to link details',exact:true}).press('Enter');
+    await expect(reviewButton).toBeFocused();
+    await expect(box.getByLabel('Link evidence',{exact:true})).toHaveValue('Synthetic screen retained é 😀');
+    await reviewButton.press('Enter');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);assert(await box.getByRole('button',{name:'Save customer link',exact:true}).evaluate(el=>el.getBoundingClientRect().height>=44));
+    await mkdir('.local/review',{recursive:true});
+    await review.screenshot({path:'.local/review/vehicle-link-review-'+name+'.png',animations:'disabled'});
     await box.getByRole('button',{name:'Save customer link',exact:true}).click();await expect(box.getByRole('status')).toContainText('Customer link saved');
     const original=(await client.query('SELECT crest_private.association_projection(c) AS value FROM crest.customer_vehicles c WHERE business_id=$1 AND vehicle_id=$2',[business,car.vehicleId])).rows[0].value;assert.equal(original.valid_from,'2026-10-01T00:00:00.123456Z');assert.equal(original.customer_id,one.customerId);assert.equal(original.is_billing,false);assert.equal(original.evidence,'Synthetic screen retained é 😀');
-    await reloadLinks(page);await box.getByRole('button',{name:'End link for '+one.displayName,exact:true}).click();await box.getByLabel('Effective time (UTC)',{exact:true}).fill('2026-10-25T00:00:00.000001Z');await box.getByLabel('Reason for ending the earlier link',{exact:true}).fill('Stale device review');
+    await reloadLinks(page);
+    await expect(box.getByRole('link',{name:one.displayName,exact:true})).toHaveAttribute('href','/customers?customer='+one.customerId+'&view=vehicles');
+    await page.locator('.vehicle-record').screenshot({path:'.local/review/vehicle-customer-links-'+name+'.png',animations:'disabled'});
+    const currentLink=box.getByRole('listitem').filter({hasText:one.displayName}).filter({hasText:'In effect'});
+    await currentLink.getByText('Link actions for '+one.displayName,{exact:true}).click();
+    await currentLink.getByRole('button',{name:'End link for '+one.displayName,exact:true}).click();await box.getByLabel('Effective time (UTC)',{exact:true}).fill('2026-10-25T00:00:00.000001Z');await box.getByLabel('Reason for ending the earlier link',{exact:true}).fill('Stale device review');
     otherProof=(await send(other,'auth/session')).body.csrfToken;
     const current={schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,expectedVersion:'1',action:'transfer',associationId:original.id,customerId:two.customerId,vehicleId:car.vehicleId,effectiveAt:'2026-10-25T00:00:00.000001Z',relationship:'keeper',isBilling:false,evidence:null,reason:'Synthetic other device transfer',nextAssociationId:randomUUID()};assert.equal((await send(other,root+'save',current,otherProof)).status,200);
-    const stale=page.waitForRequest(r=>r.url().endsWith('/api/business/vehicle-associations/save'));await box.getByRole('button',{name:'Confirm end of link',exact:true}).click();const loser=(await stale).postDataJSON();await expect(box.getByRole('status')).toContainText('changed or conflicts');assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,loser.operationId])).rows[0].n,0);
-    await reloadLinks(page);await box.getByRole('button',{name:'Transfer link for '+two.displayName,exact:true}).click();await choose(page,one.displayName);await box.getByLabel('Relationship',{exact:true}).selectOption('keeper');await box.getByLabel('Billing selection',{exact:true}).selectOption('no');await box.getByLabel('Effective time (UTC)',{exact:true}).fill('2026-10-26T00:00:00.000001Z');await box.getByLabel('Reason for ending the earlier link',{exact:true}).fill('Synthetic selected next customer');await box.getByRole('button',{name:'Confirm customer-link transfer',exact:true}).click();await expect(box.getByRole('status')).toContainText('Customer link saved');
-    await reloadLinks(page);await box.getByRole('button',{name:'End link for '+one.displayName,exact:true}).click();await box.getByLabel('Effective time (UTC)',{exact:true}).fill('2026-10-27T00:00:00.000001Z');await box.getByLabel('Reason for ending the earlier link',{exact:true}).fill('Synthetic retained end');await box.getByRole('button',{name:'Confirm end of link',exact:true}).click();await expect(box.getByRole('status')).toContainText('Customer link saved');
+    const stale=page.waitForRequest(r=>r.url().endsWith('/api/business/vehicle-associations/save'));await box.getByRole('button',{name:'Review customer-link change',exact:true}).click();await box.getByRole('button',{name:'Confirm end of link',exact:true}).click();const loser=(await stale).postDataJSON();await expect(box.getByRole('status')).toContainText('changed or conflicts');assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,loser.operationId])).rows[0].n,0);
+    await reloadLinks(page);await box.getByText('Link actions for '+two.displayName,{exact:true}).click();await box.getByRole('button',{name:'Transfer link for '+two.displayName,exact:true}).click();await choose(page,one.displayName);await box.getByLabel('Relationship',{exact:true}).selectOption('keeper');await box.getByLabel('Billing selection',{exact:true}).selectOption('no');await box.getByLabel('Effective time (UTC)',{exact:true}).fill('2026-10-26T00:00:00.000001Z');await box.getByLabel('Reason for ending the earlier link',{exact:true}).fill('Synthetic selected next customer');await box.getByRole('button',{name:'Review customer-link change',exact:true}).click();await box.getByRole('button',{name:'Confirm customer-link transfer',exact:true}).click();await expect(box.getByRole('status')).toContainText('Customer link saved');
+    await reloadLinks(page);
+    await currentLink.getByText('Link actions for '+one.displayName,{exact:true}).click();
+    await currentLink.getByRole('button',{name:'End link for '+one.displayName,exact:true}).click();await box.getByLabel('Effective time (UTC)',{exact:true}).fill('2026-10-27T00:00:00.000001Z');await box.getByLabel('Reason for ending the earlier link',{exact:true}).fill('Synthetic retained end');await box.getByRole('button',{name:'Review customer-link change',exact:true}).click();await box.getByRole('button',{name:'Confirm end of link',exact:true}).click();await expect(box.getByRole('status')).toContainText('Customer link saved');
     const rows=(await client.query('SELECT customer_id,valid_to,version::text,is_billing FROM crest.customer_vehicles WHERE business_id=$1 AND vehicle_id=$2 ORDER BY valid_from',[business,car.vehicleId])).rows;assert.equal(rows.length,3);assert.deepEqual(rows.map(r=>r.customer_id),[one.customerId,two.customerId,one.customerId]);assert(rows.every(r=>r.valid_to!==null&&r.version==='2'&&r.is_billing===false));
-    await reloadLinks(page);await box.getByRole('button',{name:'View link history for '+one.displayName,exact:true}).last().click();await expect(box.getByRole('region',{name:'Customer link history',exact:true})).toContainText('Current version: 2');
+    await reloadLinks(page);await box.getByText('Link actions for '+one.displayName,{exact:true}).last().click();await box.getByRole('button',{name:'View link history for '+one.displayName,exact:true}).last().click();await expect(box.getByRole('region',{name:'Customer link history',exact:true})).toContainText('Current version: 2');
    });
    await caseTest('lost responses resolve original receipts; unchanged retries and lost drafts stay explicit',async()=>{
     // This independent MFA device uses its genuine ordinary budget. No table,
     // capability, proof limit or allowance is rewritten by the fixture.
-    await openPanel(other,car);const box=panel(other),key='crest.vehicle-association.pending-reference.v1',read=()=>other.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),key),save=()=>box.getByRole('button',{name:'Save customer link',exact:true});
+    await openPanel(other,car);const box=panel(other),key='crest.vehicle-association.pending-reference.v1',read=()=>other.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),key),save=async()=>{await box.getByRole('button',{name:'Review customer-link change',exact:true}).click();await box.getByRole('button',{name:'Save customer link',exact:true}).click();};
     await expect(box.getByRole('status')).toContainText('Review the retained customer links');await openDraft(other,two.displayName,'2026-10-28T00:00:00.000001Z');
     const pattern='**/api/business/vehicle-associations/save';let sent,calls=0;const lost=async route=>{sent=route.request().postDataJSON();calls++;try{assert.equal((await route.fetch()).status(),200);}finally{await route.abort('failed');}};
-    await other.route(pattern,lost);await save().click();await expect(box.getByRole('status')).toContainText('save could not be confirmed');await other.unroute(pattern,lost);const original=await read();assert.equal(calls,1);assert.equal(original.reference.associationId,sent.associationId);assert.equal(original.reference.operationId,sent.operationId);assert(!JSON.stringify(original).includes(two.displayName));assert(!JSON.stringify(original).includes('Synthetic evidence'));
+    await other.route(pattern,lost);await save();await expect(box.getByRole('status')).toContainText('save could not be confirmed');await other.unroute(pattern,lost);const original=await read();assert.equal(calls,1);assert.equal(original.reference.associationId,sent.associationId);assert.equal(original.reference.operationId,sent.operationId);assert(!JSON.stringify(original).includes(two.displayName));assert(!JSON.stringify(original).includes('Synthetic evidence'));
     await openPanel(other,car);await expect(box.getByRole('status')).toContainText('pending customer-link save');await box.getByRole('button',{name:'Check customer-link save status',exact:true}).click();await expect(box.getByRole('status')).toContainText('original customer-link save is confirmed');assert.equal(await read(),null);
-    await reloadLinks(other);await openDraft(other,one.displayName,'2026-10-29T00:00:00.000001Z');const blocked=route=>route.abort('failed');await other.route(pattern,blocked);await save().click();await expect(box.getByRole('status')).toContainText('save could not be confirmed');await other.unroute(pattern,blocked);const retry=await read();await box.getByRole('button',{name:'Check customer-link save status',exact:true}).click();await expect(box.getByRole('status')).toContainText('does not prove an earlier request failed');
+    await reloadLinks(other);await openDraft(other,one.displayName,'2026-10-29T00:00:00.000001Z');const blocked=route=>route.abort('failed');await other.route(pattern,blocked);await save();await expect(box.getByRole('status')).toContainText('save could not be confirmed');await other.unroute(pattern,blocked);const retry=await read();await box.getByRole('button',{name:'Check customer-link save status',exact:true}).click();await expect(box.getByRole('status')).toContainText('does not prove an earlier request failed');
     const request=other.waitForRequest(r=>r.url().endsWith('/api/business/vehicle-associations/save'));await box.getByRole('button',{name:'Retry original customer-link change',exact:true}).click();const retried=(await request).postDataJSON();for(const field of ['operationId','associationId','vehicleId','expectedVersion','recoveryEpoch','nextAssociationId','action'])assert.equal(retried[field],retry.reference[field]);await expect(box.getByRole('status')).toContainText('Customer link saved');assert.equal(await read(),null);
     // Allow the real minute window to replenish before the final reload path;
     // do not reset or bypass admission to make a dense automated flow pass.
     await delay(60000);await delay(250);
-    await reloadLinks(other);await openDraft(other,one.displayName,'2026-10-30T00:00:00.000001Z');await other.route(pattern,blocked);await save().click();await expect(box.getByRole('status')).toContainText('save could not be confirmed');await other.unroute(pattern,blocked);const unresolved=await read();
+    await reloadLinks(other);await openDraft(other,one.displayName,'2026-10-30T00:00:00.000001Z');await other.route(pattern,blocked);await save();await expect(box.getByRole('status')).toContainText('save could not be confirmed');await other.unroute(pattern,blocked);const unresolved=await read();
     await openPanel(other,car);await expect(box.getByRole('status')).toContainText('pending customer-link save');await box.getByRole('button',{name:'Check customer-link save status',exact:true}).click();await expect(box.getByRole('status')).toContainText('original draft is no longer in memory');await expect(box.getByRole('button',{name:'Retry original customer-link change',exact:true})).toHaveCount(0);await expect(box.getByRole('button',{name:'Add customer link',exact:true})).toHaveCount(0);assert.deepEqual(await read(),unresolved);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,unresolved.reference.operationId])).rows[0].n,0);
    });
   }finally{

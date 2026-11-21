@@ -7,8 +7,9 @@ import {createPrivateObjectStore} from '../../src/files/private-object-store.ts'
 
 // Local S3 wire fixture for generated photos. It exercises the real SDK and
 // storage code without claiming provider policy or signature conformance.
-export async function custodyPhotoObjects(){
- const bucket='crest-synthetic-custody-photos',objects=new Map(),requests=[];
+export async function custodyPhotoObjects({bucket='crest-synthetic-custody-photos'}={}){
+ assert.match(bucket,/^crest-(?:synthetic|fictional)-[a-z0-9-]{3,40}$/);
+ const objects=new Map(),requests=[];
  let origin,loseOriginal=false,afterRead=()=>{};
  function refusal(response,status,code){
   response.writeHead(status,{'content-type':'application/xml'});

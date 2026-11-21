@@ -13,12 +13,25 @@ import {PhoneInput} from '../../customers/phone-input';
 import {bookingSlotInput,prepareSlotReview} from '../../../client/booking-slot-review';
 import type {SlotReviewSelection} from '../../../client/booking-slot-review';
 import {BookingSlotReview} from '../slot-review';
+import {parseCustomer} from '../../../customer/customer-contract';
+import {AppointmentTime} from '../appointment-time';
 type ProposedSlot=Extract<ScheduleChangePayload,{action:'propose'}>['appointment'];
+type Appointment=NonNullable<JobChangeView['resources']>['head']['appointment'];
+
+function ReservationCard({appointment,proposed=false}:{appointment:Appointment;proposed?:boolean}){
+ return <section className="reservation-card" aria-label={proposed?'Saved proposed appointment':'Current appointment'}>
+  <div className="reservation-card-heading">
+   <h3>{proposed?'Saved proposed appointment':'Current appointment'}</h3>
+   <span className="reservation-status" data-reserved={!proposed}>{proposed?'Unconfirmed · No time reserved':'Confirmed · Time reserved'}</span>
+  </div>
+  <p><AppointmentTime start={appointment.start_at} end={appointment.end_at} timezone={appointment.timezone} showOffset/></p>
+ </section>;
+}
 function ChangeForm({view,kind,save}:{view:JobChangeView;kind:JobChangeKind;save:(payload:CancelScheduledJobSave['payload']|ScheduleChangePayload)=>Promise<void>}){
  const fieldPrefix=useId();
  const resources=view.resources!,context=view.context!,{head}=resources,latest=head.latestAppointment,pending=latest.confirmation_state==='proposed'&&latest.id!==head.appointment.id,retained=pending?latest:head.appointment;
  const seed=():ProposedSlot=>({start_at:retained.start_at,end_at:retained.end_at,timezone:retained.timezone,local_start:retained.local_start,local_end:retained.local_end,start_offset_minutes:retained.start_offset_minutes,end_offset_minutes:retained.end_offset_minutes,travel_before_seconds:retained.travel_before_seconds,travel_after_seconds:retained.travel_after_seconds,contact_snapshot:parseBookingContact(retained.contact_snapshot)});
- const [action,setAction]=useState<'propose'|'confirm'|'withdraw'>('propose'),[slot,setSlot]=useState(seed),[reason,setReason]=useState(''),[communication,setCommunication]=useState(''),[channel,setChannel]=useState(''),[effectiveAt,setEffectiveAt]=useState(''),[note,setNote]=useState(''),[dirty,setDirty]=useState(false),[issue,setIssue]=useState('');
+ const [action,setAction]=useState<'propose'|'confirm'|'withdraw'>(pending?'confirm':'propose'),[slot,setSlot]=useState(seed),[reason,setReason]=useState(''),[communication,setCommunication]=useState(''),[channel,setChannel]=useState(''),[effectiveAt,setEffectiveAt]=useState(''),[note,setNote]=useState(''),[dirty,setDirty]=useState(false),[issue,setIssue]=useState('');
  const zone=kind==='cancel'?head.appointment.timezone:latest.timezone,locked=view.busy||context.context.writeState!=='ready';
  const [slotReview,setSlotReview]=useState<SlotReviewSelection|null>(null),reviewInput=bookingSlotInput(context,latest,head.job.id);
  useEffect(()=>{if(!dirty)return;const warn=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
@@ -40,21 +53,117 @@ function ChangeForm({view,kind,save}:{view:JobChangeView;kind:JobChangeKind;save
   let conflictReview;try{if(!reviewInput)throw Error();conflictReview=prepareSlotReview(slotReview,context,reviewInput,zone);}catch{setIssue('Review the current schedule, acknowledge any unknown travel and give a reason for any overlapping visits before confirming.');return;}
   await save({action,reason,latestAppointmentId:latest.id,expectedModeSequence:mode!,appointment:null,customerConfirmation:{channel:channel as BookingConfirmation['channel'],effectiveAt,evidenceNote:note},conflictReview});
  }
- const confirmationFields=<><label htmlFor={fieldPrefix+'-channel'}>Confirmation or communication channel</label><select id={fieldPrefix+'-channel'} required value={channel} onChange={event=>{setChannel(event.target.value);touch();}}><option value="">Choose the actual channel</option><option value="text">Text</option><option value="phone">Phone</option><option value="email">Email</option><option value="in_person">In person</option></select><BookingInstantInput key={'actual:'+zone+':'+action} label="When the customer confirmation or communication occurred" value={effectiveAt} zone={zone} change={value=>{setEffectiveAt(value);touch();}}/><label>Confirmation or communication evidence<textarea required rows={3} maxLength={2000} value={note} onChange={event=>{setNote(event.target.value);touch();}}/></label></>;
- return <form aria-label={kind==='cancel'?'Scheduled job cancellation':'Appointment change'} onSubmit={event=>{event.preventDefault();void submit();}}><fieldset disabled={locked}><legend>{kind==='cancel'?'Cancel this scheduled job':'Change the appointment'}</legend>
-  <dl className="customer-values"><dt>Confirmed reservation</dt><dd><time dateTime={head.appointment.start_at}>{head.appointment.local_start.slice(0,16).replace('T',' ')}</time> – {head.appointment.local_end.slice(0,16).replace('T',' ')} · {head.appointment.timezone}</dd><dt>Saved job version</dt><dd>{head.job.version}</dd></dl>
-  {pending&&<p className="notice">A saved proposal awaits confirmation: {latest.local_start.slice(0,16).replace('T',' ')} – {latest.local_end.slice(0,16).replace('T',' ')} · {latest.timezone}. The confirmed reservation above still holds.</p>}
-  {kind==='cancel'?<><p>Cancellation removes this job’s active reservation. Accepted terms, previous appointments, work allocations and history remain. No fee, invoice change or refund is created automatically.</p><label>Cancellation reason<textarea required maxLength={1000} rows={3} value={reason} onChange={event=>{setReason(event.target.value);touch();}}/></label><label htmlFor={fieldPrefix+'-communication'}>Customer-communication status</label><select id={fieldPrefix+'-communication'} required value={communication} onChange={event=>{setCommunication(event.target.value);setChannel('');setEffectiveAt('');setNote('');touch();}}><option value="">Choose what actually happened</option><option value="not_sent">Not sent</option><option value="sent">Already communicated</option><option value="no_contact">No contact available</option></select>{communication==='sent'?confirmationFields:communication&&<label>{communication==='no_contact'?'Reason no contact is available':'Communication note (optional)'}<textarea rows={2} required={communication==='no_contact'} maxLength={2000} value={note} onChange={event=>{setNote(event.target.value);touch();}}/></label>}</>:<>
-   <label htmlFor={fieldPrefix+'-action'}>Appointment action</label><select id={fieldPrefix+'-action'} value={action} onChange={event=>chooseAction(event.target.value as typeof action)}><option value="propose">Propose a different time</option>{pending&&<><option value="confirm">Confirm the saved proposal</option><option value="withdraw">Withdraw the saved proposal</option></>}</select><label>Reason for this appointment change<textarea required rows={3} maxLength={1000} value={reason} onChange={event=>{setReason(event.target.value);touch();}}/></label>
-   {action==='propose'?<><p>A proposal reserves no new time. The current confirmed reservation stays until the customer-confirmed proposal is saved.</p><label>Proposed time zone<input required maxLength={100} value={slot.timezone} onChange={event=>timezone(event.target.value)}/></label><div className="booking-time-fields"><BookingInstantInput key={'start:'+slot.timezone} label="Proposed visit starts" value={slot.start_at} zone={slot.timezone} change={value=>time('start',value)}/><BookingInstantInput key={'end:'+slot.timezone} label="Proposed visit ends" value={slot.end_at} zone={slot.timezone} change={value=>time('end',value)}/></div><p className="field-help">Review the local time and time zone. Changing the zone keeps the same actual visit time.</p><details><summary>Travel estimates and visit contact</summary><p className="field-help">Blank travel means unknown. Seconds are shown here to preserve the exact saved estimate;0 means no travel time.</p>{(['travel_before_seconds','travel_after_seconds'] as const).map(key=><label key={key}>{key==='travel_before_seconds'?'Travel before (seconds)':'Travel after (seconds)'}<input type="number" inputMode="numeric" step={1} min={0} max={2147483647} value={slot[key]??''} onChange={event=>updateSlot({[key]:event.target.value===''?null:event.target.valueAsNumber})}/></label>)}<label htmlFor={fieldPrefix+'-contact'}>Proposed visit contact</label><select id={fieldPrefix+'-contact'} value={slot.contact_snapshot.kind} onChange={event=>updateSlot({contact_snapshot:event.target.value==='no_contact'?{kind:'no_contact',reason:''}:{kind:event.target.value as 'phone'|'email',value:''}})}><option value="phone">Phone</option><option value="email">Email</option><option value="no_contact">No contact selected</option></select>{slot.contact_snapshot.kind==='phone'?<PhoneInput name="change-phone" limit={512} value={slot.contact_snapshot.value} change={value=>updateSlot({contact_snapshot:{kind:'phone',value}})}/>:slot.contact_snapshot.kind==='email'?<label>Proposed visit email<input type="email" required maxLength={512} value={slot.contact_snapshot.value} onChange={event=>updateSlot({contact_snapshot:{kind:'email',value:event.target.value}})}/></label>:<label>Reason no visit contact is selected<textarea required maxLength={1000} rows={2} value={slot.contact_snapshot.kind==="no_contact"?slot.contact_snapshot.reason:""} onChange={event=>updateSlot({contact_snapshot:{kind:'no_contact',reason:event.target.value}})}/></label>}</details></>:action==='confirm'?<><p>Confirm the saved proposal shown above only after the customer actually agrees to it. Scope and job identity stay unchanged.</p><p className="field-help">Confirmation time zone: {zone}. Review current reservations and any unknown travel before confirming.</p>{confirmationFields}<BookingSlotReview context={context} input={reviewInput} timezone={zone} value={slotReview} change={setSlotReview}/></>:<p>This withdraws only the unconfirmed proposal. It leaves the confirmed reservation and its accepted scope in place.</p>}
-  </>}
-  <p className="field-help">Customer communication is recorded as evidence only. Crest sends no message automatically.</p>{issue&&<p role="alert">{issue}</p>}<button type="submit">{kind==='cancel'?'Cancel this scheduled job':action==='propose'?'Save proposed time':action==='confirm'?'Confirm proposed time':'Withdraw time proposal'}</button>
- </fieldset></form>;
+ const confirmationFields=<section className="appointment-communication" aria-label="Recorded customer communication"><h3>{kind==='cancel'?'Record the communication':'Customer confirmation'}</h3><p className="field-help">Record what actually happened. Crest sends no message from this screen.</p><label htmlFor={fieldPrefix+'-channel'}>Confirmation or communication channel</label><select id={fieldPrefix+'-channel'} required value={channel} onChange={event=>{setChannel(event.target.value);touch();}}><option value="">Choose the actual channel</option><option value="text">Text</option><option value="phone">Phone</option><option value="email">Email</option><option value="in_person">In person</option></select><BookingInstantInput key={'actual:'+zone+':'+action} label="When the customer confirmation or communication occurred" value={effectiveAt} zone={zone} change={value=>{setEffectiveAt(value);touch();}}/><label>Confirmation or communication evidence<textarea required rows={3} maxLength={2000} value={note} onChange={event=>{setNote(event.target.value);touch();}}/></label></section>;
+ const customer=parseCustomer(resources.vehicles[0]!.customer_snapshot,resources.businessId);
+ const cancellation=kind==='cancel';
+ const showDraft=action==='propose'&&!!slot.local_start&&!!slot.local_end&&Date.parse(slot.end_at)>Date.parse(slot.start_at)
+  &&(slot.start_at!==retained.start_at||slot.end_at!==retained.end_at||slot.timezone!==retained.timezone);
+
+ return <div className="appointment-change-layout">
+  <section className="appointment-comparison" aria-label="Saved appointment times">
+   <header><p className="field-help">Saved job · Version {head.job.version}</p><h2>{customer.display_name}</h2></header>
+   <div className="appointment-time-comparison">
+    <ReservationCard appointment={head.appointment}/>
+    {pending&&<><p className="appointment-replacement-label">Proposed replacement</p><ReservationCard appointment={latest} proposed/></>}
+   </div>
+  </section>
+  <form className="appointment-change-form" aria-label={cancellation?'Scheduled job cancellation':'Appointment change'} onChange={()=>setIssue('')} onSubmit={event=>{event.preventDefault();if(!locked)void submit();}}>
+   <fieldset disabled={locked}>
+    <legend>{cancellation?'Cancellation details':action==='confirm'?'Confirm the replacement':action==='withdraw'?'Withdraw the proposal':'Propose a time'}</legend>
+    {cancellation?<><section className="appointment-cancellation-notice" aria-label="Cancellation consequences">
+      <strong>The confirmed time will be released</strong>
+      <p>Crest keeps the accepted terms, previous appointments, work allocations and history. Fees, invoices and refunds require separate actions.</p>
+     </section>
+     <label>Cancellation reason<textarea required maxLength={1000} rows={3} value={reason} onChange={event=>{setReason(event.target.value);touch();}}/></label>
+     <label htmlFor={fieldPrefix+'-communication'}>Customer-communication status</label>
+     <select id={fieldPrefix+'-communication'} required value={communication} onChange={event=>{setCommunication(event.target.value);setChannel('');setEffectiveAt('');setNote('');touch();}}>
+      <option value="">Choose what actually happened</option><option value="not_sent">Not sent</option><option value="sent">Already communicated</option><option value="no_contact">No contact available</option>
+     </select>
+     {communication==='sent'?confirmationFields:communication&&<label>{communication==='no_contact'?'Reason no contact is available':'Communication note (optional)'}
+      <textarea rows={2} required={communication==='no_contact'} maxLength={2000} value={note} onChange={event=>{setNote(event.target.value);touch();}}/>
+     </label>}
+    </>:<>
+     <label htmlFor={fieldPrefix+'-action'}>Appointment action</label>
+     <select id={fieldPrefix+'-action'} value={action} onChange={event=>chooseAction(event.target.value as typeof action)}>
+      <option value="propose">Propose a different time</option>
+      {pending&&<><option value="confirm">Confirm the saved proposal</option><option value="withdraw">Withdraw the saved proposal</option></>}
+     </select>
+     <label>Reason for this appointment change<textarea required rows={3} maxLength={1000} value={reason} onChange={event=>{setReason(event.target.value);touch();}}/></label>
+     {action==='propose'?<>
+      <p className="field-help">The confirmed appointment stays reserved until the customer agrees to a replacement and you confirm it here.</p>
+      <label>Proposed time zone<input required maxLength={100} value={slot.timezone} onChange={event=>timezone(event.target.value)}/></label>
+      <div className="booking-time-fields">
+       <BookingInstantInput key={'start:'+slot.timezone} label="Proposed visit starts" value={slot.start_at} zone={slot.timezone} change={value=>time('start',value)}/>
+       <BookingInstantInput key={'end:'+slot.timezone} label="Proposed visit ends" value={slot.end_at} zone={slot.timezone} change={value=>time('end',value)}/>
+      </div>
+      <p className="field-help">Changing the time zone keeps the same actual visit time.</p>
+      {showDraft&&<div className="appointment-draft-time"><strong>New proposal draft</strong><p><AppointmentTime start={slot.start_at} end={slot.end_at} timezone={slot.timezone}/></p><p className="field-help">Unsaved · No replacement time reserved</p></div>}
+      <details>
+       <summary>Travel estimates and visit contact</summary>
+       <p className="field-help">Leave travel blank when unknown. Enter 0 for no travel time.</p>
+       {(['travel_before_seconds','travel_after_seconds'] as const).map(key=><label key={key}>
+        {key==='travel_before_seconds'?'Travel before (seconds)':'Travel after (seconds)'}
+        <input type="number" inputMode="numeric" step={1} min={0} max={2147483647} value={slot[key]??''} onChange={event=>updateSlot({[key]:event.target.value===''?null:event.target.valueAsNumber})}/>
+       </label>)}
+       <label htmlFor={fieldPrefix+'-contact'}>Proposed visit contact</label>
+       <select id={fieldPrefix+'-contact'} value={slot.contact_snapshot.kind} onChange={event=>updateSlot({contact_snapshot:event.target.value==='no_contact'?{kind:'no_contact',reason:''}:{kind:event.target.value as 'phone'|'email',value:''}})}>
+        <option value="phone">Phone</option><option value="email">Email</option><option value="no_contact">No contact selected</option>
+       </select>
+       {slot.contact_snapshot.kind==='phone'?<PhoneInput name="change-phone" limit={512} value={slot.contact_snapshot.value} change={value=>updateSlot({contact_snapshot:{kind:'phone',value}})}/>
+        :slot.contact_snapshot.kind==='email'?<label>Proposed visit email<input type="email" required maxLength={512} value={slot.contact_snapshot.value} onChange={event=>updateSlot({contact_snapshot:{kind:'email',value:event.target.value}})}/></label>
+        :<label>Reason no visit contact is selected<textarea required maxLength={1000} rows={2} value={slot.contact_snapshot.kind==='no_contact'?slot.contact_snapshot.reason:''} onChange={event=>updateSlot({contact_snapshot:{kind:'no_contact',reason:event.target.value}})}/></label>}
+      </details>
+     </>:action==='confirm'?<>
+      <p>Record the customer’s agreement and review conflicts before moving the reservation to the saved proposed time.</p>
+      <p className="field-help">Confirmation time zone {zone}</p>
+      {confirmationFields}<BookingSlotReview context={context} input={reviewInput} timezone={zone} value={slotReview} change={value=>{setSlotReview(value);setIssue('');}}/>
+     </>:<p>The current confirmed time stays reserved when you withdraw the proposal.</p>}
+    </>}
+    <p className="field-help">Crest records customer communication here. Send any message separately.</p>
+    {issue&&<p role="alert">{issue}</p>}
+    <button className={cancellation?'appointment-cancel-submit':undefined} type="submit">
+     {cancellation?'Cancel this scheduled job':action==='propose'?'Save proposed time':action==='confirm'?'Confirm proposed time':'Withdraw time proposal'}
+    </button>
+   </fieldset>
+  </form>
+ </div>;
 }
 export function JobChangeScreen({jobId,kind}:{jobId:string;kind:JobChangeKind}){
  const [view,setView]=useState(initialJobChangeView),current=useRef<ReturnType<typeof createJobChangeController>|null>(null),status=useRef<HTMLParagraphElement>(null),commandType=kind==='cancel'?'operations.job.cancel':'operations.job.reschedule';
  useEffect(()=>{const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)},controller=createJobChangeController({kind,store:createPendingSchedulingStore(storage,commandType),blockers:(Object.keys(pendingSchedulingKeys) as SchedulingOriginalKind[]).filter(key=>key!==commandType).map(key=>createPendingSchedulingStore(storage,key)),change:setView});current.current=controller;void controller.load(jobId);const hide=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restore=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};document.addEventListener('visibilitychange',hide);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restore);return()=>{current.current=null;controller.dispose();document.removeEventListener('visibilitychange',hide);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restore);};},[jobId,kind,commandType]);
  useEffect(()=>{if(!view.busy&&view.phase!=='pending')return;const warn=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[view.busy,view.phase]);
  async function action(name:'load'|'check'|'retry'){const controller=current.current;if(!controller)return;await(name==='load'?controller.load(jobId):controller[name]());if(controller===current.current)status.current?.focus();}
- return <section aria-label="Saved job change" aria-busy={view.busy}><p className="job-change-status" ref={status} tabIndex={-1} role="status">{view.message}</p>{view.phase==='signed-out'&&<a className="primary-action" href="/sign-in">Sign in to change this job</a>}{view.phase==='ready'&&view.resources&&view.context&&<ChangeForm key={view.resources.head.job.id+':'+view.resources.head.job.version+':'+kind} view={view} kind={kind} save={async payload=>{const controller=current.current;if(!controller)return;await controller.save(payload);if(controller===current.current)status.current?.focus();}}/>}{['committed','pending'].includes(view.phase)&&view.savedJobId&&<><p>Confirmed saved version {view.savedVersion}.</p><a className="primary-action" href={'/schedule?job='+encodeURIComponent(view.savedJobId)}>Open updated job in Schedule</a></>}{view.phase==='pending'&&<><p>No request retries automatically. Keep its original reference until the outcome is verified.</p>{view.reference&&<p className="save-reference">Original change reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check original job change</button>{view.canRetry&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>void action('retry')}>Retry unchanged job change</button>}<a href={'/save-review?kind='+commandType}>Review interrupted job change</a></>}{['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved job</button>}<nav aria-label="Job change navigation"><a href={'/schedule?job='+encodeURIComponent(jobId)}>Saved job</a><a href="/schedule">Schedule</a><a href="/save-review">Interrupted saves</a></nav></section>;
+ const jobHref=jobId?'/schedule?job='+encodeURIComponent(jobId):'/schedule';
+ const blocked=view.phase==='blocked';
+ return <section aria-label="Saved job change" aria-busy={view.busy}>
+  <p className="job-change-status" data-phase={view.phase} ref={status} tabIndex={-1} role="status">{view.message}</p>
+  {view.phase==='loading'&&<div className="workspace-skeleton appointment-change-loading" aria-hidden="true"/>}
+  {view.phase==='signed-out'&&<a className="primary-action" href="/sign-in">Sign in to change this job</a>}
+  {view.phase==='ready'&&view.resources&&view.context&&<ChangeForm key={view.resources.head.job.id+':'+view.resources.head.job.version+':'+kind} view={view} kind={kind} save={async payload=>{
+   const controller=current.current;if(!controller)return;
+   await controller.save(payload);if(controller===current.current)status.current?.focus();
+  }}/>}
+  {['committed','pending'].includes(view.phase)&&view.savedJobId&&<>
+   <p>Confirmed saved version {view.savedVersion}.</p><a className="primary-action" href={'/schedule?job='+encodeURIComponent(view.savedJobId)}>Open updated job in Schedule</a>
+  </>}
+  {view.phase==='pending'&&<>
+   <p>Keep the original reference until the outcome is verified. Crest checks the recorded result before any retry.</p>
+   {view.reference&&<details className="save-review-reference"><summary>Original change reference</summary><p className="save-reference"><code>{view.reference}</code></p></details>}
+   <div className="field-unavailable-actions">
+    <button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check original job change</button>
+    {view.canRetry&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>void action('retry')}>Retry unchanged job change</button>}
+    <a href={'/save-review?kind='+commandType}>Review interrupted job change</a>
+   </div>
+  </>}
+  {blocked&&<div className="field-unavailable-actions">
+   <a className="primary-action" href={jobHref}>{jobId?'Open saved job':'Open Schedule'}</a>
+   {jobId&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved job</button>}
+  </div>}
+  {['review','unavailable'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Reload saved job</button>}
+  <nav aria-label="Job change navigation">
+   {!blocked&&!view.savedJobId&&jobId&&<a href={jobHref}>Saved job</a>}
+   {(!blocked||jobId)&&<a href="/schedule">Schedule</a>}
+   <a href="/save-review">Interrupted saves</a>
+  </nav>
+ </section>;
 }

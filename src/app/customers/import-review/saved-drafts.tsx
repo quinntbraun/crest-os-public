@@ -7,6 +7,8 @@ import type {Proof} from '../../../client/authentication';
 import type {LegacyContactColumnMap} from '../../../customer/legacy-contact-import-preview';
 import {LegacyDecisionEditor} from './decision-editor';
 import {LegacyApprovalPanel} from './approval-panel';
+import {ImportStages} from './stages';
+import type {ImportReviewState} from './stages';
 
 type Access=(signal:AbortSignal)=>Promise<Proof>;
 type Batch=Awaited<ReturnType<typeof legacyBatches.read>>;
@@ -28,13 +30,15 @@ const findingText:Record<Effects['findings'][number]['reasons'][number],string>=
 };
 const matchLabels={phone:'Same phone',email:'Same email',vin:'Same VIN'} as const;
 
-function TargetComparison({targets,busy,head,show}:{
- targets:Targets;busy:boolean;head:RefObject<HTMLHeadingElement|null>;show:(cursors:(string|null)[])=>void;
+function TargetComparison({targets,incoming,busy,head,show}:{
+ targets:Targets;incoming:string|null;busy:boolean;head:RefObject<HTMLHeadingElement|null>;show:(cursors:(string|null)[])=>void;
 }){
  const customer=targets.kind==='customer';
  return <section className="legacy-target-comparison" aria-label={customer?'Saved customer matches':'Saved vehicle matches'}>
   <h5 tabIndex={-1} ref={head}>{customer?'Saved customer matches':'Saved vehicle matches'}</h5>
-  {targets.items.length>0?<ul className="legacy-target-list">
+  {targets.items.length>0?<div className="legacy-match-columns">
+   <section aria-label="Incoming CSV value"><h6>Incoming record</h6><p>{incoming??'No label mapped'}</p></section>
+   <section aria-label="Existing matches"><h6>Existing records</h6><ul className="legacy-target-list">
    {targets.items.map(target=><li key={target.id}>
     <div className="legacy-target-heading"><strong>{target.label}</strong>{target.archived&&<span>Archived</span>}</div>
     {!customer&&target.recordType!=='customer_vehicle'&&<p>{target.recordType==='business_rig'?'Business vehicle':'Other vehicle'}</p>}
@@ -42,7 +46,8 @@ function TargetComparison({targets,busy,head,show}:{
     {target.suffix&&<p>{customer?'Phone ending':'Plate ending'} {target.suffix}</p>}
     {target.descriptor&&<p>{customer?'Email domain '+target.descriptor:target.descriptor}</p>}
    </li>)}
-  </ul>:<p>No matching records on this page. Check the draft again to refresh its findings.</p>}
+   </ul></section>
+  </div>:<p>No matching records on this page. Check the draft again to refresh its findings.</p>}
   {(targets.cursors.length>1||targets.hasMore)&&<nav className="legacy-pagination" aria-label="Saved match pages">
    <button className="secondary" type="button" disabled={busy||targets.cursors.length===1}
     onClick={()=>show(targets.cursors.slice(0,-1))}>Previous matches</button>
@@ -59,6 +64,13 @@ function DraftEffects({effects,issueText,busy,cursors,show,findingsHeading,targe
  hideTargets:()=>void;targetHeading:RefObject<HTMLHeadingElement|null>;
  decisionFor:(row:DecisionRow)=>ReactNode;
 }){
+ const [focusedRow,setFocusedRow]=useState<number|null>(null);
+ const rowHeadings=useRef(new Map<number,HTMLElement>());
+ const currentIndex=effects.findings.findIndex(row=>row.row===focusedRow);
+ function focusRow(index:number){
+  const row=effects.findings[index];
+  if(row){rowHeadings.current.get(row.row)?.focus();setFocusedRow(row.row);}
+ }
  const details=[
   ['Conflicting source records',effects.sourceConflictRows],
   ['Shared phone, email or VIN in this draft',effects.sharedHintRows],
@@ -78,6 +90,10 @@ function DraftEffects({effects,issueText,busy,cursors,show,findingsHeading,targe
   <p className="field-help">Findings can overlap. Checking a draft makes no changes to customer, vehicle or financial records.</p>
   {(effects.findings.length>0||cursors.length>1)&&<section aria-label="Rows to review">
    <h4 ref={findingsHeading} tabIndex={-1}>Rows to review</h4>
+   {effects.findings.length>0&&<div className="legacy-finding-walk">
+    <button className="secondary" type="button" disabled={busy||currentIndex<1} onClick={()=>focusRow(currentIndex-1)}>Previous row</button>
+    <button className="secondary" type="button" disabled={busy||currentIndex>=effects.findings.length-1} onClick={()=>focusRow(currentIndex+1)}>Next row</button>
+   </div>}
    {effects.findings.length>0?<ul className="legacy-records">
     {effects.findings.map(row=>{
      const comparison=targets?.row===row.row?targets:null;
@@ -86,10 +102,15 @@ function DraftEffects({effects,issueText,busy,cursors,show,findingsHeading,targe
       if(row.reasons.includes('saved_phone')||row.reasons.includes('saved_email'))options.push('customer');
       if(row.reasons.includes('saved_vin'))options.push('vehicle');
      }
-     return <li key={row.row}>
+     const severity=row.issues.length?'rejected':row.reasons.some(reason=>reason==='customer_source_conflict'||reason==='vehicle_source_conflict')?'conflict':'match';
+     return <li key={row.row} data-severity={severity}>
      <span className="legacy-record-number">Record {formatCount.format(row.row)}</span>
      <div>
-      <strong>{row.customer??'Rejected record'}</strong>
+      <strong tabIndex={-1} className="legacy-finding-name" ref={node=>{
+       if(node)rowHeadings.current.set(row.row,node);
+       else rowHeadings.current.delete(row.row);
+      }}>{row.customer??'Rejected record'}</strong>
+      <span className="legacy-row-state">{severity==='rejected'?'Rejected':severity==='conflict'?'Conflict':'Possible match'}</span>
       {row.vehicle&&<p>{row.vehicle}</p>}
       <ul className="legacy-record-reasons">
        {row.issues.map(issue=><li key={issue}>{issueText(issue)}</li>)}
@@ -104,7 +125,7 @@ function DraftEffects({effects,issueText,busy,cursors,show,findingsHeading,targe
         onClick={()=>expanded?hideTargets():compare(row.row,kind)}>{expanded?'Hide':'Compare'} saved {noun}</button>;
       })}
      </div>}
-     {comparison&&<TargetComparison targets={comparison} busy={busy} head={targetHeading}
+     {comparison&&<TargetComparison targets={comparison} incoming={comparison.kind==='customer'?row.customer:row.vehicle} busy={busy} head={targetHeading}
       show={cursors=>compare(row.row,comparison.kind,cursors)}/>}
      {decisionFor(row)}
     </li>;
@@ -169,6 +190,8 @@ export function SavedLegacyDrafts({businessId,authorize,issueText,effectsAvailab
  const [list,setList]=useState<List|null>(null),[batch,setBatch]=useState<Batch|null>(null),[after,setAfter]=useState(1);
  const [effects,setEffects]=useState<Effects|null>(null),[decisionRevision,setDecisionRevision]=useState(0);
  const [appliedBatch,setAppliedBatch]=useState<string|null>(null);
+ const [approvalState,setApprovalState]=useState<ImportReviewState|null>(null);
+ const verified=approvalState&&approvalState.batchId===batch?.batch.batchId&&approvalState.revision===decisionRevision?approvalState:null;
  const [findingCursors,setFindingCursors]=useState<number[]>([1]);
  const [targets,setTargets]=useState<Targets|null>(null);
  const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
@@ -262,13 +285,15 @@ export function SavedLegacyDrafts({businessId,authorize,issueText,effectsAvailab
    </div>}
    {batch&&<>
     <button className="secondary" type="button" onClick={()=>{
-     returnTo.current=batch.batch.batchId;setBatch(null);setEffects(null);setTargets(null);setMessage('');
+     returnTo.current=batch.batch.batchId;setBatch(null);setEffects(null);setTargets(null);setApprovalState(null);setMessage('');
     }} disabled={busy}>Back to saved drafts</button>
     <h2 tabIndex={-1} ref={heading}>{batch.batch.sourceLabel}</h2>
     <p>{batch.batch.rowCount.toLocaleString('en-US')} CSV records · {batch.batch.rejectedCount.toLocaleString('en-US')} rejected</p>
-    {approvalsAvailable&&<LegacyApprovalPanel key={batch.batch.batchId} businessId={businessId} batch={batch.batch}
-     recoveryEpoch={recoveryEpoch} revision={decisionRevision} authorize={authorize} applicationsAvailable={applicationsAvailable} backgroundApplications={backgroundApplications} downloadsAvailable={downloadsAvailable}
-     onApplied={()=>setAppliedBatch(batch.batch.batchId)}/>}
+    <ImportStages stage={verified?.stage??'review'}/>
+    {approvalsAvailable&&<div className="legacy-review-progress">
+     <p aria-live="polite">{verified?.stage==='results'?(verified.applicationPending?'Import queued':'Application complete'):verified?.undecided==null?'Check saved decisions for the current count.':<><strong>{formatCount.format(verified.undecided)}</strong> awaiting decision</>}</p>
+     <a href="#legacy-import-approval">{verified?.stage==='results'?(verified.applicationPending?'Check import status':'Open import results'):'Review approval'}</a>
+    </div>}
     {effectsAvailable&&<section className="legacy-effect-review" aria-label="Import effect review">
      <div className="legacy-effect-heading">
       <h3>Import effect review</h3>
@@ -294,6 +319,9 @@ export function SavedLegacyDrafts({businessId,authorize,issueText,effectsAvailab
      <button className="secondary" type="button" disabled={busy||!batch.hasMore}
       onClick={()=>open(batch.batch.batchId,after+batch.rows.length)}>Next</button>
     </nav>}
+    {approvalsAvailable&&<LegacyApprovalPanel key={batch.batch.batchId} businessId={businessId} batch={batch.batch}
+     recoveryEpoch={recoveryEpoch} revision={decisionRevision} authorize={authorize} applicationsAvailable={applicationsAvailable} backgroundApplications={backgroundApplications} downloadsAvailable={downloadsAvailable}
+     onApplied={()=>setAppliedBatch(batch.batch.batchId)} onReviewState={setApprovalState}/>}
    </>}
   </section>
  </details>;

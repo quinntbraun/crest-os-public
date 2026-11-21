@@ -1,15 +1,17 @@
+import {reviewRecordRecovery} from '../support/record-recovery-layout.mjs';
 // Genuine HTTPS + compiled Next/Node + real disposable Auth/PG. No traces,
 // HAR, video, storageState exports or credential-bearing failure artifacts.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
-import {readFile,chmod} from 'node:fs/promises';
-import {join} from 'node:path';
+import {mkdir} from 'node:fs/promises';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {URI,TOTP} from 'otpauth';
+import {gateEditorFocusFrames,releaseEditorFocusFrames} from '../support/editor-focus-frame.mjs';
+import {reviewDirectoryIntroduction} from '../support/directory-introduction.mjs';
+import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
@@ -18,27 +20,31 @@ let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=fa
 const sessionName='__Host-crest_session';
 // Failure diagnostics contain fixed endpoint/status pairs and admission counts
 // only. Never log cookies, hashes, headers, query strings, bodies or source rows.
-const safeResponses=new WeakMap(),diagnosticPaths=new Set(['/api/auth/session','/api/business/leads/context','/api/business/leads/list','/api/business/leads/history','/api/business/leads/state-events','/api/business/leads/vehicle-list','/api/business/leads/vehicle-history','/api/business/leads/address-list']);
+const safeResponses=new WeakMap(),diagnosticPaths=new Set(['/api/auth/session','/api/business/leads/context','/api/business/leads/list','/api/business/leads/history','/api/business/leads/state-events','/api/business/leads/vehicle-list','/api/business/leads/vehicle-history','/api/business/leads/address-list','/api/business/leads/save','/api/business/leads/operation','/api/business/leads/state','/api/business/leads/state-operation','/api/business/lead-sources/context','/api/business/lead-sources/list','/api/business/lead-sources/history','/api/business/lead-sources/save','/api/business/lead-sources/operation']);
 function observeContext(context){
  const events=[];safeResponses.set(context,events);
  context.on('response',response=>{try{const path=new URL(response.url()).pathname;if(diagnosticPaths.has(path)){events.push({path,status:response.status()});if(events.length>48)events.shift();}}catch{/* Ignore disposed unrelated responses. */}});
+ context.on('requestfailed',request=>{try{const path=new URL(request.url()).pathname;if(diagnosticPaths.has(path)){events.push({path,transportFailed:true});if(events.length>48)events.shift();}}catch{/* Ignore disposed unrelated requests. */}});
  return context;
 }
 async function failureDiagnostics(page,stage){
- const detail={stage,responses:safeResponses.get(page.context())??[],admissions:[],unavailable:false};let hash;
+ const detail={stage,responses:safeResponses.get(page.context())??[],provider:service?.diagnostics?.()??[],admissions:[],unavailable:false};let hash;
  try{
   const cookie=(await page.context().cookies()).find(c=>c.name===sessionName);if(!cookie)throw new Error();
   hash=createHash('sha256').update(cookie.value,'ascii').digest();
   detail.admissions=(await client.query("SELECT a.bucket,count(*)::int AS count FROM crest_private.session_request_admissions a JOIN crest_private.app_sessions s ON s.id=a.session_id WHERE s.token_hash=$1 AND a.admitted_at>clock_timestamp()-interval '1 minute' GROUP BY a.bucket ORDER BY a.bucket",[hash])).rows;
  }catch{detail.unavailable=true;}finally{hash?.fill(0);}
+ try{const save=saveButton(page,stage==='source_recovery'),saveVisible=await save.isVisible(),notes=page.getByLabel('Notes',{exact:true});detail.ui={visibility:await page.evaluate(()=>document.visibilityState),saveVisible,saveEnabled:saveVisible?await save.isEnabled():null,staleNotesMatch:stage==='stale_intake'&&await notes.count()===1?await notes.inputValue().then(value=>value==='Stale unsaved intake'):null};}catch{detail.ui={unavailable:true};}
  process.stderr.write('SYNTHETIC_LEAD_BROWSER_DIAGNOSTIC '+JSON.stringify(detail)+'\n');
 }
+
+async function withLeadFailureDiagnostics(page,stage,work){try{return await work();}catch(error){await failureDiagnostics(page,stage);throw error;}}
 
 // Each engine exercises five genuine MFA sessions in its own disposable
 // business/Auth/database/application. Ten logins against one identifier would
 // correctly hit the unchanged five-attempt/15-minute production admission.
 async function startFixture(){
-  assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
+  assert(['linux','win32'].includes(process.platform),'supported disposable TLS/Auth browser fixture required');
   process.env.NODE_ENV='production';
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);
   await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
@@ -46,7 +52,7 @@ async function startFixture(){
   assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;
   await sandbox.admin.query(`GRANT crest_web TO ${login}`);const database=new URL(target);database.username=login;database.password=password;
-  service=await startRealAuthService(target);
+  service=await startRealAuthService(target,{diagnostic:true});
   const email=`synthetic-${randomUUID()}@example.com`,secret=randomBytes(32).toString('base64url');
   const user=authResult(await service.admin.admin.createUser({email,password:secret,email_confirm:true}),'browser_provision').user;assert(user?.id,'synthetic subject required');
   const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password:secret}),'browser_enrollment_password');
@@ -60,22 +66,18 @@ async function startFixture(){
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor]);await client.query('COMMIT');
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_OWNER_FAILED');}
-  const keyPath=join(sandbox.workspace,'ephemeral.key'),certPath=join(sandbox.workspace,'ephemeral.pem');
-  await chmod(sandbox.workspace,0o700);
-  try{execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-noenc','-keyout',keyPath,'-out',certPath,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{stdio:'ignore',timeout:15000});}
-  catch{throw new Error('SYNTHETIC_TLS_FIXTURE_FAILED');}
-  await chmod(keyPath,0o600);
+  const tls=await browserTestTls();
   const reservation=createServer();await new Promise(resolve=>reservation.listen(0,'127.0.0.1',resolve));const port=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));origin=`https://127.0.0.1:${port}`;
   // Normal Node resolution: react-server is only a build-time marker condition.
   const {createCrestApplication,createAuthenticationRuntime}=await import('../../.local/server/application.mjs');
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},leads:true,customers:true,vehicles:true});
+  app=await createCrestApplication({origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:business},leads:true,customers:true,vehicles:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 }
-async function stopFixture(){try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}app=undefined;service=undefined;sandbox=undefined;loginOwned=false;}
+async function stopFixture(){const providerErrors=service?.diagnostics?.()??[];if(providerErrors.length)process.stderr.write('LEAD_AUTH_PROVIDER_DIAGNOSTIC '+JSON.stringify({stage:'fixture_before_close',provider:providerErrors})+'\n');try{await app?.close();}finally{try{await service?.close();}finally{if(loginOwned)await sandbox.admin.query(`DROP ROLE ${login}`);await sandbox?.close();}}app=undefined;service=undefined;sandbox=undefined;loginOwned=false;}
 
 async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
@@ -93,9 +95,9 @@ const editorStatus=(page,source=false)=>page.getByRole('status',{name:source?'Le
 const saveButton=(page,source=false)=>page.getByRole('button',{name:source?'Save lead source':'Save lead',exact:true});
 const loadButton=(page,source=false)=>page.getByRole('button',{name:source?'Load current lead sources':'Load current leads',exact:true});
 async function openScreen(page,source=false){await page.bringToFront();await page.goto(origin+(source?'/lead-sources':'/leads'));await expect(page.getByRole('button',{name:source?'Add lead source':'Add lead',exact:true})).toBeVisible();}
-async function findWithin(page,label,source=false,inactive=false){await page.getByLabel(source?'Lead source search':'Lead search',{exact:true}).fill(label);if(source)await page.getByLabel('Include inactive sources',{exact:true}).setChecked(inactive);await page.getByRole('button',{name:source?'Search lead sources':'Search leads',exact:true}).click();await expect(editorStatus(page,source)).toHaveText(source?'Lead source search complete.':'Lead search complete.');await page.getByRole('button',{name:label+(source&&inactive?' — inactive':''),exact:true}).click();await expect(page.getByRole('form',{name:source?'Lead source editor':'Lead editor',exact:true})).toBeVisible();if(!source){for(const name of ['Lead status','Lead vehicles','Lead addresses'])await expect(page.getByRole('region',{name,exact:true})).toHaveCount(1);for(const name of ['Lead status editor status','Lead vehicle editor status','Lead address editor status'])await expect(page.getByRole('status',{name,exact:true})).toHaveCount(1);}}
+async function findWithin(page,label,source=false,inactive=false){if(!source){const back=page.getByRole('button',{name:/^Back to (follow-ups|leads)$/});if(!await page.getByRole('searchbox',{name:'Lead search',exact:true}).isVisible()&&await back.isVisible())await back.click();const all=page.getByRole('button',{name:'All leads',exact:true});if(!await page.getByRole('searchbox',{name:'Lead search',exact:true}).isVisible()&&await all.isVisible())await all.click();}await page.getByLabel(source?'Lead source search':'Lead search',{exact:true}).fill(label);if(source)await page.getByLabel('Include inactive sources',{exact:true}).setChecked(inactive);await page.getByRole('button',{name:source?'Search lead sources':'Search leads',exact:true}).click();await expect(editorStatus(page,source)).toHaveText(source?'Lead source search complete.':'Lead search complete.');await page.getByRole('button',{name:label+(source&&inactive?' — inactive':''),exact:true}).click();await expect(page.getByRole('form',{name:source?'Lead source editor':'Lead editor',exact:true})).toBeVisible();if(!source){for(const name of ['Lead status','Lead vehicles','Lead addresses'])await expect(page.getByRole('region',{name,exact:true})).toHaveCount(1);for(const name of ['Lead status editor status','Lead vehicle editor status','Lead address editor status'])await expect(page.getByRole('status',{name,exact:true})).toHaveCount(1);}}
 async function find(page,label,source=false,inactive=false){try{return await findWithin(page,label,source,inactive);}catch(error){await failureDiagnostics(page,'find');throw error;}}
-async function choose(page,kind,search,label){const picker=page.getByRole('region',{name:'Choose '+kind,exact:true});await picker.getByLabel(kind==='customer'?'Customer search':kind==='vehicle'?'Vehicle search':'Source search',{exact:true}).fill(search);await picker.getByRole('button',{name:kind==='customer'?'Find customers':kind==='vehicle'?'Find vehicles':'Find sources',exact:true}).click();await expect(picker.getByRole('button',{name:'Use '+label,exact:true})).toBeVisible();await picker.getByRole('button',{name:'Use '+label,exact:true}).click();await expect(picker).toContainText('Selected '+kind+': '+label);}
+async function choose(page,kind,search,label){const picker=page.getByRole('region',{name:'Choose '+kind,exact:true});if((kind==='customer'||kind==='source')&&!await picker.isVisible()){const links=page.locator('.lead-reference-links > summary');if(await links.isVisible())await links.click();}await picker.getByLabel(kind==='customer'?'Customer search':kind==='vehicle'?'Vehicle search':'Source search',{exact:true}).fill(search);await picker.getByRole('button',{name:kind==='customer'?'Find customers':kind==='vehicle'?'Find vehicles':'Find sources',exact:true}).click();await expect(picker.getByRole('button',{name:'Use '+label,exact:true})).toBeVisible();await picker.getByRole('button',{name:'Use '+label,exact:true}).click();await expect(picker).toContainText('Selected '+kind+': '+label);}
 const customer=(epoch,label)=>({schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,customerId:randomUUID(),expectedVersion:'0',displayName:label,phone:'5550100',email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null});
 for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900}],['webkit',webkit,{width:360,height:800}]]){
  test('genuine private lead/source editors '+name,async t=>{
@@ -119,7 +121,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     assert.equal((await send(other,leadRoot+'save',raw,await fresh())).status,200);await openScreen(p);await find(p,label);await loadStatus(p);return raw;
    }
    const vehiclePanel=(p=vehiclePage)=>p.getByRole('region',{name:'Lead vehicles',exact:true}),vehicleMessage=(p=vehiclePage)=>p.getByRole('status',{name:'Lead vehicle editor status',exact:true}),vehicleKey='crest.lead-vehicle.pending-reference.v1',vehiclePattern='**/api/business/leads/vehicle-save';
-   async function loadVehicles(p=vehiclePage){await vehiclePanel(p).getByRole('button',{name:'Load lead vehicles',exact:true}).click();await expect(vehicleMessage(p)).toContainText(/Review a reported vehicle|changes are paused|pending vehicle report/);}
+   async function loadVehicles(p=vehiclePage){await withLeadFailureDiagnostics(p,'vehicle_list',async()=>{await vehiclePanel(p).getByRole('button',{name:'Load lead vehicles',exact:true}).click();await expect(vehicleMessage(p)).toContainText(/Review a reported vehicle|changes are paused|pending vehicle report/);});}
    async function saveVehicle(){const waiting=vehiclePage.waitForRequest(r=>r.url().endsWith('/api/business/leads/vehicle-save'));await vehiclePanel().getByRole('button',{name:'Save vehicle report',exact:true}).click();const body=(await waiting).postDataJSON();await expect(vehicleMessage()).toContainText('Vehicle report saved');await expect.poll(()=>vehiclePage.evaluate(k=>sessionStorage.getItem(k),vehicleKey)).toBeNull();await expect.poll(async()=>(await client.query('SELECT version::text FROM crest.lead_vehicles WHERE business_id=$1 AND id=$2',[business,body.leadVehicleId])).rows[0]?.version).toBe((BigInt(body.expectedVersion)+1n).toString());return body;}
 
    await t.test('two genuine MFA devices and explicit same-contact customers remain separate',async()=>{
@@ -129,12 +131,99 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     const proof=await fresh();epoch=(await send(other,'business/customers/context',{},proof)).body.recoveryEpoch;one=customer(epoch,'Synthetic selected customer '+name);two=customer(epoch,'Synthetic shared-contact customer '+name);for(const input of [one,two])assert.equal((await send(other,'business/customers/save',input,proof)).status,200);assert.notEqual(one.customerId,two.customerId);
    });
    await t.test('source forms explicitly select a referring customer and retain deactivation/reactivation history',async()=>{
-    await openScreen(page,true);await page.getByRole('button',{name:'Add lead source',exact:true}).click();await page.getByLabel('Source label',{exact:true}).fill(sourceLabel);await expect(saveButton(page,true)).toBeDisabled();await page.getByLabel('Source kind',{exact:true}).fill('Synthetic owner classification');await choose(page,'customer','5550100',one.displayName);
+    await openScreen(page,true);
+    const sourceDirectoryFacts=async()=>({sources:(await client.query('SELECT to_jsonb(s) AS value FROM crest.lead_sources s WHERE business_id=$1 ORDER BY id',[business])).rows,audits:(await client.query("SELECT to_jsonb(a) AS value FROM crest_private.audit_events a WHERE business_id=$1 AND entity_kind='lead_sources' ORDER BY entity_id,entity_version",[business])).rows});
+    const emptyDirectory=await sourceDirectoryFacts();
+    await reviewDirectoryIntroduction(page,{kind:'source',engine:name,state:'empty'});
+    assert.deepEqual(await sourceDirectoryFacts(),emptyDirectory);
+    await page.getByRole('button',{name:'Add lead source',exact:true}).click();await page.getByLabel('Source label',{exact:true}).fill(sourceLabel);await expect(saveButton(page,true)).toBeDisabled();await page.getByLabel('Source kind',{exact:true}).fill('Synthetic owner classification');
+    await page.locator('.lead-source-referral > summary').click();await choose(page,'customer','5550100',one.displayName);
     assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert(await saveButton(page,true).evaluate(el=>el.getBoundingClientRect().height>=44));
     await saveButton(page,true).click();await expect(editorStatus(page,true)).toContainText('Lead source saved');source=(await client.query('SELECT id,referral_customer_id,version::text FROM crest.lead_sources WHERE business_id=$1 AND label=$2',[business,sourceLabel])).rows[0];assert.equal(source.referral_customer_id,one.customerId);assert.equal(source.version,'1');
     await loadButton(page,true).click();await find(page,sourceLabel,true);await page.getByLabel('Source active',{exact:true}).uncheck();await saveButton(page,true).click();await expect(editorStatus(page,true)).toContainText('Lead source saved');
     await loadButton(page,true).click();await find(page,sourceLabel,true,true);await page.getByLabel('Source active',{exact:true}).check();await saveButton(page,true).click();await expect(editorStatus(page,true)).toContainText('Lead source saved');
-    await loadButton(page,true).click();await find(page,sourceLabel,true);await expect(page.getByRole('region',{name:'Lead source history',exact:true})).toContainText('Current version: 3');assert.deepEqual((await client.query("SELECT action FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='lead_sources' AND entity_id=$2 ORDER BY entity_version",[business,source.id])).rows.map(r=>r.action),['create','deactivate','activate']);
+    await loadButton(page,true).click();
+    await find(page,sourceLabel,true);const history=page.getByRole('region',{name:'Lead source history',exact:true});
+    await expect(history).toContainText('Current version: 3');
+    await history.locator('details > summary').first().click();
+    await expect(history).toContainText('Loaded versions 1–3.');
+    await history.getByText('Source deactivated',{exact:true}).click();
+    await expect(history.getByRole('region',{name:'Before',exact:true}).getByText('Active',{exact:true})).toBeVisible();
+    await expect(history.getByRole('region',{name:'After',exact:true}).getByText('Inactive',{exact:true})).toBeVisible();
+    const beforeDisclosure=await sourceDirectoryFacts();let disclosureRequests=0;
+    const observeDisclosure=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))disclosureRequests++;};
+    page.on('request',observeDisclosure);
+    try{
+     await history.getByText('Retained source details at version 2',{exact:true}).click();
+     const resulting=history.getByRole('region',{name:'Retained resulting source',exact:true});
+     await expect(resulting.getByText(sourceLabel,{exact:true})).toBeVisible();
+     await expect(resulting.getByText(source.id,{exact:true})).toBeVisible();
+     const exactTime=resulting.locator('time');assert.equal(await exactTime.textContent(),await exactTime.getAttribute('datetime'));
+     await history.getByText('Retained source details at version 2',{exact:true}).click();
+     assert.equal(disclosureRequests,0);
+    }finally{page.off('request',observeDisclosure);}
+    assert.deepEqual(await sourceDirectoryFacts(),beforeDisclosure);
+    const directory='.local/review';await mkdir(directory,{recursive:true});
+    for(const width of [360,390,768,1100,1440]){
+     await page.setViewportSize({width,height:900});
+     await expect(page.getByRole('region',{name:'Lead source directory',exact:true}))[width<976?'toBeHidden':'toBeVisible']();
+     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(v=>v.id),[]);
+     await page.evaluate(()=>window.scrollTo(0,0));
+     await page.screenshot({path:directory+'/lead-source-history-'+name+'-'+width+'.png',fullPage:true});
+     if(width===390)await page.screenshot({path:directory+'/lead-source-editor-'+name+'-390.png'});
+    }
+    await page.setViewportSize(viewport);
+    const sourceFacts=async()=>({source:(await client.query('SELECT to_jsonb(s) AS value FROM crest.lead_sources s WHERE business_id=$1 AND id=$2',[business,source.id])).rows,audits:(await client.query("SELECT to_jsonb(a) AS value FROM crest_private.audit_events a WHERE business_id=$1 AND entity_kind='lead_sources' AND entity_id=$2 ORDER BY entity_version",[business,source.id])).rows});
+    const focusEvidence=await sourceFacts();
+    await gateEditorFocusFrames(page,'Back to sources');
+    await page.getByRole('button',{name:'Back to sources',exact:true}).click();
+    await page.getByLabel('Lead source search',{exact:true}).focus();
+    await releaseEditorFocusFrames(page);
+    await expect(page.getByLabel('Lead source search',{exact:true})).toBeFocused();
+    assert.deepEqual(await sourceFacts(),focusEvidence,'Directory return and focus do not change a source or its audit');
+    await find(page,sourceLabel,true);
+    await page.getByLabel('Source label',{exact:true}).fill('Unsaved source label');
+    page.once('dialog',dialog=>void dialog.dismiss());
+    await page.getByRole('button',{name:'Back to sources',exact:true}).click();
+    await expect(page.getByLabel('Source label',{exact:true})).toHaveValue('Unsaved source label');
+    page.once('dialog',dialog=>void dialog.accept());
+    await page.getByRole('button',{name:'Back to sources',exact:true}).click();
+    await expect(page.getByRole('button',{name:sourceLabel,exact:true})).toBeFocused();
+    await expect(page.getByLabel('Lead source search',{exact:true})).toHaveValue(sourceLabel);
+    const populatedDirectory=await sourceDirectoryFacts();
+    await reviewDirectoryIntroduction(page,{kind:'source',engine:name,state:'populated'});
+    assert.deepEqual(await sourceDirectoryFacts(),populatedDirectory);
+    await page.setViewportSize({width:390,height:900});
+    const sourceRow=page.getByRole('list',{name:'Saved lead sources',exact:true}).locator('li').filter({has:page.getByRole('button',{name:sourceLabel,exact:true})});
+    await expect(sourceRow.getByRole('button')).toHaveAccessibleDescription('Synthetic owner classification Active');
+    assert.deepEqual((await new AxeBuilder({page}).include('.lead-source-directory').withRules(['label-content-name-mismatch']).analyze()).violations,[]);
+    await sourceRow.scrollIntoViewIfNeeded();
+    const hit=await sourceRow.locator('.crest-record-meta').evaluate(meta=>{
+     const rect=meta.getBoundingClientRect();
+     return document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2)?.closest('button')?.textContent?.trim();
+    });
+    assert.equal(hit,sourceLabel,'source status remains part of the row tap target');
+    await page.screenshot({path:directory+'/lead-source-directory-'+name+'-390.png'});
+    await page.setViewportSize(viewport);
+    assert.deepEqual((await client.query("SELECT action FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='lead_sources' AND entity_id=$2 ORDER BY entity_version",[business,source.id])).rows.map(r=>r.action),['create','deactivate','activate']);
+
+    // Create a real second history page without changing the earlier source.
+    const pagedLabel='Synthetic paged source '+name,pagedId=randomUUID(),proof=await fresh();
+    for(let version=0;version<21;version++){
+     const result=await send(other,sourceRoot+'save',{schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadSourceId:pagedId,expectedVersion:String(version),label:pagedLabel,kind:'Synthetic category '+version,active:true,referralCustomerId:null},proof);
+     assert.equal(result.status,200);
+    }
+    await find(page,pagedLabel,true);
+    await history.locator('details > summary').first().click();
+    await expect(history).toContainText('Current version: 21');
+    await history.getByRole('button',{name:'Next source history page',exact:true}).click();
+    await expect(history.getByText('Source kind changed',{exact:true})).toBeVisible();
+    await expect(history.getByText(/Version 21 ·/)).toBeVisible();
+    await expect(history).toContainText('Loaded versions 21–21.');
+    await expect(history).toContainText('Reopen this source to return to its first history page.');
+    await expect(history.locator('details > summary').first()).toBeFocused();
+    await expect(history.getByText(/Version 20 ·/)).toHaveCount(0);
    });
    await t.test('lead forms preserve nullable/empty evidence, exact dollars/UTC and genuine customer/source choices on mobile',async()=>{
     await openScreen(page);await page.getByRole('button',{name:'Add lead',exact:true}).click();await page.getByLabel('Lead label',{exact:true}).fill(leadLabel);await choose(page,'customer','5550100',two.displayName);await choose(page,'source',sourceLabel,sourceLabel);
@@ -144,15 +233,35 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     assert.equal(await page.locator('form form').count(),0);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert(await saveButton(page).evaluate(el=>el.getBoundingClientRect().height>=44));
     await saveButton(page).click();await expect(editorStatus(page)).toContainText('Lead saved');lead=(await client.query('SELECT id,customer_id,source_id,source_snapshot,phone_raw,email_raw,notes,estimated_cents::text,to_char(follow_up_at AT TIME ZONE $3,\'YYYY-MM-DD"T"HH24:MI:SS.US"Z"\') AS follow_up,requested_scope,state FROM crest.leads WHERE business_id=$1 AND label=$2',[business,leadLabel,'UTC'])).rows[0];assert.equal(lead.customer_id,two.customerId);assert.equal(lead.source_id,source.id);assert.equal(lead.source_snapshot.label,sourceLabel);assert.equal(lead.phone_raw,' Raw phone é /001 ');assert.equal(lead.email_raw,null);assert.equal(lead.notes,null);assert.equal(lead.estimated_cents,'9007199254740993');assert.equal(lead.follow_up,'2026-10-25T14:30:01.123456Z');assert.equal(lead.requested_scope,'😀'.repeat(4000));assert.equal(lead.state,'new');
    });
-   await t.test('stale edits cannot overwrite another device; large complete history pages preserve the pinned source',async()=>{
+   await t.test('stale edits cannot overwrite another device; large complete history pages preserve the pinned source',async()=>withLeadFailureDiagnostics(page,'stale_intake',async()=>{
     await loadButton(page).click();await find(page,leadLabel);await page.getByLabel('Notes',{exact:true}).fill('Stale unsaved intake');const proof=await fresh(),base={schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadId:lead.id,expectedVersion:'1',label:leadLabel,customerId:two.customerId,sourceId:source.id,referralText:null,phone:lead.phone_raw,email:null,requestedScope:lead.requested_scope,availability:null,estimatedCents:lead.estimated_cents,followUpAt:lead.follow_up,notes:'Other device retained edit'};
     assert.equal((await send(other,leadRoot+'save',base,proof)).status,200);await saveButton(page).click();await expect(editorStatus(page)).toContainText('record changed');assert.equal((await client.query('SELECT notes FROM crest.leads WHERE id=$1',[lead.id])).rows[0].notes,base.notes);
     for(let version=2;version<10;version++){const body={...base,operationId:randomUUID(),expectedVersion:String(version),phone:'😀'.repeat(512),email:'😀'.repeat(512),referralText:'😀'.repeat(2000),requestedScope:'😀'.repeat(4000),availability:'😀'.repeat(4000),notes:'😀'.repeat(4000)};assert.equal((await send(other,leadRoot+'save',body,proof)).status,200);}
     assert.equal((await send(other,sourceRoot+'save',{schemaVersion:1,operationId:randomUUID(),recoveryEpoch:epoch,leadSourceId:source.id,expectedVersion:'3',label:sourceLabel+' renamed',kind:'Changed classification',active:false,referralCustomerId:one.customerId},proof)).status,200);
     assert.equal((await send(other,leadRoot+'history',{leadId:lead.id,afterVersion:'0',pageSize:20},proof)).status,503,'oversized history stays closed');
-    await loadButton(page).click();await find(page,leadLabel);const history=page.getByRole('region',{name:'Lead history',exact:true});await expect(history).toContainText('Current version: 10');await expect(page.getByText('Retained source attribution: '+sourceLabel+' · Synthetic owner classification. Later source edits do not replace this snapshot.',{exact:true})).toBeVisible();assert.equal(await history.locator('details').count(),5);await page.getByRole('button',{name:'Next lead history page',exact:true}).click();await expect(editorStatus(page)).toContainText('Showing the next retained history page');assert.equal(await history.locator('details').count(),5);await expect(history).toContainText('Version 10');
-   });
+    await loadButton(page).click();await find(page,leadLabel);const history=page.getByRole('region',{name:'Lead history',exact:true});await expect(history).toContainText('Current version: 10');await expect(page.getByText('Retained source attribution: '+sourceLabel+' · Synthetic owner classification. Later source edits do not replace this snapshot.',{exact:true})).toBeVisible();assert.equal(await history.locator('.lead-history-event').count(),5);
+    await expect(history).toContainText('Loaded versions 1–5. Later versions are available.');
+    const facts=async()=>createHash('sha256').update(JSON.stringify({lead:(await client.query('SELECT to_jsonb(l) AS value FROM crest.leads l WHERE id=$1',[lead.id])).rows,audits:(await client.query("SELECT to_jsonb(a) AS value FROM crest_private.audit_events a WHERE business_id=$1 AND entity_kind='leads' AND entity_id=$2 ORDER BY entity_version",[business,lead.id])).rows})).digest('hex');
+    const unchanged=await facts();let historyRequests=0;const observeHistory=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))historyRequests++;};page.on('request',observeHistory);
+    try{
+     const second=history.locator('.lead-history-event').nth(1),summary=second.locator(':scope > summary');
+     await summary.focus();await summary.press('Enter');await expect(summary).toBeFocused();
+     const changed=second.getByRole('group',{name:'Changed lead facts',exact:true});await expect(changed).toContainText('Notes');await expect(changed.getByRole('group',{name:'After',exact:true})).toContainText(base.notes);
+     for(const width of [360,390,768,1100,1440]){
+      await page.setViewportSize({width,height:900});await page.evaluate(async()=>document.fonts.ready);await history.evaluate(el=>el.scrollIntoView({block:'start'}));
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(v=>v.id),[]);
+      const columns=await changed.evaluate(el=>{const [a,b]=el.children;return {sameRow:Math.abs(a.getBoundingClientRect().top-b.getBoundingClientRect().top)<2,width:el.getBoundingClientRect().width};});assert.equal(columns.sameRow,width>=768);assert(columns.width>100);
+      await page.screenshot({path:'.local/review/lead-history-changes-'+name+'-'+width+'.png'});
+     }
+     await second.getByText('Retained lead details at version 2',{exact:true}).click();const resulting=second.getByRole('group',{name:'Retained resulting lead',exact:true});await expect(resulting).toContainText(sourceLabel);await expect(resulting).not.toContainText(sourceLabel+' renamed');await expect(resulting).toContainText(source.id);
+     for(const width of [360,390,768,1100,1440]){await page.setViewportSize({width,height:900});await resulting.evaluate(el=>el.scrollIntoView({block:'start'}));assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(v=>v.id),[]);await page.screenshot({path:'.local/review/lead-history-snapshot-'+name+'-'+width+'.png'});}
 
+     const third=history.locator('.lead-history-event').nth(2);await third.locator(':scope > summary').click();const notes=third.getByRole('region',{name:'After changes at version 3: Notes',exact:true});await expect(notes).toHaveText('😀'.repeat(4000));await notes.focus();await notes.press('ArrowDown');await expect(notes).toBeFocused();assert(await notes.evaluate(el=>el.scrollHeight>el.clientHeight));
+     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(v=>v.id),[]);await third.locator(':scope > summary').click();await second.getByText('Retained lead details at version 2',{exact:true}).click();await summary.click();
+     assert.equal(historyRequests,0);assert.equal(await facts(),unchanged);
+    }finally{page.off('request',observeHistory);await page.setViewportSize(viewport);}
+    await page.getByRole('button',{name:'Next lead history page',exact:true}).click();await expect(editorStatus(page)).toContainText('Showing the next retained history page');assert.equal(await history.locator('.lead-history-event').count(),5);await expect(history).toContainText('Version 10');await expect(history).toContainText('Loaded versions 6–10. No later versions in this loaded history. Reopen this lead to return to its first history page.');
+   }));
    await t.test('status controls record original Lost/reopen reasons with accessible mobile controls and refreshed intake',async()=>{
     statusContext=observeContext(await browser.newContext({ignoreHTTPSErrors:true,viewport}));statusPage=await statusContext.newPage();await statusPage.goto(origin+'/sign-in');await fill(statusPage);await expect(statusPage.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
     const raw=await statusLead('Synthetic status controls '+name),panel=statusPanel(statusPage);
@@ -207,7 +316,7 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     await vehiclePage.reload();await expect(vehiclePage.getByRole('button',{name:'Add lead',exact:true})).toBeVisible();await find(vehiclePage,vehicleLead.label);await loadVehicles();await vehiclePanel().getByRole('button',{name:'Check vehicle report outcome',exact:true}).click();await expect(vehicleMessage()).toContainText('original draft is no longer in memory');await expect(vehiclePanel().getByRole('button',{name:'Retry original vehicle report',exact:true})).toHaveCount(0);await expect(vehiclePage.getByLabel('Lead label',{exact:true})).toBeDisabled();assert.deepEqual(await vehiclePage.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),vehicleKey),original);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,original.reference.operationId])).rows[0].n,0);
     const aux=await vehicleContext.newPage();try{await openScreen(aux);await find(aux,vehicleLead.label);await loadVehicles(aux);assert.equal(await aux.evaluate(k=>sessionStorage.getItem(k),vehicleKey),null);await loadStatus(aux);await statusPanel(aux).getByLabel('New lead status',{exact:true}).selectOption('contacted');await expect(vehiclePanel(aux).getByRole('button',{name:'Add reported vehicle',exact:true})).toBeDisabled();assert.deepEqual(await vehiclePage.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),vehicleKey),original);}finally{await aux.close();}
    });
-   await t.test('status response loss resolves original receipt, unchanged retry and lost-draft blocking without intake overlap',async()=>{
+   await t.test('status response loss resolves original receipt, unchanged retry and lost-draft blocking without intake overlap',async()=>withLeadFailureDiagnostics(statusPage,'status_recovery',async()=>{
     const raw=await statusLead('Synthetic status recovery '+name),panel=statusPanel(statusPage),pattern='**/api/business/leads/state',key='crest.lead-state.pending-reference.v1',read=()=>statusPage.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),key);
     await panel.getByLabel('New lead status',{exact:true}).selectOption('contacted');let sent,calls=0;
     const dropped=async route=>{sent=route.request().postDataJSON();calls++;assert.equal((await route.fetch()).status(),200);await route.abort('failed');};await statusPage.route(pattern,dropped);await panel.getByRole('button',{name:'Save lead status',exact:true}).click();await expect(statusMessage(statusPage)).toContainText('could not be confirmed');await statusPage.unroute(pattern,dropped);const original=await read();assert.equal(calls,1);assert.equal(original.reference.operationId,sent.operationId);assert.equal(original.reference.expectedVersion,'1');assert(!JSON.stringify(original).includes(raw.label));
@@ -216,27 +325,25 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     const retry=statusPage.waitForRequest(r=>r.url().endsWith('/api/business/leads/state'));await panel.getByRole('button',{name:'Retry original status change',exact:true}).click();assert.deepEqual((await retry).postDataJSON(),blockedBody);await statusCommitted('3');assert.equal(await read(),null);
     await loadStatus();await panel.getByLabel('New lead status',{exact:true}).selectOption('contacted');await statusPage.route(pattern,blocked);await panel.getByRole('button',{name:'Save lead status',exact:true}).click();await expect(statusMessage(statusPage)).toContainText('could not be confirmed');await statusPage.unroute(pattern,blocked);const unresolved=await read();
     await statusPage.reload();await expect(statusPage.getByRole('button',{name:'Add lead',exact:true})).toBeVisible();await find(statusPage,raw.label);await panel.getByRole('button',{name:'Load current lead status',exact:true}).click();await panel.getByRole('button',{name:'Check status change outcome',exact:true}).click();await expect(statusMessage(statusPage)).toContainText('original draft is no longer in memory');await expect(panel.getByRole('button',{name:'Retry original status change',exact:true})).toHaveCount(0);await expect(statusPage.getByLabel('Lead label',{exact:true})).toBeDisabled();assert.deepEqual(await read(),unresolved);assert.equal(await statusPage.evaluate(()=>sessionStorage.getItem('crest.lead.pending-reference.v1')),null);
-   });
-   await t.test('backgrounding clears private status reasons and paused writes retain read-only history in a separate tab',async()=>{
+   }));   await t.test('backgrounding clears private status reasons and paused writes retain read-only history in a separate tab',async()=>{
     const kept=await statusPage.evaluate(()=>sessionStorage.getItem('crest.lead-state.pending-reference.v1')),aux=await statusContext.newPage();try{
      await statusLead('Synthetic status privacy '+name,aux);const panel=statusPanel(aux);await panel.getByLabel('New lead status',{exact:true}).selectOption('lost');await panel.getByLabel('Reason for this status change',{exact:true}).fill('Private reason cleared on hiding');await aux.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'});document.dispatchEvent(new Event('visibilitychange'));});await expect(editorStatus(aux)).toContainText('Private lead details were cleared');await expect(aux.getByRole('region',{name:'Lead status',exact:true})).toHaveCount(0);await aux.evaluate(()=>{delete document.visibilityState;});
      await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[business]);try{await loadButton(aux).click();await find(aux,'Synthetic status privacy '+name);await panel.getByRole('button',{name:'Load current lead status',exact:true}).click();await expect(statusMessage(aux)).toContainText('Status changes are paused');await expect(panel.getByLabel('New lead status',{exact:true})).toBeDisabled();await expect(panel.getByRole('button',{name:'Save lead status',exact:true})).toBeDisabled();}finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);}
      assert.equal(await statusPage.evaluate(()=>sessionStorage.getItem('crest.lead-state.pending-reference.v1')),kept);
     }finally{await aux.close();}
    });
-   await t.test('lost lead responses resolve original receipts; unchanged manual retry and missing-draft blocking survive reload',async()=>{
+   await t.test('lost lead responses resolve original receipts; unchanged manual retry and missing-draft blocking survive reload',async()=>withLeadFailureDiagnostics(page,'intake_recovery',async()=>{
     await openScreen(page);const key='crest.lead.pending-reference.v1',pattern='**/api/business/leads/save',read=()=>page.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),key);async function add(label){await page.getByRole('button',{name:'Add lead',exact:true}).click();await page.getByLabel('Lead label',{exact:true}).fill(label);}
-    let sent,calls=0;await add('Synthetic lost lead response '+name);const drop=async route=>{sent=route.request().postDataJSON();calls++;assert.equal((await route.fetch()).status(),200);await route.abort('failed');};await page.route(pattern,drop);await saveButton(page).click();await expect(editorStatus(page)).toContainText('save could not be confirmed');await page.unroute(pattern,drop);const original=await read();assert.equal(calls,1);assert.equal(original.reference.operationId,sent.operationId);assert.equal(original.reference.leadId,sent.leadId);assert(!JSON.stringify(original).includes(sent.label));
+    let sent,calls=0;await add('Synthetic lost lead response '+name);const drop=async route=>{sent=route.request().postDataJSON();calls++;assert.equal((await route.fetch()).status(),200);await route.abort('failed');};await page.route(pattern,drop);await saveButton(page).click();await expect(editorStatus(page)).toContainText('save could not be confirmed');await page.unroute(pattern,drop);const original=await read();assert.equal(calls,1);assert.equal(original.reference.operationId,sent.operationId);assert.equal(original.reference.leadId,sent.leadId);await reviewRecordRecovery(page,{client,business},name,'lead',original.reference.operationId);assert(!JSON.stringify(original).includes(sent.label));
     await page.reload();await expect(editorStatus(page)).toContainText('A pending lead save was found');await page.getByRole('button',{name:'Check lead save status',exact:true}).click();await expect(editorStatus(page)).toContainText('original save is confirmed');assert.equal(await read(),null);
     await loadButton(page).click();await add('Synthetic unchanged lead retry '+name);const notSent=route=>route.abort('failed');await page.route(pattern,notSent);await saveButton(page).click();await expect(editorStatus(page)).toContainText('save could not be confirmed');await page.unroute(pattern,notSent);const retry=await read();await page.getByRole('button',{name:'Check lead save status',exact:true}).click();await expect(editorStatus(page)).toContainText('does not prove an earlier request failed');const waiting=page.waitForRequest(r=>r.url().endsWith('/api/business/leads/save'));await page.getByRole('button',{name:'Retry original lead change',exact:true}).click();const retried=(await waiting).postDataJSON();for(const key of ['operationId','leadId','expectedVersion','recoveryEpoch'])assert.equal(retried[key],retry.reference[key]);await expect(editorStatus(page)).toContainText('Lead saved');assert.equal(await read(),null);
     await loadButton(page).click();await add('Synthetic missing lead draft '+name);await page.route(pattern,notSent);await saveButton(page).click();await expect(editorStatus(page)).toContainText('save could not be confirmed');await page.unroute(pattern,notSent);const unresolved=await read();await page.reload();await page.getByRole('button',{name:'Check lead save status',exact:true}).click();await expect(editorStatus(page)).toContainText('original draft is no longer in memory');assert.equal(await page.getByRole('button',{name:'Retry original lead change',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'Add lead',exact:true}).count(),0);assert.deepEqual(await read(),unresolved);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,unresolved.reference.operationId])).rows[0].n,0);
-   });
-   await t.test('source lost responses keep their own reference; hidden drafts clear and paused writes remain read-only',async()=>{
+   }));   await t.test('source lost responses keep their own reference; hidden drafts clear and paused writes remain read-only',async()=>withLeadFailureDiagnostics(page,'source_recovery',async()=>{
     await openScreen(page,true);await page.getByRole('button',{name:'Add lead source',exact:true}).click();const label='Synthetic lost source response '+name;await page.getByLabel('Source label',{exact:true}).fill(label);await page.getByLabel('Source kind',{exact:true}).fill('Private source');const pattern='**/api/business/lead-sources/save';let sent;const drop=async route=>{sent=route.request().postDataJSON();assert.equal((await route.fetch()).status(),200);await route.abort('failed');};await page.route(pattern,drop);await saveButton(page,true).click();await expect(editorStatus(page,true)).toContainText('save could not be confirmed');await page.unroute(pattern,drop);
     const references=await page.evaluate(()=>({lead:JSON.parse(sessionStorage.getItem('crest.lead.pending-reference.v1')),source:JSON.parse(sessionStorage.getItem('crest.lead.source.pending-reference.v1'))}));assert(references.lead);assert.equal(references.source.reference.leadSourceId,sent.leadSourceId);assert(!JSON.stringify(references.source).includes(label));await page.reload();await page.getByRole('button',{name:'Check lead source save status',exact:true}).click();await expect(editorStatus(page,true)).toContainText('original save is confirmed');assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.lead.source.pending-reference.v1')),null);assert.deepEqual(await page.evaluate(()=>JSON.parse(sessionStorage.getItem('crest.lead.pending-reference.v1'))),references.lead);
     await loadButton(page,true).click();await page.getByRole('button',{name:'Add lead source',exact:true}).click();await page.getByLabel('Source label',{exact:true}).fill('Synthetic hidden source draft');await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'});document.dispatchEvent(new Event('visibilitychange'));});await expect(editorStatus(page,true)).toContainText('Private lead source details were cleared');await expect(page.getByRole('form',{name:'Lead source editor',exact:true})).toHaveCount(0);await page.evaluate(()=>{delete document.visibilityState;});
     await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=false,version=version+1 WHERE business_id=$1',[business]);try{await loadButton(page,true).click();await expect(page.getByRole('button',{name:'Add lead source',exact:true})).toBeDisabled();await find(page,label,true);await expect(saveButton(page,true)).toBeDisabled();}finally{await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);}
-   });
+   }));
   }finally{try{await vehicleContext?.close();await statusContext?.close();await first?.close();await second?.close();await browser.close();}finally{await stopFixture();}}
  });
 }

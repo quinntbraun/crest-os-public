@@ -18,7 +18,7 @@ export function QuoteReviewPanel({row,dirty,blocked=false,commercialAvailable=fa
   const leave=()=>controller.clearPrivate(),hidden=()=>{if(document.visibilityState==='hidden')leave();};window.addEventListener('pagehide',leave);document.addEventListener('visibilitychange',hidden);
   return ()=>{current.current=null;controller.dispose();onLock(false);window.removeEventListener('pagehide',leave);document.removeEventListener('visibilitychange',hidden);};
  },[row,onLock,onCommitted]);
- return <section aria-labelledby="quote-review-heading"><h3 id="quote-review-heading">Review and approval</h3>
+ return <section className="quote-review-workspace" aria-labelledby="quote-review-heading"><h3 id="quote-review-heading">Review and approval</h3>
   <p role="status" aria-label="Quote review status" className="notice">{view.status}</p>
   {dirty&&<p className="field-help">Save your changes and reopen the quote before requesting review or approval.</p>}
   {row.revision.customer_safe_snapshot.schemaVersion===1&&<button type="button" className="secondary" disabled={blocked||dirty||view.busy||view.pending!==null} onClick={onPrepare}>Prepare this draft for approval</button>}

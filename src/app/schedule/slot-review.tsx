@@ -11,17 +11,18 @@ export function BookingSlotReview({context,input,timezone,value,change}:{context
  return <SlotReviewContents key={key} context={context} input={key?input:null} timezone={timezone} reviewKey={key} value={value?.key===key?value:null} change={change}/>;
 }
 function SlotReviewContents({context,input,timezone,reviewKey,value,change}:{context:Context;input:BookingConflictRequest|null;timezone:string;reviewKey:string;value:SlotReviewSelection|null;change:(value:SlotReviewSelection|null)=>void}){
- const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),active=useRef<AbortController|null>(null),reasonId=useId();
+ const [busy,setBusy]=useState(false),[failed,setFailed]=useState(false),[message,setMessage]=useState(''),active=useRef<AbortController|null>(null),reasonId=useId();
  useEffect(()=>()=>active.current?.abort(),[]);
  async function load(){
-  if(!input||busy)return;active.current?.abort();const controller=new AbortController();active.current=controller;setBusy(true);setMessage('Checking current reservations and travel…');change(null);
+  if(!input||busy)return;active.current?.abort();const controller=new AbortController();active.current=controller;setBusy(true);setFailed(false);setMessage('Checking current reservations and travel…');change(null);
   try{const review=await readBookingSlotReview(context,input,controller.signal);if(!controller.signal.aborted){change({key:reviewKey,review,unknownTravelReviewed:false,overrideReason:''});setMessage('Current schedule review loaded. Saving rechecks reservations.');}}
-  catch{if(!controller.signal.aborted)setMessage('Schedule review could not be verified. No booking or time change was sent. Review again, or reload the form if access has changed.');}
+  catch{if(!controller.signal.aborted){setFailed(true);setMessage('Schedule review could not be verified. No booking or time change was sent. Review again, or reload the form if access has changed.');}}
   finally{if(!controller.signal.aborted){active.current=null;setBusy(false);}}
  }
- return <section className="slot-review" aria-label="Schedule conflict review" aria-busy={busy}><h2>Check the schedule</h2><p className="field-help">Includes confirmed visits and known travel buffers. Review again after changing times or travel estimates.</p>
+ return <section className="slot-review" aria-label="Schedule conflict review" aria-busy={busy} data-review-state={busy?'checking':value?'verified':failed?'unavailable':'not-reviewed'}><h2>Check the schedule</h2><p className="field-help">Includes confirmed visits and known travel buffers. Review again after changing times or travel estimates.</p>
   {!input?<p>Enter valid visit start and end times before checking the schedule.</p>:<button type="button" className="secondary" disabled={busy||context.context.writeState!=='ready'} onClick={()=>void load()}>{value?'Review schedule again':'Review schedule'}</button>}
-  {message&&<p role="status">{message}</p>}
+  <p className="slot-review-status" role="status">{message||'Schedule not reviewed. No time has been reserved.'}</p>
+  {busy&&<div className="workspace-skeleton slot-review-loading" aria-hidden="true"/>}
   {value&&<><p>{value.review.conflictingAppointmentIds.length?`${value.review.conflictingAppointmentIds.length} overlapping confirmed ${value.review.conflictingAppointmentIds.length===1?'visit':'visits'}. Saving requires an explicit override reason.`:'No overlapping confirmed visits found.'}</p>
    {value.review.reservations.length>0&&<details open={value.review.conflictingAppointmentIds.length>0}><summary>Relevant booked visits ({value.review.reservations.length})</summary><ul className="follow-up-list">{value.review.reservations.map(row=><li key={row.appointmentId}><a href={'/schedule?job='+encodeURIComponent(row.jobId)}>{row.customerName}</a><span>{row.relation==='overlap'?'Overlaps this visit':row.relation==='before'?'Nearest visit before':'Nearest visit after'}</span><time dateTime={row.startAt}>{when(row.startAt,row.timezone)} – {when(row.endAt,row.timezone)} · {row.timezone}</time><span>Travel before: {row.travelBeforeSeconds===null?'unknown':row.travelBeforeSeconds+' seconds'} · after: {row.travelAfterSeconds===null?'unknown':row.travelAfterSeconds+' seconds'}</span></li>)}</ul></details>}
    {value.review.unknownTravel&&<><p className="notice">Travel time is unknown for this visit or a relevant neighbouring visit. Review the surrounding schedule before saving.</p><label className="trust"><input type="checkbox" checked={value.unknownTravelReviewed} onChange={event=>change({...value,unknownTravelReviewed:event.target.checked})}/><span>I reviewed the schedule and the unknown travel time.</span></label></>}

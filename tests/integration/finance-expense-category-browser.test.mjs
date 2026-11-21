@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
+import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
+import {reviewTextResize} from '../support/text-resize-layout.mjs';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {reviewApprovalEntry,reviewApprovalHistory,reviewMappingRecordingCsv,verifyMappingSignIn,assertMappingLayout,mappingBusinessSource} from '../support/mapping-workbench.mjs';
 
 for(const engine of [chromium,webkit]){
  test(engine.name()+' approves a fictional expense category account, recovers an interrupted save and exports history',
@@ -13,7 +16,7 @@ for(const engine of [chromium,webkit]){
    if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
    let fixture,browser;
    try{
-    fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true,financeMappings:true,financeCategoryMappings:true});
+    fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true,financeMappings:true,financeMappingHistory:true,financeCategoryMappings:true});
     browser=await engine.launch();
     const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:900}});
     const page=await context.newPage();page.setDefaultTimeout(20000);
@@ -28,14 +31,15 @@ for(const engine of [chromium,webkit]){
     await page.getByLabel('Password',{exact:true}).fill(credentials.password);
     await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);
     await page.getByRole('button',{name:'Sign in',exact:true}).click();
-    await expect(page.getByRole('status')).toContainText('Signed in');
+    await verifyMappingSignIn(page,fixture);
     await page.goto(fixture.origin+'/settings');
     await page.getByRole('link',{name:'Fictional account setup',exact:true}).click();
-    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+    await page.getByRole('button',{name:'Setup',exact:true}).click();
     await page.getByRole('link',{name:'Expense category mappings',exact:true}).click();
     await page.getByRole('link',{name:'Manage category approvals',exact:true}).click();
 
     const editor=page.getByRole('region',{name:'Mapping approvals',exact:true}),status=editor.getByRole('status');
+    await reviewApprovalEntry(page,engine.name(),'category');
     const category=editor.getByLabel('Expense category',{exact:true}),date=editor.getByLabel('Effective from',{exact:true});
     const load=editor.getByRole('button',{name:'Load approval settings',exact:true});
     const save=editor.getByRole('button',{name:'Save approval',exact:true});
@@ -60,13 +64,15 @@ for(const engine of [chromium,webkit]){
 
     await mkdir('.local/review',{recursive:true});
     async function capture(view){
-     for(const width of [360,390,768,1440]){
+     if(view==='approval')await reviewTextResize(page,engine.name(),'category-approval');
+     for(const width of [360,390,768,1100,1440]){
       await page.setViewportSize({width,height:900});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
       assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
       if(view==='approval')await page.evaluate(()=>window.scrollTo(0,0));
       else await page.getByRole('heading',{name:'Approval history',exact:true}).scrollIntoViewIfNeeded();
-      await page.screenshot({path:'.local/review/finance-category-'+view+'-'+engine.name()+'-'+width+'.png',animations:'disabled'});
+      if(view==='history')await assertMappingLayout(page,width);
+      await page.screenshot({path:'.local/review/finance-category-'+view+'-'+engine.name()+'-'+width+'.png',animations:'disabled',fullPage:true});
      }
     }
     await capture('approval');
@@ -83,6 +89,7 @@ for(const engine of [chromium,webkit]){
     const retained=await page.evaluate(key=>sessionStorage.getItem(key),pendingKey);
     assert(retained&&!retained.includes(accountId)&&!retained.includes('2026-02-01')&&!retained.includes('Fictional'));
     assert.deepEqual(Object.keys(JSON.parse(retained).reference).sort(),['expectedVersion','operationId','purpose','recoveryEpoch']);
+    await reviewFinancialRecovery(page,fixture,engine.name(),'category',editor.getByRole('region',{name:'Interrupted mapping approval',exact:true}));
     await page.reload();
     await review.click();
     await expect(status).toHaveText('The original approval was confirmed.');
@@ -93,22 +100,70 @@ for(const engine of [chromium,webkit]){
     await editor.getByRole('button',{name:'Close mapping',exact:true}).click();
     await date.fill('2026-03-01');
     await editor.getByLabel('Closure reason',{exact:true}).fill('Fictional owner stopped using this category mapping');
+    const embedded=editor.getByRole('region',{name:'Saved mapping history',exact:true});
+    await embedded.getByText('Version 1 · Account 5100',{exact:true}).click();
+    await expect(embedded.getByText('=Fictional review selected the fuel account',{exact:true})).toBeVisible();
+    const beforeHistory=await mappingBusinessSource(fixture);
+    await reviewApprovalHistory(page,engine.name(),'category-proposed-closure',1,fixture);
+    assert.deepEqual(await mappingBusinessSource(fixture),beforeHistory,'reviewing retained approvals must not post a change');
     await editor.getByRole('button',{name:'Save closure',exact:true}).click();
     await expect(status).toHaveText('Mapping closure saved.');
+    await expect(embedded.getByText('Version 2 · Closed',{exact:true})).toBeVisible();
+    await expect(embedded.getByText('From Feb 1, 2026 · Before Mar 1, 2026',{exact:true})).toBeVisible();
     await page.getByRole('link',{name:'Expense category mappings',exact:true}).click();
 
     const lookup=page.getByRole('region',{name:'Account mapping lookup',exact:true});
-    await lookup.getByLabel('Expense category',{exact:true}).selectOption('category_fuel');
+    await expect(lookup.getByLabel('Expense category',{exact:true})).toHaveCount(0);
+    await lookup.getByRole('button',{name:'Select Fuel',exact:true}).click();
+    await expect(lookup.getByRole('heading',{name:'Fuel',exact:true})).toBeFocused();
     const effective=lookup.getByLabel('Effective date',{exact:true});
     await effective.fill('2026-02-28');
     await lookup.getByRole('button',{name:'Check account',exact:true}).click();
-    await expect(lookup.getByText('5100 · Fuel',{exact:true})).toBeVisible();
+    const approved=lookup.getByRole('region',{name:'Approved account',exact:true});
+    await expect(approved.getByText('Fuel',{exact:true})).toBeVisible();
+    await expect(approved.getByText('5100',{exact:true})).toBeVisible();
     await expect(lookup.getByRole('heading',{name:'Account on Feb 28, 2026',exact:true})).toBeFocused();
+    const directory=lookup.getByRole('region',{name:'Expense category directory',exact:true});
+    await lookup.getByRole('button',{name:'Back to categories',exact:true}).click();
+    await lookup.getByRole('button',{name:'Check categories for selected date',exact:true}).click();
+    await expect(lookup.getByRole('status')).toHaveText('Category mappings checked for Feb 28, 2026.',{timeout:15000});
+    await expect(directory).toContainText('Posting accounts on Feb 28, 2026');
+    await directory.getByLabel('Find a category',{exact:true}).fill('fuel');
+    await expect(directory.getByRole('listitem')).toHaveCount(1);
+    await expect(directory.getByRole('listitem')).toContainText('Approved account 5100');
+    await directory.getByLabel('Show categories needing attention',{exact:true}).check();
+    await expect(directory.getByText('No categories match these filters.',{exact:true})).toBeVisible();
+    await directory.getByLabel('Show categories needing attention',{exact:true}).uncheck();
+    await directory.screenshot({path:'.local/review/finance-category-directory-'+engine.name()+'-390.png'});
+    await directory.getByLabel('Find a category',{exact:true}).fill('insurance');
+    const beforeSelection=await mappingBusinessSource(fixture);let selectionRequests=0;
+    const observeSelection=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))selectionRequests++;};page.on('request',observeSelection);
+    try{
+     await expect(directory.getByRole('listitem')).toContainText('No usable mapping');
+     await directory.getByRole('button',{name:'Select Insurance',exact:true}).click();
+     await expect(lookup.getByRole('heading',{name:'Insurance',exact:true})).toBeFocused();
+     await expect(directory).toBeHidden();
+     await lookup.getByRole('button',{name:'Back to categories',exact:true}).click();
+     await expect(directory.getByLabel('Find a category',{exact:true})).toHaveValue('insurance');
+     await expect(directory.getByLabel('Find a category',{exact:true})).toBeFocused();
+     await expect(effective).toHaveValue('2026-02-28');
+     await directory.getByRole('button',{name:'Select Insurance',exact:true}).click();
+     assert.equal(selectionRequests,0);assert.deepEqual(await mappingBusinessSource(fixture),beforeSelection);
+    }finally{page.off('request',observeSelection);}
+    await lookup.getByRole('button',{name:'View approval history',exact:true}).click();
+    const emptyHistory=lookup.getByRole('region',{name:'Saved mapping history',exact:true});
+    await expect(emptyHistory.getByText('No approved versions for this category.',{exact:true})).toBeVisible();
+    await expect(emptyHistory.getByRole('link',{name:'Manage approvals for Insurance',exact:true})).toHaveAttribute('href','/settings/accounts/mappings/categories/manage?purpose=category_insurance');
+    await lookup.getByRole('button',{name:'Back to categories',exact:true}).click();
+    await directory.getByLabel('Find a category',{exact:true}).fill('fuel');
+    await directory.getByRole('button',{name:'Select Fuel',exact:true}).click();
     await effective.fill('2026-03-01');
     await lookup.getByRole('button',{name:'Check account',exact:true}).click();
     await expect(lookup.getByRole('status')).toHaveText('No usable account mapping applies on that date.');
     await lookup.getByRole('button',{name:'View approval history',exact:true}).click();
     await expect(lookup.getByText('Version 2 · Closed',{exact:true})).toBeVisible();
+    await expect(lookup.locator('.mapping-history-coverage')).toContainText('Versions 2 through 1 loaded.');
+    await expect(lookup.locator('.mapping-history-boundary')).toContainText('before Feb 1, 2026');
     await expect(lookup.getByRole('heading',{name:'Approval history',exact:true})).toBeFocused();
     await expect(lookup.getByText('Version 2 · Closed',{exact:true})).toBeInViewport();
     await expect(lookup.getByText('Version 1 · Account 5100',{exact:true})).toBeVisible();
@@ -117,10 +172,21 @@ for(const engine of [chromium,webkit]){
     const download=await waiting;
     assert.equal(download.suggestedFilename(),'crest-mapping-approvals.csv');
     const csv=await readFile(await download.path(),'utf8');
+    await reviewMappingRecordingCsv(csv,fixture,'category_fuel');
     assert.match(csv,/"Fuel","1","2026-02-01","Approved","5100","'=Fictional review selected the fuel account"/);
     await capture('history');
-    await page.goBack();
+    await lookup.getByRole('link',{name:'Manage approvals for Fuel',exact:true}).click();
     await expect(page.getByRole('heading',{name:'Manage expense category approvals',exact:true})).toBeVisible();
+    await expect(page.getByLabel('Expense category',{exact:true})).toHaveValue('category_fuel');
+    await load.click();
+    await expect(status).toHaveText('Approval settings loaded.');
+    await reviewApprovalHistory(page,engine.name(),'category-saved-closure',2,fixture);
+    const embeddedDownload=page.waitForEvent('download');
+    await embedded.getByRole('button',{name:'Download loaded approvals (CSV)',exact:true}).click();
+    assert.equal(await readFile(await (await embeddedDownload).path(),'utf8'),csv);
+    await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
+    await expect(embedded).toHaveCount(0);
+    await expect(category).toHaveValue('');
    }finally{
     try{await browser?.close();}finally{
      try{await fixture?.close();}finally{

@@ -1,3 +1,4 @@
+import {parseFinanceAccountHistoryEvidence,parseFinanceTaxHistoryEvidence,parseMoneyChannelHistoryEvidence} from './finance-history-recording.ts';
 import 'server-only';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
@@ -19,7 +20,7 @@ import {
  parseFinanceAccountReceipt,parseFinanceAccountReference,parseFinanceAccountResolution,requireFinanceAccount as check,
 } from './finance-account-contract.ts';
 import {
- expenseCategoryMappingPurpose,fixedFinanceMappingPurpose,parseExpenseCategoryMappingAccounts,parseFinanceMappingApproval,parseFinanceMappingAt,parseFinanceMappingEditor,parseFinanceMappingHistory,
+ expenseCategoryMappingPurpose,fixedFinanceMappingPurpose,parseExpenseCategoryMappingAccounts,parseFinanceMappingApproval,parseFinanceMappingAt,parseFinanceMappingEditor,parseFinanceMappingHistory,parseFinanceMappingHistoryEvidence,
  parseFinanceMappingOperation,parseFinanceMappingReference,
 } from './finance-mapping-contract.ts';
 import type {FinanceMappingPurpose} from './finance-mapping-contract.ts';
@@ -34,6 +35,7 @@ import {
  parseMoneyChannelHistory,parseMoneyChannelOperation,parseMoneyChannelPage,parseMoneyChannelReference,
 } from './finance-money-channel-contract.ts';
 
+import {parseInvoiceOutstanding} from './invoice-outstanding-contract.ts';
 import {parseInvoicePreparation} from './invoice-preparation-contract.ts';
 import {parseInvoiceDraftInput,parseInvoiceDraftOperation,parseInvoiceDraftPage,parseInvoiceDraftRead,parseInvoiceDraftReference} from './invoice-draft-contract.ts';
 
@@ -87,7 +89,7 @@ import {allocationUnapplicationMatchesInput,parseAllocationUnapplicationInput,pa
  parseAllocationUnapplicationReference,parseAllocationUnapplicationResult,parseInvoicePaymentAllocations} from './allocation-unapplication-contract.ts';
 import {collectionFailureRecreditMatchesInput, collectionFailureRecreditRefusal, parseCollectionFailureRecreditList, parseCollectionFailureRecreditInput, parseCollectionFailureRecreditOptions,
  parseCollectionFailureRecreditReference, parseCollectionFailureRecreditResult} from './collection-failure-recredit-contract.ts';
-import {groupedRecreditMatchesInput, parseGroupedRecreditInput, parseGroupedRecreditOptions,
+import {groupedRecreditMatchesInput, parseGroupedRecreditInput, groupedRecreditOptionsForCapability,
  parseGroupedRecreditReference, parseGroupedRecreditResult} from './collection-failure-grouped-recredit-contract.ts';
 import {parseStatementDraft,parseStatementReference,parseStatementResult} from './statement-staging-contract.ts';
 import {parseStatementMatchSnapshot} from './statement-match-review.ts';
@@ -157,6 +159,7 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'opening-worksheet-save':['reference','expectedRevision','draft'],
  'opening-worksheet-lookup':['reviewEpoch','reference'],
  'opening-worksheet-retire':['reviewEpoch','reference','reason'],
+ 'invoice-outstanding':['customerId','invoiceId'],
  'receipt-options':['customerId','actualOn'],
  'receipt-tip-options':['customerId','actualOn','jurisdiction'],
  'receipt-tip-record':['reference','customerId','channelId','channelVersion','actualOn','grossCents','confirmation','distinctReason',
@@ -251,10 +254,13 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false,collectionFailureGroupedRecredits=false,collectionFailureTipReinstatements=false,openingWorksheet=false,openingArPreview=false,statementStaging=false,statementMatchReview=false,statementMatchDrafts=false,supplierBillDrafts=false,supplierPayableReview=false,supplierPayablePosting=false,supplierOriginalUploads=false,recordedIncomeStatement=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;recordedIncomeStatement?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,mappingHistoryEvidence=false,historyEvidence=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,invoiceOutstanding=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false,collectionFailureGroupedRecredits=false,collectionFailureTipReinstatements=false,openingWorksheet=false,openingArPreview=false,statementStaging=false,statementMatchReview=false,statementMatchDrafts=false,supplierBillDrafts=false,supplierPayableReview=false,supplierPayablePosting=false,supplierOriginalUploads=false,recordedIncomeStatement=false}:Readonly<{
+  fixedMappings?:boolean;mappingHistoryEvidence?:boolean;historyEvidence?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;invoiceOutstanding?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;recordedIncomeStatement?:boolean;
  }>={}){
  check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
+ check(typeof historyEvidence==='boolean');
+ check(typeof mappingHistoryEvidence==='boolean'&&(!mappingHistoryEvidence||fixedMappings));
+ check(typeof invoiceOutstanding==='boolean'&&(!invoiceOutstanding||invoiceIssue));
  check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
  check(!paymentCorrections||trialBalance);
  check(!fundApplications||paymentCorrections);
@@ -300,6 +306,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    const url=new URL(request.url),route=url.pathname.slice(financeAccountPrefix.length) as keyof typeof fields;
    if(url.search||url.hash||!url.pathname.startsWith(financeAccountPrefix)||!Object.hasOwn(fields,route))return financeAccountFailure(404);
    if(!fixedMappings&&route.startsWith('mapping-')||!taxProfiles&&route.startsWith('tax-')||!moneyChannels&&route.startsWith('channel-')||!invoicePreparation&&route==='invoice-preparation'||!invoiceDrafts&&route.startsWith('invoice-draft-'))return financeAccountFailure(404);
+   if(route==='invoice-outstanding'&&!invoiceOutstanding)return financeAccountFailure(404);
    if(route==='invoice-issue-tax-review'&&!invoiceIssueTaxReview)return financeAccountFailure(404);
    if(route.startsWith('invoice-issue-')&&route!=='invoice-issue-tax-review'&&!invoiceIssue)return financeAccountFailure(404);
    if(route.startsWith('invoice-setup-')&&!invoiceIssue)return financeAccountFailure(404);
@@ -351,6 +358,8 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     const response=privateJsonResponse({businessId,recoveryEpoch:c.recoveryEpoch,writeState:c.writeState});
     response.headers.set('X-Crest-Edit-Binding',binding);
     if(fixedMappings)response.headers.set('X-Crest-Finance-Fixed-Mappings','1');
+    if(mappingHistoryEvidence)response.headers.set('X-Crest-Finance-Mapping-History-Evidence','1');
+    if(historyEvidence)response.headers.set('X-Crest-Finance-History-Evidence','1');
     if(taxProfiles)response.headers.set('X-Crest-Finance-Tax-Profiles','1');
     if(categoryMappings)response.headers.set('X-Crest-Finance-Category-Mappings','1');
     if(moneyChannels)response.headers.set('X-Crest-Finance-Money-Channels','1');
@@ -371,6 +380,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     if(invoiceDrafts)response.headers.set('X-Crest-Invoice-Drafts','1');
     if(invoiceIssueTaxReview)response.headers.set('X-Crest-Invoice-Issue-Tax-Review','1');
     if(invoiceIssue)response.headers.set('X-Crest-Invoice-Issue','1');
+    if(invoiceOutstanding)response.headers.set('X-Crest-Invoice-Outstanding','1');
     if(directReceipts)response.headers.set('X-Crest-Direct-Receipts','1');
     if(excessReceipts)response.headers.set('X-Crest-Excess-Receipts','1');
     if(excessReturns)response.headers.set('X-Crest-Excess-Returns','1');
@@ -722,8 +732,8 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     check(customerUuid(customerId)&&customerUuid(failureId)&&customerDate(actualOn));
     const value=await database('SELECT crest_commands.read_fictional_collection_failure_recredit_options('+authority+
      ',$9::uuid,$10::uuid,$11::date) AS result',[...args,customerId,failureId,actualOn],signal);
-    parseGroupedRecreditOptions(value,businessId,customerId,failureId,actualOn,collectionFailureTipReinstatements);
-    return privateJsonResponse(value as object);
+    const response=groupedRecreditOptionsForCapability(value,businessId,customerId,failureId,actualOn,collectionFailureTipReinstatements);
+    return privateJsonResponse(response as object);
    }
    if(route==='grouped-payment-recredit-lookup'||route==='grouped-payment-recredit-retire'){
     const reference=parseGroupedRecreditReference(route==='grouped-payment-recredit-lookup'?input:input.reference);
@@ -1318,6 +1328,13 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     },signal);
     return privateJsonResponse(result.value,result.state==='conflict'?409:200);
    }
+   if(route==='invoice-outstanding'){
+    check(customerUuid(input.customerId)&&customerUuid(input.invoiceId));
+    const value=await database('SELECT crest_commands.read_fictional_invoice_outstanding('+authority+',$9::uuid,$10::uuid) AS result',
+     [...args,input.customerId,input.invoiceId],signal);
+    parseInvoiceOutstanding(value,businessId,input.customerId,input.invoiceId);
+    return privateJsonResponse(value as object);
+   }
    if(route==='receipt-options'){
     check(customerUuid(input.customerId)&&(input.actualOn===null||customerDate(input.actualOn)));
     const command=excessReceipts?'read_direct_fictional_receipt_funds_options':'read_direct_fictional_receipt_options';
@@ -1558,9 +1575,11 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='channel-history'){
     check(customerUuid(input.channelId)&&(input.beforeVersion===null||customerVersion(input.beforeVersion)));
-    const value=await database('SELECT crest_commands.read_money_channel_history('+authority+',$9::uuid,$10::bigint,25) AS result',
+    const reader=historyEvidence?'read_money_channel_history_evidence':'read_money_channel_history';
+    const value=await database('SELECT crest_commands.'+reader+'('+authority+',$9::uuid,$10::bigint,25) AS result',
      [...args,input.channelId,input.beforeVersion],signal);
-    parseMoneyChannelHistory(value,businessId,input.channelId,input.beforeVersion);
+    if(historyEvidence)parseMoneyChannelHistoryEvidence(value,businessId,input.channelId,input.beforeVersion);
+    else parseMoneyChannelHistory(value,businessId,input.channelId,input.beforeVersion);
     return privateJsonResponse(value as object);
    }
    if(route==='channel-accounts'){
@@ -1606,9 +1625,11 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route==='tax-history'){
     const scope=parseFinanceTaxScope({jurisdiction:input.jurisdiction,applicability:input.applicability,serviceId:input.serviceId});
     check(input.beforeVersion===null||customerVersion(input.beforeVersion));
-    const value=await database('SELECT crest_commands.read_finance_tax_profile_history('+authority+',$9::text,$10::text,$11::uuid,$12::bigint,25) AS result',
+    const reader=historyEvidence?'read_finance_tax_profile_history_evidence':'read_finance_tax_profile_history';
+    const value=await database('SELECT crest_commands.'+reader+'('+authority+',$9::text,$10::text,$11::uuid,$12::bigint,25) AS result',
      [...args,scope.jurisdiction,scope.applicability,scope.serviceId,input.beforeVersion],signal);
-    parseFinanceTaxHistory(value,businessId,scope,input.beforeVersion);
+    if(historyEvidence)parseFinanceTaxHistoryEvidence(value,businessId,scope,input.beforeVersion);
+    else parseFinanceTaxHistory(value,businessId,scope,input.beforeVersion);
     return privateJsonResponse(value as object);
    }
    if(route==='tax-preview'){
@@ -1673,9 +1694,11 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='mapping-history'){
     check(mappingPurpose(input.purpose)&&(input.beforeVersion===null||customerVersion(input.beforeVersion)));
-    const value=await database('SELECT crest_commands.read_fixed_finance_mapping_history('+authority+',$9::text,$10::bigint,25) AS result',
+    const reader=mappingHistoryEvidence?'read_finance_mapping_history_evidence':'read_fixed_finance_mapping_history';
+    const value=await database('SELECT crest_commands.'+reader+'('+authority+',$9::text,$10::bigint,25) AS result',
      [...args,input.purpose,input.beforeVersion],signal);
-    parseFinanceMappingHistory(value,businessId,input.purpose,input.beforeVersion);
+    if(mappingHistoryEvidence)parseFinanceMappingHistoryEvidence(value,businessId,input.purpose,input.beforeVersion);
+    else parseFinanceMappingHistory(value,businessId,input.purpose,input.beforeVersion);
     return privateJsonResponse(value as object);
    }
    if(route==='mapping-editor'){
@@ -1729,9 +1752,11 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='history'){
     check(customerUuid(input.accountId)&&customerVersion(input.afterVersion,true));
-    const value=await database('SELECT crest_commands.read_finance_account_history('+authority+',$9::uuid,$10::bigint,25) AS result',
+    const reader=historyEvidence?'read_finance_account_history_evidence':'read_finance_account_history';
+    const value=await database('SELECT crest_commands.'+reader+'('+authority+',$9::uuid,$10::bigint,25) AS result',
      [...args,input.accountId,input.afterVersion],signal);
-    parseFinanceAccountHistory(value,businessId,input.accountId,input.afterVersion);
+    if(historyEvidence)parseFinanceAccountHistoryEvidence(value,businessId,input.accountId,input.afterVersion);
+    else parseFinanceAccountHistory(value,businessId,input.accountId,input.afterVersion);
     return privateJsonResponse(value as object);
    }
    const reference=parseFinanceAccountReference(route==='operation'?input:input.reference);

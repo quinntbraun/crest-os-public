@@ -5,6 +5,7 @@ import {it,expect} from 'vitest';
 import {prepareQuoteContent} from '../../src/commercial/quote-content';
 import type {QuoteContentInput,QuoteContentLine} from '../../src/commercial/quote-content';
 import {QuoteDocument} from '../../src/app/quotes/quote-document';
+import {prepareQuoteCancellationContent} from '../../src/commercial/quote-cancellation-content';
 import type {QuoteDocumentContent} from '../../src/app/quotes/quote-document';
 const line=(grossCents:string):QuoteContentLine=>({id:randomUUID(),vehicleId:randomUUID(),jobWide:false,vehicleLabel:'Synthetic SUV',serviceVersionId:randomUUID(),description:'Interior detail',inclusions:'Vacuum and applicable leather care',exclusions:'Exterior protection',condition:'Moderate',grossCents,lineDiscount:null,documentDiscountEligible:true,complimentaryReason:null});
 const draft=():QuoteContentInput=>({schemaVersion:1,title:'Synthetic quote',recipient:{customerId:randomUUID(),leadId:null,displayName:'Synthetic Jordan Avery',phone:'(317) 555-0100',email:'synthetic@example.com'},workLocation:'Synthetic workshop\nUse the side entrance',terms:'Synthetic scope terms',timezone:'America/Indianapolis',expiryAt:null,proposedSchedule:null,internalNotes:'PRIVATE_SYNTHETIC_COST_ASSUMPTION',documentDiscount:{kind:'fixed',cents:'2500'},lines:[line('25000'),line('30000')]});
@@ -52,4 +53,16 @@ it('labels proposed scheduling as tentative and preserves precise expiry alongsi
 it.each([['sent','Shared','Awaiting customer acceptance'],['accepted','Accepted','Customer agreement recorded'],['superseded','Superseded','Retained earlier offer']] as const)('labels retained %s customer content without inferring payment or exposing private sources',(stage,label,detail)=>{
  const input=draft(),prepared=prepareQuoteContent(input),html=renderToStaticMarkup(createElement(QuoteDocument,{quote:prepared.customer,stage}));
  expect(html).toContain(label);expect(html).toContain(detail);expect(html).not.toContain('Not sent or accepted');expect(html).not.toContain(input.internalNotes!);expect(html).not.toContain(input.recipient.customerId!);expect(html).not.toMatch(/<(button|input|form)\b|Payment received|Paid in full/);
+});
+
+it.each(['quote','cancellation'] as const)('distinguishes current and two retained %s documents in assistive navigation',kind=>{
+ const input=draft(),quote=kind==='quote'?prepareQuoteContent(input).customer:prepareQuoteCancellationContent({...input,schemaVersion:3,purpose:'cancel_all_remaining_scope',cancellationReason:'Synthetic retained customer cancellation',documentDiscount:null,proposedSchedule:null,lines:[]}).customer;
+ const before=JSON.stringify(quote),html=renderToStaticMarkup(createElement('div',null,
+  createElement(QuoteDocument,{quote,stage:'accepted'}),
+  createElement(QuoteDocument,{quote,stage:'accepted',contextLabel:'Saved version 4'}),
+  createElement(QuoteDocument,{quote,stage:'accepted',contextLabel:'Saved version 5'})
+ ));
+ const names=[...html.matchAll(/<section[^>]*aria-label="([^"]+)"/g)].map(match=>match[1]);
+ expect(names.length).toBeGreaterThanOrEqual(3);expect(new Set(names).size).toBe(names.length);
+ expect(JSON.stringify(quote)).toBe(before);expect(html).not.toContain(input.internalNotes!);
 });

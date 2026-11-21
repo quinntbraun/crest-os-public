@@ -3,7 +3,7 @@ import {useCallback,useEffect,useRef,useState,useSyncExternalStore} from 'react'
 import type {FormEvent} from 'react';
 import {AuthenticationError} from '../../../../../client/authentication';
 import {
- clearPendingFinanceMapping,financeAccounts,readPendingFinanceMapping,retainPendingFinanceMapping,
+ clearPendingFinanceMapping,downloadFinanceHistory,financeAccounts,readPendingFinanceMapping,retainPendingFinanceMapping,
 } from '../../../../../client/finance-accounts';
 import type {FinanceAccountContext} from '../../../../../client/finance-accounts';
 import {customerDate} from '../../../../../customer/customer-contract';
@@ -11,18 +11,36 @@ import {financeAccountReviewReason,requireFinanceAccount as check} from '../../.
 import {expenseCategoryMappingLabels,expenseCategoryMappingPurpose,financeMappingLabels,fixedFinanceMappingLabels,fixedFinanceMappingPurpose,parseFinanceMappingApproval} from '../../../../../bookkeeping/finance-mapping-contract';
 import type {FinanceMappingApproval,FinanceMappingEditorData,FinanceMappingPurpose} from '../../../../../bookkeeping/finance-mapping-contract';
 import styles from '../../screen.module.css';
+import {MappingApprovalHistory} from '../history';
 
 type Pending=NonNullable<ReturnType<typeof readPendingFinanceMapping>>;
 type Draft={action:'approve'|'close';date:string;reason:string;accountId:string};
 type Choices=Awaited<ReturnType<typeof financeAccounts.expenseCategoryAccounts>>;
-type Workspace={context:FinanceAccountContext;data:FinanceMappingEditorData;choices?:Choices};
+type History=Awaited<ReturnType<typeof financeAccounts.mappingHistory>>;
+type HistoryRow=History['rows'][number];
+type SavedResult={operationId:string;purpose:FinanceMappingPurpose;version:string;effectiveFrom:string;closed:boolean};
+type Workspace={context:FinanceAccountContext;data:FinanceMappingEditorData;saved:HistoryRow|null;history:History;choices?:Choices};
 const subscribeToHydration=()=>()=>undefined;
-const initialMessage='Choose a purpose to review its approval settings.';
+const expenseExamples={
+ category_supplies:'Cleaning chemicals, towels and other consumable detailing supplies.',
+ category_equipment:'Equipment purchases classified as an expense under the approved rules.',
+ category_vehicle:'Business vehicle costs other than fuel.',
+ category_fuel:'Fuel purchased for business travel.',
+ category_insurance:'Business insurance premiums.',
+ category_marketing:'Advertising and promotional materials.',
+ category_software:'Software subscriptions and licenses.',
+ category_fees:'Business fees assigned to this expense category.',
+ category_rent:'Rent for business premises or storage.',
+ category_utilities:'Utilities for business premises.',
+ category_professional:'Work from an outside professional, such as bookkeeping.',
+} as const;
 const displayDate=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
 const dateLabel=(value:string)=>displayDate.format(new Date(value+'T00:00:00Z'));
 
-export function FinanceMappingEditor({categories=false}:{categories?:boolean}){
- const [purpose,setPurpose]=useState<FinanceMappingPurpose|''>('');
+export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categories?:boolean;initialPurpose?:FinanceMappingPurpose|''}){
+ const initialMessage=categories?'Choose an expense category to review its approval settings.':'Choose a purpose to review its approval settings.';
+ const [purpose,setPurpose]=useState<FinanceMappingPurpose|''>(initialPurpose);
+ const [result,setResult]=useState<SavedResult|null>(null);
  const labels=categories?expenseCategoryMappingLabels:fixedFinanceMappingLabels;
  const acceptsPurpose=categories?expenseCategoryMappingPurpose:fixedFinanceMappingPurpose;
  const [workspace,setWorkspace]=useState<Workspace|null>(null),[draft,setDraft]=useState<Draft|null>(null);
@@ -32,15 +50,15 @@ export function FinanceMappingEditor({categories=false}:{categories?:boolean}){
  const mounted=useSyncExternalStore(subscribeToHydration,()=>true,()=>false);
  const controlsDisabled=!mounted||busy;
  const active=useRef<AbortController|null>(null),original=useRef<FinanceMappingApproval|null>(null);
- const status=useRef<HTMLParagraphElement>(null),draftTitle=useRef<HTMLHeadingElement>(null);
+ const status=useRef<HTMLParagraphElement>(null),draftTitle=useRef<HTMLHeadingElement>(null),historyHeading=useRef<HTMLHeadingElement>(null);
  const draftAction=draft?.action;
  useEffect(()=>{if(draftAction)draftTitle.current?.focus();},[draftAction]);
 
  const clearPrivate=useCallback(()=>{
   active.current?.abort();active.current=null;original.current=null;
-  setPurpose('');setWorkspace(null);setDraft(null);setPending(null);setReview('none');setReviewReason('');
+  setPurpose('');setWorkspace(null);setDraft(null);setPending(null);setReview('none');setReviewReason('');setResult(null);
   setBusy(false);setSignedOut(false);setMessage(initialMessage);
- },[]);
+ },[initialMessage]);
  useEffect(()=>{
   const visibility=()=>{if(document.visibilityState==='hidden')clearPrivate();};
   const restore=(event:PageTransitionEvent)=>{if(event.persisted)clearPrivate();};
@@ -67,15 +85,24 @@ export function FinanceMappingEditor({categories=false}:{categories?:boolean}){
    if(active.current===controller){active.current=null;setBusy(false);status.current?.focus();}
   }
  }
+ async function savedRule(context:FinanceAccountContext,selected:FinanceMappingPurpose,latest:FinanceMappingEditorData['latest'],signal:AbortSignal){
+  if(!latest)return {rows:[],hasMore:false};
+  const history=await financeAccounts.mappingHistory(context,selected,null,signal);
+  const saved=history.rows[0];
+  check(!signal.aborted&&saved?.version===latest.version&&saved.accountId===latest.accountId&&saved.effectiveFrom===latest.effectiveFrom);
+  return history;
+ }
  async function loadEditor(context:FinanceAccountContext,selected:FinanceMappingPurpose,signal:AbortSignal){
   if(expenseCategoryMappingPurpose(selected)){
    const choices=await financeAccounts.expenseCategoryAccounts(context,selected,null,signal);
+   const history=await savedRule(context,selected,choices.latest,signal);
    check(!signal.aborted);
-   setWorkspace({context,data:{purpose:selected,latest:choices.latest,eligible:null},choices});
+   setWorkspace({context,data:{purpose:selected,latest:choices.latest,eligible:null},saved:history.rows[0]??null,history,choices});
   }else{
    const data=await financeAccounts.mappingEditor(context,selected,signal);
+   const history=await savedRule(context,selected,data.latest,signal);
    check(!signal.aborted);
-   setWorkspace({context,data});
+   setWorkspace({context,data,saved:history.rows[0]??null,history});
   }
   setPurpose(selected);setDraft(null);
  }
@@ -93,11 +120,33 @@ export function FinanceMappingEditor({categories=false}:{categories?:boolean}){
    }
    const rows=[...choices.rows,...result.rows];
    check(new Set(rows.map(row=>row.id)).size===rows.length&&new Set(rows.map(row=>row.code)).size===rows.length);
-   setWorkspace({context,data,choices:{...result,rows}});setMessage('More eligible accounts loaded.');
+   setWorkspace({...workspace,choices:{...result,rows}});setMessage('More eligible accounts loaded.');
   },'More accounts could not be loaded. Try again.');
  }
- async function finish(context:FinanceAccountContext,entry:Pending,messageAfter:string,signal:AbortSignal){
+ function loadMoreHistory(){
+  if(!workspace?.history.hasMore)return;
+  const {context,data,history}=workspace,last=history.rows.at(-1);if(!last)return;
+  void run(async signal=>{
+   // Earlier approvals are immutable; loading them preserves the proposal and its original version.
+   const page=await financeAccounts.mappingHistory(context,data.purpose,last.version,signal);
+   check(!signal.aborted);
+   const rows=[...history.rows,...page.rows];
+   check(new Set(rows.map(row=>row.id)).size===rows.length&&new Set(rows.map(row=>row.version)).size===rows.length);
+   setWorkspace({...workspace,history:{rows,hasMore:page.hasMore}});setMessage('Older approvals loaded.');
+  },'Older approvals could not be loaded. The loaded history is still available.');
+ }
+ function downloadHistory(){
+  if(!workspace?.history.rows.length||active.current)return;
+  const recordingAvailable=workspace.history.rows.every(row=>row.recording!==undefined);
+  downloadFinanceHistory('crest-mapping-approvals.csv',[
+   ['Purpose','Version','Effective from','Status','Account code','Approval reason',...(recordingAvailable?['Recorded in Crest (UTC)','Recorded by reference']:[])],
+   ...workspace.history.rows.map(row=>[financeMappingLabels[row.purpose],row.version,row.effectiveFrom,
+    row.accountId===null?'Closed':'Approved',row.accountCode??'',row.reason,...(recordingAvailable?[row.recording!.recordedAt,row.recording!.actorId]:[])]),
+  ]);
+ }
+ async function finish(context:FinanceAccountContext,entry:Pending,messageAfter:string,signal:AbortSignal,receipt?:{version:string;effectiveFrom:string;accountId:string|null}){
   check(!signal.aborted);clearPendingFinanceMapping(entry);original.current=null;
+  if(receipt)setResult({operationId:entry.reference.operationId,purpose:entry.reference.purpose,version:receipt.version,effectiveFrom:receipt.effectiveFrom,closed:receipt.accountId===null});
   setPending(null);setDraft(null);setReview('none');setReviewReason('');setWorkspace(null);
   setMessage(messageAfter);
   if(!acceptsPurpose(entry.reference.purpose))return;
@@ -111,7 +160,7 @@ export function FinanceMappingEditor({categories=false}:{categories?:boolean}){
   check(!signal.aborted);
   if(result.state==='committed'||result.state==='retired'){
    await finish(context,entry,result.state==='committed'?'The original approval was confirmed.':
-    'The interrupted approval was closed. You can start a new change.',signal);
+    'The interrupted approval was closed. You can start a new change.',signal,result.state==='committed'?result.receipt:undefined);
    return;
   }
   if(result.state==='conflict'){
@@ -142,11 +191,11 @@ export function FinanceMappingEditor({categories=false}:{categories?:boolean}){
    'Approval settings could not be verified. Try again.');
  }
  async function send(context:FinanceAccountContext,entry:Pending,approval:FinanceMappingApproval,signal:AbortSignal){
-  setReview('none');setMessage('Saving mapping approval…');
+  setReview('none');setResult(null);setMessage('Saving mapping approval…');
   const result=await financeAccounts.approveMapping(context,entry.reference,approval,signal);
   check(!signal.aborted);
   if(result.state==='committed'){
-   await finish(context,entry,approval.accountId===null?'Mapping closure saved.':'Mapping approval saved.',signal);
+   await finish(context,entry,approval.accountId===null?'Mapping closure saved.':'Mapping approval saved.',signal,result.receipt);
    return;
   }
   if(result.state==='rejected')original.current=null;
@@ -194,7 +243,7 @@ export function FinanceMappingEditor({categories=false}:{categories?:boolean}){
    check(!signal.aborted);
    if(result.state==='committed'||result.state==='retired'){
     await finish(context,pending,result.state==='committed'?'The original approval was confirmed.':
-     'The interrupted approval was closed. You can start a new change.',signal);
+     'The interrupted approval was closed. You can start a new change.',signal,result.state==='committed'?result.receipt:undefined);
    }else{
     if(result.state==='rejected'&&result.reason==='FINANCE_ACCOUNT_SIGN_IN_REQUIRED')setSignedOut(true);
     setMessage('The attempt could not be closed. Check the approval status again.');
@@ -205,19 +254,27 @@ export function FinanceMappingEditor({categories=false}:{categories?:boolean}){
  const hasChoice=categories?!!choices?.rows.length:!!eligible;
  const canEdit=workspace?.context.writeState==='ready'&&!pending;
  const canClose=latest!==null&&latest!==undefined&&latest.accountId!==null;
+ const proposedAccount=draft?.action==='approve'?(categories?choices?.rows.find(account=>account.id===draft.accountId):eligible):null;
  const validDraft=!!draft&&customerDate(draft.date)&&(!latest||draft.date>latest.effectiveFrom)
   &&financeAccountReviewReason(draft.reason.trim())&&(draft.action==='close'?canClose:categories?choices?.rows.some(account=>account.id===draft.accountId):eligible?.id===draft.accountId);
 
- return <section className={styles.workspace} aria-label="Mapping approvals" aria-busy={busy}>
+ return <section className={styles.workspace+' mapping-approval-workspace'} aria-label="Mapping approvals" aria-busy={busy}>
   <p ref={status} tabIndex={-1} role="status">{message}</p>
   {signedOut&&<a href="/sign-in">Sign in again</a>}
-  {!pending&&!draft&&<>
+  {result&&<section className="mapping-summary-card" aria-label="Saved mapping change">
+   <h2>{result.closed?'Mapping closure recorded':'Mapping approval recorded'}</h2>
+   <p>{financeMappingLabels[result.purpose]} · Version {result.version} · Effective {dateLabel(result.effectiveFrom)}</p>
+   <details className="mapping-save-reference"><summary>Save reference</summary><p className="save-reference"><code>{result.operationId}</code></p></details>
+  </section>}
+  {!pending&&!draft&&<section className={!workspace?'mapping-approval-start':'mapping-approval-selector'} aria-label="Choose an approval setting">
+   {!workspace&&<div className="mapping-approval-introduction"><h2>Review an approval setting</h2><p>Choose a {categories?'category':'purpose'} to see its saved setting and the accounts eligible for a new approval.</p><p>Review the saved and proposed rules before confirming a change. Earlier approvals stay in history.</p></div>}
+   <div className="mapping-approval-fields">
    <div className={styles.lookupFields}>
     <div>
      <label htmlFor="approval-purpose">{categories?'Expense category':'Purpose'}</label>
      <select id="approval-purpose" disabled={controlsDisabled} value={purpose} onChange={event=>{
       const value=event.target.value;
-      setPurpose(acceptsPurpose(value)?value:'');setWorkspace(null);setDraft(null);setMessage(initialMessage);
+      setPurpose(acceptsPurpose(value)?value:'');setWorkspace(null);setDraft(null);setResult(null);setMessage(initialMessage);
      }}>
       <option value="">{categories?'Choose a category':'Select a purpose'}</option>
       {Object.entries(labels).map(([value,label])=><option value={value} key={value}>{label}</option>)}
@@ -228,9 +285,12 @@ export function FinanceMappingEditor({categories=false}:{categories?:boolean}){
     <button type="button" disabled={controlsDisabled||!purpose} onClick={()=>load()}>Load approval settings</button>
     <button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>load(true)}>Review interrupted approval</button>
    </div>
-  </>}
-  {workspace&&!pending&&<section aria-label="Saved approval settings">
+   </div>
+  </section>}
+  {workspace&&!pending&&<section className="mapping-summary-card" aria-label="Saved approval settings">
    <h2>{financeMappingLabels[workspace.data.purpose]}</h2>
+   {expenseCategoryMappingPurpose(workspace.data.purpose)&&<p className="field-help">{expenseExamples[workspace.data.purpose]}</p>}
+   <div className="mapping-approval-columns"><div className="mapping-approval-proposal">
    <p>{latest?<>Version {latest.version} · {latest.accountId===null?'Closed':'Approved'} · Effective {dateLabel(latest.effectiveFrom)}</>:
     'No approved mapping yet.'}</p>
    {eligible&&<p>Eligible account <strong>{eligible.code} · {eligible.name}</strong></p>}
@@ -263,26 +323,48 @@ export function FinanceMappingEditor({categories=false}:{categories?:boolean}){
     <label htmlFor="mapping-approval-reason">{draft.action==='close'?'Closure reason':'Approval reason'}</label>
     <textarea id="mapping-approval-reason" rows={2} maxLength={1000} required disabled={controlsDisabled}
      value={draft.reason} onChange={event=>setDraft({...draft,reason:event.target.value})}/>
+    <div className="mapping-rule-comparison" aria-label="Rule comparison">
+     <section aria-label="Latest saved rule">
+      <h4>Latest saved rule</h4>
+      <dl>
+       <dt>Posting account</dt><dd>{workspace.saved?.accountCode??(latest?'Mapping closed':'No approved rule')}</dd>
+       <dt>Effective period</dt><dd>{latest?<>From {dateLabel(latest.effectiveFrom)}{customerDate(draft.date)&&draft.date>latest.effectiveFrom&&<> · Before {dateLabel(draft.date)} if saved</>}</>:'No saved effective period'}</dd>
+       <dt>Reason</dt><dd>{workspace.saved?.reason??'No saved reason'}</dd>
+      </dl>
+     </section>
+     <section aria-label="Proposed rule">
+      <h4>Proposed rule</h4>
+      <dl>
+       <dt>Posting account</dt><dd>{draft.action==='close'?'No posting account from this date':proposedAccount?proposedAccount.code+' · '+proposedAccount.name:'Choose an account'}</dd>
+       <dt>Effective period</dt><dd>{customerDate(draft.date)?'From '+dateLabel(draft.date):'Choose an effective date'}</dd>
+       <dt>Reason</dt><dd>{draft.reason.trim()||'Enter a reason'}</dd>
+      </dl>
+     </section>
+    </div>
     <div className={styles.actions}>
      <button type="submit" disabled={controlsDisabled||!validDraft}>{draft.action==='close'?'Save closure':'Save approval'}</button>
      <button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>{setDraft(null);status.current?.focus();}}>Cancel</button>
     </div>
    </form>}
+   </div>
+   <MappingApprovalHistory embedded history={workspace.history} purpose={workspace.data.purpose} categories={categories}
+    heading={historyHeading} disabled={controlsDisabled} download={downloadHistory} more={loadMoreHistory}/>
+   </div>
   </section>}
   {pending&&<section aria-label="Interrupted mapping approval">
    <h2>Interrupted approval</h2>
    <p>{financeMappingLabels[pending.reference.purpose]}</p>
-   <p className="save-reference">Save reference <code>{pending.reference.operationId}</code></p>
    <div className={styles.actions}>
-    <button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>load(true)}>Check approval status</button>
-    {review==='retry'&&<button type="button" disabled={controlsDisabled} onClick={retry}>Retry original approval</button>}
+    <button type="button" disabled={controlsDisabled} onClick={()=>load(true)}>Check approval status</button>
+    {review==='retry'&&<button className="secondary" type="button" disabled={controlsDisabled} onClick={retry}>Retry original approval</button>}
    </div>
+   <details className="mapping-save-reference"><summary>Save reference</summary><p className="save-reference"><code>{pending.reference.operationId}</code></p></details>
    {review==='retire'&&<form onSubmit={retire}>
     <p className="field-help">Closing this attempt prevents it from saving later. If an approval already saved, it stays in history.</p>
     <label htmlFor="mapping-attempt-reason">Reason for closing the attempt</label>
     <textarea id="mapping-attempt-reason" rows={2} maxLength={1000} required disabled={controlsDisabled}
      value={reviewReason} onChange={event=>setReviewReason(event.target.value)}/>
-    <button type="submit" disabled={controlsDisabled||!financeAccountReviewReason(reviewReason.trim())}>Close interrupted attempt</button>
+    <button type="submit" className="secondary" disabled={controlsDisabled||!financeAccountReviewReason(reviewReason.trim())}>Close interrupted attempt</button>
    </form>}
   </section>}
  </section>;

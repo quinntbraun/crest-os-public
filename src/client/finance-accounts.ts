@@ -1,12 +1,14 @@
+import {parseFinanceAccountHistoryEvidence,parseFinanceTaxHistoryEvidence,parseMoneyChannelHistoryEvidence} from '../bookkeeping/finance-history-recording';
+import type {FinanceHistoryPage} from '../bookkeeping/finance-history-recording';
 import {authentication} from './authentication';
 import {customerDate,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract';
 import {
  parseFinanceAccountHistory,parseFinanceAccountPage,parseFinanceAccountReceipt,
  parseFinanceAccountReference,parseFinanceAccountResolution,financeAccountReviewReason,requireFinanceAccount as check,
 } from '../bookkeeping/finance-account-contract';
-import type {FinanceAccountDraft,FinanceAccountReference} from '../bookkeeping/finance-account-contract';
-import {expenseCategoryMappingPurpose,parseExpenseCategoryMappingAccounts,parseFinanceMappingAt,parseFinanceMappingEditor,parseFinanceMappingHistory,parseFinanceMappingOperation,parseFinanceMappingReference} from '../bookkeeping/finance-mapping-contract';
-import type {ExpenseCategoryMappingPurpose,FinanceMappingApproval,FinanceMappingPurpose,FinanceMappingReference,FixedFinanceMappingPurpose} from '../bookkeeping/finance-mapping-contract';
+import type {FinanceAccountDraft,FinanceAccountReference,FinanceAccountHistory} from '../bookkeeping/finance-account-contract';
+import {expenseCategoryMappingPurpose,parseExpenseCategoryMappingAccounts,parseFinanceMappingAt,parseFinanceMappingEditor,parseFinanceMappingHistory,parseFinanceMappingHistoryEvidence,parseFinanceMappingOperation,parseFinanceMappingReference} from '../bookkeeping/finance-mapping-contract';
+import type {ExpenseCategoryMappingPurpose,FinanceMappingApproval,FinanceMappingPurpose,FinanceMappingReference,FixedFinanceMappingPurpose,FinanceMappingHistoryData} from '../bookkeeping/finance-mapping-contract';
 
 import {
  matchesFinanceTaxApproval,parseFinanceTaxHistory,parseFinanceTaxOperation,parseFinanceTaxPreview,parseFinanceTaxReference,
@@ -32,6 +34,8 @@ import {invoiceTaxJurisdiction,parseInvoiceTaxMappingApproval,parseInvoiceTaxMap
 import {parseInvoiceExemptionApproval,parseInvoiceExemptionEditor,parseInvoiceExemptionResult,parseInvoiceExemptionTarget}
  from '../bookkeeping/invoice-exemption-contract';
 import {parseInvoiceSetupRead,parseInvoiceSetupResult,parseInvoiceSetupWrite} from '../bookkeeping/invoice-setup-contract';
+import {parseInvoiceOutstanding} from '../bookkeeping/invoice-outstanding-contract';
+import {startFinanceActivity} from './finance-activity';
 import {directReceiptMatchesInput,parseDirectReceiptInput,parseDirectReceiptOptions,parseDirectReceiptTipOptions,parseDirectReceiptReference,
  parseDirectReceiptResult} from '../bookkeeping/direct-receipt-contract';
 import {parseServiceRefundCredits,parseServiceRefundInput,parseServiceRefundOptions,parseServiceRefundReference,parseServiceRefundResult,
@@ -102,7 +106,7 @@ import {parseOpeningArInput,verifyOpeningArPreview} from '../bookkeeping/opening
 import type {OpeningArInput} from '../bookkeeping/opening-receivables-preview';
 import {parseOpeningArOperation,parseOpeningArSave,parseOpeningArStored} from '../bookkeeping/opening-receivables-schedule-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;supplierPayableReports?:boolean;recordedIncomeStatement?:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;mappingHistoryEvidence?:boolean;historyEvidence?:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;supplierPayableReports?:boolean;recordedIncomeStatement?:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;invoiceOutstanding?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -132,6 +136,8 @@ const channelFailure=[...knownFailure,'FINANCE_CHANNEL_VERSION_CONFLICT','FINANC
  'FINANCE_CHANNEL_ACCOUNT_REQUIRED','FINANCE_CHANNEL_ACCOUNT_PINNED','FINANCE_CHANNEL_IDENTITY_RETAINED'] as const;
 
 async function post(route:string,body:object,signal:AbortSignal,binding?:string,existingProof?:Proof){
+ const finish=route==='context'||route==='invoice-outstanding'?()=>{}:startFinanceActivity();
+ try{
  const bounded=AbortSignal.any([signal,AbortSignal.timeout(40000)]),proof=existingProof??await authentication.session(bounded);
  check(!bounded.aborted&&bindingPattern.test(proof.csrfToken)&&proof.expiresAt>Date.now());
  const response=await fetch('/api/business/finance-accounts/'+route,{
@@ -156,6 +162,8 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
  }finally{void reader.cancel().catch(()=>undefined);reader.releaseLock();}
  return {status:response.status,value:JSON.parse(text) as unknown,binding:response.headers.get('x-crest-edit-binding'),
   fixedMappings:response.headers.get('x-crest-finance-fixed-mappings')==='1',
+  mappingHistoryEvidence:response.headers.get('x-crest-finance-mapping-history-evidence')==='1',
+  historyEvidence:response.headers.get('x-crest-finance-history-evidence')==='1',
   taxProfiles:response.headers.get('x-crest-finance-tax-profiles')==='1',
   categoryMappings:response.headers.get('x-crest-finance-category-mappings')==='1',
   moneyChannels:response.headers.get('x-crest-finance-money-channels')==='1',
@@ -174,6 +182,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   invoiceDrafts:response.headers.get('x-crest-invoice-drafts')==='1',
   invoiceIssueTaxReview:response.headers.get('x-crest-invoice-issue-tax-review')==='1',
   invoiceIssue:response.headers.get('x-crest-invoice-issue')==='1',
+  invoiceOutstanding:response.headers.get('x-crest-invoice-outstanding')==='1',
   directReceipts:response.headers.get('x-crest-direct-receipts')==='1',
   excessReceipts:response.headers.get('x-crest-excess-receipts')==='1',
   excessReturns:response.headers.get('x-crest-excess-returns')==='1',
@@ -195,6 +204,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   customerFundsReport:response.headers.get('x-crest-customer-funds-report')==='1',
   sameDayExpenses:response.headers.get('x-crest-same-day-expenses')==='1',
   trialBalance:response.headers.get('x-crest-trial-balance')==='1'};
+ }finally{finish();}
 }
 
 async function submitSupplierPosting(context:FinanceAccountContext,route:'supplier-payable-accrual'|'supplier-payable-settlement',
@@ -213,11 +223,13 @@ async function submitSupplierPosting(context:FinanceAccountContext,route:'suppli
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,openingWorksheet,openingArPreview,statementStaging,statementMatchReview,statementMatchDrafts,supplierBillDrafts,supplierPayableReview,supplierPayablePosting,supplierOriginalUploads,supplierPayableReports,recordedIncomeStatement,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,mappingHistoryEvidence,historyEvidence,taxProfiles,categoryMappings,moneyChannels,openingWorksheet,openingArPreview,statementStaging,statementMatchReview,statementMatchDrafts,supplierBillDrafts,supplierPayableReview,supplierPayablePosting,supplierOriginalUploads,supplierPayableReports,recordedIncomeStatement,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,invoiceOutstanding,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
   return Object.freeze({...value,binding,fixedMappings,taxProfiles,categoryMappings,moneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,
+   ...(fixedMappings&&mappingHistoryEvidence?{mappingHistoryEvidence:true}:{}),
+   ...(historyEvidence?{historyEvidence:true}:{}),
    ...(moneyChannels&&statementStaging?{statementStaging}:{}),
    ...(moneyChannels&&openingWorksheet?{openingWorksheet}:{}),
    ...(trialBalance&&recordedIncomeStatement?{recordedIncomeStatement}:{}),
@@ -228,7 +240,7 @@ export const financeAccounts={
    ...(moneyChannels&&supplierBillDrafts?{supplierBillDrafts}:{}),
    ...(moneyChannels&&supplierBillDrafts&&supplierPayableReview?{supplierPayableReview}:{}),
    ...(openingWorksheet&&openingArPreview?{openingArPreview}:{}),
-   ...(invoiceIssue?{invoiceIssue}:{}),...(directReceipts?{directReceipts}:{}),...(directReceipts&&excessReceipts?{excessReceipts}:{}),
+   ...(invoiceIssue?{invoiceIssue}:{}),...(invoiceIssue&&invoiceOutstanding?{invoiceOutstanding}:{}),...(directReceipts?{directReceipts}:{}),...(directReceipts&&excessReceipts?{excessReceipts}:{}),
    ...(directReceipts&&excessReceipts&&excessReturns?{excessReturns}:{}),
    ...(excessReturns&&tipReturns?{tipReturns}:{}),
    ...(tipReturns&&trialBalance&&collectionFailures?{collectionFailures}:{}),
@@ -493,6 +505,12 @@ export const financeAccounts={
   const {status,value}=await post('expense-post-retire',{reference:parseSameDayExpenseReference(reference),reviewEpoch:context.recoveryEpoch,reason},signal,context.binding);
   check(status===200||status===409);
   return parseSameDayExpenseResult(value,context.businessId,reference);
+ },
+ async invoiceOutstanding(context:FinanceAccountContext,customerId:string,invoiceId:string,signal:AbortSignal){
+  check(context.invoiceOutstanding&&customerUuid(customerId)&&customerUuid(invoiceId));
+  const {status,value}=await post('invoice-outstanding',{customerId,invoiceId},signal,context.binding);
+  check(status===200);
+  return parseInvoiceOutstanding(value,context.businessId,customerId,invoiceId);
  },
  async directReceiptOptions(context:FinanceAccountContext,customerId:string,actualOn:string|null,signal:AbortSignal){
   check(context.directReceipts&&customerUuid(customerId)&&(actualOn===null||customerDate(actualOn)));
@@ -1099,10 +1117,12 @@ export const financeAccounts={
   const {status,value}=await post('channel-list',{afterChannel},signal,context.binding);
   check(status===200);return parseMoneyChannelPage(value,context.businessId,afterChannel);
  },
- async moneyChannelHistory(context:FinanceAccountContext,channelId:string,beforeVersion:string|null,signal:AbortSignal){
+ async moneyChannelHistory(context:FinanceAccountContext,channelId:string,beforeVersion:string|null,signal:AbortSignal):Promise<FinanceHistoryPage<ReturnType<typeof parseMoneyChannelHistory>['rows'][number]>>{
   check(context.moneyChannels);
   const {status,value}=await post('channel-history',{channelId,beforeVersion},signal,context.binding);
-  check(status===200);return parseMoneyChannelHistory(value,context.businessId,channelId,beforeVersion);
+  check(status===200);
+  if(context.historyEvidence)return parseMoneyChannelHistoryEvidence(value,context.businessId,channelId,beforeVersion);
+  return parseMoneyChannelHistory(value,context.businessId,channelId,beforeVersion);
  },
  async moneyChannelAccounts(context:FinanceAccountContext,kind:MoneyChannelKind,ownershipScope:MoneyChannelScope,afterCode:string|null,signal:AbortSignal){
   check(context.moneyChannels);
@@ -1137,10 +1157,12 @@ export const financeAccounts={
    ||result.state==='retired'&&result.reviewEpoch===context.recoveryEpoch));
   return result;
  },
- async taxHistory(context:FinanceAccountContext,scope:FinanceTaxScope,beforeVersion:string|null,signal:AbortSignal){
+ async taxHistory(context:FinanceAccountContext,scope:FinanceTaxScope,beforeVersion:string|null,signal:AbortSignal):Promise<FinanceHistoryPage<ReturnType<typeof parseFinanceTaxHistory>['rows'][number]>>{
   check(context.taxProfiles);
   const {status,value}=await post('tax-history',{...scope,beforeVersion},signal,context.binding);
-  check(status===200);return parseFinanceTaxHistory(value,context.businessId,scope,beforeVersion);
+  check(status===200);
+  if(context.historyEvidence)return parseFinanceTaxHistoryEvidence(value,context.businessId,scope,beforeVersion);
+  return parseFinanceTaxHistory(value,context.businessId,scope,beforeVersion);
  },
  async taxPreview(context:FinanceAccountContext,scope:FinanceTaxScope,date:string,grossCents:string,discountCents:string,signal:AbortSignal){
   check(context.taxProfiles);
@@ -1176,15 +1198,17 @@ export const financeAccounts={
    ||result.state==='retired'&&result.receipt.reviewEpoch===context.recoveryEpoch));
   return result;
  },
- async mappingAt(context:FinanceAccountContext,purpose:FinanceMappingPurpose,date:string,signal:AbortSignal){
+ async mappingAt(context:FinanceAccountContext,purpose:FinanceMappingPurpose,date:string,signal:AbortSignal,proof?:Proof){
   check(context.fixedMappings&&(!expenseCategoryMappingPurpose(purpose)||context.categoryMappings));
-  const {status,value}=await post('mapping-at',{purpose,date},signal,context.binding);
+  const {status,value}=await post('mapping-at',{purpose,date},signal,context.binding,proof);
   check(status===200);return parseFinanceMappingAt(value,purpose,date);
  },
- async mappingHistory(context:FinanceAccountContext,purpose:FinanceMappingPurpose,beforeVersion:string|null,signal:AbortSignal){
+ async mappingHistory(context:FinanceAccountContext,purpose:FinanceMappingPurpose,beforeVersion:string|null,signal:AbortSignal):Promise<FinanceMappingHistoryData>{
   check(context.fixedMappings&&(!expenseCategoryMappingPurpose(purpose)||context.categoryMappings));
   const {status,value}=await post('mapping-history',{purpose,beforeVersion},signal,context.binding);
-  check(status===200);return parseFinanceMappingHistory(value,context.businessId,purpose,beforeVersion);
+  check(status===200);
+  if(context.mappingHistoryEvidence)return parseFinanceMappingHistoryEvidence(value,context.businessId,purpose,beforeVersion);
+  return parseFinanceMappingHistory(value,context.businessId,purpose,beforeVersion);
  },
  async mappingEditor(context:FinanceAccountContext,purpose:FixedFinanceMappingPurpose,signal:AbortSignal){
   check(context.fixedMappings);
@@ -1230,9 +1254,11 @@ export const financeAccounts={
   const result=await post('list',{afterCode,includeArchived},signal,context.binding);
   check(result.status===200);return parseFinanceAccountPage(result.value,context.businessId);
  },
- async history(context:FinanceAccountContext,accountId:string,afterVersion:string,signal:AbortSignal){
+ async history(context:FinanceAccountContext,accountId:string,afterVersion:string,signal:AbortSignal):Promise<FinanceHistoryPage<FinanceAccountHistory>>{
   const result=await post('history',{accountId,afterVersion},signal,context.binding);
-  check(result.status===200);return parseFinanceAccountHistory(result.value,context.businessId,accountId,afterVersion);
+  check(result.status===200);
+  if(context.historyEvidence)return parseFinanceAccountHistoryEvidence(result.value,context.businessId,accountId,afterVersion);
+  return parseFinanceAccountHistory(result.value,context.businessId,accountId,afterVersion);
  },
  async lookup(context:FinanceAccountContext,reference:FinanceAccountReference,signal:AbortSignal){
   const result=await post('operation',reference,signal,context.binding);

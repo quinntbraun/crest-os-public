@@ -5,9 +5,12 @@ import {test} from 'node:test';
 import {setTimeout as delay} from 'node:timers/promises';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {observeWorkReads} from '../support/work-read-diagnostic.mjs';
 import sharp from 'sharp';
 import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {assertActiveWorkLayout} from '../support/field-work-layout.mjs';
+import {reviewCustodyEventTimeline} from '../support/custody-event-timeline.mjs';
 
 async function downloadCustodyHistory(page,panel){
  const started=page.waitForEvent('download');
@@ -32,7 +35,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
  name+(cancelWork?' Drop-Off no-work cancellation retains the vehicle for explicit return':startWork?' Drop-Off work starts explicitly, completes, and awaits separate collection':' Drop-Off forms recover interrupted intake and record collection'),async()=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:startWork,unfulfilledCancellation:cancelWork,dropoffCustody:true});
- let browser,page;
+ let browser,page,readDiagnostic;
  const responses=[];
  function logScheduleDiagnostic(path,scheduleStatus){
   const scheduling=responses.filter(item=>item.route.startsWith('/api/business/scheduling/'));
@@ -45,7 +48,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
  try{
   browser=await engine.launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}});
-  page=await context.newPage();
+  page=await context.newPage();readDiagnostic=observeWorkReads(page,fixture,name+(cancelWork?' Drop-Off cancellation':startWork?' Drop-Off completion':' Drop-Off intake'));
   page.setDefaultTimeout(20000);
   page.on('response',response=>{
    const url=new URL(response.url());
@@ -100,7 +103,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
 
   const collectionList=page.getByRole('region',{name:'Vehicle collections',exact:true});
   const collectionSummary=page.locator('summary').filter({hasText:/^Vehicle collections$/});
-  const review=page.getByRole('region',{name:'Job review',exact:true});
+  const review=page.getByRole('region',{name:'Job review',exact:true}).locator('.schedule-job-heading h2');
   async function verifyQueueWaitsForLinkedJob(openJob){
    let releaseHistory;
    const historyReady=new Promise(resolve=>{releaseHistory=resolve;});
@@ -110,7 +113,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
    },{times:1});
    try{
     await openJob();
-    await expect(page.locator('.schedule-status')).toContainText('Saved schedule loaded.');
+    await expect(page.locator('.schedule-status')).toHaveText('Loading saved job…');
     await expect(collectionSummary).toHaveCount(0);
    }finally{releaseHistory();}
    await expect(review).toBeFocused();
@@ -143,8 +146,8 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   await expect(panel.getByText('A handoff policy needs to be configured for this booking.',{exact:true})).toBeVisible();
 
   const workStatus=page.locator('.job-change-status');
-  const openWork=async()=>{
-   await page.getByRole('button',{name:'Record work status…',exact:true}).click();
+  const openWork=async(name='Review work start…')=>{
+   await page.getByRole('button',{name,exact:true}).click();
    await expect(page.getByRole('region',{name:'Drop-Off work status'})).toBeVisible();
   };
   if(startWork){
@@ -231,10 +234,12 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   if(startWork){
    await openWork();
    const work=page.getByRole('region',{name:'Drop-Off work status'});
-   await expect(work.getByText('Scheduled · Saved version 1',{exact:true})).toBeVisible();
+   await expect(work.locator('.field-visit-state strong')).toHaveText('Scheduled');await expect(work.locator('.field-visit-state')).toContainText('Version 1');
    await expect(work.getByLabel('Vehicle you are driving',{exact:true})).toHaveCount(0);
    for(const width of [360,390,768,1440]){
     await page.setViewportSize({width,height:900});
+    await page.evaluate(()=>window.scrollTo(0,0));
+    await assertActiveWorkLayout(page,width,'Scheduled');
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     const audit=await new AxeBuilder({page}).include('[aria-label="Drop-Off work status"]').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
     assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
@@ -254,16 +259,16 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
    await page.getByRole('button',{name:'Check original work action',exact:true}).click();
    await expect(workStatus).toContainText('Work status saved.');
    await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
-   await openWork();
-   await expect(work.getByText('In progress · Saved version 2',{exact:true})).toBeVisible();
+   await openWork('Pause work…');
+   await expect(work.locator('.field-visit-state strong')).toHaveText('In progress');await expect(work.locator('.field-visit-state')).toContainText('Version 2');
    await work.getByLabel('Reason for pause',{exact:true}).fill('Synthetic break');
    await work.getByRole('button',{name:'Pause work',exact:true}).click();
    await expect(workStatus).toContainText('Work status saved.');
    await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
-   await openWork();
-   await expect(work.getByText('Paused · Saved version 3',{exact:true})).toBeVisible();
+   await openWork('Resume work…');
+   await expect(work.locator('.field-visit-state strong')).toHaveText('Paused');await expect(work.locator('.field-visit-state')).toContainText('Version 3');
    if(cancelWork){
-    await work.getByRole('link',{name:'Cancel if no work was completed',exact:true}).click();
+    await work.getByText('More actions',{exact:true}).click();await work.getByRole('link',{name:'Cancel if no work was completed',exact:true}).click();
     const cancellation=page.getByRole('region',{name:'Drop-Off job cancellation',exact:true});
     await expect(cancellation.getByRole('status')).toHaveText('Review the saved work before cancelling.');
     await expect(cancellation.getByText('Any vehicle in your custody still needs a separate recorded handoff. Cancellation keeps it in the return queue.',{exact:true})).toBeVisible();
@@ -285,6 +290,8 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
      submitted++;const response=await route.fetch();assert.equal(response.status(),200);
      if(name==='webkit')await route.abort();else await route.fulfill({response});
     },{times:1});
+    await cancellation.getByRole('button',{name:'Review cancellation',exact:true}).click();
+    await expect(cancellation.getByRole('region',{name:'Review job cancellation',exact:true})).toBeVisible();assert.equal(submitted,0);
     const cancel=cancellation.getByRole('button',{name:'Cancel job and close work time',exact:true});
     await cancel.focus();await page.keyboard.press('Enter');
     if(name==='webkit'){
@@ -315,7 +322,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
    await work.getByRole('button',{name:'Resume work',exact:true}).click();
    await expect(workStatus).toContainText('Work status saved.');
    await page.reload();
-   await expect(work.getByText('In progress · Saved version 4',{exact:true})).toBeVisible();
+   await expect(work.locator('.field-visit-state strong')).toHaveText('In progress');await expect(work.locator('.field-visit-state')).toContainText('Version 4');
    await work.getByRole('link',{name:'Review and end job',exact:true}).click();
    const completion=page.getByRole('region',{name:'Job completion',exact:true});
    await completion.getByRole('button',{name:'Mark all items fulfilled',exact:true}).click();
@@ -419,6 +426,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   assert.equal(downloaded.events[1].person.displayName,collectedBy);
   assert.equal(downloaded.events[0].notes,null);
   assert.equal(downloaded.policy.acknowledgementText,acknowledgement);
+  await reviewCustodyEventTimeline(page,panel,{fixture,expected:downloaded,engine:name,scenario:'missing-photo'});
   await mkdir('.local/review',{recursive:true});
   for(const width of [360,390,768,1440]){
    await page.setViewportSize({width,height:900});
@@ -446,6 +454,7 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
   const path=page?new URL(page.url()).pathname:null;
   const safeStatus=page&&path==='/schedule'?await page.locator('.schedule-status').textContent({timeout:500}).catch(()=>null):null;
   logScheduleDiagnostic(path,safeStatus);
+  await readDiagnostic?.();
   throw error;
  }finally{
   if(process.env.CREST_CUSTODY_ROUTE_DIAGNOSTICS==='1')logScheduleDiagnostic(page?new URL(page.url()).pathname:null,null);
@@ -459,11 +468,11 @@ test(photoEngine[0]+' signed-in condition photo survives interrupted upload conf
   .withExif({IFD0:{Copyright:'Generated Crest test image'}}).png().toBuffer();
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,dropoffCustody:true,photoFixture:photo});
- let browser;
+ let browser,page,photoDiagnostic;
  try{
   browser=await photoEngine[1].launch();
   const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:844}});
-  const page=await context.newPage();page.setDefaultTimeout(25000);
+  page=await context.newPage();photoDiagnostic=observeWorkReads(page,fixture,photoEngine[0]+' custody photo');page.setDefaultTimeout(25000);
   await page.addInitScript(()=>{
    const revoke=URL.revokeObjectURL.bind(URL);
    window.crestTestRevocations=[];
@@ -514,7 +523,7 @@ test(photoEngine[0]+' signed-in condition photo survives interrupted upload conf
    await vehicle.click();
    await panel.getByRole('button',{name:'Load custody history',exact:true}).click();
   }
-  await openHistory();
+  photoDiagnostic.mark('intake');await openHistory();
   await panel.getByRole('button',{name:'Record intake…',exact:true}).click();
   await panel.getByLabel('Actual handoff time',{exact:true}).fill('2026-11-03T09:45');
   await panel.getByLabel('Who handed over the vehicle?',{exact:true}).fill('Synthetic intake contact');
@@ -553,10 +562,11 @@ test(photoEngine[0]+' signed-in condition photo survives interrupted upload conf
   assert.equal((await post('custody-photo/status',{jobVehicleId:randomUUID(),photoId:scope.photoId})).status,400);
   await expect(save).toBeEnabled();await save.click();
   await expect(panel.getByText('Handoff saved.',{exact:true})).toBeVisible();
-  await page.reload();await openHistory();
+  photoDiagnostic.mark('photo_reopen');await page.reload();await openHistory();
   const exported=await downloadCustodyHistory(page,panel);
   assert.equal(exported.state,'in_custody');
   assert.equal(exported.events[0].conditionPhotoId,scope.photoId);
+  await reviewCustodyEventTimeline(page,panel,{fixture,expected:exported,engine:photoEngine[0],scenario:'verified-photo'});
   const show=panel.getByRole('button',{name:'View condition photo',exact:true});
   await show.focus();await page.keyboard.press('Enter');
   const image=panel.getByRole('img',{name:'Saved vehicle condition photo'});
@@ -592,19 +602,20 @@ test(photoEngine[0]+' signed-in condition photo survives interrupted upload conf
   }
   const oldUrl=await image.getAttribute('src'),oldDownload=await downloadLink.getAttribute('href');
   await vehicle.click();
-  await expect(image).toHaveCount(0);
+  photoDiagnostic.mark('preview_clear');await expect(image).toHaveCount(0);
   await expect.poll(()=>page.evaluate(url=>window.crestTestRevocations.includes(url),oldUrl)).toBe(true);
   await expect.poll(()=>page.evaluate(url=>window.crestTestRevocations.includes(url),oldDownload)).toBe(true);
 
   await page.setViewportSize({width:390,height:844});
-  await page.getByRole('button',{name:'Cancel this job…',exact:true}).click();
+  photoDiagnostic.mark('scheduled_cancel');await page.getByRole('button',{name:'Cancel this job…',exact:true}).click();
   await page.getByLabel('Cancellation reason',{exact:true}).fill('Synthetic cancellation after verified intake');
   await page.getByLabel('Customer-communication status',{exact:true}).selectOption('not_sent');
   await page.getByRole('button',{name:'Cancel this scheduled job',exact:true}).click();
   await expect(page.locator('.job-change-status')).toContainText('Job cancellation saved.');
   await page.getByRole('link',{name:'Open updated job in Schedule',exact:true}).click();
-  await openHistory();
+  photoDiagnostic.mark('release_history');await openHistory();
   await panel.getByRole('button',{name:'Record release…',exact:true}).click();
+  photoDiagnostic.mark('release_save');
   await panel.getByLabel('Actual handoff time',{exact:true}).fill('2026-11-03T11:15');
   await panel.getByLabel('Who collected the vehicle?',{exact:true}).fill('Synthetic collecting customer');
   await panel.getByLabel('Handoff location',{exact:true}).fill('Synthetic shop bay');
@@ -623,5 +634,5 @@ test(photoEngine[0]+' signed-in condition photo survives interrupted upload conf
   assert.notEqual(rows[1].condition_photo_id,scope.photoId);
   assert(rows[1].condition_photo_id);
   assert.equal(fixture.photoStorage.requests.filter(request=>request.method==='PUT'&&request.key.startsWith('staging/')).length,2);
- }finally{try{await browser?.close();}finally{await fixture.close();}}
+ }catch(error){await photoDiagnostic?.();if(page&&!page.isClosed()&&new URL(page.url()).pathname==='/schedule'){await mkdir('.local/review',{recursive:true});await page.screenshot({path:'.local/review/custody-photo-read-failure-'+photoEngine[0]+'-'+Date.now()+'.png',fullPage:true}).catch(()=>null);}throw error;}finally{try{await browser?.close();}finally{await fixture.close();}}
 },{timeout:360000});

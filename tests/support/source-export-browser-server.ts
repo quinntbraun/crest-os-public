@@ -23,3 +23,6 @@ export {createDropoffPhotoDispatch} from '../../src/operations/dropoff-photo-wor
 export {validateImage} from '../../src/files/image-validation.ts';
 export {createLocalSandboxValidator} from '../../src/files/local-sandbox-validator.ts';
 export {createSupplierOriginalDispatcher} from '../../src/bookkeeping/expenses/supplier-bill-original-directory.ts';
+
+export {createReceiptDirectory} from '../../src/bookkeeping/expenses/receipt-directory.ts';
+export {createReceiptWorkflow} from '../../src/bookkeeping/expenses/receipt-workflow.ts';

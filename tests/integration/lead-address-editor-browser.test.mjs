@@ -3,12 +3,10 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
-import {readFile,chmod} from 'node:fs/promises';
-import {join} from 'node:path';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {URI,TOTP} from 'otpauth';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
@@ -19,7 +17,7 @@ const sessionName='__Host-crest_session';
 // Address scenarios own a disposable business/Auth/database/application and two
 // genuine sessions. Admission rows and production limits are never reset.
 async function startFixture(){
-  assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
+  assert(['linux','win32'].includes(process.platform),'supported disposable TLS/Auth browser fixture required');
   process.env.NODE_ENV='production';
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);
   await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
@@ -41,18 +39,14 @@ async function startFixture(){
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor]);await client.query('COMMIT');
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_OWNER_FAILED');}
-  const keyPath=join(sandbox.workspace,'ephemeral.key'),certPath=join(sandbox.workspace,'ephemeral.pem');
-  await chmod(sandbox.workspace,0o700);
-  try{execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-noenc','-keyout',keyPath,'-out',certPath,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{stdio:'ignore',timeout:15000});}
-  catch{throw new Error('SYNTHETIC_TLS_FIXTURE_FAILED');}
-  await chmod(keyPath,0o600);
+  const tls=await browserTestTls();
   const reservation=createServer();await new Promise(resolve=>reservation.listen(0,'127.0.0.1',resolve));const port=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));origin=`https://127.0.0.1:${port}`;
   // Normal Node resolution: react-server is only a build-time marker condition.
   const {createCrestApplication,createAuthenticationRuntime}=await import('../../.local/server/application.mjs');
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},leads:true,customers:true,vehicles:true});
+  app=await createCrestApplication({origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:business},leads:true,customers:true,vehicles:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 }
@@ -73,7 +67,7 @@ const leadRoot='business/leads/';
 const editorStatus=(page,source=false)=>page.getByRole('status',{name:source?'Lead source editor status':'Lead editor status',exact:true});
 const loadButton=(page,source=false)=>page.getByRole('button',{name:source?'Load current lead sources':'Load current leads',exact:true});
 async function openScreen(page,source=false){await page.bringToFront();await page.goto(origin+(source?'/lead-sources':'/leads'));await expect(page.getByRole('button',{name:source?'Add lead source':'Add lead',exact:true})).toBeVisible();}
-async function find(page,label,source=false,inactive=false){await page.getByLabel(source?'Lead source search':'Lead search',{exact:true}).fill(label);if(source)await page.getByLabel('Include inactive sources',{exact:true}).setChecked(inactive);await page.getByRole('button',{name:source?'Search lead sources':'Search leads',exact:true}).click();await expect(editorStatus(page,source)).toHaveText(source?'Lead source search complete.':'Lead search complete.');await page.getByRole('button',{name:label+(source&&inactive?' — inactive':''),exact:true}).click();await expect(page.getByRole('form',{name:source?'Lead source editor':'Lead editor',exact:true})).toBeVisible();if(!source){for(const name of ['Lead status','Lead vehicles','Lead addresses'])await expect(page.getByRole('region',{name,exact:true})).toHaveCount(1);for(const name of ['Lead status editor status','Lead vehicle editor status','Lead address editor status'])await expect(page.getByRole('status',{name,exact:true})).toHaveCount(1);}}
+async function find(page,label,source=false,inactive=false){if(!source){const back=page.getByRole('button',{name:/^Back to (follow-ups|leads)$/});if(!await page.getByRole('searchbox',{name:'Lead search',exact:true}).isVisible()&&await back.isVisible())await back.click();const all=page.getByRole('button',{name:'All leads',exact:true});if(!await page.getByRole('searchbox',{name:'Lead search',exact:true}).isVisible()&&await all.isVisible())await all.click();}await page.getByLabel(source?'Lead source search':'Lead search',{exact:true}).fill(label);if(source)await page.getByLabel('Include inactive sources',{exact:true}).setChecked(inactive);await page.getByRole('button',{name:source?'Search lead sources':'Search leads',exact:true}).click();await expect(editorStatus(page,source)).toHaveText(source?'Lead source search complete.':'Lead search complete.');await page.getByRole('button',{name:label+(source&&inactive?' — inactive':''),exact:true}).click();await expect(page.getByRole('form',{name:source?'Lead source editor':'Lead editor',exact:true})).toBeVisible();if(!source){for(const name of ['Lead status','Lead vehicles','Lead addresses'])await expect(page.getByRole('region',{name,exact:true})).toHaveCount(1);for(const name of ['Lead status editor status','Lead vehicle editor status','Lead address editor status'])await expect(page.getByRole('status',{name,exact:true})).toHaveCount(1);}}
 for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900}],['webkit',webkit,{width:360,height:800}]]){
  test('genuine private lead address editors '+name,async t=>{
   const browser=await engine.launch();let first,second,addressPage,addressLead,addressCurrent,epoch;

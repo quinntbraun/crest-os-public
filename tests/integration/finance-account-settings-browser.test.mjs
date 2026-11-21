@@ -1,8 +1,11 @@
+import {reviewFinancialHistoryRecording,reviewFinancialHistoryRecordingCsv} from '../support/financial-history-recording-layout.mjs';
 import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
+import {reviewBusinessSettingsIndex} from '../support/business-settings-index.mjs';
+import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
@@ -12,7 +15,7 @@ for(const engine of [chromium,webkit]){
   if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
   let fixture,browser;
   try{
-   fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true});
+   fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true,financeHistoryEvidence:true});
    browser=await engine.launch();
    const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:900}});
    const page=await context.newPage();page.setDefaultTimeout(20000);
@@ -32,9 +35,21 @@ for(const engine of [chromium,webkit]){
    await expect(page.getByRole('status')).toContainText('Signed in');
 
    await page.goto(fixture.origin+'/settings');
+   const directory=page.getByRole('navigation',{name:'Settings navigation',exact:true});
+   await expect(directory.getByRole('heading',{name:'Finance',exact:true})).toBeVisible();
+   await expect(directory.getByRole('heading',{name:'Data and recovery',exact:true})).toBeVisible();
+   await expect(directory.getByRole('heading',{name:'Device access',exact:true})).toBeVisible();
+   await expect(directory.getByRole('link',{name:'Business data exports',exact:true})).toHaveAttribute('href','/export-files');
+   await expect(directory.getByRole('link',{name:'Google Calendar setup',exact:true})).toHaveCount(0);
+   await reviewBusinessSettingsIndex(page,{label:'finance-'+engine.name(),finance:true,calendar:false});
+   if(engine.name()==='chromium')await page.route('**/api/business/finance-accounts/context',route=>route.abort('failed'),{times:1});
    await page.getByRole('link',{name:'Fictional account setup',exact:true}).click();
    const settings=page.getByRole('region',{name:'Account settings',exact:true}),status=settings.getByRole('status');
-   await settings.getByRole('button',{name:'Load accounts',exact:true}).press('Enter');
+   if(engine.name()==='chromium'){
+    await expect(status).toHaveText('Accounting could not be verified. Check access and try again.');
+    await expect(settings.getByRole('heading',{name:'Chart of accounts',exact:true})).toHaveCount(0);
+    await settings.getByRole('button',{name:'Check accounting access',exact:true}).press('Enter');
+   }
    await expect(status).toHaveText('No accounts match this view.');
    await expect(page.getByRole('link',{name:'Dated account mappings',exact:true})).toHaveCount(0);
    assert.equal((await page.request.post(api+'mapping-approve',{data:{}})).status(),404);
@@ -65,8 +80,8 @@ for(const engine of [chromium,webkit]){
    assert.deepEqual(Object.keys(JSON.parse(retained).reference).sort(),['accountId','expectedVersion','operationId','recoveryEpoch']);
 
    await page.reload();
-   await settings.getByRole('button',{name:'Load accounts',exact:true}).click();
    await expect(status).toContainText('Review the interrupted account save');
+   await reviewFinancialRecovery(page,fixture,engine.name(),'account',settings.getByRole('region',{name:'Interrupted account save',exact:true}),JSON.parse(retained).reference.operationId);
    await settings.getByRole('button',{name:'Check save status',exact:true}).click();
    await expect(status).toHaveText('The original account save was confirmed.');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
@@ -76,12 +91,16 @@ for(const engine of [chromium,webkit]){
    const history=settings.getByRole('region',{name:'Saved account history',exact:true});
    await expect(history.getByRole('heading',{name:'Fictional closed checking history',exact:true})).toBeFocused();
    await expect(history.getByText('Fictional checking',{exact:true})).toBeVisible();
+   await expect(history.getByText('Version 2',{exact:true})).toBeVisible();
    await expect(history.getByText('Fictional review confirmed closure',{exact:true})).toBeVisible();
    const download=page.waitForEvent('download');
    await history.getByRole('button',{name:'Download loaded history (CSV)',exact:true}).click();
    const file=await download;
    assert.equal(file.suggestedFilename(),'crest-account-history.csv');
-   assert.match(await readFile(await file.path(),'utf8'),/"1000","Fictional closed checking","2","Archived"/);
+   const csv=await readFile(await file.path(),'utf8');
+   assert.match(csv,/"1000","Fictional closed checking","2","Archived"/);
+   await reviewFinancialHistoryRecording(page,fixture,history,'account');
+   await reviewFinancialHistoryRecordingCsv(csv,fixture,history,'account');
 
    await mkdir('.local/review',{recursive:true});
    for(const width of [360,390,768,1440]){
@@ -89,7 +108,7 @@ for(const engine of [chromium,webkit]){
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
     await page.evaluate(()=>window.scrollTo(0,0));
-    await page.screenshot({path:'.local/review/finance-account-settings-recovery-'+engine.name()+'-'+width+'.png',animations:'disabled'});
+    await page.screenshot({path:'.local/review/finance-account-settings-recovery-'+engine.name()+'-'+width+'.png',animations:'disabled',fullPage:true});
    }
    const stored=(await fixture.client.query('SELECT version::text,active FROM crest.account_versions ORDER BY version')).rows;
    assert.deepEqual(stored,[{version:'1',active:true},{version:'2',active:false}]);
@@ -97,7 +116,7 @@ for(const engine of [chromium,webkit]){
    await expect(history).toHaveCount(0);
 
    await page.setViewportSize({width:390,height:900});
-   await settings.getByRole('button',{name:'Load accounts',exact:true}).click();
+   await settings.getByRole('button',{name:'Check accounting access',exact:true}).click();
    await settings.getByRole('button',{name:'Add account',exact:true}).click();
    await settings.getByLabel('Account name',{exact:true}).fill('Fictional draft lost before save');
    await settings.getByLabel('Account code',{exact:true}).fill('1100');
@@ -109,7 +128,6 @@ for(const engine of [chromium,webkit]){
    const original=JSON.parse(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey)).reference;
 
    await page.reload();
-   await settings.getByRole('button',{name:'Load accounts',exact:true}).click();
    await settings.getByRole('button',{name:'Check save status',exact:true}).click();
    await expect(status).toContainText('No completed save was found');
    const close=settings.getByRole('button',{name:'Close interrupted save',exact:true});
@@ -130,7 +148,6 @@ for(const engine of [chromium,webkit]){
    assert.deepEqual(JSON.parse(unresolved).reference,original);
    assert(!unresolved.includes('Fictional'));
    await page.reload();
-   await settings.getByRole('button',{name:'Load accounts',exact:true}).click();
    await settings.getByRole('button',{name:'Check save status',exact:true}).click();
    await expect(status).toHaveText('The interrupted save was closed. You can start a new edit.');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
@@ -141,6 +158,27 @@ for(const engine of [chromium,webkit]){
    `,[original.operationId])).rows;
    assert.deepEqual(retired,[{command_type:'finance.account.retire',reason:'Fictional owner reviewed the interrupted attempt',state:'retired'}]);
    assert.equal((await fixture.client.query('SELECT count(*)::integer n FROM crest.accounts WHERE id=$1',[original.accountId])).rows[0].n,0);
+
+   await page.getByRole('link',{name:'Business settings',exact:true}).click();
+   await expect(page).toHaveURL(fixture.origin+'/settings');
+   const name=page.getByLabel('Business legal name',{exact:true});
+   const savedName='Fictional revised business '+engine.name();
+   await expect(name).toBeVisible();
+   await name.fill(savedName);
+   const saveName=page.getByRole('button',{name:'Save business name',exact:true});
+   await expect(saveName).toBeEnabled();
+   let renameStatus;
+   await page.route('**/api/business/rename',async route=>{
+    const response=await route.fetch();renameStatus=response.status();await route.abort();
+   },{times:1});
+   await saveName.click();
+   await expect(page.getByRole('status')).toContainText('save could not be confirmed');
+   assert.equal(renameStatus,200);
+   await expect(page.getByText('Save reference',{exact:true})).toBeVisible();
+   await page.getByRole('button',{name:'Check save status',exact:true}).click();
+   await expect(page.getByRole('status')).toContainText('Save reference confirmed.');
+   await page.getByRole('button',{name:'Load current settings',exact:true}).click();
+   await expect(page.locator('.current-name')).toContainText(savedName);
   }finally{
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{

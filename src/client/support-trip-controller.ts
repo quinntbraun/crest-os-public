@@ -2,8 +2,8 @@ import {authentication,AuthenticationError} from './authentication';
 import {scheduling,SchedulingClientError} from './scheduling';
 import {lookupSchedulingOriginal} from './scheduling-original';
 import {vehicles} from './vehicles';
-import {parseSupportTripSave,supportTripOriginal} from '../operations/support-trip';
-import type {SupportTrip,SupportTripBody} from '../operations/support-trip';
+import {parseSupportTripSave,supportTripOriginal,tripCursorBefore} from '../operations/support-trip';
+import type {SupportTrip,SupportTripBody,SupportTripCursor} from '../operations/support-trip';
 import type {PendingScheduling,createPendingSchedulingStore} from './pending-scheduling';
 
 type Context=Awaited<ReturnType<typeof scheduling.workspace>>;
@@ -24,7 +24,7 @@ export const initialSupportTripView:SupportTripView=Object.freeze({
 });
 
 export function createSupportTripController(deps:{
- stores:Readonly<Record<SupportTripKind,Store>>;blockers:readonly Store[];change:(view:SupportTripView)=>void;
+ initialTrip?:SupportTripCursor;stores:Readonly<Record<SupportTripKind,Store>>;blockers:readonly Store[];change:(view:SupportTripView)=>void;
 }){
  let alive=true,active:AbortController|null=null,workspace:Context|null=null,pending:Pending|null=null;
  let view=initialSupportTripView;
@@ -93,7 +93,24 @@ export function createSupportTripController(deps:{
   const {proof}=await fresh(signal);
   if(pending){clear('pending','Check the original trip save before recording another.');return;}
   await firstPage(proof,signal,'Saved travel loaded.');
+  if(!deps.initialTrip)return;
+  const selected=await findTrip(deps.initialTrip.legId,proof,signal,deps.initialTrip);
+  if(selected)await readHistory(selected,false,proof,signal);
+  else update({message:'The linked trip could not be reopened. Choose a saved trip.'});
  },error=>{if(!(error instanceof SupportTripUnavailable))unavailable(error);});
+ async function findTrip(legId:string,proof:Proof,signal:AbortSignal,anchor?:SupportTripCursor){
+  let selected=[view.activeTrip,...view.trips].find(row=>row?.legId===legId);
+  if(!anchor)return selected;
+  if(!selected){
+   const after=tripCursorBefore(anchor);
+   if(after){
+    const page=await scheduling.supportTrips({businessId:workspace!.context.businessId,after,pageSize:1},proof,signal);
+    live(signal);
+    if(page.trips[0]?.legId===anchor.legId)selected=page.trips[0];
+   }
+  }
+  return selected;
+ }
  const moreTrips=()=>run(async signal=>{
   const last=view.trips.at(-1);
   if(view.phase!=='ready'||!view.hasMore||!last)return;
@@ -112,17 +129,20 @@ export function createSupportTripController(deps:{
   live(signal);
   update({vehicles:[...view.vehicles,...page.vehicles],moreVehicles:page.hasMore,message:'More vehicles loaded.'});
  });
+ async function readHistory(selected:SupportTrip,append:boolean,proof:Proof,signal:AbortSignal,message='Saved trip history loaded.'){
+  const earlier=append?view.history:[];
+  const page=await scheduling.supportTripHistory({businessId:workspace!.context.businessId,legId:selected.legId,throughVersion:selected.sequence,
+   afterVersion:earlier.at(-1)?.sequence??'0',pageSize:10},proof,signal);
+  live(signal);
+  if('state'in page||!page.hasMore&&page.trips.at(-1)?.legVersionId!==selected.legVersionId)throw Error();
+  update({selected,history:[...earlier,...page.trips],moreHistory:page.hasMore,message});
+ }
  const history=(legId:string,append=false)=>run(async signal=>{
   if(view.phase!=='ready')return;
   const selected=append?view.selected:[view.activeTrip,...view.trips].find(row=>row?.legId===legId);
   if(!selected||selected.legId!==legId||append&&!view.moreHistory)return;
-  const {proof,context}=await fresh(signal);
-  const earlier=append?view.history:[];
-  const page=await scheduling.supportTripHistory({businessId:context.businessId,legId,throughVersion:selected.sequence,
-   afterVersion:earlier.at(-1)?.sequence??'0',pageSize:10},proof,signal);
-  live(signal);
-  if('state'in page||!page.hasMore&&page.trips.at(-1)?.legVersionId!==selected.legVersionId)throw Error();
-  update({selected,history:[...earlier,...page.trips],moreHistory:page.hasMore,message:'Saved trip history loaded.'});
+  const {proof}=await fresh(signal);
+  await readHistory(selected,append,proof,signal);
  });
  async function historyDownload(){
   let downloaded:Uint8Array<ArrayBuffer>|undefined;
@@ -142,14 +162,18 @@ export function createSupportTripController(deps:{
   });
   return downloaded;
  }
- async function confirmed(proof:Proof,signal:AbortSignal){
-  try{await firstPage(proof,signal,'Trip saved.');update({saveCount:view.saveCount+1});}
-  catch{if(alive&&!signal.aborted&&active?.signal===signal)clear('review','Trip saved. Reload to see the saved record.');}
+ async function confirmed(proof:Proof,signal:AbortSignal,legId:string,anchor?:SupportTripCursor){
+  try{
+   await firstPage(proof,signal,'Refreshing saved travel…');
+   const selected=await findTrip(legId,proof,signal,anchor);
+   if(selected&&selected.state!=='open')await readHistory(selected,false,proof,signal,'Trip saved.');
+   update({saveCount:view.saveCount+1,message:'Trip saved.'});
+  }catch{if(alive&&!signal.aborted&&active?.signal===signal)clear('review','Trip saved. Reload to see the saved record.');}
  }
  const save=(body:SupportTripBody,legId?:string)=>run(async signal=>{
   if(view.phase!=='ready'||!view.canSave)return;
   const creating=body.action==='depart'||body.action==='record';
-  const current=creating?null:[view.activeTrip,...view.trips].find(row=>row?.legId===legId);
+  const current=creating?null:[view.activeTrip,...view.trips,view.selected].find(row=>row?.legId===legId);
   if(!creating&&!current)return;
   const {proof,context}=await fresh(signal);
   if(context.writeState!=='ready'||!workspace)throw Error();
@@ -182,7 +206,8 @@ export function createSupportTripController(deps:{
   try{store.clear(pending.value);pending=null;}
   catch{clear('pending',saved?'Trip saved. The local reference still needs review.':'No trip was saved. The local reference still needs review.');return;}
   if(!saved){clear('review','No trip was saved. Check saved travel for an overlapping trip or changed record, then reload.');return;}
-  await confirmed(proof,signal);
+  const savedDeparture=request.body.trip&&'departedAt'in request.body.trip?request.body.trip.departedAt:current?.departedAt;
+  await confirmed(proof,signal,request.legId,savedDeparture?{legId:request.legId,departedAt:savedDeparture}:undefined);
  });
  const check=()=>run(async signal=>{
   if(!pending)return;
@@ -196,7 +221,7 @@ export function createSupportTripController(deps:{
    clear('pending','The trip save could not be confirmed. Open Interrupted saves before recording it again.');return;
   }
   deps.stores[kind].clear(value);pending=null;
-  await confirmed(proof,signal);
+  await confirmed(proof,signal,result.receipt.subjectId);
  });
  function suspend(){
   active?.abort();active=null;workspace=null;

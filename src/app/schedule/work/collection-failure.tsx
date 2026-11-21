@@ -222,7 +222,7 @@ export function CollectionFailure({businessId, customerId}: {businessId: string;
       <p className="field-help">Correct a payment entered in error or record a bank or wallet debit for a failed incoming payment.</p>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
       <button type="button" className="secondary" disabled={busy} onClick={loadPayments}>Load customer payments</button>
-      {pending && <button type="button" className="secondary" disabled={busy} onClick={() => recover()}>Check original adjustment</button>}
+      {pending && <button type="button" disabled={busy} onClick={() => recover()}>Check original adjustment</button>}
       {pending && canClose && <form onSubmit={event => { event.preventDefault(); if (financeAccountReviewReason(closeReason.trim())) recover(closeReason.trim()); }}>
         <label>Reason for closing the attempt<input required maxLength={1000} value={closeReason}
           onChange={event => setCloseReason(event.target.value)} disabled={busy}/></label>

@@ -5,6 +5,7 @@ import type {createQuoteAmendmentWorkspace,QuoteAmendmentWorkspaceView} from '..
 import {quoteMoney} from '../../../commercial/quote-pricing';
 import type {QuoteConfirmationChannel} from '../../../commercial/quote-commercial-contract';
 import {customerInstant} from '../../../customer/customer-contract';
+import {AmendmentTotals} from '../quote-amendment-document';
 import {PhoneInput} from '../../customers/phone-input';
 import {followUpCandidates,followUpWall} from '../../leads/follow-up-time';
 import {leadUtc} from '../../leads/intake-input';
@@ -13,7 +14,24 @@ const labels={assigned:'Assigned',completed:'Completed',cancelled:'Cancelled',un
 export function AmendmentAcceptance({view,controller}:{view:QuoteAmendmentWorkspaceView;controller:RefObject<ReturnType<typeof createQuoteAmendmentWorkspace>|null>}){
  const amendment=view.amendment,[channel,setChannel]=useState<''|QuoteConfirmationChannel>(''),[name,setName]=useState(''),[phone,setPhone]=useState(''),[email,setEmail]=useState(''),[wall,setWall]=useState(''),[instant,setInstant]=useState(''),[exact,setExact]=useState(''),[evidence,setEvidence]=useState(''),[confirmed,setConfirmed]=useState(false);
  if(!amendment)return null;
- if(amendment.schemaVersion===2&&amendment.acceptance)return <section aria-label="Saved amendment acceptance"><h3>Customer acceptance recorded</h3><dl className="customer-values"><dt>Confirmed by</dt><dd>{amendment.acceptance.request.body.counterpartySnapshot.displayName}</dd><dt>Customer confirmation</dt><dd><time dateTime={amendment.acceptance.request.body.confirmationEffectiveAt}>{amendment.acceptance.request.body.confirmationEffectiveAt}</time></dd><dt>Recorded in Crest</dt><dd><time dateTime={amendment.acceptance.recordedAt}>{amendment.acceptance.recordedAt}</time></dd></dl><details><summary>Confirmation evidence</summary><p className="service-scope">{amendment.acceptance.request.body.evidenceNote}</p></details><p className="field-help">The saved private record includes the exact confirmation, allocation command and original receipt. Visit changes, invoices, credits and refunds are separate.</p></section>;
+ if(amendment.schemaVersion===2&&amendment.acceptance){
+  const acceptance=amendment.acceptance,zone=amendment.revision.timezone,format=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'long',timeZone:zone});
+  return <section aria-label="Saved amendment acceptance"><h3>Customer acceptance recorded</h3>
+   <dl className="customer-values">
+    <dt>Confirmed by</dt><dd>{acceptance.request.body.counterpartySnapshot.displayName}</dd>
+    <dt>Customer confirmation</dt><dd><time dateTime={acceptance.request.body.confirmationEffectiveAt}>{format.format(new Date(acceptance.request.body.confirmationEffectiveAt))}</time></dd>
+    <dt>Recorded in Crest</dt><dd><time dateTime={acceptance.recordedAt}>{format.format(new Date(acceptance.recordedAt))}</time></dd>
+   </dl>
+   <details><summary>Confirmation evidence</summary><p className="service-scope">{acceptance.request.body.evidenceNote}</p>
+    <dl className="financial-history-evidence">
+     <dt>Customer confirmation (exact UTC)</dt><dd><time dateTime={acceptance.request.body.confirmationEffectiveAt}>{acceptance.request.body.confirmationEffectiveAt}</time></dd>
+     <dt>Recorded in Crest (exact UTC)</dt><dd><time dateTime={acceptance.recordedAt}>{acceptance.recordedAt}</time></dd>
+     <dt>Saved time zone</dt><dd>{zone}</dd>
+    </dl>
+   </details>
+   <p className="field-help">The saved private record includes the exact confirmation, allocation command and original receipt. Visit changes, invoices, credits and refunds are separate.</p>
+  </section>;
+ }
  if(!view.canPrepareAcceptance&&!view.acceptance)return null;
  const zone=amendment.revision.timezone,matches=followUpCandidates(wall,zone),validTime=customerInstant(instant)&&instant.length===27,canChange=!view.busy&&view.phase==='ready',preparation=view.acceptance;
  const time=(value:string)=>{setInstant(value);setExact(value);setWall(followUpWall(value,zone));};
@@ -35,6 +53,7 @@ export function AmendmentAcceptance({view,controller}:{view:QuoteAmendmentWorksp
     {wall&&matches.length===0&&<p role="alert">This local time does not exist in the quote’s time zone.</p>}{matches.length>1&&<><label htmlFor="amendment-confirmation-occurrence">Confirmation time occurrence</label><select id="amendment-confirmation-occurrence" value={matches.includes(instant)?instant:''} onChange={event=>time(event.target.value)}><option value="">Choose the occurrence</option>{matches.map((v,i)=><option key={v} value={v}>{i===0?'First':'Later'} occurrence · {v} UTC</option>)}</select></>}
     <details><summary>Precise confirmation time (UTC)</summary><label>Exact confirmation time in UTC<input maxLength={35} value={exact} placeholder="2026-11-04 15:30:00.000000" onChange={event=>{const v=event.target.value?leadUtc(event.target.value):'';setExact(event.target.value);setInstant(v);setWall(followUpWall(v,zone));}}/></label></details>{exact&&!validTime&&<p role="alert">Enter a valid UTC date and time, or use the local time field.</p>}
     <label>Acceptance evidence<textarea required rows={3} maxLength={8000} value={evidence} onChange={event=>setEvidence(event.target.value)}/></label><p className="field-help">Describe the customer’s actual confirmation and how it can be substantiated. This form records an acceptance; it does not send a message.</p>
+    <AmendmentTotals comparison={amendment.comparison.customer}/>
     <label className="checkbox"><input type="checkbox" checked={confirmed} onChange={event=>setConfirmed(event.target.checked)}/>The customer separately confirmed this exact sent amendment, and I reviewed its remaining work portions.</label><button type="submit" disabled={!view.canRecordAcceptance||!confirmed||!channel||!name.trim()||!evidence.trim()||!validTime}>Record customer amendment acceptance</button>
    </fieldset></form>
   </>}

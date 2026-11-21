@@ -203,7 +203,7 @@ export function CollectionFailureRecredit({businessId, customerId, recoveryOnly=
       <p className="field-help">Record money the bank or wallet credited back after a failed incoming payment. This restores customer funds that were held before the failure. Choose a verified deposit with no fee.</p>
       <p role="status" tabIndex={-1} ref={status}>{message}</p>
       {pending ? <>
-        <button type="button" className="secondary" disabled={busy} onClick={() => recover()}>Check original save</button>
+        <button type="button" disabled={busy} onClick={() => recover()}>Check original save</button>
         {canClose && <form onSubmit={event => {event.preventDefault(); recover(closeReason.trim());}}>
           <label>Reason for closing the attempt<textarea required rows={2} maxLength={1000} value={closeReason}
             onChange={event => setCloseReason(event.target.value)}/></label>

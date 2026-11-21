@@ -24,6 +24,11 @@ function setup(){
  const payload=()=>({...initialBookingPayload(record,context.context.operatorId,controller.view().jobId,'UTC'),workLocation:f.q.payload.workLocation,appointment:f.q.payload.appointment,conflictReview:{expectedAppointmentIds:[],expectedUnknownTravel:false,overrideReason:null}});
  return {f,record,map,storage,store,context,session,api,lookup,addressApi,quoteApi,vehicleApi,controller,payload};
 }
+it('only offers quote selection after access and original-save checks, without reading an agreement or creating a booking',async()=>{
+ const f=setup();await f.controller.load('');expect(f.controller.view()).toMatchObject({phase:'blocked',selectionNeeded:true});expect(f.api.agreement).not.toHaveBeenCalled();expect(f.api.book).not.toHaveBeenCalled();
+ f.session.mockRejectedValueOnce(new AuthenticationError('denied'));await f.controller.load('');expect(f.controller.view()).toMatchObject({phase:'signed-out'});expect(f.controller.view().selectionNeeded).toBeUndefined();
+ await f.controller.load(f.record.familyId);f.api.book.mockRejectedValueOnce(new SchedulingClientError('unknown'));await f.controller.save(f.payload());await f.controller.load('');expect(f.controller.view().phase).toBe('pending');expect(f.controller.view().selectionNeeded).toBeUndefined();expect(f.store.read()).not.toBeNull();expect(f.api.book).toHaveBeenCalledTimes(1);
+});
 it('binds a complete booking to fresh accepted scope and clears only its acknowledged pending identity',async()=>{
  const f=setup();await f.controller.load(f.record.familyId);await f.controller.save(f.payload());expect(f.api.book).toHaveBeenCalledOnce();const q=f.api.book.mock.calls[0]![0];expect(q).toMatchObject({businessId:f.context.context.businessId,expectedModeSequence:'0',recoveryEpoch:f.context.context.recoveryEpoch});expect(f.controller.view()).toMatchObject({phase:'committed',savedJobId:q.jobId,agreement:null,context:null,addresses:[]});expect(f.store.read()).toBeNull();f.controller.dispose();
 });
