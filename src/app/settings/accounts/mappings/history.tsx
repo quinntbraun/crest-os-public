@@ -1,4 +1,5 @@
 import type {Ref} from 'react';
+import {FinanceHistoryComparison,previousLoadedFinanceVersion} from '../history-comparison';
 import type {parseFinanceMappingHistory,FinanceMappingPurpose,FinanceMappingRecording} from '../../../../bookkeeping/finance-mapping-contract';
 import {financeMappingLabels} from '../../../../bookkeeping/finance-mapping-contract';
 import {financeMappingPeriods} from '../../../../bookkeeping/finance-mapping-presentation';
@@ -16,7 +17,7 @@ export function MappingApprovalHistory({history,purpose,categories,heading,disab
   {categories&&purpose&&!embedded&&<a href={'/settings/accounts/mappings/categories/manage?purpose='+encodeURIComponent(purpose)}>Manage approvals for {financeMappingLabels[purpose]}</a>}
   {!first?<p>No approved versions for this {categories?'category':'purpose'}.</p>:<>
    <p className="mapping-history-coverage">{first.version===last!.version?'Version '+first.version+' loaded.':'Versions '+first.version+' through '+last!.version+' loaded.'} {history.hasMore?'Older approvals have not been loaded.':'This includes the first recorded approval.'} {embedded?'Reload approval settings':'Reload history'} to check for newer versions.</p>
-   <ol className="mapping-history-list mapping-period-timeline">{financeMappingPeriods(history.rows).map(({row,effectiveFrom,effectiveUntil})=><li key={row.id} data-closed={row.accountId===null}>
+   <ol className="mapping-history-list mapping-period-timeline">{financeMappingPeriods(history.rows).map(({row,effectiveFrom,effectiveUntil})=>{const previous=previousLoadedFinanceVersion(history.rows,row);return <li key={row.id} data-closed={row.accountId===null}>
     <details><summary><strong>Version {row.version} · {row.accountCode===null?'Closed':`Account ${row.accountCode}`}</strong>{row.recording&&<span className="mapping-recorded-time">Recorded <time dateTime={row.recording.recordedAt}>{recordingFormat.format(new Date(row.recording.recordedAt))}</time></span>}<span className="mapping-effective-period">From <time dateTime={effectiveFrom}>{dateLabel(effectiveFrom)}</time>{effectiveUntil?<> · Before <time dateTime={effectiveUntil}>{dateLabel(effectiveUntil)}</time></>:' · Newest loaded version'}</span>{row.accountId===null&&<span className="mapping-period-closed">No posting account assigned by this version</span>}</summary>
      <div className="mapping-period-reason"><h3>Approval reason</h3><p>{row.reason}</p>{effectiveUntil&&<p className="field-help">The next version starts {dateLabel(effectiveUntil)}. This period excludes that date.</p>}
       <p className="field-help">These dates show when the rule applies.{!row.recording&&' Recording time and the approving person are not included in this history view.'}</p>
@@ -26,9 +27,14 @@ export function MappingApprovalHistory({history,purpose,categories,heading,disab
        <dt>Approval reference</dt><dd>{row.id}</dd><dt>Audit event reference</dt><dd>{row.auditEventId}</dd>
        {row.recording&&<><dt>Recorded in Crest (UTC)</dt><dd><time dateTime={row.recording.recordedAt}>{row.recording.recordedAt}</time></dd><dt>Recorded by reference</dt><dd>{row.recording.actorId}</dd></>}
       </dl></details>
+      <FinanceHistoryComparison version={row.version} previousVersion={previous?.version} fields={previous?[
+       {label:'Posting account',before:previous.accountCode===null?'Closed':`Account ${previous.accountCode}`,after:row.accountCode===null?'Closed':`Account ${row.accountCode}`},
+       {label:'Effective from',before:dateLabel(previous.effectiveFrom),after:dateLabel(row.effectiveFrom)},
+       {label:'Approval reason',before:previous.reason,after:row.reason},
+      ]:[]}/>
      </div>
     </details>
-   </li>)}</ol>
+   </li>;})}</ol>
    <p className="mapping-history-boundary">{history.hasMore?'Earlier periods are not shown. Load older approvals before drawing conclusions about them.':'No earlier mapping approval is recorded before '+dateLabel(last!.effectiveFrom)+' in this loaded history.'}</p>
    {history.hasMore&&<button type="button" className="secondary" disabled={disabled} onClick={more}>Load older approvals</button>}
   </>}

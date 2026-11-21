@@ -1,4 +1,5 @@
 'use client';
+import {useFinancialNotice} from '../use-financial-notice';
 
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
@@ -35,7 +36,8 @@ export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved,onT
 }){
  const [reviewed,setReviewed]=useState<Reviewed|null>(null),[draft,setDraft]=useState(blankDraft);
  const [pending,setPending]=useState<Pending|null>(null),[canClose,setCanClose]=useState(false);
- const [closeReason,setCloseReason]=useState(''),[message,setMessage]=useState('');
+ const [closeReason,setCloseReason]=useState('');
+ const {message,setMessage,confirmed:saveConfirmed,resetConfirmation}=useFinancialNotice('');
  const [busy,setBusy]=useState(false),[signedOut,setSignedOut]=useState(false);
  const active=useRef<AbortController|null>(null),status=useRef<HTMLParagraphElement>(null);
  const taskState:TaxApprovalTaskState=busy?'busy':pending?'pending':reviewed?'editing':'idle';
@@ -46,7 +48,7 @@ export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved,onT
  const clear=useCallback(()=>{
   active.current?.abort();active.current=null;setReviewed(null);setDraft(blankDraft);setPending(null);
   setCanClose(false);setCloseReason('');setMessage('');setBusy(false);setSignedOut(false);
- },[]);
+ },[setMessage]);
  useEffect(()=>{
   const hide=()=>{if(document.visibilityState==='hidden')clear();};
   const restore=(event:PageTransitionEvent)=>{if(event.persisted)clear();};
@@ -62,7 +64,7 @@ export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved,onT
  async function run(work:(context:FinanceAccountContext,signal:AbortSignal)=>Promise<void>,failure:string){
   if(active.current||disabled)return;
   const controller=new AbortController(),signal=controller.signal;
-  active.current=controller;setBusy(true);setSignedOut(false);setCanClose(false);setCloseReason('');
+  active.current=controller;setBusy(true);resetConfirmation();setSignedOut(false);setCanClose(false);setCloseReason('');
   try{
    const context=await financeAccounts.context(signal);
    check(!signal.aborted&&context.taxProfiles);
@@ -78,7 +80,7 @@ export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved,onT
  }
  function finish(entry:Pending,signal:AbortSignal,saved:boolean,messageAfter:string){
   check(!signal.aborted);clearPendingFinanceTax(entry);
-  setPending(null);setReviewed(null);setDraft(blankDraft);setMessage(messageAfter);
+  setPending(null);setReviewed(null);setDraft(blankDraft);setMessage(messageAfter,saved);
   if(saved)onSaved();
  }
  async function lookup(context:FinanceAccountContext,entry:Pending,signal:AbortSignal){
@@ -154,7 +156,7 @@ export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved,onT
  function change(field:keyof typeof blankDraft,value:string){setDraft(current=>({...current,[field]:value}));}
  const locked=disabled||busy;
  return <section aria-label="Manage tax approvals" aria-busy={busy}>
-   <p role="status" tabIndex={-1} ref={status}>{message}</p>
+   <p role="status" className={styles.notice} data-confirmed={saveConfirmed&&!busy} tabIndex={-1} ref={status}>{message}</p>
    {signedOut&&<a href="/sign-in">Sign in again</a>}
    {!reviewed&&<div className={styles.actions}>
     {!pending&&<button type="button" className="secondary" disabled={locked||!scope} onClick={()=>load()}>Load approval settings</button>}

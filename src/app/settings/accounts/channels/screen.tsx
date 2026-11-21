@@ -1,4 +1,6 @@
 'use client';
+import {useFinancialNotice} from '../use-financial-notice';
+import {FinanceHistoryComparison,previousLoadedFinanceVersion} from '../history-comparison';
 import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from '../history-recording';
 
 import {useCallback,useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
@@ -70,10 +72,11 @@ function description(row:MoneyChannel){
 }
 
 export function MoneyChannelsScreen(){
+ const {message,setMessage,confirmed:saveConfirmed,resetConfirmation}=useFinancialNotice(initialMessage);
  const [workspace,setWorkspace]=useState<Workspace|null>(null),[editor,setEditor]=useState<Editor|null>(null);
  const [choices,setChoices]=useState<Choices|null>(null),[history,setHistory]=useState<{record:RecordRow;page:History}|null>(null);
  const [pending,setPending]=useState<Pending|null>(null),[canClose,setCanClose]=useState(false),[reason,setReason]=useState('');
- const [busy,setBusy]=useState(false),[signedOut,setSignedOut]=useState(false),[message,setMessage]=useState(initialMessage);
+ const [busy,setBusy]=useState(false),[signedOut,setSignedOut]=useState(false);
  const [selectedId,setSelectedId]=useState<string|null>(null),[search,setSearch]=useState('');
  const [focusTarget,setFocusTarget]=useState<{target:'record'|'directory'}|null>(null);
  const handledFocus=useRef<typeof focusTarget>(null);
@@ -101,7 +104,7 @@ export function MoneyChannelsScreen(){
  const clearPrivate=useCallback(()=>{
   controller.current?.abort();controller.current=null;setWorkspace(null);setEditor(null);setChoices(null);setHistory(null);setSelectedId(null);setSearch('');setFocusTarget(null);origin.current=null;
   setPending(null);setCanClose(false);setReason('');setBusy(false);setSignedOut(false);setMessage(initialMessage);
- },[]);
+ },[setMessage]);
  useEffect(()=>{
   const hide=()=>{if(document.visibilityState==='hidden')clearPrivate();};
   const restore=(event:PageTransitionEvent)=>{if(event.persisted)clearPrivate();};
@@ -117,7 +120,7 @@ export function MoneyChannelsScreen(){
  async function run(work:(context:FinanceAccountContext,signal:AbortSignal)=>Promise<void>,failure:string){
   if(controller.current||!mounted)return;
   const active=new AbortController(),signal=active.signal;
-  controller.current=active;setBusy(true);setSignedOut(false);
+  controller.current=active;setBusy(true);resetConfirmation();setSignedOut(false);
   try{
    const context=await financeAccounts.context(signal);
    if(signal.aborted)return;
@@ -136,10 +139,10 @@ export function MoneyChannelsScreen(){
   const page=await financeAccounts.moneyChannels(context,null,signal);
   if(!signal.aborted)setWorkspace({context,page});
  }
- async function finish(context:FinanceAccountContext,entry:Pending,signal:AbortSignal,result:string){
+ async function finish(context:FinanceAccountContext,entry:Pending,signal:AbortSignal,result:string,confirmed:boolean){
   check(!signal.aborted);clearPendingMoneyChannel(entry);setPending(null);setCanClose(false);setReason('');
-  setWorkspace(null);setHistory(null);setSelectedId(null);setFocusTarget({target:'directory'});origin.current=null;setMessage(result);
-  try{await refresh(context,signal);}catch{if(!signal.aborted)setMessage(result+' Reload channels to view the latest records.');}
+  setWorkspace(null);setHistory(null);setSelectedId(null);setFocusTarget({target:'directory'});origin.current=null;setMessage(result,confirmed);
+  try{await refresh(context,signal);}catch{if(!signal.aborted)setMessage(result+' Reload channels to view the latest records.',confirmed);}
  }
  async function lookup(context:FinanceAccountContext,entry:Pending,signal:AbortSignal){
   check(context.businessId===entry.businessId);
@@ -148,7 +151,7 @@ export function MoneyChannelsScreen(){
   if(signal.aborted)return;
   if(decision.state==='committed'||decision.state==='retired'){
    await finish(context,entry,signal,decision.state==='committed'?'The original channel review was confirmed.':
-    'The interrupted channel review was closed.');return;
+    'The interrupted channel review was closed.',decision.state==='committed');return;
   }
   if(decision.state==='conflict'){setMessage('The saved outcome does not match this reference. Keep it for review.');return;}
   setCanClose(context.writeState==='ready');
@@ -211,7 +214,7 @@ export function MoneyChannelsScreen(){
    setPending(entry);setEditor(null);setChoices(null);setWorkspace(null);setMessage('Saving channel review…');
    const result=await financeAccounts.saveMoneyChannel(context,entry.reference,draft,signal);
    if(signal.aborted)return;
-   if(result.state==='committed'){await finish(context,entry,signal,'Channel review saved.');return;}
+   if(result.state==='committed'){await finish(context,entry,signal,'Channel review saved.',true);return;}
    const signIn=result.state==='rejected'&&result.reason==='FINANCE_ACCOUNT_SIGN_IN_REQUIRED';
    setSignedOut(signIn);setMessage(signIn?'Sign in again, then check the original review.':
     'The channel review could not be confirmed. Check its status before another change.');
@@ -228,7 +231,7 @@ export function MoneyChannelsScreen(){
    if(signal.aborted)return;
    if(result.state==='committed'||result.state==='retired'){
     await finish(context,pending,signal,result.state==='committed'?'The original channel review was confirmed.':
-     'The interrupted channel review was closed.');return;
+     'The interrupted channel review was closed.',result.state==='committed');return;
    }
    if(result.state==='rejected'&&result.reason==='FINANCE_ACCOUNT_SIGN_IN_REQUIRED')setSignedOut(true);
    setMessage('The attempt could not be closed. Check its status again.');
@@ -269,25 +272,36 @@ export function MoneyChannelsScreen(){
    <h3>{history.record.label} history</h3>
    <p className="field-help">{history.page.rows.length} loaded review{history.page.rows.length===1?'':'s'}. {history.page.hasMore?'Earlier reviews remain to be loaded.':'All earlier reviews loaded.'}</p>
    <div className={styles.actions}><button type="button" className="secondary" disabled={disabled} onClick={download}>Download loaded history (CSV)</button></div>
-   <ol className="mapping-history-list">{history.page.rows.map((row,index)=><li key={row.version} className="channel-timeline-row">
+   <ol className="mapping-history-list">{history.page.rows.map((row,index)=>{const previous=previousLoadedFinanceVersion(history.page.rows,row);return <li key={row.auditEventId} className="channel-timeline-row">
     <strong>Version {row.version} · {row.active?'Open':'Closed'}</strong>
     <FinanceHistoryRecordedTime recording={row.recording}/>
     <p>Effective <time dateTime={row.effectiveFrom}>{dateLabel(row.effectiveFrom)}</time>{index>0?' · Before '+dateLabel(history.page.rows[index-1]!.effectiveFrom)+' (exclusive)':' · Newest loaded review'}</p>
     <p>Account {history.record.accountCode} · {moneyChannelOpeningStates[row.openingState]}
      {row.openingCents===null?'':' · '+dollars(row.openingCents,true)+' USD'}</p>
     <p>{row.reason}</p>
+    <FinanceHistoryComparison version={row.version} previousVersion={previous?.version} fields={previous?[
+     {label:'Channel name',before:previous.label,after:row.label},
+     {label:'Status',before:previous.active?'Open':'Closed',after:row.active?'Open':'Closed'},
+     {label:'Effective from',before:dateLabel(previous.effectiveFrom),after:dateLabel(row.effectiveFrom)},
+     {label:'Opening review',before:moneyChannelOpeningStates[previous.openingState],after:moneyChannelOpeningStates[row.openingState]},
+     {label:'Opening date',before:previous.openingOn===null?'Not recorded':dateLabel(previous.openingOn),after:row.openingOn===null?'Not recorded':dateLabel(row.openingOn)},
+     {label:'Opening amount (USD)',before:previous.openingCents===null?'Not recorded':dollars(previous.openingCents,true),after:row.openingCents===null?'Not recorded':dollars(row.openingCents,true)},
+     {label:'Ownership evidence',before:previous.ownershipEvidence??'Not recorded',after:row.ownershipEvidence??'Not recorded'},
+     {label:'Opening evidence',before:previous.openingEvidence??'Not recorded',after:row.openingEvidence??'Not recorded'},
+     {label:'Reason',before:previous.reason,after:row.reason},
+    ]:[]}/>
     <details>
      <summary>{row.ownershipEvidence||row.openingEvidence?'Evidence':'Recording evidence'}</summary>
      {row.ownershipEvidence&&<p>Ownership · {row.ownershipEvidence}</p>}
      {row.openingEvidence&&<p>Opening · {row.openingOn} · {row.openingEvidence}</p>}
      <FinanceHistoryRecordingFacts recording={row.recording} auditEventId={row.auditEventId}/>
     </details>
-   </li>)}</ol>
+   </li>;})}</ol>
    {history.page.hasMore&&<button type="button" className="secondary" disabled={disabled}
     onClick={()=>loadHistory(history.record,true)}>Earlier reviews</button>}
   </section>;
  return <section className={styles.workspace} aria-label="Money channel reviews" aria-busy={busy}>
-  <p role="status" tabIndex={-1} ref={status}>{message}</p>
+  <p role="status" className={styles.notice} data-confirmed={saveConfirmed&&!busy} tabIndex={-1} ref={status}>{message}</p>
   {signedOut&&<a href="/sign-in">Sign in again</a>}
   {!editor&&!pending&&<>
    <div className={styles.actions}>

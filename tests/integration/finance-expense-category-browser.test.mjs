@@ -1,25 +1,30 @@
+import {reviewFinancialSaveNotice} from '../support/financial-save-notice.mjs';
 import assert from 'node:assert/strict';
 import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
 import {reviewTextResize} from '../support/text-resize-layout.mjs';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
+import {observeSessionQueries} from '../support/session-query-evidence.mjs';
 import {reviewApprovalEntry,reviewApprovalHistory,reviewMappingRecordingCsv,verifyMappingSignIn,assertMappingLayout,mappingBusinessSource} from '../support/mapping-workbench.mjs';
 
 for(const engine of [chromium,webkit]){
  test(engine.name()+' approves a fictional expense category account, recovers an interrupted save and exports history',
-  {timeout:240000},async()=>{
+  {timeout:240000},async t=>{
    const previous=process.env.CREST_TEST_DATABASE_URL,cluster=previous?null:await recoveryCluster();
    if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
-   let fixture,browser;
+   let fixture,browser,queryEvidence;const responses=[];
    try{
     fixture=await sourceExportBrowserFixture({product:true,workspace:true,financeAccounts:true,financeMappings:true,financeMappingHistory:true,financeCategoryMappings:true});
+    queryEvidence=observeSessionQueries();
     browser=await engine.launch();
     const context=await browser.newContext({ignoreHTTPSErrors:true,acceptDownloads:true,viewport:{width:390,height:900}});
     const page=await context.newPage();page.setDefaultTimeout(20000);
+    page.on('response',response=>{const path=new URL(response.url()).pathname;if(path==='/api/auth/session'||path.startsWith('/api/business/finance-accounts/')){responses.push([path,response.status()]);if(responses.length>64)responses.shift();}});
     const anonymous=await page.request.post(fixture.origin+'/api/business/finance-accounts/mapping-category-accounts',
      {data:{purpose:'category_fuel',afterCode:null}});
     assert.equal(anonymous.status(),400);
@@ -47,7 +52,7 @@ for(const engine of [chromium,webkit]){
     await expect(category.getByRole('option',{name:'Other',exact:true})).toHaveCount(0);
     await category.selectOption('category_fuel');
     await load.press('Enter');
-    await expect(status).toHaveText('Approval settings loaded.');
+    await expect(status).toHaveText('Approval settings loaded.');await expect(status).toHaveAttribute('data-confirmed','false');
     await expect(editor.getByText('No approved mapping yet.',{exact:true})).toBeVisible();
     await editor.getByRole('button',{name:'Approve mapping',exact:true}).press('Enter');
     await expect(editor.getByRole('heading',{name:'Approve mapping',exact:true})).toBeFocused();
@@ -55,7 +60,7 @@ for(const engine of [chromium,webkit]){
     await expect(account).toHaveValue('');
     await expect(account.getByRole('option',{name:'5100 · Fictional fuel account',exact:true})).toHaveCount(0);
     await editor.getByRole('button',{name:'Load more accounts',exact:true}).click();
-    await expect(status).toHaveText('More eligible accounts loaded.');
+    await expect(status).toHaveText('More eligible accounts loaded.');await expect(status).toHaveAttribute('data-confirmed','false');
     await expect(account.getByRole('option',{name:'1000 · Fictional bank',exact:true})).toHaveCount(0);
     await date.fill('2026-02-01');
     await editor.getByLabel('Approval reason',{exact:true}).fill('=Fictional review selected the fuel account');
@@ -92,7 +97,7 @@ for(const engine of [chromium,webkit]){
     await reviewFinancialRecovery(page,fixture,engine.name(),'category',editor.getByRole('region',{name:'Interrupted mapping approval',exact:true}));
     await page.reload();
     await review.click();
-    await expect(status).toHaveText('The original approval was confirmed.');
+    await expect(status).toHaveText('The original approval was confirmed.');await expect(status).toHaveAttribute('data-confirmed','true');await reviewFinancialSaveNotice(page,status,'category');
     await expect(editor.getByText('Version 1 · Approved · Effective Feb 1, 2026',{exact:true})).toBeVisible();
     await expect(editor.getByText('Approved account 5100',{exact:true})).toBeVisible();
     assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
@@ -107,7 +112,7 @@ for(const engine of [chromium,webkit]){
     await reviewApprovalHistory(page,engine.name(),'category-proposed-closure',1,fixture);
     assert.deepEqual(await mappingBusinessSource(fixture),beforeHistory,'reviewing retained approvals must not post a change');
     await editor.getByRole('button',{name:'Save closure',exact:true}).click();
-    await expect(status).toHaveText('Mapping closure saved.');
+    await expect(status).toHaveText('Mapping closure saved.');await expect(status).toHaveAttribute('data-confirmed','true');
     await expect(embedded.getByText('Version 2 · Closed',{exact:true})).toBeVisible();
     await expect(embedded.getByText('From Feb 1, 2026 · Before Mar 1, 2026',{exact:true})).toBeVisible();
     await page.getByRole('link',{name:'Expense category mappings',exact:true}).click();
@@ -179,7 +184,7 @@ for(const engine of [chromium,webkit]){
     await expect(page.getByRole('heading',{name:'Manage expense category approvals',exact:true})).toBeVisible();
     await expect(page.getByLabel('Expense category',{exact:true})).toHaveValue('category_fuel');
     await load.click();
-    await expect(status).toHaveText('Approval settings loaded.');
+    await expect(status).toHaveText('Approval settings loaded.');await expect(status).toHaveAttribute('data-confirmed','false');
     await reviewApprovalHistory(page,engine.name(),'category-saved-closure',2,fixture);
     const embeddedDownload=page.waitForEvent('download');
     await embedded.getByRole('button',{name:'Download loaded approvals (CSV)',exact:true}).click();
@@ -187,7 +192,13 @@ for(const engine of [chromium,webkit]){
     await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
     await expect(embedded).toHaveCount(0);
     await expect(category).toHaveValue('');
+   }catch(error){
+    t.diagnostic('Recent category response statuses: '+JSON.stringify(responses));
+    if(fixture)t.diagnostic('Category session/provider evidence: '+JSON.stringify(await sessionAdmissionDiagnostic(fixture)));
+    try{if(queryEvidence){await mkdir('.local/review',{recursive:true});await writeFile('.local/review/finance-category-session-queries-'+engine.name()+'.json',JSON.stringify(queryEvidence.snapshot(),null,2)+'\n');}}catch{t.diagnostic('Category query evidence unavailable');}
+    throw error;
    }finally{
+    queryEvidence?.stop();
     try{await browser?.close();}finally{
      try{await fixture?.close();}finally{
       if(previous===undefined)delete process.env.CREST_TEST_DATABASE_URL;

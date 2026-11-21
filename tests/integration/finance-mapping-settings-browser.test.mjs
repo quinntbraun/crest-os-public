@@ -1,3 +1,4 @@
+import {reviewFinancialSaveNotice} from '../support/financial-save-notice.mjs';
 import assert from 'node:assert/strict';
 import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 import {randomUUID} from 'node:crypto';
@@ -150,10 +151,10 @@ for(const engine of [chromium,webkit]){
    const pendingKey='crest.finance-mapping.pending-reference.v1';
    await reviewApprovalEntry(page,engine.name(),'mapping');
    await review.click();
-   await expect(editorStatus).toHaveText('There is no interrupted approval in this tab.');
+   await expect(editorStatus).toHaveText('There is no interrupted approval in this tab.');await expect(editorStatus).toHaveAttribute('data-confirmed','false');
    await selectPurpose.selectOption('service_revenue');
    await loadSettings.press('Enter');
-   await expect(editorStatus).toHaveText('Approval settings loaded.');
+   await expect(editorStatus).toHaveText('Approval settings loaded.');await expect(editorStatus).toHaveAttribute('data-confirmed','false');
    await expect(editor.getByText('Version 4 · Approved · Effective Nov 1, 2026',{exact:true})).toBeVisible();
    await expect(editor.getByText('4000 · Fictional service revenue',{exact:true})).toBeVisible();
    await editor.getByRole('button',{name:'Close mapping',exact:true}).press('Enter');
@@ -198,7 +199,7 @@ for(const engine of [chromium,webkit]){
    await reviewFinancialRecovery(page,fixture,engine.name(),'mapping',editor.getByRole('region',{name:'Interrupted mapping approval',exact:true}));
    await page.reload();
    await review.click();
-   await expect(editorStatus).toHaveText('The original approval was confirmed.');
+   await expect(editorStatus).toHaveText('The original approval was confirmed.');await expect(editorStatus).toHaveAttribute('data-confirmed','true');await reviewFinancialSaveNotice(page,editorStatus,'mapping');
    await expect(editor.getByText('Version 5 · Closed · Effective Dec 1, 2026',{exact:true})).toBeVisible();
    await expect(editor.getByRole('region',{name:'Saved mapping change',exact:true})).toContainText('Mapping closure recorded');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
@@ -234,14 +235,14 @@ for(const engine of [chromium,webkit]){
    assert.equal(retiredStatus,200);
    await page.reload();
    await review.click();
-   await expect(editorStatus).toHaveText('The interrupted approval was closed. You can start a new change.');
+   await expect(editorStatus).toHaveText('The interrupted approval was closed. You can start a new change.');await expect(editorStatus).toHaveAttribute('data-confirmed','false');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
    assert.equal((await send('mapping-approve',{reference:unsent,approval:{...approval,effectiveFrom:'2027-01-01'}})).status,409);
    await approveButton.click();
    await effective.fill('2027-01-01');
    await approvalReason.fill('Fictional mapping approved again');
    await saveApproval.press('Enter');
-   await expect(editorStatus).toHaveText('Mapping approval saved.');
+   await expect(editorStatus).toHaveText('Mapping approval saved.');await expect(editorStatus).toHaveAttribute('data-confirmed','true');
    await expect(editor.getByText('Version 6 · Approved · Effective Jan 1, 2027',{exact:true})).toBeVisible();
    await expect(embedded.getByText('Version 5 · Closed',{exact:true})).toBeVisible();
    await expect(embedded.getByText('From Dec 1, 2026 · Before Jan 1, 2027',{exact:true})).toBeVisible();
@@ -255,7 +256,7 @@ for(const engine of [chromium,webkit]){
    // then exercise the bounded reader through genuine browser requests.
    await fixture.seedRetainedMappingHistory();
    await selectPurpose.selectOption('service_revenue');await loadSettings.click();
-   await expect(editorStatus).toHaveText('Approval settings loaded.');
+   await expect(editorStatus).toHaveText('Approval settings loaded.');await expect(editorStatus).toHaveAttribute('data-confirmed','false');
    await expect(embedded.getByRole('listitem')).toHaveCount(25);
    await expect(embedded.locator('.mapping-history-coverage')).toContainText('Versions 30 through 6 loaded.');
    await approveButton.click();await effective.fill('2027-02-01');await approvalReason.fill('Fictional proposal retained while reading older approvals');
@@ -263,9 +264,9 @@ for(const engine of [chromium,webkit]){
    const older=embedded.getByRole('button',{name:'Load older approvals',exact:true});
    await page.route('**/api/business/finance-accounts/mapping-history',route=>route.abort(),{times:1});
    await older.click();
-   await expect(editorStatus).toHaveText('Older approvals could not be loaded. The loaded history is still available.');
+   await expect(editorStatus).toHaveText('Older approvals could not be loaded. The loaded history is still available.');await expect(editorStatus).toHaveAttribute('data-confirmed','false');
    await expect(embedded.getByRole('listitem')).toHaveCount(25);
-   await older.click();await expect(editorStatus).toHaveText('Older approvals loaded.');
+   await older.click();await expect(editorStatus).toHaveText('Older approvals loaded.');await expect(editorStatus).toHaveAttribute('data-confirmed','false');
    await expect(embedded.locator('.mapping-history-coverage')).toContainText('Versions 30 through 1 loaded.');
    await expect(older).toHaveCount(0);await expect(effective).toHaveValue('2027-02-01');
    await expect(approvalReason).toHaveValue('Fictional proposal retained while reading older approvals');

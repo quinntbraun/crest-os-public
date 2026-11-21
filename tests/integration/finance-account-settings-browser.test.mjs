@@ -1,3 +1,4 @@
+import {reviewFinancialSaveNotice} from '../support/financial-save-notice.mjs';
 import {reviewFinancialHistoryRecording,reviewFinancialHistoryRecordingCsv} from '../support/financial-history-recording-layout.mjs';
 import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -46,11 +47,11 @@ for(const engine of [chromium,webkit]){
    await page.getByRole('link',{name:'Fictional account setup',exact:true}).click();
    const settings=page.getByRole('region',{name:'Account settings',exact:true}),status=settings.getByRole('status');
    if(engine.name()==='chromium'){
-    await expect(status).toHaveText('Accounting could not be verified. Check access and try again.');
+    await expect(status).toHaveText('Accounting could not be verified. Check access and try again.');await expect(status).toHaveAttribute('data-confirmed','false');
     await expect(settings.getByRole('heading',{name:'Chart of accounts',exact:true})).toHaveCount(0);
     await settings.getByRole('button',{name:'Check accounting access',exact:true}).press('Enter');
    }
-   await expect(status).toHaveText('No accounts match this view.');
+   await expect(status).toHaveText('No accounts match this view.');await expect(status).toHaveAttribute('data-confirmed','false');
    await expect(page.getByRole('link',{name:'Dated account mappings',exact:true})).toHaveCount(0);
    assert.equal((await page.request.post(api+'mapping-approve',{data:{}})).status(),404);
    await settings.getByRole('button',{name:'Add account',exact:true}).click();
@@ -60,7 +61,7 @@ for(const engine of [chromium,webkit]){
    await settings.getByLabel('Report role',{exact:true}).fill('money');
    await settings.getByLabel('Control kind (optional)',{exact:true}).fill('bank');
    await settings.getByRole('button',{name:'Save account',exact:true}).click();
-   await expect(status).toHaveText('Account saved.');
+   await expect(status).toHaveText('Account saved.');await expect(status).toHaveAttribute('data-confirmed','true');await reviewFinancialSaveNotice(page,status,'account');
    await expect(settings.getByText('1000 · Fictional checking',{exact:true})).toBeVisible();
 
    await settings.getByRole('button',{name:'Edit account Fictional checking',exact:true}).click();
@@ -83,7 +84,7 @@ for(const engine of [chromium,webkit]){
    await expect(status).toContainText('Review the interrupted account save');
    await reviewFinancialRecovery(page,fixture,engine.name(),'account',settings.getByRole('region',{name:'Interrupted account save',exact:true}),JSON.parse(retained).reference.operationId);
    await settings.getByRole('button',{name:'Check save status',exact:true}).click();
-   await expect(status).toHaveText('The original account save was confirmed.');
+   await expect(status).toHaveText('The original account save was confirmed.');await expect(status).toHaveAttribute('data-confirmed','true');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
    await settings.getByLabel('Show archived accounts',{exact:true}).check();
    await expect(settings.getByText('1000 · Fictional closed checking',{exact:true})).toBeVisible();
@@ -149,7 +150,7 @@ for(const engine of [chromium,webkit]){
    assert(!unresolved.includes('Fictional'));
    await page.reload();
    await settings.getByRole('button',{name:'Check save status',exact:true}).click();
-   await expect(status).toHaveText('The interrupted save was closed. You can start a new edit.');
+   await expect(status).toHaveText('The interrupted save was closed. You can start a new edit.');await expect(status).toHaveAttribute('data-confirmed','false');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
    await expect(settings.getByRole('button',{name:'Add account',exact:true})).toBeEnabled();
    const retired=(await fixture.client.query(`

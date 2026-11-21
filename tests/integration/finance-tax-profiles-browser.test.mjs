@@ -1,3 +1,4 @@
+import {reviewFinancialSaveNotice} from '../support/financial-save-notice.mjs';
 import {reviewFinancialHistoryRecording,reviewFinancialHistoryRecordingCsv} from '../support/financial-history-recording-layout.mjs';
 import assert from 'node:assert/strict';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
@@ -173,7 +174,7 @@ for(const engine of [chromium,webkit]){
    const openEditor=()=>panel.getByText('Manage fictional approvals',{exact:true}).click();
    async function prepareApproval(dateValue,treatment,reason){
     await manager.getByRole('button',{name:'Load approval settings',exact:true}).click();
-    await expect(approvalStatus).toHaveText('Latest approval loaded.');
+    await expect(approvalStatus).toHaveText('Latest approval loaded.');await expect(approvalStatus).toHaveAttribute('data-confirmed','false');
     await expect(approvalStatus).toBeFocused();
     await manager.getByLabel('Effective from',{exact:true}).fill(dateValue);
     await manager.getByLabel('Tax treatment',{exact:true}).selectOption(treatment);
@@ -208,7 +209,7 @@ for(const engine of [chromium,webkit]){
    await expect(jurisdiction).toBeDisabled();
    page.once('dialog',dialog=>dialog.accept());
    await cancel.click();
-   await expect(approvalStatus).toHaveText('Approval draft cleared.');
+   await expect(approvalStatus).toHaveText('Approval draft cleared.');await expect(approvalStatus).toHaveAttribute('data-confirmed','false');
    await expect(jurisdiction).toBeEnabled();
    await expect(applies).toBeEnabled();
    assert.equal(fixture.requests.length,requestsBeforeCancel,'Draft cancellation makes no API request');
@@ -217,7 +218,7 @@ for(const engine of [chromium,webkit]){
    await manager.getByLabel('Decimal rate',{exact:true}).fill('0.0800');
    await manager.getByLabel('Verification evidence',{exact:true}).fill('Fictional supporting evidence for the rate');
    await save.press('Enter');
-   await expect(approvalStatus).toHaveText('Tax approval saved.');
+   await expect(approvalStatus).toHaveText('Tax approval saved.');await expect(approvalStatus).toHaveAttribute('data-confirmed','true');await reviewFinancialSaveNotice(page,approvalStatus,'tax');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
    await review.click();
    await expect(history.getByText('Version 2 · Verified inclusive rate',{exact:true})).toBeVisible();
@@ -242,7 +243,7 @@ for(const engine of [chromium,webkit]){
    await page.reload();
    await openEditor();
    await reviewInterrupted.click();
-   await expect(approvalStatus).toHaveText('The original tax approval was confirmed.');
+   await expect(approvalStatus).toHaveText('The original tax approval was confirmed.');await expect(approvalStatus).toHaveAttribute('data-confirmed','true');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
 
    await jurisdiction.fill('Fictional district');
@@ -256,7 +257,7 @@ for(const engine of [chromium,webkit]){
    await reviewFinancialRecovery(page,fixture,engine.name(),'tax_absent',manager);
    await manager.getByLabel('Reason to close this attempt',{exact:true}).fill('Fictional owner reviewed the pending operation');
    await manager.getByRole('button',{name:'Close interrupted attempt',exact:true}).click();
-   await expect(approvalStatus).toHaveText('The interrupted tax approval was closed.');
+   await expect(approvalStatus).toHaveText('The interrupted tax approval was closed.');await expect(approvalStatus).toHaveAttribute('data-confirmed','false');
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
    await review.click();
    await expect(history.getByText('Version 3 · Unresolved',{exact:true})).toBeVisible();

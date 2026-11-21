@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {expect} from '@playwright/test';
+import {reviewFinancialHistoryComparison} from './financial-history-comparison.mjs';
 const entities={account:'accounts',tax:'tax_profiles',channel:'money_channel_versions'};
 const entries=(history,kind)=>history.locator(kind==='account'?'.activity-timeline > li':'.mapping-history-list > li');
 async function retained(fixture,kind){assert(entities[kind]);return (await fixture.client.query(`SELECT id::text,
@@ -21,13 +22,14 @@ export async function reviewFinancialHistoryRecording(page,fixture,history,kind)
    await expect(time).toHaveText(new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'long',timeZone:'UTC'}).format(new Date(expected.stamp)));
   }
   for(const row of [rows.first(),rows.last()]){
-   const disclosure=row.locator(':scope > details'),wasOpen=await disclosure.getAttribute('open')!==null;
+   const disclosure=row.locator('details').filter({has:page.locator('.financial-history-evidence')}),wasOpen=await disclosure.getAttribute('open')!==null;
    if(!wasOpen)await disclosure.locator(':scope > summary').press('Enter');
    await expect(row.locator('.financial-history-evidence')).toBeVisible();
    if(!wasOpen)await disclosure.locator(':scope > summary').press('Enter');
   }
  }finally{page.off('request',observe);await focused.evaluate(node=>{if(node instanceof HTMLElement&&node.isConnected)node.focus({preventScroll:true});});await focused.dispose();await page.evaluate(value=>scrollTo({top:value,behavior:'instant'}),scroll);}
  assert.equal(requests.length,0,'Recording inspection must not refetch, save, or retire financial work.');
+ await reviewFinancialHistoryComparison(page,fixture,history,kind);
 }
 export async function reviewFinancialHistoryRecordingCsv(csv,fixture,history,kind){
  assert(csv.includes('"Recorded in Crest (UTC)","Recorded by reference"'));

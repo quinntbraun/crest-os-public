@@ -2,6 +2,25 @@
   min-width: 0;
 }
 
+.notice:not(:empty) {
+  padding: .75rem 1rem;
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--canvas);
+  overflow-wrap: anywhere;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.notice[data-confirmed="true"] {
+  border-inline-start-color: var(--gold-ink);
+  background: var(--accent-soft, var(--canvas));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice:not(:empty) { transition: none; }
+}
+
 .actions {
   display: grid;
   gap: .5rem;

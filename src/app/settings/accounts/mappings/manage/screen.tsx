@@ -1,4 +1,5 @@
 'use client';
+import {useFinancialNotice} from '../../use-financial-notice';
 import {useCallback,useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import type {FormEvent} from 'react';
 import {AuthenticationError} from '../../../../../client/authentication';
@@ -43,9 +44,10 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
  const [result,setResult]=useState<SavedResult|null>(null);
  const labels=categories?expenseCategoryMappingLabels:fixedFinanceMappingLabels;
  const acceptsPurpose=categories?expenseCategoryMappingPurpose:fixedFinanceMappingPurpose;
+ const {message,setMessage,confirmed:saveConfirmed,resetConfirmation}=useFinancialNotice(initialMessage);
  const [workspace,setWorkspace]=useState<Workspace|null>(null),[draft,setDraft]=useState<Draft|null>(null);
  const [pending,setPending]=useState<Pending|null>(null),[review,setReview]=useState<'none'|'retry'|'retire'>('none');
- const [reviewReason,setReviewReason]=useState(''),[message,setMessage]=useState(initialMessage);
+ const [reviewReason,setReviewReason]=useState('');
  const [busy,setBusy]=useState(false),[signedOut,setSignedOut]=useState(false);
  const mounted=useSyncExternalStore(subscribeToHydration,()=>true,()=>false);
  const controlsDisabled=!mounted||busy;
@@ -58,7 +60,7 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
   active.current?.abort();active.current=null;original.current=null;
   setPurpose('');setWorkspace(null);setDraft(null);setPending(null);setReview('none');setReviewReason('');setResult(null);
   setBusy(false);setSignedOut(false);setMessage(initialMessage);
- },[initialMessage]);
+ },[initialMessage,setMessage]);
  useEffect(()=>{
   const visibility=()=>{if(document.visibilityState==='hidden')clearPrivate();};
   const restore=(event:PageTransitionEvent)=>{if(event.persisted)clearPrivate();};
@@ -74,7 +76,7 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
  async function run(work:(signal:AbortSignal)=>Promise<void>,failure:string){
   if(active.current)return;
   const controller=new AbortController(),signal=controller.signal;
-  active.current=controller;setBusy(true);setSignedOut(false);
+  active.current=controller;setBusy(true);resetConfirmation();setSignedOut(false);
   try{await work(signal);}
   catch(error){
    if(signal.aborted)return;
@@ -148,7 +150,7 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
   check(!signal.aborted);clearPendingFinanceMapping(entry);original.current=null;
   if(receipt)setResult({operationId:entry.reference.operationId,purpose:entry.reference.purpose,version:receipt.version,effectiveFrom:receipt.effectiveFrom,closed:receipt.accountId===null});
   setPending(null);setDraft(null);setReview('none');setReviewReason('');setWorkspace(null);
-  setMessage(messageAfter);
+  setMessage(messageAfter,receipt!==undefined);
   if(!acceptsPurpose(entry.reference.purpose))return;
   try{await loadEditor(context,entry.reference.purpose,signal);}
   catch{if(!signal.aborted)setWorkspace(null);}
@@ -259,7 +261,7 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
   &&financeAccountReviewReason(draft.reason.trim())&&(draft.action==='close'?canClose:categories?choices?.rows.some(account=>account.id===draft.accountId):eligible?.id===draft.accountId);
 
  return <section className={styles.workspace+' mapping-approval-workspace'} aria-label="Mapping approvals" aria-busy={busy}>
-  <p ref={status} tabIndex={-1} role="status">{message}</p>
+  <p ref={status} tabIndex={-1} role="status" className={styles.notice} data-confirmed={saveConfirmed&&!busy}>{message}</p>
   {signedOut&&<a href="/sign-in">Sign in again</a>}
   {result&&<section className="mapping-summary-card" aria-label="Saved mapping change">
    <h2>{result.closed?'Mapping closure recorded':'Mapping approval recorded'}</h2>

@@ -1,4 +1,5 @@
 'use client';
+import {FinanceHistoryComparison,previousLoadedFinanceVersion} from '../history-comparison';
 import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from '../history-recording';
 
 import {useCallback,useEffect,useRef,useState,useSyncExternalStore} from 'react';
@@ -271,7 +272,7 @@ export function FinanceTaxProfilesScreen(){
     <button type="button" className="secondary" disabled={controlsDisabled||!history.rows.length} onClick={download}>Download loaded history (CSV)</button>
    </div>
    <ol className="mapping-history-list">
-    {history.rows.map((row,index)=><li key={row.id}>
+    {history.rows.map((row,index)=>{const previous=previousLoadedFinanceVersion(history.rows,row);return <li key={row.id}>
      <details><summary>
       <strong>Version {row.version} · {financeTaxTreatmentLabels[row.treatment]}</strong>
       <FinanceHistoryRecordedTime recording={row.recording} inline/>
@@ -281,8 +282,15 @@ export function FinanceTaxProfilesScreen(){
      <p>{row.reason}</p>
      {row.verificationEvidence&&<><p><strong>Verification evidence</strong></p><p>{row.verificationEvidence}</p></>}
      <FinanceHistoryRecordingFacts recording={row.recording} auditEventId={row.auditEventId}/>
+     <FinanceHistoryComparison version={row.version} previousVersion={previous?.version} fields={previous?[
+      {label:'Effective from',before:dateLabel(previous.effectiveFrom),after:dateLabel(row.effectiveFrom)},
+      {label:'Treatment',before:financeTaxTreatmentLabels[previous.treatment],after:financeTaxTreatmentLabels[row.treatment]},
+      {label:'Decimal rate',before:previous.rate??'Not recorded',after:row.rate??'Not recorded'},
+      {label:'Verification evidence',before:previous.verificationEvidence??'Not recorded',after:row.verificationEvidence??'Not recorded'},
+      {label:'Reason',before:previous.reason,after:row.reason},
+     ]:[]}/>
      </details>
-    </li>)}
+    </li>;})}
    </ol>
    {history.hasMore&&<button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>readHistory(true)}>Load earlier approvals</button>}
   </section>}

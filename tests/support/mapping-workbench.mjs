@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {reviewFinancialHistoryComparison} from './financial-history-comparison.mjs';
 export async function verifyMappingSignIn(page,fixture){
  try{await expect(page.getByRole('status')).toContainText('Signed in');}
  catch(error){console.info('MAPPING_SIGN_IN_DIAGNOSTIC '+JSON.stringify({provider:fixture.authDiagnostics(),requests:fixture.authRequestDiagnostics()}));throw error;}
@@ -73,6 +74,7 @@ export async function reviewApprovalHistory(page,engine,kind,versions,fixture){
  }
  assert.deepEqual(await editor.locator('input,textarea,select').evaluateAll(fields=>fields.map(field=>[field.id,field.value])),before,'responsive history review preserves proposal');
  if(original)await page.setViewportSize(original);
+ if(fixture)await reviewFinancialHistoryComparison(page,fixture,history,'mapping',kind);
 }
 
 export async function reviewMappingRecordingEvidence(fixture,history){

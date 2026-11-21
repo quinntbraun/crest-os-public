@@ -1,0 +1,11 @@
+# Booking context recovery across registered versions
+
+Published d8ec76d finishes with21/22 main jobs successful; Foundation136951856132 fails the schema117-to122 customer-profile recovery scenario. Both ancillary workflows succeed. The exact tested merge7b0ca203 has tree2ec0443 and ordered parents ea06dc6/d8ec76d. No release acceptance follows from the successful prerequisite jobs.
+
+The failure is deterministic: that scenario installs122 migrations but calls `backupDatabase`, whose current profile now requires all124. The helper correctly rejects the missing20270116180000/20270117180000 migrations before creating the backup. This is a stale test/profile selection, not evidence of missing stored bookings or a reason to relax the backup guard. The later screenshot-preservation failure follows the interrupted gate; later recovery/worker/artifact checks remain unaccepted.
+
+Test-only5e478c4 keeps both historical121 and122 scenarios and selects their existing frozen backup/restore pairs explicitly. It adds a separate117-to124 scenario using the unchanged current backup/restore pair. Exact migration history, idempotent application, original booking/vehicle/appointment/operation/audit conservation, customer/vehicle history, profile pagination, business scoping, revoked privileges and independent encrypted restore checks remain mandatory. The outstanding-invoice capability remains absent on121 and present on122/124. No application code, SQL, registry, frozen hashes, recovery implementation or deadlines change.
+
+`.local/design-booking-context124-recovery` executes the complete context file on5e478c4: **12/12 pass**, including all three historical/current upgrade-and-independent-restore scenarios. Tracked source stays frozen and the owned cluster is cleaned. The retained `proof.json` includes the complete log checksum. Nearby explicit122 mapping/invoice recovery tests already use frozen122 helpers; the invoice unit/storage scenario does not call the current backup helper.
+
+The failed hosted run remains in `.local/design-publication/d8-terminal-safe.json`. This local correction needs fresh exact-source hosted acceptance with all original release, recovery, isolated-worker and artifact gates. It does not diagnose or erase earlier unrelated browser/authentication failures, authorize a merge/installation or make Crest ready for real data.

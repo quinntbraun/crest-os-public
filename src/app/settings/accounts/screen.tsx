@@ -1,4 +1,6 @@
 'use client';
+import {useFinancialNotice} from './use-financial-notice';
+import {FinanceHistoryComparison,previousLoadedFinanceVersion} from './history-comparison';
 import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from './history-recording';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
@@ -50,9 +52,10 @@ const initialMessage='Checking accounting access…';
 type Area='reports'|'setup'|'accounts';
 
 export function FinanceAccountsScreen(){
+ const {message,setMessage,confirmed:saveConfirmed,resetConfirmation}=useFinancialNotice(initialMessage);
  const [workspace,setWorkspace]=useState<Workspace|null>(null),[editor,setEditor]=useState<Editor|null>(null);
  const [history,setHistory]=useState<AccountHistory|null>(null),[pending,setPending]=useState<Pending|null>(null);
- const [busy,setBusy]=useState(false),[message,setMessage]=useState(initialMessage),[signedOut,setSignedOut]=useState(false);
+ const [busy,setBusy]=useState(false),[signedOut,setSignedOut]=useState(false);
  const [canRetry,setCanRetry]=useState(false),[stale,setStale]=useState(false);
  const [canRetire,setCanRetire]=useState(false),[reviewReason,setReviewReason]=useState('');
  const [area,setArea]=useState<Area|null>(null),[initialRead,setInitialRead]=useState(true);
@@ -68,7 +71,7 @@ export function FinanceAccountsScreen(){
   setCanRetire(false);setReviewReason('');
   setArea(null);focusArea.current=null;setInitialRead(false);
   setBusy(false);setSignedOut(false);setMessage('Check access to reload private accounting records.');
- },[]);
+ },[setMessage]);
  useEffect(()=>{
   const visibility=()=>{if(document.visibilityState==='hidden')clearPrivate();};
   const restored=(event:PageTransitionEvent)=>{if(event.persisted)clearPrivate();};
@@ -82,14 +85,14 @@ export function FinanceAccountsScreen(){
  },[clearPrivate]);
  const run=useCallback(async(work:(signal:AbortSignal)=>Promise<void>,failure:string,focus=true)=>{
   if(request.current)return;
-  const active=new AbortController();request.current=active;setBusy(true);setSignedOut(false);
+  const active=new AbortController();request.current=active;setBusy(true);resetConfirmation();setSignedOut(false);
   try{await work(active.signal);}
   catch(error){if(!active.signal.aborted){
    const denied=error instanceof AuthenticationError&&error.kind==='denied';
    if(denied){setSignedOut(true);setWorkspace(null);setHistory(null);setEditor(null);}
    setMessage(denied?'Sign in to review your accounts.':failure);
   }}finally{if(request.current===active){request.current=null;setBusy(false);if(focus)status.current?.focus();}}
- },[]);
+ },[setMessage,resetConfirmation]);
  const showAccounts=useCallback(async(context:FinanceAccountContext,includeArchived:boolean,signal:AbortSignal)=>{
   const page=await financeAccounts.list(context,null,includeArchived,signal);
   check(!signal.aborted);setWorkspace({context,...page,includeArchived});
@@ -109,7 +112,7 @@ export function FinanceAccountsScreen(){
      count?'Saved accounts loaded.':'No accounts match this view.');
    }catch(error){if(!signal.aborted)setWorkspace(null);throw error;}
   },'Accounting could not be verified. Check access and try again.',focus);
- },[run,showAccounts]);
+ },[run,showAccounts,setMessage]);
  useEffect(()=>{
   let mounted=true;
   queueMicrotask(()=>{
@@ -144,7 +147,7 @@ export function FinanceAccountsScreen(){
   clearPendingFinanceAccount(entry);setPending(null);original.current=null;
   setCanRetry(false);setCanRetire(false);setReviewReason('');
   setMessage(outcome==='committed'?'The original account save was confirmed.':
-   'The interrupted save was closed. You can start a new edit.');
+   'The interrupted save was closed. You can start a new edit.',outcome==='committed');
   await refreshAfterSave(current,signal);
  }
  async function transmit(current:Workspace,entry:Pending,draft:FinanceAccountDraft,signal:AbortSignal){
@@ -172,7 +175,7 @@ export function FinanceAccountsScreen(){
    setMessage(result.reason==='version'?'This account changed. Reload the saved version before editing again.':
     'That account code is already in use. Review the code and try again.');
   }else{
-   setMessage('Account saved.');await refreshAfterSave(current,signal);
+   setMessage('Account saved.',true);await refreshAfterSave(current,signal);
   }
  }
  async function submit(event:FormEvent){
@@ -260,7 +263,7 @@ export function FinanceAccountsScreen(){
  },[activeArea]);
  const loading=initialRead||busy;
  return <section className={styles.workspace} aria-label="Account settings" aria-busy={loading}>
-  <p role="status" tabIndex={-1} ref={status}>{message}</p>
+  <p role="status" className={styles.notice} data-confirmed={saveConfirmed&&!busy} tabIndex={-1} ref={status}>{message}</p>
   {!editor&&!signedOut&&!workspace&&!loading&&<button type="button" className={styles.openAccounting}
    onClick={()=>void load()}>Check accounting access</button>}
   {loading&&!workspace&&!editor&&!signedOut&&<div className={styles.accountLoading} aria-hidden="true">
@@ -365,7 +368,7 @@ export function FinanceAccountsScreen(){
   </form>}
   {history&&workspace&&!editor&&<section className={styles.section} aria-label="Saved account history" hidden={activeArea!=='accounts'}>
    <h2 ref={historyHeading} tabIndex={-1}>{history.account.name} history</h2>
-   <ol className="activity-timeline">{history.rows.map(row=><li className="activity-entry" key={row.auditEventId}>
+   <ol className="activity-timeline">{history.rows.map(row=>{const previous=previousLoadedFinanceVersion(history.rows,row);return <li className="activity-entry" key={row.auditEventId}>
     <div className="activity-heading">
      <strong>{row.name}</strong>
      <span className="activity-version">Version {row.version}</span>
@@ -373,8 +376,13 @@ export function FinanceAccountsScreen(){
     <p className="activity-meta">{row.active?'Active':'Archived'}</p>
     <FinanceHistoryRecordedTime recording={row.recording}/>
     {row.reason&&<p>{row.reason}</p>}
+    <FinanceHistoryComparison version={row.version} previousVersion={previous?.version} fields={previous?[
+     {label:'Account name',before:previous.name,after:row.name},
+     {label:'Status',before:previous.active?'Active':'Archived',after:row.active?'Active':'Archived'},
+     {label:'Reason',before:previous.reason??'No reason recorded',after:row.reason??'No reason recorded'},
+    ]:[]}/>
     <details><summary>Version evidence</summary><FinanceHistoryRecordingFacts recording={row.recording} auditEventId={row.auditEventId}/></details>
-   </li>)}</ol>
+   </li>;})}</ol>
    <div className={styles.actions}>{history.hasMore&&<button type="button" className="secondary" disabled={busy}
     onClick={()=>void openHistory(workspace,history.account,true)}>Load more history</button>}
    {history.rows.length>0&&<button type="button" className="secondary" disabled={busy}

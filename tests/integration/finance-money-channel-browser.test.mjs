@@ -1,3 +1,4 @@
+import {reviewFinancialSaveNotice} from '../support/financial-save-notice.mjs';
 import {reviewFinancialHistoryRecording,reviewFinancialHistoryRecordingCsv} from '../support/financial-history-recording-layout.mjs';
 import assert from 'node:assert/strict';
 import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
@@ -70,7 +71,7 @@ for(const engine of [chromium,webkit]){
    await date.fill('2026-01-01');
    await reason.fill('Fictional masked channel setup');
    await save.press('Enter');
-   await expect(status).toHaveText('Channel review saved.');
+   await expect(status).toHaveText('Channel review saved.');await expect(status).toHaveAttribute('data-confirmed','true');await reviewFinancialSaveNotice(page,status,'channel',panel.getByRole('heading',{name:'Saved channels',exact:true}));
    await expect(panel.getByText('Opening unknown',{exact:true})).toBeVisible();
    await expect(panel.locator('.channel-directory').getByText('Account 1070 · USD',{exact:true})).toBeVisible();
    await expect(panel.getByRole('button',{name:/^Fictional business custody/})).toHaveAccessibleName(/Fictional business custody.*Account 1070.*USD.*Opening unknown/);
@@ -138,7 +139,7 @@ for(const engine of [chromium,webkit]){
     const response=await route.fetch();committedStatus=response.status();await route.abort();
    },{times:1});
    await save.click();
-   await expect(status).toContainText('The channel review could not be confirmed');
+   await expect(status).toContainText('The channel review could not be confirmed');await expect(status).toHaveAttribute('data-confirmed','false');
    assert.equal(committedStatus,200);
    const stored=await page.evaluate(key=>sessionStorage.getItem(key),pendingKey);
    assert(stored);
@@ -152,7 +153,7 @@ for(const engine of [chromium,webkit]){
    await reviewFinancialRecovery(page,fixture,engine.name(),'channel',panel.getByRole('region',{name:'Interrupted channel review',exact:true}));
    await page.reload();
    await checkInterrupted();
-   await expect(status).toHaveText('The original channel review was confirmed.');
+   await expect(status).toHaveText('The original channel review was confirmed.');await expect(status).toHaveAttribute('data-confirmed','true');
    await openCustody();
    await expect(selected.getByText('Verified opening amount · $10.25',{exact:true})).toBeVisible();
    await expect(selected.getByText('Latest review · Open from Feb 1, 2026',{exact:true})).toBeVisible();
@@ -168,7 +169,7 @@ for(const engine of [chromium,webkit]){
    await expect(status).toContainText('No completed review was found.');
    await panel.getByLabel('Reason to close this attempt',{exact:true}).fill('Fictional owner closed this attempt');
    await panel.getByRole('button',{name:'Close interrupted review',exact:true}).click();
-   await expect(status).toHaveText('The interrupted channel review was closed.');
+   await expect(status).toHaveText('The interrupted channel review was closed.');await expect(status).toHaveAttribute('data-confirmed','false');
 
    await openCustody();
    await panel.getByRole('button',{name:'Edit review',exact:true}).click();
@@ -215,7 +216,7 @@ for(const engine of [chromium,webkit]){
    await date.fill('2026-01-01');
    await reason.fill('Fictional second channel');
    await save.click();
-   await expect(status).toHaveText('Channel review saved.');
+   await expect(status).toHaveText('Channel review saved.');await expect(status).toHaveAttribute('data-confirmed','true');
    await expect(filter).toHaveValue('custody');
    await filter.fill('');
    await expect(panel.locator('.channel-directory > li')).toHaveCount(2);

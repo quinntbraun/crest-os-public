@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 61 |
-| Partial implementation or required review | 7 |
+| Main change locally addressed | 62 |
+| Partial implementation or required review | 6 |
 | Open audit work | 2 |
 | Review required before choosing changes | 0 |
 | Total | 70 |
 
-61/70, or 87.1%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 87.1% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 7 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+62/70, or 88.6%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 88.6% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 6 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. The active objective is to complete all 70 original audit groups. Approved V1 business-use, recovery, upgrade, release and owner/device gates remain separate requirements and are not waived by this inventory.
 
@@ -37,7 +37,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | S09 | Replace Unicode navigation symbols | Main change addressed | Physical-device and installed verification remain separate. |
 | S10 | Refine type, spacing and numeric rhythm | Partial | Complete configured business/input/long-name/history actual-browser-zoom checks plus matching hosted/installed/physical-device acceptance. Earlier720 root-text observations and144 real-zoom closed-state observations are separate scopes, not one complete current-source configured matrix. |
 | S11 | Motion should explain changes | Partial | Finish other workflow-specific motion, stable loading geometry, focus/save-feedback review and exact-source delivered/physical-device acceptance. Scoped booking2/2 is not global S11 completion. |
-| S12 | Turn history into a readable evidence trail | Partial | Implement explicit expand-to-compare detail for account/tax/channel/mapping history using only the actual adjacent loaded versions; never invent an earlier snapshot or silently fetch it. Finish remaining missing/stale/long/zoom/private history variants, diagnose retained tax and hosted amendment failures, and require fresh exact-source124 release/installed/owner/physical-device acceptance. |
+| S12 | Turn history into a readable evidence trail | Main change addressed | Main local presentation/comparison is implemented. Finish missing/unloaded/stale/long/private and actual-zoom history variants, diagnose retained category/tax/access/hosted-timeout failures, and require fresh exact-source hosted/installed/owner/physical-device acceptance. No final sign-off or complete recovery follows from these scoped proofs. |
 | S13 | Protect context through every transition | Partial | Verify planner date/view and all remaining contextual returns plus sign-out/private clearing on the exact release. Earlier WebKit failures are not explained or cured by this contrast or later passes; full matching hosted/installed/physical-device acceptance remains separate. |
 | S14 | Phone finishing is physical-device work | Open | Complete the required physical iPhone, keyboard, safe-area, camera/download, zoom and reduced-motion acceptance. |
 | R01 | Sign in (/sign-in) | Main change addressed | Complete genuine timed-expiry, password-manager/zoom/physical keyboard and iPhone acceptance, broader state variants and matching delivered release; all final sign-offs remain false. |
@@ -99,7 +99,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 ## Next sequence
 
-1. Allcb3f3d5 runs are terminal failed, main20/22. Publish the corrected native-import/history presentation source with full strict-source/expected-head/tree guards, then observe its own original full release/upgrade/recovery/worker checks. Retain older acceptance/failures separately; no live-run overwrite or unchanged rerun solely for green.
-2. Use DESIGN_AUDIT_FINISH_REGISTER.md as the single remaining-work checklist. Mapping/account/tax/channel recording projections and local branding have separate scoped proof. Retain tax verification and prior-result failures; later2/2 is non-reproduction. Finish remaining original history/state/context/action/actual-zoom/motion requirements in coherent batches.
+1. Observe exactd8ec76d/tree2ec0443: main44936327988 terminal failed at the booking122/current124 backup-profile mismatch; both ancillary workflows successful. Test-only fix and added current124 independent restore pass12/12 locally. Priorcb3 runs are terminal failed, main20/22; native import correction and retained hosted timeout require their own full fresh checks. No inherited acceptance, live-run overwrite or unchanged rerun solely for green.
+2. Use DESIGN_AUDIT_FINISH_REGISTER.md as the single remaining-work checklist. S12 main history presentation and retained comparisons are locally addressed with separate scoped proof. Retain category/tax/access/timeout failures; later2/2 is non-reproduction. Finish remaining original history/state/context/action/actual-zoom/motion requirements in coherent batches.
 3. Retain the four-record09ce80/82 and commercial/amendment3cec21/23 access failures separately; later successes are not a root-cause diagnosis. Do not weaken original assertions, deadlines, quotas, security or accounting rules.
 4. Require fresh new-head release/upgrade/recovery/isolated-worker, installed comparison, owner-finance/off-laptop restore and physical iPhone acceptance. Counts61 main/7partial/2open; all 70 original requirements/hash and false sign-offs remain.
