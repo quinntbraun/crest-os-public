@@ -66,12 +66,14 @@ test('signed-in Calendar pages six protected native bookings and retains phone r
     await directory.getByRole('button',{name:'Reload activity'}).press('Enter');await expect(rows).toHaveCount(5);assert.deepEqual(await facts(),before);
     assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),referenceKey),null);
     await rows.first().locator('h3 a').press('Enter');await expect(sync.locator('.calendar-activity-version')).toBeVisible();
+    const returnJob=new URL(page.url()).searchParams.get('job');assert(fixture.calendarActivityJobIds.includes(returnJob));
+    const signInReturn='/sign-in?returnTo=calendar&'+new URLSearchParams({job:returnJob,activityFrom:'2026-11-02',activityThrough:'2026-11-04'});
     await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));
     await expect(page.getByRole('region',{name:'Appointment activity workspace'})).toHaveCount(0);await expect(page.getByRole('region',{name:'Setup overview'})).toHaveCount(0);
     await context.clearCookies();assert.equal((await context.cookies()).length,0);
     const refused=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/auth/session'&&response.status()>=400&&response.status()<500);
     await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));await refused;
-    await expect(setup).toContainText('Sign in again to review Calendar setup.');await expect(setup.getByRole('link',{name:'Sign in again',exact:true})).toHaveAttribute('href','/sign-in');await expect(setup.getByRole('button',{name:'Check setup status',exact:true})).toHaveCount(0);
+    await expect(setup).toContainText('Sign in again to review Calendar setup.');await expect(setup.getByRole('link',{name:'Sign in again',exact:true})).toHaveAttribute('href',signInReturn);await expect(setup.getByRole('button',{name:'Check setup status',exact:true})).toHaveCount(0);
     await expect(page.getByRole('region',{name:'Appointment activity workspace'})).toHaveCount(0);await expect(sync).toHaveCount(0);await expect(page.locator('.calendar-selected-identity')).toHaveCount(0);
     for(const width of [390,1440]){await page.setViewportSize({width,height:900});assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:'.local/review/settings-calendar-access-lost-'+engine.name()+'-'+width+'.png',fullPage:true});}assert.deepEqual(await facts(),before);
     await setup.getByRole('link',{name:'Sign in again',exact:true}).press('Enter');await expect(page.getByLabel('Email',{exact:true})).toBeVisible();await expect(page.getByLabel('Password',{exact:true})).toBeVisible();await expect(page.getByLabel('Authenticator code',{exact:true})).toBeVisible();

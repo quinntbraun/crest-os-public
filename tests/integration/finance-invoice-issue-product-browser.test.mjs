@@ -13,6 +13,7 @@ import {sourceExportBrowserFixture} from '../support/source-export-browser-fixtu
 import {reviewAccountingReportWorkspace} from '../support/accounting-report-workspace.mjs';
 import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
 import {captureDuringAction} from '../support/quote-browser-response.mjs';
+import {reviewPaymentAccessRecovery} from '../support/payment-access-recovery.mjs';
 
 const directReceipts=true;
 const invoiceOutstanding=true;
@@ -360,6 +361,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
       await allowInvoiceReadWindow();
       await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
       await expect(payments.getByRole('status')).toHaveText('Saved balances loaded.');
+      await reviewPaymentAccessRecovery({page,region:payments,engine:name,task:'receipt',loadLabel:'Load saved balances',privateLabel:'Money received in',message:'Sign in again to review payments.',ready:'Saved balances loaded.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
       await expect(payments.getByLabel('Money received in')).toHaveValue(/^[a-f0-9-]{36}$/);
       await payments.getByLabel(/Invoice TEST-1/).fill('100.00');
       await payments.getByLabel('How you verified the payment').fill('Fictional credited payment verified');
@@ -370,7 +372,20 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
       await expect(payments.getByRole('status')).toContainText('could not be confirmed');
       const pending=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('crest.direct-receipt.pending-reference.v1')??'null'));
       assert.deepEqual(Object.keys(pending.reference).sort(),['operationId','paymentId','recoveryEpoch']);
-      await payments.getByRole('button',{name:'Check original payment',exact:true}).press('Enter');
+      const pendingBytes=await page.evaluate(()=>sessionStorage.getItem('crest.direct-receipt.pending-reference.v1'));
+      const pendingCookies=await context.cookies(),pendingFacts=await financialFacts();
+      await allowInvoiceReadWindow();
+      try{
+       await context.clearCookies();
+       await payments.getByRole('button',{name:'Check original payment',exact:true}).press('Enter');
+       await expect(payments.getByRole('status')).toHaveText('Sign in again to review payments.');
+       await expect(payments.getByLabel('Money received in')).toHaveCount(0);
+       await expect(payments.getByRole('button',{name:'Download payment (CSV)',exact:true})).toHaveCount(0);
+       assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.direct-receipt.pending-reference.v1')),pendingBytes);
+       assert.deepEqual(await financialFacts(),pendingFacts);
+      }finally{await context.addCookies(pendingCookies);}
+      await allowInvoiceReadWindow();
+      await payments.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
       await expect(payments.getByRole('status')).toHaveText('The original payment was saved.');
       await expect(payments).toContainText('$100.00');
       const paymentDownload=page.waitForEvent('download');
@@ -482,6 +497,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        const correction=invoice.getByRole('region',{name:'Correct an applied payment',exact:true});
        await correction.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
        await expect(correction.getByRole('status')).toHaveText('Saved payments loaded.');
+       await reviewPaymentAccessRecovery({page,region:correction,engine:name,task:'correction',loadLabel:'Load applied payments',privateLabel:'Applied payment',message:'Sign in again to review payment corrections.',ready:'Saved payments loaded.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
        await correction.getByRole('button',{name:'Review correction',exact:true}).press('Enter');
        await expect(correction).toContainText('$100.00');
        await correction.getByLabel('Amount to move',{exact:true}).fill('25.00');
@@ -555,6 +571,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const funds=invoice.getByRole('region',{name:'Apply customer funds',exact:true});
         await funds.getByRole('button',{name:'Load available funds',exact:true}).press('Enter');
         await expect(funds.getByRole('status')).toHaveText('Review the amount before applying funds.');
+        await reviewPaymentAccessRecovery({page,region:funds,engine:name,task:'funds',loadLabel:'Load available funds',privateLabel:'Held funds',message:'Sign in again to review customer funds.',ready:'Review the amount before applying funds.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
         await expect(funds).toContainText('Maximum to apply · $25.00');
         await funds.getByLabel('Amount to apply',{exact:true}).fill('15.00');
         await funds.getByLabel('Reason for applying funds',{exact:true}).fill('Fictional customer approved use on this invoice');

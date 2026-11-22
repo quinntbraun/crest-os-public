@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {SignInLink} from '../../sign-in-link';
 
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {clearPendingPaymentCorrection,downloadFinanceHistory,financeAccounts,readPendingPaymentCorrection,
@@ -29,17 +31,18 @@ export function PaymentCorrection({businessId,customerId,invoiceId}: {businessId
   const [canWrite,setCanWrite]=useState(false);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [signedOut,setSignedOut]=useState(false);
   const request=useRef<AbortController|null>(null);
   const status=useRef<HTMLParagraphElement>(null);
 
   const clearReview=useCallback(()=>{
     setOptions(null);setFirstCent('');setAmount('');setReason('');
   },[]);
-  const suspend=useCallback(()=>{
-    request.current?.abort();request.current=null;
+  const clearPrivate=useCallback(()=>{
     setAllocations(null);setAllocationId('');setDate('');clearReview();setRetirementReason('');
-    setReceipt(null);setPending(false);setAbsent(false);setCanWrite(false);setBusy(false);setMessage('');
+    setReceipt(null);setPending(false);setAbsent(false);setCanWrite(false);setBusy(false);setMessage('');setSignedOut(false);
   },[clearReview]);
+  const suspend=useCallback(()=>{request.current?.abort();request.current=null;clearPrivate();},[clearPrivate]);
   useEffect(()=>{
     const hidden=()=>{if(document.visibilityState==='hidden')suspend();};
     document.addEventListener('visibilitychange',hidden);
@@ -59,11 +62,17 @@ export function PaymentCorrection({businessId,customerId,invoiceId}: {businessId
       const context=await financeAccounts.context(signal);
       if(signal.aborted)return;
       if(!context.paymentCorrections||context.businessId!==businessId){
+        clearPrivate();
         setMessage('Payment corrections are unavailable for this workspace.');return;
       }
+      setSignedOut(false);
       setCanWrite(context.writeState==='ready');
       await action(context,signal);
-    }catch{if(!signal.aborted)setMessage(failure);}
+    }catch(error){if(!signal.aborted){
+      if(error instanceof AuthenticationError&&error.kind==='denied'){
+        clearPrivate();setSignedOut(true);setMessage('Sign in again to review payment corrections.');
+      }else setMessage(failure);
+    }}
     finally{
       if(request.current===controller){request.current=null;setBusy(false);status.current?.focus();}
     }
@@ -165,6 +174,7 @@ export function PaymentCorrection({businessId,customerId,invoiceId}: {businessId
         {pending?'Check original correction':'Load applied payments'}
       </button>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<nav className="actions" aria-label="Payment correction access recovery"><SignInLink className="primary-action" returnTo="schedule">Sign in again</SignInLink><a className="record-return-link" href="/save-review">Review interrupted saves</a></nav>}
       {pending&&absent&&<form onSubmit={event=>{event.preventDefault();if(retirementReason.trim())resolve(retirementReason.trim());}}>
         <label>Reason for closing the attempt<input required maxLength={1000} value={retirementReason} disabled={busy}
           onChange={event=>setRetirementReason(event.target.value)}/></label>

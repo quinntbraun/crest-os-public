@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {SignInLink} from '../../sign-in-link';
 
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {clearPendingFundApplication,downloadFinanceHistory,financeAccounts,readPendingFundApplication,
@@ -25,6 +27,7 @@ export function FundApplication({businessId,customerId,invoiceId}: {businessId:s
   const [canWrite,setCanWrite]=useState(false);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [signedOut,setSignedOut]=useState(false);
   const request=useRef<AbortController|null>(null);
   const status=useRef<HTMLParagraphElement>(null);
   const lot=review?.lots.find(item=>item.fundLotId===lotId);
@@ -36,11 +39,11 @@ export function FundApplication({businessId,customerId,invoiceId}: {businessId:s
   const clearReview=useCallback(()=>{
     setReview(null);setLotId('');setFirstCent('');setAmount('');setReason('');
   },[]);
-  const suspend=useCallback(()=>{
-    request.current?.abort();request.current=null;
+  const clearPrivate=useCallback(()=>{
     setDate('');clearReview();setCloseReason('');setReceipt(null);
-    setPending(false);setAbsent(false);setCanWrite(false);setBusy(false);setMessage('');
+    setPending(false);setAbsent(false);setCanWrite(false);setBusy(false);setMessage('');setSignedOut(false);
   },[clearReview]);
+  const suspend=useCallback(()=>{request.current?.abort();request.current=null;clearPrivate();},[clearPrivate]);
   useEffect(()=>{
     const hidden=()=>{if(document.visibilityState==='hidden')suspend();};
     document.addEventListener('visibilitychange',hidden);
@@ -60,11 +63,17 @@ export function FundApplication({businessId,customerId,invoiceId}: {businessId:s
       const context=await financeAccounts.context(signal);
       if(signal.aborted)return;
       if(!context.fundApplications||context.businessId!==businessId){
+        clearPrivate();
         setMessage('Applying customer funds is unavailable for this workspace.');return;
       }
+      setSignedOut(false);
       setCanWrite(context.writeState==='ready');
       await action(context,signal);
-    }catch{if(!signal.aborted)setMessage(failure);}
+    }catch(error){if(!signal.aborted){
+      if(error instanceof AuthenticationError&&error.kind==='denied'){
+        clearPrivate();setSignedOut(true);setMessage('Sign in again to review customer funds.');
+      }else setMessage(failure);
+    }}
     finally{if(request.current===controller){request.current=null;setBusy(false);status.current?.focus();}}
   }
 
@@ -147,6 +156,7 @@ export function FundApplication({businessId,customerId,invoiceId}: {businessId:s
         {pending?'Check original application':'Load available funds'}
       </button>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<nav className="actions" aria-label="Customer funds access recovery"><SignInLink className="primary-action" returnTo="schedule">Sign in again</SignInLink><a className="record-return-link" href="/save-review">Review interrupted saves</a></nav>}
       {pending&&absent&&<form onSubmit={event=>{event.preventDefault();if(closeReason.trim())load(closeReason.trim());}}>
         <label>Reason for closing the attempt<input required maxLength={1000} value={closeReason} disabled={busy}
           onChange={event=>setCloseReason(event.target.value)}/></label>
