@@ -7,7 +7,7 @@ import {currentBusinessSourceInventory} from '../../src/security/current-busines
 import type {CurrentBusinessRows} from '../../src/security/current-business-source';
 it('delivers safe exact-text Excel cells and explicit CSV references for oversized values',()=>{
  const businessId='11111111-1111-4111-8111-111111111111';
- const sources=currentBusinessSourceInventory.map(source=>({...source,primaryKey:['id'],types:Object.fromEntries(source.columns.map(column=>[column,'text'])),rows:[] as Record<string,string|null>[]}));
+ const sources=currentBusinessSourceInventory.map(source=>({...source,primaryKey:[source.columns.includes('id')?'id':'business_id'],types:Object.fromEntries(source.columns.map(column=>[column,'text'])),rows:[] as Record<string,string|null>[]}));
  const first=sources[0]!,row=Object.fromEntries(first.columns.map(column=>[column,null])) as Record<string,string|null>;
  row.id=businessId;row.legal_name='=HYPERLINK("https://example.com")\r_x0001_\u0001<&';row.currency='9007199254740993';row.timezone='';row.status='x'.repeat(32768);first.rows.push(row);
  const capture={schemaVersion:1,profile:'crest.current-business-rows.v1',businessId,snapshotToken:'a'.repeat(64),observedAt:'2026-11-22T20:00:00.000000Z',sources,recordCount:1,completePortableExport:false,completeBackup:false} as CurrentBusinessRows;

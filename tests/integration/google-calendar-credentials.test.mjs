@@ -22,6 +22,8 @@ import {sourceExportDownloadPermitRecord,parseSourceExportDownloadPermit} from '
 import {readCurrentSourceLogicalFiles,readCurrentSourceLogicalSelection} from '../../src/client/current-source-logical-files.ts';
 import {custodyFixture} from '../support/source-export-custody-fixture.mjs';
 import {parseSourceExportStopCommand,parseSourceExportStopOutcome} from '../../src/security/source-export-stop-contract.ts';
+import {captureCurrentIdentitySource} from '../../src/security/current-business-identity-source.ts';
+import {captureCurrentBusinessRows} from '../../src/security/current-business-source.ts';
 import { createGoogleCalendarOAuthTransport } from '../../src/operations/google-calendar-oauth-transport.ts';
 import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
 import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixture.mjs';
@@ -459,10 +461,14 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((regis
         await assert.rejects(restricted.query('SELECT statements FROM supabase_migrations.schema_migrations'),{code:'42501'});
         await assert.rejects(restricted.query("UPDATE supabase_migrations.schema_migrations SET name='changed'"),{code:'42501'});
         if(registered>=133){
-          const source=(await createCurrentBusinessSourceCollector(config)(signal)).forCurrentBusinessServer();
+          await restricted.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+          try{const direct=await captureCurrentBusinessRows(identityOwner.business,async(sql,args)=>(await restricted.query(sql,args)).rows,()=>{});await captureCurrentIdentitySource(direct,async(sql,args)=>(await restricted.query(sql,args)).rows,()=>{});}finally{await restricted.query('ROLLBACK');}
+          const collected=await createCurrentBusinessSourceCollector(config)(signal),source=collected.forCurrentBusinessServer(),identitySource=collected.forCurrentBusinessIdentityServer();
           assert.equal(source.sources.length,167);assert(source.recordCount>0);
           const coverage=JSON.parse(await readFile(new URL(registered===133?'../support/registered133-export-coverage.json':'../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
           assert.deepEqual(source.sources.map(item=>({table:item.source,required:item.columns})),coverage.tables.filter(item=>item.scope==='business').map(item=>({table:item.table,required:item.required})));
+          assert.equal(identitySource.businessSnapshotToken,source.snapshotToken);assert.equal(identitySource.businessId,source.businessId);
+          for(const item of identitySource.sources)assert.deepEqual(item.columns,coverage.tables.find(table=>table.table===item.source).required,'identity columns match the registered closed source inventory');
           let directCount=0;
           for(const group of source.sources){
             const businessColumn=group.source==='crest.businesses'?'id':'business_id';
@@ -471,10 +477,22 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((regis
             for(const row of group.rows)assert.equal(row[businessColumn],identityOwner.business);
           }
           assert.equal(source.recordCount,directCount);
-          const bundle=formatCurrentBusinessPortableSource(source,{appReleaseId:'a'.repeat(40),sourceSchemaVersion:registered}),dictionary=JSON.parse(Buffer.from(bundle.files['current_business_dictionary.json']).toString()),escapes=JSON.parse(Buffer.from(bundle.files['current_business_escape_map.json']).toString());
+          const bundle=formatCurrentBusinessPortableSource(source,{appReleaseId:'a'.repeat(40),sourceSchemaVersion:registered},identitySource),dictionary=JSON.parse(Buffer.from(bundle.files['current_business_dictionary.json']).toString()),escapes=JSON.parse(Buffer.from(bundle.files['current_business_escape_map.json']).toString());
           for(const group of source.sources){const file=group.source.replace('.','_')+'.csv';assert.deepEqual(readCurrentBusinessCsv(Buffer.from(bundle.files[file]).toString(),dictionary[file].columns,escapes[file]),group.rows);}
           const workbook=unzipSync(bundle.files['business_records.xlsx']),workbookCoverage=JSON.parse(Buffer.from(bundle.files['workbook_coverage.json']).toString());
           assert.equal(workbookCoverage.sheets.length,source.sources.length+3);assert.equal(Object.keys(workbook).filter(name=>/^xl\/worksheets\/sheet\d+\.xml$/.test(name)).length,source.sources.length+3);
+          const neutral=await sandbox.connect(await sandbox.database());
+          await neutral.query('SET standard_conforming_strings = off');
+          await neutral.query(Buffer.from(bundle.files['business_records_reimport.txt']).toString());
+          for(const table of [...source.sources,...identitySource.sources]){
+            const target=table.source.replace('.','_'),order=table.primaryKey.map(column=>'"'+column.replaceAll('"','""')+'" COLLATE "C"').join(',');
+            assert.deepEqual((await neutral.query('SELECT * FROM crest_portable_source."'+target+'" ORDER BY '+order)).rows,table.rows,'neutral SQL reimport retains every exact source value: '+table.source);
+            const metadata=(await neutral.query('SELECT * FROM crest_portable_source._crest_export WHERE source_name=$1',[table.source])).rows[0];
+            assert.equal(metadata.row_count,String(table.rows.length));assert.deepEqual(JSON.parse(metadata.types_json),table.types);assert.deepEqual(JSON.parse(metadata.primary_key_json),table.primaryKey);assert.equal(metadata.complete_portable_export,'false');assert.equal(metadata.complete_backup,'false');
+          }
+          assert.equal((await neutral.query("SELECT count(*)::integer AS total FROM pg_namespace WHERE nspname IN('crest','crest_private')")).rows[0].total,0,'neutral import creates no application schema');
+          await assert.rejects(neutral.query(Buffer.from(bundle.files['business_records_reimport.txt']).toString()),{code:'42P06'});await neutral.query('ROLLBACK');
+          assert.equal((await neutral.query('SELECT count(*)::integer AS total FROM crest_portable_source._crest_export')).rows[0].total,source.sources.length+identitySource.sources.length,'existing import is never replaced');
           const exported=Object.entries(bundle.files).filter(([name])=>!name.endsWith('.xlsx')).map(([,bytes])=>Buffer.from(bytes).toString()).join('\n')+Object.values(workbook).map(bytes=>strFromU8(bytes)).join('\n');
           assert.equal(exported.includes('<f>'),false);
           assert.equal(exported.includes(foreign.business),false);

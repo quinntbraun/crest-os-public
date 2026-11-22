@@ -263,7 +263,15 @@ test('registered coverage accounts for every actual source column and rejects om
  const columns=(await restored.query(`SELECT n.nspname||'.'||c.relname AS "table",a.attname AS "column" FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('crest','crest_private') AND c.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2`)).rows;
  const requiredColumns=manifest.tables.reduce((total,entry)=>total+entry.required.length,0);
  const excludedColumns=manifest.tables.reduce((total,entry)=>total+entry.excluded.length,0);
- assert.equal(excludedColumns,23,'10 prior exclusions and 13 reviewed Calendar exclusions');
+ const priorCoverage=JSON.parse(await readFile(new URL('../support/registered124-export-coverage.json',import.meta.url),'utf8'));
+ const exclusions=value=>value.tables.flatMap(table=>table.excluded.map(entry=>({table:table.table,...entry}))).sort((a,b)=>a.table.localeCompare(b.table)||a.column.localeCompare(b.column));
+ const priorExclusions=exclusions(priorCoverage);assert.equal(priorExclusions.length,23,'frozen124 retains10 prior and13 reviewed Calendar exclusions');
+ assert.deepEqual(exclusions(manifest),[...priorExclusions,
+  {table:'crest_private.google_calendar_account_bindings',column:'provider_subject',reason:'calendar_account_identifier'},
+  {table:'crest_private.google_calendar_reconnection_stagings',column:'provider_subject',reason:'calendar_account_identifier'},
+  {table:'crest_private.google_calendar_reconnection_stagings',column:'reviewed_google_owner',reason:'calendar_account_identifier'}
+ ].sort((a,b)=>a.table.localeCompare(b.table)||a.column.localeCompare(b.column)),'exact prior exclusions plus the three reviewed account-binding/reconnect identifiers');
+ assert.equal(excludedColumns,26);
  assert.equal(columns.length,requiredColumns+excludedColumns);
  assert.deepEqual(verifyExportCoverage(manifest,columns,backup.manifest.schemaVersion),{assurance:'schema_inventory_only',tables:manifest.tables.length,requiredColumns,excludedColumns,partialEvidenceTables:9,completePortableExport:false,completeBackup:false});
  const incompleteCalendar=structuredClone(manifest);

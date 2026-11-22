@@ -21,6 +21,8 @@ import {verifyFinanceSourceExport} from '../tooling/verify-finance-source-export
 import {schemaMigrationLock} from './schema-migration-lock.ts';
 import {captureCurrentBusinessRows} from './current-business-source.ts';
 import type {CurrentBusinessRows} from './current-business-source.ts';
+import {captureCurrentIdentitySource} from './current-business-identity-source.ts';
+import type {CurrentBusinessIdentitySource} from './current-business-identity-source.ts';
 
 type FinanceSourceVersion=5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23;
 type Configuration=Readonly<{connectionString:string;environment:'production'|'test';businessId:string;migrationIdentity?:readonly Readonly<{version:string;name:string}>[]}>;
@@ -43,7 +45,7 @@ type PostedFinanceCapture=Readonly<{
  completePortableExport:false;completeBackup:false;
 }>;
 export type PostedFinanceSourceCapture=Readonly<{forFinanceServer:()=>PostedFinanceCapture;toJSON:()=>never}>;
-export type CurrentBusinessSourceCapture=Readonly<{forCurrentBusinessServer:()=>CurrentBusinessRows;toJSON:()=>never}>;
+export type CurrentBusinessSourceCapture=Readonly<{forCurrentBusinessServer:()=>CurrentBusinessRows;forCurrentBusinessIdentityServer:()=>CurrentBusinessIdentitySource;toJSON:()=>never}>;
 export class BusinessFoundationCollectionError extends Error{
  constructor(){super('BUSINESS_FOUNDATION_COLLECTION_REVIEW_REQUIRED');this.name='BusinessFoundationCollectionError';}
 }
@@ -188,8 +190,9 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
     }
     if(includeCurrent){
      const value=await captureCurrentBusinessRows(businessId,async(sql,args)=>(await query(sql,args)).rows,check);
+     const identity=await captureCurrentIdentitySource(value,async(sql,args)=>(await query(sql,args)).rows,check);
      require((await query('COMMIT')).command==='COMMIT');check();
-     return Object.freeze({forCurrentBusinessServer:()=>value,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
+     return Object.freeze({forCurrentBusinessServer:()=>value,forCurrentBusinessIdentityServer:()=>identity,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
     }
     if(includeFinance){
      const capture=(await captureFinanceSourceExport(businessId,async(sql,args)=>(await query(sql,args)).rows,{

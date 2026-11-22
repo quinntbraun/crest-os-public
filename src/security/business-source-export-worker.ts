@@ -88,7 +88,7 @@ export function createCurrentBusinessExportWorker(config:Configuration,collector
  const fixed=Object.freeze({...config});let originals:readonly Readonly<{name:string;bytes:Uint8Array}>[]|undefined,active=false;
  const worker=createWorker(fixed,collector,store,jobs,'crest.current-business-source-bundle.v1',134,
   async(captured,signal)=>{
-   const source=captured.forCurrentBusinessServer(),formatted=formatCurrentBusinessPortableSource(source,{appReleaseId:fixed.appReleaseId,sourceSchemaVersion:134});
+   const source=captured.forCurrentBusinessServer(),formatted=formatCurrentBusinessPortableSource(source,{appReleaseId:fixed.appReleaseId,sourceSchemaVersion:134},captured.forCurrentBusinessIdentityServer());
    originals=Object.entries({...formatted.files,'current_business_source_manifest.json':Buffer.from(formatted.manifest)}).map(([name,bytes])=>({name,bytes}));
    return formatCurrentSourceLogicalFiles(originals,{businessId:fixed.businessId,generationId:randomUUID(),appReleaseId:fixed.appReleaseId,sourceSchemaVersion:134},source.observedAt.replace(/Z$/,'+00:00'),signal);
   },async(root,files,captured,signal)=>{

@@ -3,6 +3,10 @@ import {expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {waitForSessionAdmissionCapacity} from './session-admission-capacity.mjs';
 
+export async function calendarConsentReferences(page){
+ return page.evaluate(()=>Object.keys(sessionStorage).filter(key=>key==='crest.calendar-consent.pending.v1'||key.startsWith('crest.calendar-consent.pending.v2:')).sort().map(key=>({key,value:sessionStorage.getItem(key)})));
+}
+
 export async function expectCalendarAccessCleared(page,engine,label,returnUrl){
  const setup=page.getByRole('region',{name:'Fictional Calendar setup'});
  await expect(setup.locator('.settings-feedback')).toHaveText('Sign in again to review Calendar setup.');
@@ -25,7 +29,7 @@ export async function expectCalendarAccessCleared(page,engine,label,returnUrl){
 
 export async function reviewCalendarNestedAccess(page,fixture,engine,facts){
  const context=page.context(),cookies=await context.cookies(),selectedUrl=page.url(),before=await facts();
- const original=await page.evaluate(()=>sessionStorage.getItem('crest.calendar-consent.pending.v1'));
+ const original=await calendarConsentReferences(page);
  for(const kind of ['sync','activity']){
   await waitForSessionAdmissionCapacity(fixture,{reserve:40});
   if(kind==='activity')await page.getByRole('button',{name:'Back to appointment activity',exact:true}).click();
@@ -34,7 +38,7 @@ export async function reviewCalendarNestedAccess(page,fixture,engine,facts){
   const denied=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/auth/session'&&r.status()===400);
   await page.getByRole('button',{name:kind==='sync'?'Check Calendar status':'Reload activity',exact:true}).click();
   await denied;await expectCalendarAccessCleared(page,engine,kind,returnUrl);
-  assert.equal((await page.evaluate(()=>sessionStorage.getItem('crest.calendar-consent.pending.v1')))===original,true,'Original consent reference is preserved');
+  assert.deepEqual(await calendarConsentReferences(page),original,'All original consent references are preserved byte-for-byte');
   assert.deepEqual(await facts(),before,'A denied read does not change appointments, dispatch or audit records');
   await context.addCookies(cookies);await page.goto(selectedUrl);
   await expect(page.getByRole('region',{name:'Saved appointment sync'}).locator('.calendar-activity-version')).toBeVisible();

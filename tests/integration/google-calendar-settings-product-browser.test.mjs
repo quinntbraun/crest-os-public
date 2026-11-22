@@ -8,11 +8,10 @@ import { chromium, expect, webkit } from '@playwright/test';
 import { reviewBusinessSettingsIndex } from '../support/business-settings-index.mjs';
 import { recoveryCluster } from '../support/recovery-drill.mjs';
 import { sourceExportBrowserFixture } from '../support/source-export-browser-fixture.mjs';
-import {reviewCalendarNestedAccess,expectCalendarAccessCleared} from '../support/calendar-private-access.mjs';
+import {reviewCalendarNestedAccess,expectCalendarAccessCleared,calendarConsentReferences} from '../support/calendar-private-access.mjs';
 
 const prefix = '/api/business/google-calendar/';
 const settings = '/settings/google-calendar';
-const referenceKey = 'crest.calendar-consent.pending.v1';
 
 for(const engine of [chromium,webkit])test('Calendar clears denied consent reviews and preserves a committed original in '+engine.name(),{timeout:240000},async()=>{
  const previous=process.env.CREST_TEST_DATABASE_URL,cluster=previous?null:await recoveryCluster();
@@ -35,14 +34,14 @@ for(const engine of [chromium,webkit])test('Calendar clears denied consent revie
   let denied=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/auth/session'&&r.status()===400);
   await setup.getByRole('button',{name:'Review shared event',exact:true}).click();await denied;
   await expectCalendarAccessCleared(page,engine.name(),'consent-preview',url);assert.deepEqual(await facts(),beforePreview);
-  assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),referenceKey),null);
+  assert.deepEqual(await calendarConsentReferences(page),[]);
   await context.addCookies(cookies);await page.goto(url);
   await expect(setup.getByLabel('Client display name',{exact:true})).not.toBeChecked();
   await setup.getByRole('button',{name:'Review shared event',exact:true}).click();
   await expect(setup.getByRole('heading',{name:'Review what Google receives',exact:true})).toBeVisible();
   for(const label of [/I reviewed the example event fields/,/I read how to check who can access/,/I read how to check notifications/])await setup.getByLabel(label).check();
-  let originalCommitted=false;
-  const loseReply=async route=>{const response=await route.fetch();assert.equal(response.status(),200);originalCommitted=true;await route.abort();};
+  let originalCommitted=false,committedReference;
+  const loseReply=async route=>{const response=await route.fetch();assert.equal(response.status(),200);const input=route.request().postDataJSON();committedReference=Object.fromEntries(['destinationId','credentialId','recoveryEpoch','reviewId'].map(key=>[key,input[key]]));originalCommitted=true;await route.abort();};
   await page.route('**/api/business/google-calendar/consent/confirm',loseReply);
   try{
    await setup.getByRole('button',{name:'Save Calendar consent',exact:true}).click();
@@ -50,7 +49,9 @@ for(const engine of [chromium,webkit])test('Calendar clears denied consent revie
    await expect(setup.getByText('Crest could not confirm the save. Check its status before continuing.',{exact:true})).toBeVisible();
    assert.equal(originalCommitted,true);
   }finally{await page.unroute('**/api/business/google-calendar/consent/confirm',loseReply);}
-  const original=await page.evaluate(key=>sessionStorage.getItem(key),referenceKey);assert(original);
+  assert(committedReference);for(const value of Object.values(committedReference))assert.match(value,/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
+  const referenceKey='crest.calendar-consent.pending.v2:'+committedReference.destinationId+':'+committedReference.credentialId+':'+committedReference.recoveryEpoch;
+  const original=await page.evaluate(key=>sessionStorage.getItem(key),referenceKey);assert(original);assert.deepEqual(JSON.parse(original),committedReference);assert.deepEqual(await calendarConsentReferences(page),[{key:referenceKey,value:original}]);
   const beforeStatus=await facts();await context.clearCookies();
   denied=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/auth/session'&&r.status()===400);
   await setup.getByRole('button',{name:'Check save status',exact:true}).click();await denied;
@@ -121,7 +122,7 @@ test('signed-in Calendar pages six protected native bookings and retains phone r
     let release,forwarded,held=false;const gate=new Promise(resolve=>{release=resolve;}),hold=route=>{forwarded=(async()=>{held=true;await gate;await route.abort();})();return forwarded;};await page.route('**/api/business/scheduling/list',hold);
     try{await directory.getByRole('button',{name:'Reload activity'}).press('Enter');await expect.poll(()=>held).toBe(true);await expect(rows).toHaveCount(0);await directory.getByRole('button',{name:'Cancel loading'}).press('Enter');await expect(status).toContainText('cancelled');await expect(rows).toHaveCount(0);}finally{release();await forwarded;await page.unroute('**/api/business/scheduling/list',hold);}
     await directory.getByRole('button',{name:'Reload activity'}).press('Enter');await expect(rows).toHaveCount(5);assert.deepEqual(await facts(),before);
-    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),referenceKey),null);
+    assert.deepEqual(await calendarConsentReferences(page),[]);
     await rows.first().locator('h3 a').press('Enter');await expect(sync.locator('.calendar-activity-version')).toBeVisible();
     const returnJob=new URL(page.url()).searchParams.get('job');assert(fixture.calendarActivityJobIds.includes(returnJob));
     const signInReturn='/sign-in?returnTo=calendar&'+new URLSearchParams({job:returnJob,activityFrom:'2026-11-02',activityThrough:'2026-11-04'});
@@ -291,7 +292,7 @@ for (const automatic of [false,true]) test('signed-in Calendar preserves consent
           await panel.getByRole('button', { name: 'Check save status' }).press('Enter');
           await expect(panel.getByRole('status')).toContainText('consent was saved');
           await expect(overview.getByText('Consent saved', { exact: true })).toBeVisible();
-          assert.equal(await page.evaluate(key => sessionStorage.getItem(key), referenceKey), null);
+          assert.deepEqual(await calendarConsentReferences(page),[]);
           const consent = await fixture.client.query('SELECT state,client_name,service_label,work_address FROM crest.google_calendar_consents WHERE business_id=$1',
             [fixture.business]);
           assert.deepEqual(consent.rows, [{ state: 'active', client_name: optional, service_label: optional, work_address: optional }]);
@@ -365,7 +366,7 @@ for (const automatic of [false,true]) test('signed-in Calendar preserves consent
         await page.goBack();await expect(sync.getByRole('status')).toHaveText(expectedStatus,{timeout:15000});
         await page.goForward();await expect(activityDirectory).toBeVisible();await expect(activityLink).toBeFocused();
         await expect(activityDirectory.getByLabel('From date',{exact:true})).toHaveValue(from);await expect(activityDirectory.getByLabel('Through date',{exact:true})).toHaveValue(through);
-        assert.deepEqual(await facts(),retained);assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),referenceKey),null);
+        assert.deepEqual(await facts(),retained);assert.deepEqual(await calendarConsentReferences(page),[]);
         await activityLink.press('Enter');await expect(sync.getByRole('status')).toHaveText(expectedStatus,{timeout:15000});
         const fonts=await page.evaluate(async()=>{await document.fonts.ready;return {root:getComputedStyle(document.documentElement).fontFamily,body:getComputedStyle(document.body).fontFamily,regular:document.fonts.check('400 16px "IBM Plex Sans"'),semibold:document.fonts.check('600 16px "IBM Plex Sans"'),faces:[...document.fonts].map(face=>({family:face.family,weight:face.weight,status:face.status}))};});
         await writeFile(fileURLToPath(new URL('settings-calendar-fonts-'+(automatic?'automatic-':'pending-')+engine.name()+'.json',directory)),JSON.stringify(fonts,null,2));
