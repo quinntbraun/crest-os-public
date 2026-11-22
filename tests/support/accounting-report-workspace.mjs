@@ -3,9 +3,31 @@ import {mkdir} from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import {expect} from '@playwright/test';
 
+// Called while a genuine report request is held, before its unmodified reply.
+export async function reviewAccountingReportLoading(page,region,label){
+ const placeholder=region.locator('[data-report-loading]');
+ await expect(region).toHaveAttribute('aria-busy','true');
+ await expect(placeholder).toBeVisible();await expect(placeholder).toHaveAttribute('aria-hidden','true');
+ await expect(region.locator('[data-report-reading] header')).toHaveCount(0);
+ await expect(region.getByRole('button',{name:/Download/})).toHaveCount(0);
+ for(const input of await region.locator('form input').all())await expect(input).toBeDisabled();
+ await mkdir('.local/review',{recursive:true});
+ try{
+  for(const width of [390,1440]){
+   await page.setViewportSize({width,height:900});await placeholder.scrollIntoViewIfNeeded();
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+   const bounds=await placeholder.boundingBox();assert(bounds&&bounds.height>=150);
+   await page.screenshot({path:'.local/review/accounting-report-loading-'+label+'-'+width+'.png'});
+  }
+  await page.emulateMedia({reducedMotion:'reduce'});
+  assert.equal(await placeholder.locator('.workspace-skeleton').first().evaluate(element=>getComputedStyle(element).animationName),'none');
+ }finally{await page.emulateMedia({reducedMotion:'no-preference'});}
+}
+
 export async function reviewAccountingReportWorkspace(page,region,{label,values,pickerExpected=true}){
  assert.equal(typeof pickerExpected,'boolean');
  const reading=region.locator('[data-report-reading]'),header=reading.locator('header');
+ await expect(region.locator('[data-report-loading]')).toHaveCount(0);
  await expect(header).toBeFocused();
  for(const [name,value]of values){const item=reading.getByText(name,{exact:true});await expect(item).toBeVisible();await expect(item.locator('..')).toContainText(value);}
  const requests=[],observe=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))requests.push(request.method()+' '+new URL(request.url()).pathname);};page.on('request',observe);

@@ -80,9 +80,9 @@ export function RecordedIncomeStatement({businessId,initialFrom='',initialThroug
  }
  return <details className="review-card" open onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
   <summary>Income statement</summary>
-  <section aria-label="Recorded income statement" className="trial-balance">
+  <section aria-label="Recorded income statement" aria-busy={busy} className="trial-balance">
    {!report&&<p>{basis}. {coverage}</p>}
-   <ReportReadingSummary snapshot={report}>{report&&<FinancialReportHeader period={<>Income statement · <time dateTime={report.fromOn}>{displayDate(report.fromOn)}</time>
+   <ReportReadingSummary snapshot={report} loading={busy&&!report}>{report&&<FinancialReportHeader period={<>Income statement · <time dateTime={report.fromOn}>{displayDate(report.fromOn)}</time>
       {report.fromOn!==report.throughOn&&<> to <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}</>}
       timeZone={report.timeZone} observedAt={report.observedAt} scopeLabel="Coverage incomplete"
       coverage={coverage} basis={report.schemaVersion===2?supplierBasis:basis}

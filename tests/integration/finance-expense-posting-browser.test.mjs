@@ -1,5 +1,6 @@
 import {observeExpenseAccess,prepareExpenseBrowserCode} from '../support/expense-access-diagnostic.mjs';
 import {waitForSessionAdmissionCapacity} from '../support/session-admission-capacity.mjs';
+import {reviewPaymentAccessRecovery} from '../support/payment-access-recovery.mjs';
 import assert from 'node:assert/strict';
 import {reviewRecoveryActionPriority,financePriorityFacts} from '../support/recovery-action-priority.mjs';
 import {openReceiptDownloads,captureExpenseState} from '../support/receipt-layout.mjs';
@@ -12,7 +13,7 @@ import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 import {reviewReceiptDocumentViewer} from '../support/receipt-document-viewer.mjs';
-import {reviewAccountingReportWorkspace} from '../support/accounting-report-workspace.mjs';
+import {reviewAccountingReportWorkspace,reviewAccountingReportLoading} from '../support/accounting-report-workspace.mjs';
 
 async function exerciseSupplierBills(page,date,fixture,engine){
  const region=page.getByRole('region',{name:'Unpaid supplier bill drafts',exact:true});
@@ -393,15 +394,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    // Retain the genuine server body before forwarding it unchanged. Chromium
    // can discard its protocol body handle even in the response-event callback.
    // One real POST, no redirects/retries, fabricated payload or changed headers.
-   const incomeBody=Promise.withResolvers(),incomePattern='**/api/business/finance-accounts/recorded-income-statement';let incomeCalls=0,incomeMetadata;
+   const incomeArrived=Promise.withResolvers(),incomeGate=Promise.withResolvers(),incomeBody=Promise.withResolvers(),incomePattern='**/api/business/finance-accounts/recorded-income-statement';let incomeCalls=0,incomeMetadata;
    void incomeBody.promise.catch(()=>undefined);
-   const retainIncome=async route=>{try{incomeCalls++;assert.equal(route.request().method(),'POST');const response=await route.fetch({maxRedirects:0,maxRetries:0});assert.equal(response.status(),200);const body=await response.json();await route.fulfill({response});incomeBody.resolve(body);}catch(error){incomeBody.reject(error);await route.abort('failed').catch(()=>undefined);}};
+   const retainIncome=async route=>{try{incomeCalls++;assert.equal(route.request().method(),'POST');incomeArrived.resolve();await incomeGate.promise;const response=await route.fetch({maxRedirects:0,maxRetries:0});assert.equal(response.status(),200);const body=await response.json();await route.fulfill({response});incomeBody.resolve(body);}catch(error){incomeBody.reject(error);await route.abort('failed').catch(()=>undefined);}};
    await page.route(incomePattern,retainIncome);
    try{
     const browserIncome=page.waitForResponse(response=>response.url().endsWith('/api/business/finance-accounts/recorded-income-statement'));
-    const [body,response]=await Promise.all([incomeBody.promise,browserIncome,statement.getByRole('button',{name:'Load income statement',exact:true}).press('Enter')]);
+    const loading=async()=>{try{await statement.getByRole('button',{name:'Load income statement',exact:true}).press('Enter');await incomeArrived.promise;await reviewAccountingReportLoading(page,statement,'income-'+name);}finally{incomeGate.resolve();}};
+    const [body,response]=await Promise.all([incomeBody.promise,browserIncome,loading()]);
     incomeMetadata=body;assert.equal(response.status(),200);assert.equal(incomeCalls,1);
-   }finally{await page.unroute(incomePattern,retainIncome);}
+   }finally{incomeGate.resolve();await page.unroute(incomePattern,retainIncome);}
    await expect(statement.getByRole('status')).toHaveText('Recorded income loaded.');
    await reviewAccountingReportWorkspace(page,statement,{label:'income-'+name,values:[['Recorded-book net income','-$100.00']]});
    await expect(statement.locator('time[title]')).toHaveAttribute('datetime',incomeMetadata.observedAt);
@@ -442,7 +444,12 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(accountsView).toBeVisible();
   await report.getByLabel('Through date (optional)',{exact:true}).fill(date);
   const dateControl=await report.getByLabel('Through date (optional)',{exact:true}).elementHandle();
-  await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
+  const ledgerArrived=Promise.withResolvers(),ledgerHandled=Promise.withResolvers(),ledgerGate=Promise.withResolvers(),ledgerPattern='**/api/business/finance-accounts/trial-balance';
+  void ledgerHandled.promise.catch(()=>undefined);
+  const holdLedger=async route=>{try{ledgerArrived.resolve();await ledgerGate.promise;await route.continue();ledgerHandled.resolve();}catch(error){ledgerHandled.reject(error);}};
+  await page.route(ledgerPattern,holdLedger,{times:1});
+  try{await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');await ledgerArrived.promise;await reviewAccountingReportLoading(page,report,'ledger-'+name);}
+  finally{ledgerGate.resolve();await ledgerHandled.promise;await page.unroute(ledgerPattern,holdLedger);}
   await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
   assert(await dateControl.evaluate(element=>element.isConnected),'loading a snapshot must retain the mounted date control');
   await reviewAccountingReportWorkspace(page,report,{label:'ledger-'+name,values:[['Debit balances','$100.00'],['Credit balances','$100.00']],pickerExpected:income||payableReports});
@@ -586,6 +593,19 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await expect(page.getByRole('status')).toBeFocused();
      assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
     }
+    // Exercise the same journal-denial recovery as the complete invoice journey,
+    // starting from the default URL with no explicit section/report metadata.
+    await context.addCookies(cookies);await page.goto(f.origin+'/settings/accounts');
+    assert.equal(new URL(page.url()).search,'');
+    const defaultLedger=page.getByRole('region',{name:'Fictional trial balance',exact:true});
+    await defaultLedger.getByRole('button',{name:'Load trial balance',exact:true}).click();
+    await expect(defaultLedger.getByRole('status')).toHaveText('Posted balances loaded.');
+    await defaultLedger.getByText('Journal entries',{exact:true}).click();
+    await reviewPaymentAccessRecovery({page,region:defaultLedger,recoveryRegion:page.getByRole('region',{name:'Account settings',exact:true}),
+     engine:name,task:'journal-default-return',loadLabel:'Load journal entries',privateTarget:defaultLedger.locator('table').first(),
+     message:'Sign in again to review accounting records.',ready:'Posted balances loaded.',facts,
+     allowRead:()=>waitForSessionAdmissionCapacity(f,{reserve:30}),expectedSignIn:'/sign-in?returnTo=accounting&view=reports',auditSelector:'html',
+     reload:async()=>{await page.reload();await defaultLedger.getByRole('button',{name:'Load trial balance',exact:true}).click();}});
     assert.deepEqual(await facts(),before,'Report return and denied reads cannot change posted finance or its audit');
    }finally{page.off('request',observe);}
   }

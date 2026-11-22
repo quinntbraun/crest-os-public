@@ -26,7 +26,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 | ID | Audit group | Local state | Remaining work |
 |---|---|---|
-| S01 | One visual system, delivered consistently | Open | Publish the next coherent exact-tree strictly scanned UI batch and require its own complete fresh release checks. Matching installed build, owner finance/off-laptop restore and physical iPhone acceptance remain open. |
+| S01 | One visual system, delivered consistently | Open | Strictly scan and publish the coherent recovery/loading follow-up, then require its own complete matching release gates. Keep the unexplained custody verification and real503 failures explicit. Matching installed, owner finance/off-laptop restore and physical iPhone acceptance remain open. |
 | S02 | Desktop layouts need purpose, not more cards | Main change addressed | Complete broader configured states/long-content/actual zoom and matching hosted/installed/physical-device acceptance. The separate paid-profile rerun remains0/2 at session creation and interrupted-save checks; causes unresolved and no combined6/6 or release acceptance claimed. Every final sign-off staysfalse. |
 | S03 | Phone record detail should replace the directory | Main change addressed | Verify both separate service workflows on fresh Linux source and finish alternate-origin/state and delivered/device acceptance. |
 | S04 | Make action priority predictable | Main change addressed | Preserve complete original financial and recovery behavior and verify remaining configured states and matching delivered/release/installed/physical-device acceptance. Partial-allocation/Add-another overlap and pending-known-receipt cleanup branches retain source review without a new dedicated rendered acceptance claim. |
@@ -99,6 +99,6 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 ## Next sequence
 
-1. Public9723a836 is terminal: all22 main jobs and both ancillary suites pass for localf4f937f/tree444649b. Preserve its source-specific worker/restore acceptance. Strictly scan and publish the coherent newer UI batch with canonical tree/sole-parent/test-merge and expected-head nonforce proof; require its own fresh checks. Unpublished82a was superseded before any public mutation.
-2. S13 main safe-context implementation is now locally addressed; it is not a full sign-off for every transition/state. Finish S06 important-workflow eight-state variants and broader remaining long/alternate/private/stale/zoom review under the original scope. Retain unexplained genuine503 evidence; a subsequent pass alone does not establish its cause or cure.
-3. Complete matching installed/owner/off-laptop restore and actual iPhone13 acceptance without bypassing authentication, trust, protected checks or real-data activation gates. All70 original requirement bodies and every false final sign-off remain.
+1. Preserve84a terminal17/22 main and both ancillary successes as source-specific, unaccepted evidence. Strictly scan/publish the coherent recovery/loading follow-up with exact tree, sole parent, test merge and expected-head nonforce proof, then require fresh full gates. Do not relabel retained native or hosted failures.
+2. Continue S06 important-workflow states and broader alternate/private/pending/stale review under every original requirement. Gated lead25/28 is not a full pass; real503 and custody verification causes remain unproven. No guard, original assertion or deadline is waived.
+3. Complete matching installed/owner/off-laptop restore and physical iPhone13 acceptance. All70 original bodies/hash and every false final sign-off remain. No merge/install, real-data or financial/provider activation, or spending.

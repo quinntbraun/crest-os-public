@@ -93,7 +93,10 @@ export function createLeadEditorController(deps:Dependencies){
   const open=(leadId:string,confirmed:'status'|'conversion'|false=false)=>{
     if(phase!=='ready'||!snapshot||!proof||!leadUuid(leadId))return Promise.resolve();const context=snapshot;let authorization=proof;
     return run(async signal=>{
-      selected=null;draft=null;history=null;emit();
+      // A confirmed child action refreshes this same record. Keep its identity
+      // mounted while controls are busy so the child's verified receipt is not
+      // replaced by a newly initialized panel. Failures still clear private data.
+      if(!confirmed){selected=null;draft=null;history=null;}emit();
       if(confirmed){
         await fresh(signal);
         if(!sameReadContext(snapshot!,context))throw new LeadClientError('unavailable');
@@ -103,6 +106,7 @@ export function createLeadEditorController(deps:Dependencies){
       live(signal);
       const reminder=followUps?.page?.followUps.find(row=>row.id===leadId);
       if(result.state==='absent'){
+        selected=null;draft=null;history=null;
         if(reminder)await readFollowUps(context,authorization,followUpQuery,signal);
         message='This lead was not found. Load the current directory before editing.';
         return;

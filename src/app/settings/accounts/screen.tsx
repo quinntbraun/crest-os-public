@@ -310,7 +310,10 @@ export function FinanceAccountsScreen(){
   {loading&&!workspace&&!editor&&!signedOut&&<div className={styles.accountLoading} aria-hidden="true">
    <span className="workspace-skeleton"/><span className="workspace-skeleton"/><span className="workspace-skeleton"/>
   </div>}
-  {signedOut&&<SignInLink returnTo="accounting" context={reportNavigation}>Sign in again</SignInLink>}
+  {signedOut&&<nav className="actions" aria-label="Accounting access recovery">
+   <SignInLink className="primary-action" returnTo="accounting" context={{...reportNavigation,view:currentArea??'reports'}}>Sign in again</SignInLink>
+   <a className="record-return-link" href="/save-review">Review interrupted saves</a>
+  </nav>}
   {workspace&&!editor&&(context?.trialBalance||hasSetup)&&<nav className={styles.sectionLinks} aria-label="Accounting sections">
    {context?.trialBalance&&<button type="button" className="secondary" aria-current={activeArea==='reports'?'true':undefined} onClick={()=>selectArea('reports')}>Reports</button>}
    <button type="button" className="secondary" aria-current={activeArea==='accounts'?'true':undefined} onClick={()=>selectArea('accounts')}>Accounts</button>

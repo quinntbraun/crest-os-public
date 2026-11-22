@@ -21,6 +21,33 @@ const result=(c=command())=>({state:'committed' as const,operationId:c.operation
 const reference=()=>pendingLead({schemaVersion:1,businessId:leadBusiness,binding,reference:{operationId,leadId:newLeadId,expectedVersion:'0',recoveryEpoch:epoch}});
 let memory:Map<string,string>,storage:{getItem:Mock<(key:string)=>string|null>;setItem:Mock<(key:string,value:string)=>void>;removeItem:Mock<(key:string)=>void>},store:ReturnType<typeof createPendingLeadStore>,api:{[K in keyof typeof leads]:Mock<(typeof leads)[K]>},session:Mock<typeof authentication.session>,id:Mock<()=>string>;
 const controller=()=>createLeadEditorController({conversionStore:{read:conversionRead},addressStore:createPendingLeadAddressStore(storage),vehicleStore:createPendingLeadVehicleStore(storage),store,statusStore:createPendingLeadStateStore(storage),api,session,id,change:vi.fn()});
+function historyResponse(){
+ let resolve!:(value:Awaited<ReturnType<typeof leads.history>>)=>void;
+ const promise=new Promise<Awaited<ReturnType<typeof leads.history>>>(done=>{resolve=done;});
+ return {resolve,promise};
+}
+it.each(['statusChanged','conversionChanged'] as const)('retains the same child receipt identity during %s and clears on refresh failure',async method=>{
+ const c=controller(),lead=leadFixture();await c.load();await c.open(lead.id);
+ const response=historyResponse();
+ api.history.mockImplementationOnce(()=>response.promise);
+ const refresh=c[method](lead.id);
+ await vi.waitFor(()=>expect(api.history).toHaveBeenCalledTimes(2));
+ expect(c.view()).toMatchObject({busy:true,selected:{id:lead.id},canSave:false});
+ response.resolve({state:'found',lead:leadFixture({version:'2'}),history:[],hasMore:false});await refresh;
+ expect(c.view()).toMatchObject({busy:false,selected:{id:lead.id,version:'2'}});
+ api.history.mockResolvedValueOnce({state:'absent'});await c[method](lead.id);
+ expect(c.view()).toMatchObject({selected:null,draft:null,history:null,canSave:false});
+ await c.open(lead.id);
+ api.history.mockRejectedValueOnce(new LeadClientError('unavailable'));await c[method](lead.id);
+ expect(c.view()).toMatchObject({phase:'unavailable',selected:null,draft:null,history:null,rows:[],canSave:false});
+});
+it('suspension during a confirmed child refresh removes private data and ignores the late result',async()=>{
+ const c=controller(),lead=leadFixture();await c.load();await c.open(lead.id);
+ const response=historyResponse();api.history.mockImplementationOnce(()=>response.promise);
+ const refresh=c.conversionChanged(lead.id);await vi.waitFor(()=>expect(api.history).toHaveBeenCalledTimes(2));
+ c.suspend();response.resolve({state:'found',lead,history:[],hasMore:false});await refresh;
+ expect(c.view()).toMatchObject({phase:'review',selected:null,draft:null,history:null,rows:[],canSave:false});
+});
 it('clears the directory and queue when the follow-up cursor belongs to a prior sign-in binding',async()=>{
  const lead=leadFixture();
  api.followUps.mockResolvedValue({schemaVersion:1,businessId:leadBusiness,observedAt:'2026-11-01T02:00:00.000000Z',hasMore:false,

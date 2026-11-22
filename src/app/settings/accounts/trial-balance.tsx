@@ -262,9 +262,9 @@ export function TrialBalance({businessId,initialThrough='',onThroughChange,onAcc
   }
   return <details className="review-card" open onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
     <summary>Fictional trial balance</summary>
-    <section className="trial-balance" aria-label="Fictional trial balance">
+    <section className="trial-balance" aria-label="Fictional trial balance" aria-busy={busy}>
       {!balance&&<p>Review posted balances by account. Opening balances and bank reconciliation are still pending.</p>}
-      <ReportReadingSummary snapshot={balance}>{balance&&<FinancialReportHeader period={<>Trial balance · Through <time dateTime={balance.throughOn}>{balance.throughOn}</time></>}
+      <ReportReadingSummary snapshot={balance} loading={busy&&!balance}>{balance&&<FinancialReportHeader period={<>Trial balance · Through <time dateTime={balance.throughOn}>{balance.throughOn}</time></>}
           timeZone={balance.timeZone} observedAt={balance.observedAt} scopeLabel="Coverage incomplete"
           coverage="Recorded posted balances only. Opening balances and bank reconciliation are still pending."
           details={<>{balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}<dl className={styles.reportKeyFigures}><div><dt>Debit balances</dt><dd>{usd(balance.totals.debitBalanceCents)}</dd></div><div><dt>Credit balances</dt><dd>{usd(balance.totals.creditBalanceCents)}</dd></div></dl></>}

@@ -46,6 +46,9 @@ export function LeadScreen({addressAssist,initialLeadId=null,initialIncludeAll=f
  const [saving,setSaving]=useState(false);
  const [conversionLocked,setConversionLocked]=useState(false),[conversionGeneration,setConversionGeneration]=useState(0),[statusLocked,setStatusLocked]=useState(false),[vehicleLocked,setVehicleLocked]=useState(false),[addressLocked,setAddressLocked]=useState(false),[view,setView]=useState(initialLeadEditorView),current=useRef<ReturnType<typeof createLeadEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),editHeading=useRef<HTMLHeadingElement>(null);
  const [directory,setDirectory]=useState(initialDirectory),queueHeading=useRef<HTMLHeadingElement>(null);
+ const [initialRecord,setInitialRecord]=useState({leadId:initialLeadId,ready:!initialLeadId});
+ if(initialRecord.leadId!==initialLeadId)setInitialRecord({leadId:initialLeadId,ready:!initialLeadId});
+ const initialRecordReady=initialRecord.leadId===initialLeadId&&initialRecord.ready;
  const [followUpFilter,setFollowUpFilter]=useState<FollowUpFilter>(initialFollowUpFilter),[recordDismissed,setRecordDismissed]=useState(false);
  const [focusRequest,setFocusRequest]=useState<{target:'record';leadId:string|null}|{target:'directory'}|null>(null);
  const handledFocus=useRef<typeof focusRequest>(null),record=useRef<HTMLElement>(null),directoryHeading=useRef<HTMLHeadingElement>(null);
@@ -68,13 +71,13 @@ export function LeadScreen({addressAssist,initialLeadId=null,initialIncludeAll=f
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
   const controller=createLeadEditorController({conversionStore:createPendingLeadConversionStore(storage),addressStore:createPendingLeadAddressStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),store:createPendingLeadStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),statusStore:createPendingLeadStateStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),vehicleStore:createPendingLeadVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:next=>{if(next.phase!=='ready'){directoryOrigin.current=null;rowOrigin.current=null;handledFocus.current=null;}setView(next);}});current.current=controller;
-  void (async()=>{
+  void (async()=>{try{
    await controller.load(includeAll.current);
    if(!initialLeadId||current.current!==controller||controller.view().phase!=='ready')return;
    const intent={target:'record' as const,leadId:initialLeadId};setRecordDismissed(false);setFocusRequest(intent);
    await controller.open(initialLeadId);
    if(current.current===controller&&controller.view().selected?.id!==initialLeadId)setFocusRequest(previous=>previous===intent?null:previous);
-  })();
+  }finally{if(current.current===controller)setInitialRecord({leadId:initialLeadId,ready:true});}})();
   const leave=()=>{directoryOrigin.current=null;rowOrigin.current=null;handledFocus.current=null;setFocusRequest(null);setRecordDismissed(false);controller.suspend();};
   const hidden=()=>{if(document.visibilityState==='hidden')leave();},restored=(event:PageTransitionEvent)=>{if(event.persisted)leave();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
@@ -220,7 +223,7 @@ export function LeadScreen({addressAssist,initialLeadId=null,initialIncludeAll=f
    {view.selected&&view.businessId&&<div id="lead-addresses" tabIndex={-1} className="lead-record-task"><LeadAddressPanel key={'addresses:'+view.businessId+':'+view.selected.id+':'+conversionGeneration} businessId={view.businessId} leadId={view.selected.id} disabled={view.busy||dirty||statusLocked||vehicleLocked||conversionLocked} onLock={setAddressLocked} {...addressAssist?{assist:addressAssist}:{}}/></div>}
    {view.history&&<LeadHistory history={view.history} busy={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onMore={()=>void action('moreHistory')}/>}
    </section>
-   {view.businessId&&<div id="lead-conversion" tabIndex={-1} className="lead-record-task lead-conversion-outlet" hidden={view.draft!==null&&!showingRecord}><LeadConversionPanel key={'conversion:'+view.businessId+':'+(view.selected?.id??'none')} businessId={view.businessId} leadId={view.selected?.id??null} disabled={view.busy||dirty||statusLocked||vehicleLocked||addressLocked} onLock={setConversionLocked} onCommitted={conversionCommitted}/></div>}
+   {view.businessId&&initialRecordReady&&<div id="lead-conversion" tabIndex={-1} className="lead-record-task lead-conversion-outlet" hidden={view.draft!==null&&!showingRecord}><LeadConversionPanel key={'conversion:'+view.businessId+':'+(view.selected?.id??'none')} businessId={view.businessId} leadId={view.selected?.id??null} disabled={view.busy||dirty||statusLocked||vehicleLocked||addressLocked} onLock={setConversionLocked} onCommitted={conversionCommitted}/></div>}
    </div>
   </>}
   {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p><button type="button" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('check')}>Check lead save status</button>{view.canRetry&&<button type="button" className="secondary" disabled={view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked} onClick={()=>void action('retry')}>Retry original lead change</button>}{view.reference&&<details className="save-review-reference"><summary>Original save reference</summary><p className="save-reference"><code>{view.reference}</code></p></details>}</>}

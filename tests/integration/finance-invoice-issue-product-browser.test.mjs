@@ -1041,7 +1041,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
        await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
        await report.getByText('Journal entries',{exact:true}).click();
-       await reviewPaymentAccessRecovery({page,region:report,engine:name,task:'journal',loadLabel:'Load journal entries',privateTarget:report.locator('table').first(),message:'Sign in again to review accounting balances.',ready:'Posted balances loaded.',facts:financialFacts,allowRead:allowInvoiceReadWindow,expectedSignIn:'/sign-in?returnTo=accounting&view=reports',auditSelector:'html',reload:async()=>{await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');}});
+       await reviewPaymentAccessRecovery({page,region:report,recoveryRegion:page.getByRole('region',{name:'Account settings',exact:true}),engine:name,task:'journal',loadLabel:'Load journal entries',privateTarget:report.locator('table').first(),message:'Sign in again to review accounting records.',ready:'Posted balances loaded.',facts:financialFacts,allowRead:allowInvoiceReadWindow,expectedSignIn:'/sign-in?returnTo=accounting&view=reports',auditSelector:'html',reload:async()=>{await page.reload();await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');}});
        await expect(report).toContainText(heldTips?'Customer funds and tax payable match the ledger':'Customer funds held match the ledger');
        await report.getByText('Journal entries',{exact:true}).click();
        await report.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');

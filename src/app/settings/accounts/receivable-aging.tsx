@@ -73,7 +73,7 @@ export function ReceivableAging({businessId,initialThrough='',onThroughChange,on
     <summary onClick={event=>{if(event.currentTarget.closest('details')?.open)clear();}}>Outstanding invoices by due date</summary>
     <section aria-label="Outstanding invoices by due date" aria-busy={busy}>
       {!report&&<p className="field-help">Fictional posted invoices. Opening receivables and legacy balances are outside this report’s coverage.</p>}
-      <ReportReadingSummary snapshot={report}>{report&&<FinancialReportHeader period={<>Receivables · As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}
+      <ReportReadingSummary snapshot={report} loading={busy&&!report}>{report&&<FinancialReportHeader period={<>Receivables · As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}
           timeZone={report.timeZone} observedAt={report.observedAt} scopeLabel="Posted invoices"
           coverage="Fictional posted invoices. Opening receivables and legacy balances are outside this report’s coverage."
           details={<><p className={styles.reportAmount}><span>Total outstanding</span> <strong>{usd(report.totalCents)}</strong></p>{report.truncated&&<p className="field-help">Showing the first 100 by due date. Totals include all outstanding posted invoices.</p>}</>}

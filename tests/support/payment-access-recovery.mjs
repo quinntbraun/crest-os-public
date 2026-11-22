@@ -4,8 +4,9 @@ import {expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 const keys=['invoice-draft','invoice-issue','direct-receipt','payment-correction','fund-application','held-tip','invoice-credit','paid-invoice-credit','excess-return','tip-return','collection-failure','refund-transfer','service-refund','collection-failure-recredit','grouped-payment-recredit'].map(kind=>'crest.'+kind+'.pending-reference.v1');
-export async function reviewPaymentAccessRecovery({page,region,engine,task,loadLabel,privateLabel,privateTarget,message,ready,jobId,facts,allowRead,reload,expectedSignIn,auditSelector='.direct-receipt',saveReview=true}){
+export async function reviewPaymentAccessRecovery({page,region,recoveryRegion=region,engine,task,loadLabel,privateLabel,privateTarget,message,ready,jobId,facts,allowRead,reload,expectedSignIn,auditSelector='.direct-receipt',saveReview=true}){
  const target=privateTarget??region.getByLabel(privateLabel),notice=region.locator(':scope > [role="status"]');
+ const deniedNotice=recoveryRegion.locator(':scope > [role="status"]'),wholeWorkspace=recoveryRegion!==region;
  await expect(target).toBeVisible();
  await allowRead();
  const before=await facts(),context=page.context(),cookies=await context.cookies(),viewport=page.viewportSize();
@@ -15,11 +16,12 @@ export async function reviewPaymentAccessRecovery({page,region,engine,task,loadL
   await context.clearCookies();
   const denied=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/auth/session'&&response.status()===400);
   await region.getByRole('button',{name:loadLabel,exact:true}).click();await denied;
-  await expect(notice).toHaveText(message);
-  await expect(notice).toBeFocused();
+  await expect(deniedNotice).toHaveText(message);
+  await expect(deniedNotice).toBeFocused();
   await expect(target).toHaveCount(0);
-  if(saveReview)await expect(region.getByRole('link',{name:'Review interrupted saves',exact:true})).toHaveAttribute('href','/save-review');
-  const signIn=region.getByRole('link',{name:'Sign in again',exact:true});
+  if(wholeWorkspace){await expect(region).toHaveCount(0);await expect(recoveryRegion.locator('form')).toHaveCount(0);}
+  if(saveReview)await expect(recoveryRegion.getByRole('link',{name:'Review interrupted saves',exact:true})).toHaveAttribute('href','/save-review');
+  const signIn=recoveryRegion.getByRole('link',{name:'Sign in again',exact:true});
   await expect(signIn).toHaveAttribute('href',expectedSignIn??'/sign-in?returnTo=schedule&job='+jobId);
   await mkdir('.local/review',{recursive:true});
   for(const width of [390,1440]){
@@ -38,6 +40,7 @@ export async function reviewPaymentAccessRecovery({page,region,engine,task,loadL
  await expect(notice).toHaveText(ready);
  await expect(target).toBeVisible();
  await expect(region.getByRole('link',{name:'Sign in again',exact:true})).toHaveCount(0);
+ await expect(recoveryRegion.getByRole('link',{name:'Sign in again',exact:true})).toHaveCount(0);
  assert.deepEqual(await facts(),before,'Reloading the task does not write financial records');
- await writeFile('.local/review/finance-payment-denied-'+task+'-'+engine+'.json',JSON.stringify({observations,actualSessionDenial:true,loadedTaskCleared:true,wholeWorkspaceClearingClaimed:false,originalReferencesPreserved:true,financialFactsPreserved:true,reloadVerified:true},null,2)+'\n');
+ await writeFile('.local/review/finance-payment-denied-'+task+'-'+engine+'.json',JSON.stringify({observations,actualSessionDenial:true,loadedTaskCleared:true,wholeWorkspaceClearingClaimed:wholeWorkspace,originalReferencesPreserved:true,financialFactsPreserved:true,reloadVerified:true},null,2)+'\n');
 }

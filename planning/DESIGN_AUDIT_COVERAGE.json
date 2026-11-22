@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-22T12:49:42.098Z",
+  "assessedAt": "2026-11-22T14:17:09.355Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "26bf3c3f4b3ca3a99100ebf7971d59add6e79eac",
-    "publishedCommit": "9723a8362485ba93844a7b4c1500e79fb9839ed4",
-    "publishedTree": "444649bd89c2b0949bd662465ea0193e2bc701d4",
-    "localTree": "307571c29c641452586ba41616904c69802f0324"
+    "localCommit": "3983cfad4bafa2b5b9c10383fc80ec0334afd0ce",
+    "publishedCommit": "6b198bc0098ec2c11a5ad1dbd0fabe3e08140e08",
+    "publishedTree": "82cee9cd26b580ada30ab6dc3a75a7084a825492",
+    "localTree": "1d3685f3611a7c1818f249d1858e2c47d605d65a"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -44,8 +44,8 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "Public9723a836/tree444649b exactly matches localf4f937f and now passes all22 main jobs plus both ancillary workflows, including portable container, Linux isolated document/receipt workers, same-session/new-sign-in supplier original re-entry and independent schema120 recovery. Newer Accounting/mapping/CRM safe-context implementation has its own local evidence, not transferred public acceptance.",
-      "remainingWork": "Publish the next coherent exact-tree strictly scanned UI batch and require its own complete fresh release checks. Matching installed build, owner finance/off-laptop restore and physical iPhone acceptance remain open.",
+      "implementedOrPresent": "Public6b198bc0/tree82cee9cd matches local50ef61e and is terminal17/22 main, with both ancillary suites passing. Intake, custody, payment-recovery and records fail; Foundation refuses failed prerequisites and screenshot preservation fails. This candidate is not accepted. Prior81a all22 plus both ancillary successes remain evidence only for their own tree. Local recovery/loading follow-through has separately scoped proof and retained failures.",
+      "remainingWork": "Strictly scan and publish the coherent recovery/loading follow-up, then require its own complete matching release gates. Keep the unexplained custody verification and real503 failures explicit. Matching installed, owner finance/off-laptop restore and physical iPhone acceptance remain open.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "aa45e343219fa5a20ab5fa6bcb86f754cc3730a0e9b797b89a9a100ca5447bb9"
+          "sha256": "e3bc1a14d84fda8b9b728b104d442ea165746b673e3acd51a1e64fbbc9d2482e"
         },
         {
           "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
@@ -225,7 +225,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
@@ -265,7 +265,7 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
+          "sha256": "2b2364206f7a4de59eac96d2da4011c02ce542f83bf782131a1392e6ae2f62e5"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
@@ -297,11 +297,11 @@
         },
         {
           "path": "tests/support/payment-access-recovery.mjs",
-          "sha256": "649f7f6882ea5726299aa6d7a7c0515097b44b570dc47587247bf6ea33a76633"
+          "sha256": "93fd9dc7342c767f71b788eabeccd0693f99966a14297841877682b1c7700081"
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
-          "sha256": "e8dc19667f4f710145c9b276032bde6f118cdea4a0e2065e1f13df108f2af5b8"
+          "sha256": "8e94e6f411b22d001d492a2bb75b869b7a6383e59d399867a54593757ce5cb9a"
         },
         {
           "path": "tests/support/record-unavailable-navigation.mjs",
@@ -321,7 +321,7 @@
         },
         {
           "path": "planning/DESIGNED_WORKFLOW_STATES.md",
-          "sha256": "22b2a827fe67438f7f23684126c18164235e54e1a3294954b1c28900753065f3"
+          "sha256": "445a9f10378365e602adfe363a0b726d5a66c36b21a5685e277abdd80d451235"
         },
         {
           "path": "planning/INVOICE_ACCESS_STATE_REVIEW.md",
@@ -809,7 +809,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
@@ -833,7 +833,7 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
+          "sha256": "2b2364206f7a4de59eac96d2da4011c02ce542f83bf782131a1392e6ae2f62e5"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
@@ -913,7 +913,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
@@ -1013,7 +1013,7 @@
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
-          "sha256": "e8dc19667f4f710145c9b276032bde6f118cdea4a0e2065e1f13df108f2af5b8"
+          "sha256": "8e94e6f411b22d001d492a2bb75b869b7a6383e59d399867a54593757ce5cb9a"
         },
         {
           "path": "tests/support/quote-browser-response.mjs",
@@ -1249,7 +1249,7 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
+          "sha256": "2b2364206f7a4de59eac96d2da4011c02ce542f83bf782131a1392e6ae2f62e5"
         },
         {
           "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
@@ -1316,7 +1316,7 @@
       "title": "P1 · Treat every state as a designed screen",
       "requirements": "Some baseline captures are loading or unavailable. A clean screenshot with no overflow does not establish a completed workflow.\n\nFinish standard: Every important workflow needs loaded, empty, loading, validation, denied, stale, uncertain-save and successful variants with clear next steps.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "The19-family eight-state inventory is present and remains a source/evidence index, not exhaustive visual acceptance. Supplier originals now survive private clearing/reload without stored private payloads. Full financial cases pass on6c15479; same-session and new-sign-in focused original re-entry pass2/2 per browser on35003e4 with exact one15025 P14 and current-authorization receipt checks. Both selected-date financial cases pass separately on2cbb8c0, retaining actual request scope and all P14/P15/export/restore checks.49 reference tests and62 navigation/server-page checks pass; final build/types/full lint pass. Prior0/2,2/4 and1/2 invocations remain retained and scoped. Accounting report follow-up on 89e924da: separate validated Ledger/Income/Customer Funds/Receivables dates and report/section survive switching, privacy clearing, explicit access recheck, reload and genuine denied-child sign-in return. Every report denial clears the complete parent private workspace and focuses the notice. Complete original expense/income journeys pass2/2, including all8 denied-report cases and unchanged finance/journal/audit facts; 70 hashed rendered images retained. Build/types/full lint and52 focused navigation checks pass. Default Ledger URL assertion failure0/2 and initial runner-prerequisite failure0/2 remain retained; no fabricated authentication or assertion/deadline weakening. Repeated loaded-report coverage paragraphs are removed while scoped headers remain. This is local source-specific evidence, not physical/device/installed or fresh public acceptance. Further safe returns: complete original account-settings2/2 on4c9b90b verify opaque selected-history/archived-filter privacy/reload/sign-in return, explicit reopen, actual loading/error/retry, close/origin focus and no account-version/audit changes (34 hashed artifacts,16 new return views). Complete fixed-mapping2/2 and category-approval2/2 separately on a3f3c64 verify preserved public lookup purpose/date through pagehide/persisted restore, category attention private-clear/reload/explicit directory recheck, absent private results/query, actual sign-in/immutable approval/recovery/CSV behavior and conserved financial source (158 hashed artifacts,16 new private-return views). Each invocation kept its source fixed and cleaned its owned database. Final build/types/full lint and62 focused navigation/server-page/sign-in checks pass. Original lookup-empty UI expectations are deliberately replaced by safe retained-filter plus private-result absence checks; approval-editor private clearing and all financial assertions remain. These scoped viewport passes do not establish every state, current public/installed or physical-device acceptance. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off.",
+      "implementedOrPresent": "The19-family eight-state inventory is present and remains a source/evidence index, not exhaustive visual acceptance. Supplier originals now survive private clearing/reload without stored private payloads. Full financial cases pass on6c15479; same-session and new-sign-in focused original re-entry pass2/2 per browser on35003e4 with exact one15025 P14 and current-authorization receipt checks. Both selected-date financial cases pass separately on2cbb8c0, retaining actual request scope and all P14/P15/export/restore checks.49 reference tests and62 navigation/server-page checks pass; final build/types/full lint pass. Prior0/2,2/4 and1/2 invocations remain retained and scoped. Accounting report follow-up on 89e924da: separate validated Ledger/Income/Customer Funds/Receivables dates and report/section survive switching, privacy clearing, explicit access recheck, reload and genuine denied-child sign-in return. Every report denial clears the complete parent private workspace and focuses the notice. Complete original expense/income journeys pass2/2, including all8 denied-report cases and unchanged finance/journal/audit facts; 70 hashed rendered images retained. Build/types/full lint and52 focused navigation checks pass. Default Ledger URL assertion failure0/2 and initial runner-prerequisite failure0/2 remain retained; no fabricated authentication or assertion/deadline weakening. Repeated loaded-report coverage paragraphs are removed while scoped headers remain. This is local source-specific evidence, not physical/device/installed or fresh public acceptance. Further safe returns: complete original account-settings2/2 on4c9b90b verify opaque selected-history/archived-filter privacy/reload/sign-in return, explicit reopen, actual loading/error/retry, close/origin focus and no account-version/audit changes (34 hashed artifacts,16 new return views). Complete fixed-mapping2/2 and category-approval2/2 separately on a3f3c64 verify preserved public lookup purpose/date through pagehide/persisted restore, category attention private-clear/reload/explicit directory recheck, absent private results/query, actual sign-in/immutable approval/recovery/CSV behavior and conserved financial source (158 hashed artifacts,16 new private-return views). Each invocation kept its source fixed and cleaned its owned database. Final build/types/full lint and62 focused navigation/server-page/sign-in checks pass. Original lookup-empty UI expectations are deliberately replaced by safe retained-filter plus private-result absence checks; approval-editor private clearing and all financial assertions remain. These scoped viewport passes do not establish every state, current public/installed or physical-device acceptance. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off. Recovery follow-through: real initial-record and confirmed-child remount races are addressed for selected-lead conversion originals; failed/absent/hidden reads still clear private data and protect original references. Accounting provides parent sign-in/interrupted-save recovery with retained intended section, plus genuine shared report placeholders and reduced motion. Final build/types/full lint and78 focused checks pass; complete income/expense2/2 on8b093a2 verifies four report denials per browser and default journal parent recovery, with76 hashed artifacts. Gated lead invocation25/28 onf94505b retains genuine Chrome503 failures; both address suites, complete Safari conversion and Chrome committed-original gate pass in their own scopes. No full lead or invoice pass is inferred. All native invocations preserve source and owned cleanup. Prior failures remain in LEAD_AND_ACCOUNTING_RECOVERY_FINISH_REVIEW.md. No permission, financial, original-operation, assertion or deadline rule was weakened.",
       "remainingWork": "Finish remaining important-workflow stale/alternate/private/pending/setup variants and any uncovered eight-state behavior. Keep original requirement scope and source-specific passes/failures separate. Require fresh matching release, installed and physical-device review; an inventory is not proof of every variant.",
       "evidence": [
         {
@@ -1325,7 +1325,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "a6ffffd779fdf01f6be0cd232f99a7f7eac9b3f22fad1382a5eb565213e43cc0"
+          "sha256": "a998549859693f85ead3440abc230fd2b6b820f0d4b73cd9b900ca86bb23447c"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -1369,7 +1369,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -1501,7 +1501,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
         },
         {
           "path": "src/app/addresses/addresses.tsx",
@@ -1593,7 +1593,7 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
+          "sha256": "2b2364206f7a4de59eac96d2da4011c02ce542f83bf782131a1392e6ae2f62e5"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
@@ -1621,11 +1621,11 @@
         },
         {
           "path": "tests/support/payment-access-recovery.mjs",
-          "sha256": "649f7f6882ea5726299aa6d7a7c0515097b44b570dc47587247bf6ea33a76633"
+          "sha256": "93fd9dc7342c767f71b788eabeccd0693f99966a14297841877682b1c7700081"
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
-          "sha256": "e8dc19667f4f710145c9b276032bde6f118cdea4a0e2065e1f13df108f2af5b8"
+          "sha256": "8e94e6f411b22d001d492a2bb75b869b7a6383e59d399867a54593757ce5cb9a"
         },
         {
           "path": "tests/integration/google-calendar-settings-product-browser.test.mjs",
@@ -1645,7 +1645,7 @@
         },
         {
           "path": "planning/DESIGNED_WORKFLOW_STATES.md",
-          "sha256": "22b2a827fe67438f7f23684126c18164235e54e1a3294954b1c28900753065f3"
+          "sha256": "445a9f10378365e602adfe363a0b726d5a66c36b21a5685e277abdd80d451235"
         },
         {
           "path": "planning/INVOICE_ACCESS_STATE_REVIEW.md",
@@ -1737,19 +1737,19 @@
         },
         {
           "path": "src/app/settings/accounts/trial-balance.tsx",
-          "sha256": "386a87634f1cfc7c2ee032ea2b043d0fcc43e1a157a79f2aa3cfa67109b7fdff"
+          "sha256": "25c24243e95c13938f639f5ede1df5e2755f385e9fd1b809a061b79a83a4e8b1"
         },
         {
           "path": "src/app/settings/accounts/recorded-income-statement.tsx",
-          "sha256": "470d4ab9712716c99c460dadd634a05bc5d6aa1f6322a0d29fc011c986fbd840"
+          "sha256": "a403ee3f855b1ee25a280305d61ee624433b437867f4fd402e5a7f372e2ee00d"
         },
         {
           "path": "src/app/settings/accounts/customer-funds-report.tsx",
-          "sha256": "b328b3d2c6731e6e98f31c7f41835ec93975003aa6b941a052eafd6d50d5b19c"
+          "sha256": "1ae0b5f9830c9ee73335ffc05211f37b6eb19d00ba2c27ca1f9f194e9951d4da"
         },
         {
           "path": "src/app/settings/accounts/receivable-aging.tsx",
-          "sha256": "f44c68101be0b5a36bddd1e8097e2f09faa82a1c4e0a47fc3c1dd4fac44e2828"
+          "sha256": "09103f83743aead5b0df2ccaa084c79992f6ac65cf6f0edcee383d2de9c09a13"
         },
         {
           "path": "planning/ACCOUNT_HISTORY_RETURN_REVIEW.md",
@@ -1829,7 +1829,7 @@
         },
         {
           "path": "src/client/lead-editor-controller.ts",
-          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+          "sha256": "3c69e55038c28fcd3f281bb962947bcb59c5a60ab0842720015a866b8feaec9a"
         },
         {
           "path": "src/client/service-editor-controller.ts",
@@ -1838,6 +1838,42 @@
         {
           "path": "tests/support/directory-private-return.mjs",
           "sha256": "117a32dc185797ea03e8c76e1d039b48054b46c5d82e248149b952cc359872b3"
+        },
+        {
+          "path": "planning/LEAD_AND_ACCOUNTING_RECOVERY_FINISH_REVIEW.md",
+          "sha256": "01a5b4dc1ea7bdae968eb63187675d9def7e514c176e13e79e15aa158f7e4dac"
+        },
+        {
+          "path": "planning/ACCOUNTING_REPORT_LOADING_REVIEW.md",
+          "sha256": "f7c69a60d0bb6e2e910b9dd74d6a15ad82de93a923c04722a1746f10ab008547"
+        },
+        {
+          "path": "tests/unit/lead-editor-controller.test.ts",
+          "sha256": "00585b4832a5d00b9986332e351ff8900d49719aa7dd3622cfc396086d271075"
+        },
+        {
+          "path": "tests/integration/lead-address-editor-browser.test.mjs",
+          "sha256": "7d9b68a88c5a27ecaddb11cbca00cd5edf88040876a274d2514c0ade66b960ea"
+        },
+        {
+          "path": "tests/integration/lead-conversion-editor-browser.test.mjs",
+          "sha256": "46db8526e36f6055e091544f2c8a530779b939668b069896c66dc4131ba12e09"
+        },
+        {
+          "path": "src/app/settings/accounts/report-reading-summary.tsx",
+          "sha256": "e32259ba9e9cc569b507b3ef40b2034cbd168cac369b006d74a41a223515acfb"
+        },
+        {
+          "path": "src/app/settings/accounts/screen.module.css",
+          "sha256": "204315a68db82375a37c7d37e727d6db0e0229ca3f47a8222a3acfb4b2c25a94"
+        },
+        {
+          "path": "tests/support/accounting-report-workspace.mjs",
+          "sha256": "f7c562e8204d60ab3b0d8f7cff6be68a045e99098842abb49e0c88e8ed488967"
+        },
+        {
+          "path": "tests/support/work-read-diagnostic.mjs",
+          "sha256": "4657ad936fd2d1c23bc66a5a2a6a0c3fe8f48a89833aa333e305ab6eedbdc8a7"
         }
       ],
       "verification": {
@@ -1945,7 +1981,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "a6ffffd779fdf01f6be0cd232f99a7f7eac9b3f22fad1382a5eb565213e43cc0"
+          "sha256": "a998549859693f85ead3440abc230fd2b6b820f0d4b73cd9b900ca86bb23447c"
         }
       ],
       "verification": {
@@ -2085,7 +2121,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -2181,7 +2217,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
@@ -2189,7 +2225,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.module.css",
-          "sha256": "8e117d5642f61255e59ee8221205d8ae4f577527bd29ea7271d04dadcb8cd83b"
+          "sha256": "204315a68db82375a37c7d37e727d6db0e0229ca3f47a8222a3acfb4b2c25a94"
         },
         {
           "path": "tests/integration/finance-money-channel-browser.test.mjs",
@@ -2256,7 +2292,7 @@
       "title": "P2 · Motion should explain changes",
       "requirements": "Source already includes short menu/panel transitions, skeleton shimmer and reduced-motion support. Recommending animations as if absent would be misleading.\n\nFinish standard: Extend the existing system: 120–180 ms control feedback, 180–240 ms panel entry, stable skeleton geometry and a quiet confirmed-save response. No fake progress, delayed access to controls or animated financial totals.",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "The main shared motion implementation and source/rendering review is complete: all17 CSS transition/animation declarations and both keyframes are reviewed. Controls use160ms/140ms feedback and every panel now uses200ms, including Today. Both engines at360/390/1440 normal/reduced motion pass12 isolated actual-CSS matrices/180 element observations with12 hashed captures: computed durations, immediately focusable controls, exact layout dimensions, stable confirmed-notice geometry and an unanimated exact amount. The initial transformed-bounds floating-point probe failure and corrected layout-dimension comparison remain retained with no app change. Actual customer/vehicle loading/verified saves and the three new lead/service/address loading/first-save journeys have separate scoped workflow evidence; the original eight workspace journeys also pass on the new app. No fake progress or access delay was added. Source90071f4 build/types/full lint pass; test-only corrections do not change application files. See SHARED_MOTION_REVIEW.md and DIRECTORY_LOADING_CONTINUITY.md.",
+      "implementedOrPresent": "The main shared motion implementation and source/rendering review is complete: all17 CSS transition/animation declarations and both keyframes are reviewed. Controls use160ms/140ms feedback and every panel now uses200ms, including Today. Both engines at360/390/1440 normal/reduced motion pass12 isolated actual-CSS matrices/180 element observations with12 hashed captures: computed durations, immediately focusable controls, exact layout dimensions, stable confirmed-notice geometry and an unanimated exact amount. The initial transformed-bounds floating-point probe failure and corrected layout-dimension comparison remain retained with no app change. Actual customer/vehicle loading/verified saves and the three new lead/service/address loading/first-save journeys have separate scoped workflow evidence; the original eight workspace journeys also pass on the new app. No fake progress or access delay was added. Source90071f4 build/types/full lint pass; test-only corrections do not change application files. See SHARED_MOTION_REVIEW.md and DIRECTORY_LOADING_CONTINUITY.md. Recovery follow-through: real initial-record and confirmed-child remount races are addressed for selected-lead conversion originals; failed/absent/hidden reads still clear private data and protect original references. Accounting provides parent sign-in/interrupted-save recovery with retained intended section, plus genuine shared report placeholders and reduced motion. Final build/types/full lint and78 focused checks pass; complete income/expense2/2 on8b093a2 verifies four report denials per browser and default journal parent recovery, with76 hashed artifacts. Gated lead invocation25/28 onf94505b retains genuine Chrome503 failures; both address suites, complete Safari conversion and Chrome committed-original gate pass in their own scopes. No full lead or invoice pass is inferred. All native invocations preserve source and owned cleanup. Prior failures remain in LEAD_AND_ACCOUNTING_RECOVERY_FINISH_REVIEW.md. No permission, financial, original-operation, assertion or deadline rule was weakened.",
       "remainingWork": "Complete accepted-release, installed, owner and physical-device motion review, including real keyboard/device preferences. Isolated CSS rendering and the listed synthetic workflow scopes do not establish final sign-off; other missing workflow-state coverage remains in S06.",
       "evidence": [
         {
@@ -2301,11 +2337,11 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/app/settings/accounts/screen.module.css",
-          "sha256": "8e117d5642f61255e59ee8221205d8ae4f577527bd29ea7271d04dadcb8cd83b"
+          "sha256": "204315a68db82375a37c7d37e727d6db0e0229ca3f47a8222a3acfb4b2c25a94"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -2454,6 +2490,62 @@
         {
           "path": "tests/support/directory-loading-journey.mjs",
           "sha256": "5f8a5bfcb5ccf569b6923a4ffac7f0569a99acd74ba016c9c5d288176e7eaa4a"
+        },
+        {
+          "path": "planning/LEAD_AND_ACCOUNTING_RECOVERY_FINISH_REVIEW.md",
+          "sha256": "01a5b4dc1ea7bdae968eb63187675d9def7e514c176e13e79e15aa158f7e4dac"
+        },
+        {
+          "path": "planning/ACCOUNTING_REPORT_LOADING_REVIEW.md",
+          "sha256": "f7c69a60d0bb6e2e910b9dd74d6a15ad82de93a923c04722a1746f10ab008547"
+        },
+        {
+          "path": "planning/DESIGNED_WORKFLOW_STATES.md",
+          "sha256": "445a9f10378365e602adfe363a0b726d5a66c36b21a5685e277abdd80d451235"
+        },
+        {
+          "path": "src/app/leads/leads.tsx",
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
+        },
+        {
+          "path": "src/client/lead-editor-controller.ts",
+          "sha256": "3c69e55038c28fcd3f281bb962947bcb59c5a60ab0842720015a866b8feaec9a"
+        },
+        {
+          "path": "tests/unit/lead-editor-controller.test.ts",
+          "sha256": "00585b4832a5d00b9986332e351ff8900d49719aa7dd3622cfc396086d271075"
+        },
+        {
+          "path": "tests/integration/lead-address-editor-browser.test.mjs",
+          "sha256": "7d9b68a88c5a27ecaddb11cbca00cd5edf88040876a274d2514c0ade66b960ea"
+        },
+        {
+          "path": "tests/integration/lead-conversion-editor-browser.test.mjs",
+          "sha256": "46db8526e36f6055e091544f2c8a530779b939668b069896c66dc4131ba12e09"
+        },
+        {
+          "path": "src/app/settings/accounts/report-reading-summary.tsx",
+          "sha256": "e32259ba9e9cc569b507b3ef40b2034cbd168cac369b006d74a41a223515acfb"
+        },
+        {
+          "path": "tests/support/payment-access-recovery.mjs",
+          "sha256": "93fd9dc7342c767f71b788eabeccd0693f99966a14297841877682b1c7700081"
+        },
+        {
+          "path": "tests/support/accounting-report-workspace.mjs",
+          "sha256": "f7c562e8204d60ab3b0d8f7cff6be68a045e99098842abb49e0c88e8ed488967"
+        },
+        {
+          "path": "tests/integration/finance-expense-posting-browser.test.mjs",
+          "sha256": "2b2364206f7a4de59eac96d2da4011c02ce542f83bf782131a1392e6ae2f62e5"
+        },
+        {
+          "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
+          "sha256": "8e94e6f411b22d001d492a2bb75b869b7a6383e59d399867a54593757ce5cb9a"
+        },
+        {
+          "path": "tests/support/work-read-diagnostic.mjs",
+          "sha256": "4657ad936fd2d1c23bc66a5a2a6a0c3fe8f48a89833aa333e305ab6eedbdc8a7"
         }
       ],
       "verification": {
@@ -2677,7 +2769,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/app/settings/accounts/tax/screen.tsx",
@@ -2716,7 +2808,7 @@
       "title": "P2 · Protect context through every transition",
       "requirements": "Back links now exist on many deeper routes. Their wording and destinations still vary, and an opened task can lose the visible customer/job context.\n\nFinish standard: Use a common breadcrumb or contextual return row, preserve selected record/date/filter where safe, restore focus and avoid retaining private detail after sign-out.",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Source-specific record/planner/Calendar returns and private clearing remain. Supplier posting/payment recovery now uses actual current authorization after new sign-in, retains only original identities, preserves original re-entry targets and never silently releases a conflicting original. Selected supplier register dates survive sign-in/private clearing/actual reload in both full financial cases. Safe inactive Purchases/Exports context is projected through the actual return/server pages and62 unit checks; new pane-switch browser assertions are registered for release. Accounting report follow-up on 89e924da: separate validated Ledger/Income/Customer Funds/Receivables dates and report/section survive switching, privacy clearing, explicit access recheck, reload and genuine denied-child sign-in return. Every report denial clears the complete parent private workspace and focuses the notice. Complete original expense/income journeys pass2/2, including all8 denied-report cases and unchanged finance/journal/audit facts; 70 hashed rendered images retained. Build/types/full lint and52 focused navigation checks pass. Default Ledger URL assertion failure0/2 and initial runner-prerequisite failure0/2 remain retained; no fabricated authentication or assertion/deadline weakening. Repeated loaded-report coverage paragraphs are removed while scoped headers remain. This is local source-specific evidence, not physical/device/installed or fresh public acceptance. Further safe returns: complete original account-settings2/2 on4c9b90b verify opaque selected-history/archived-filter privacy/reload/sign-in return, explicit reopen, actual loading/error/retry, close/origin focus and no account-version/audit changes (34 hashed artifacts,16 new return views). Complete fixed-mapping2/2 and category-approval2/2 separately on a3f3c64 verify preserved public lookup purpose/date through pagehide/persisted restore, category attention private-clear/reload/explicit directory recheck, absent private results/query, actual sign-in/immutable approval/recovery/CSV behavior and conserved financial source (158 hashed artifacts,16 new private-return views). Each invocation kept its source fixed and cleaned its owned database. Final build/types/full lint and62 focused navigation/server-page/sign-in checks pass. Original lookup-empty UI expectations are deliberately replaced by safe retained-filter plus private-result absence checks; approval-editor private clearing and all financial assertions remain. These scoped viewport passes do not establish every state, current public/installed or physical-device acceptance. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off.",
+      "implementedOrPresent": "Source-specific record/planner/Calendar returns and private clearing remain. Supplier posting/payment recovery now uses actual current authorization after new sign-in, retains only original identities, preserves original re-entry targets and never silently releases a conflicting original. Selected supplier register dates survive sign-in/private clearing/actual reload in both full financial cases. Safe inactive Purchases/Exports context is projected through the actual return/server pages and62 unit checks; new pane-switch browser assertions are registered for release. Accounting report follow-up on 89e924da: separate validated Ledger/Income/Customer Funds/Receivables dates and report/section survive switching, privacy clearing, explicit access recheck, reload and genuine denied-child sign-in return. Every report denial clears the complete parent private workspace and focuses the notice. Complete original expense/income journeys pass2/2, including all8 denied-report cases and unchanged finance/journal/audit facts; 70 hashed rendered images retained. Build/types/full lint and52 focused navigation checks pass. Default Ledger URL assertion failure0/2 and initial runner-prerequisite failure0/2 remain retained; no fabricated authentication or assertion/deadline weakening. Repeated loaded-report coverage paragraphs are removed while scoped headers remain. This is local source-specific evidence, not physical/device/installed or fresh public acceptance. Further safe returns: complete original account-settings2/2 on4c9b90b verify opaque selected-history/archived-filter privacy/reload/sign-in return, explicit reopen, actual loading/error/retry, close/origin focus and no account-version/audit changes (34 hashed artifacts,16 new return views). Complete fixed-mapping2/2 and category-approval2/2 separately on a3f3c64 verify preserved public lookup purpose/date through pagehide/persisted restore, category attention private-clear/reload/explicit directory recheck, absent private results/query, actual sign-in/immutable approval/recovery/CSV behavior and conserved financial source (158 hashed artifacts,16 new private-return views). Each invocation kept its source fixed and cleaned its owned database. Final build/types/full lint and62 focused navigation/server-page/sign-in checks pass. Original lookup-empty UI expectations are deliberately replaced by safe retained-filter plus private-result absence checks; approval-editor private clearing and all financial assertions remain. These scoped viewport passes do not establish every state, current public/installed or physical-device acceptance. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off. Recovery follow-through: real initial-record and confirmed-child remount races are addressed for selected-lead conversion originals; failed/absent/hidden reads still clear private data and protect original references. Accounting provides parent sign-in/interrupted-save recovery with retained intended section, plus genuine shared report placeholders and reduced motion. Final build/types/full lint and78 focused checks pass; complete income/expense2/2 on8b093a2 verifies four report denials per browser and default journal parent recovery, with76 hashed artifacts. Gated lead invocation25/28 onf94505b retains genuine Chrome503 failures; both address suites, complete Safari conversion and Chrome committed-original gate pass in their own scopes. No full lead or invoice pass is inferred. All native invocations preserve source and owned cleanup. Prior failures remain in LEAD_AND_ACCOUNTING_RECOVERY_FINISH_REVIEW.md. No permission, financial, original-operation, assertion or deadline rule was weakened.",
       "remainingWork": "Main contextual return implementation is locally addressed, with genuine directory, report/account and mapping consumers and fresh-reader/private-clear/focus proof. Complete broader alternate-origin, long/filter/paging, stale/private and task-specific state review plus matching current release, installed/owner and physical-device acceptance. Unsafe drafts, search text and stale private cursors are deliberately not retained. Every original requirement and final-sign-off gate remains.",
       "evidence": [
         {
@@ -2941,7 +3033,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
@@ -3001,7 +3093,7 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
+          "sha256": "2b2364206f7a4de59eac96d2da4011c02ce542f83bf782131a1392e6ae2f62e5"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
@@ -3029,11 +3121,11 @@
         },
         {
           "path": "tests/support/payment-access-recovery.mjs",
-          "sha256": "649f7f6882ea5726299aa6d7a7c0515097b44b570dc47587247bf6ea33a76633"
+          "sha256": "93fd9dc7342c767f71b788eabeccd0693f99966a14297841877682b1c7700081"
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
-          "sha256": "e8dc19667f4f710145c9b276032bde6f118cdea4a0e2065e1f13df108f2af5b8"
+          "sha256": "8e94e6f411b22d001d492a2bb75b869b7a6383e59d399867a54593757ce5cb9a"
         },
         {
           "path": "tests/integration/google-calendar-settings-product-browser.test.mjs",
@@ -3053,7 +3145,7 @@
         },
         {
           "path": "planning/DESIGNED_WORKFLOW_STATES.md",
-          "sha256": "22b2a827fe67438f7f23684126c18164235e54e1a3294954b1c28900753065f3"
+          "sha256": "445a9f10378365e602adfe363a0b726d5a66c36b21a5685e277abdd80d451235"
         },
         {
           "path": "planning/INVOICE_ACCESS_STATE_REVIEW.md",
@@ -3145,7 +3237,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/app/settings/accounts/accounting-reports.tsx",
@@ -3153,19 +3245,19 @@
         },
         {
           "path": "src/app/settings/accounts/trial-balance.tsx",
-          "sha256": "386a87634f1cfc7c2ee032ea2b043d0fcc43e1a157a79f2aa3cfa67109b7fdff"
+          "sha256": "25c24243e95c13938f639f5ede1df5e2755f385e9fd1b809a061b79a83a4e8b1"
         },
         {
           "path": "src/app/settings/accounts/recorded-income-statement.tsx",
-          "sha256": "470d4ab9712716c99c460dadd634a05bc5d6aa1f6322a0d29fc011c986fbd840"
+          "sha256": "a403ee3f855b1ee25a280305d61ee624433b437867f4fd402e5a7f372e2ee00d"
         },
         {
           "path": "src/app/settings/accounts/customer-funds-report.tsx",
-          "sha256": "b328b3d2c6731e6e98f31c7f41835ec93975003aa6b941a052eafd6d50d5b19c"
+          "sha256": "1ae0b5f9830c9ee73335ffc05211f37b6eb19d00ba2c27ca1f9f194e9951d4da"
         },
         {
           "path": "src/app/settings/accounts/receivable-aging.tsx",
-          "sha256": "f44c68101be0b5a36bddd1e8097e2f09faa82a1c4e0a47fc3c1dd4fac44e2828"
+          "sha256": "09103f83743aead5b0df2ccaa084c79992f6ac65cf6f0edcee383d2de9c09a13"
         },
         {
           "path": "planning/ACCOUNT_HISTORY_RETURN_REVIEW.md",
@@ -3237,7 +3329,7 @@
         },
         {
           "path": "src/client/lead-editor-controller.ts",
-          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+          "sha256": "3c69e55038c28fcd3f281bb962947bcb59c5a60ab0842720015a866b8feaec9a"
         },
         {
           "path": "src/client/service-editor-controller.ts",
@@ -3246,6 +3338,42 @@
         {
           "path": "tests/support/directory-private-return.mjs",
           "sha256": "117a32dc185797ea03e8c76e1d039b48054b46c5d82e248149b952cc359872b3"
+        },
+        {
+          "path": "planning/LEAD_AND_ACCOUNTING_RECOVERY_FINISH_REVIEW.md",
+          "sha256": "01a5b4dc1ea7bdae968eb63187675d9def7e514c176e13e79e15aa158f7e4dac"
+        },
+        {
+          "path": "planning/ACCOUNTING_REPORT_LOADING_REVIEW.md",
+          "sha256": "f7c69a60d0bb6e2e910b9dd74d6a15ad82de93a923c04722a1746f10ab008547"
+        },
+        {
+          "path": "tests/unit/lead-editor-controller.test.ts",
+          "sha256": "00585b4832a5d00b9986332e351ff8900d49719aa7dd3622cfc396086d271075"
+        },
+        {
+          "path": "tests/integration/lead-address-editor-browser.test.mjs",
+          "sha256": "7d9b68a88c5a27ecaddb11cbca00cd5edf88040876a274d2514c0ade66b960ea"
+        },
+        {
+          "path": "tests/integration/lead-conversion-editor-browser.test.mjs",
+          "sha256": "46db8526e36f6055e091544f2c8a530779b939668b069896c66dc4131ba12e09"
+        },
+        {
+          "path": "src/app/settings/accounts/report-reading-summary.tsx",
+          "sha256": "e32259ba9e9cc569b507b3ef40b2034cbd168cac369b006d74a41a223515acfb"
+        },
+        {
+          "path": "src/app/settings/accounts/screen.module.css",
+          "sha256": "204315a68db82375a37c7d37e727d6db0e0229ca3f47a8222a3acfb4b2c25a94"
+        },
+        {
+          "path": "tests/support/accounting-report-workspace.mjs",
+          "sha256": "f7c562e8204d60ab3b0d8f7cff6be68a045e99098842abb49e0c88e8ed488967"
+        },
+        {
+          "path": "tests/support/work-read-diagnostic.mjs",
+          "sha256": "4657ad936fd2d1c23bc66a5a2a6a0c3fe8f48a89833aa333e305ab6eedbdc8a7"
         }
       ],
       "verification": {
@@ -3269,7 +3397,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "aa45e343219fa5a20ab5fa6bcb86f754cc3730a0e9b797b89a9a100ca5447bb9"
+          "sha256": "e3bc1a14d84fda8b9b728b104d442ea165746b673e3acd51a1e64fbbc9d2482e"
         }
       ],
       "verification": {
@@ -3529,7 +3657,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
         },
         {
           "path": "src/app/leads/page.tsx",
@@ -3553,7 +3681,7 @@
         },
         {
           "path": "src/client/lead-editor-controller.ts",
-          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+          "sha256": "3c69e55038c28fcd3f281bb962947bcb59c5a60ab0842720015a866b8feaec9a"
         },
         {
           "path": "src/client/service-editor-controller.ts",
@@ -3661,7 +3789,7 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
+          "sha256": "2b2364206f7a4de59eac96d2da4011c02ce542f83bf782131a1392e6ae2f62e5"
         },
         {
           "path": "tests/integration/owner-expenses-layout.test.mjs",
@@ -3768,12 +3896,12 @@
       "title": "P1 · Leads and follow-ups (/leads)",
       "requirements": "Observed: Follow-up rows are compact and useful, but the captured queue mixes an overdue lost lead with future reminders. Fixture dates are extreme and should not be treated as business defects.\n\nDirection: Make urgency, lead state and next action separate visual facts. Add clearly labeled due and upcoming views only over the existing authorized data. Keep follow-up eligibility governed by documented rules.\n\nDesktop: Use aligned due time, lead and status columns with an inspector.\n\nPhone: Show name, next due time and action before secondary source details.\n\nAcceptance: Review the treatment of lost or closed leads with due reminders; do not silently change their eligibility rule during visual work.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/leads-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Loaded-page due/upcoming views, independent urgency/state, focused phone records and next actions are implemented. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off.",
+      "implementedOrPresent": "Loaded-page due/upcoming views, independent urgency/state, focused phone records and next actions are implemented. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off. Recovery follow-through: real initial-record and confirmed-child remount races are addressed for selected-lead conversion originals; failed/absent/hidden reads still clear private data and protect original references. Accounting provides parent sign-in/interrupted-save recovery with retained intended section, plus genuine shared report placeholders and reduced motion. Final build/types/full lint and78 focused checks pass; complete income/expense2/2 on8b093a2 verifies four report denials per browser and default journal parent recovery, with76 hashed artifacts. Gated lead invocation25/28 onf94505b retains genuine Chrome503 failures; both address suites, complete Safari conversion and Chrome committed-original gate pass in their own scopes. No full lead or invoice pass is inferred. All native invocations preserve source and owned cleanup. Prior failures remain in LEAD_AND_ACCOUNTING_RECOVERY_FINISH_REVIEW.md. No permission, financial, original-operation, assertion or deadline rule was weakened.",
       "remainingWork": "Complete remaining state variants and final release; do not alter follow-up eligibility.",
       "evidence": [
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
         },
         {
           "path": "planning/LEAD_REMINDER_WORKBENCH_DESIGN.md",
@@ -3821,7 +3949,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
         },
         {
           "path": "src/app/leads/page.tsx",
@@ -3845,7 +3973,7 @@
         },
         {
           "path": "src/client/lead-editor-controller.ts",
-          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+          "sha256": "3c69e55038c28fcd3f281bb962947bcb59c5a60ab0842720015a866b8feaec9a"
         },
         {
           "path": "src/client/service-editor-controller.ts",
@@ -3862,6 +3990,62 @@
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
           "sha256": "f29258476c6473bef71774b05267e4f224ca97981d1606a698cea876a4a0d6e2"
+        },
+        {
+          "path": "planning/LEAD_AND_ACCOUNTING_RECOVERY_FINISH_REVIEW.md",
+          "sha256": "01a5b4dc1ea7bdae968eb63187675d9def7e514c176e13e79e15aa158f7e4dac"
+        },
+        {
+          "path": "planning/ACCOUNTING_REPORT_LOADING_REVIEW.md",
+          "sha256": "f7c69a60d0bb6e2e910b9dd74d6a15ad82de93a923c04722a1746f10ab008547"
+        },
+        {
+          "path": "planning/DESIGNED_WORKFLOW_STATES.md",
+          "sha256": "445a9f10378365e602adfe363a0b726d5a66c36b21a5685e277abdd80d451235"
+        },
+        {
+          "path": "tests/unit/lead-editor-controller.test.ts",
+          "sha256": "00585b4832a5d00b9986332e351ff8900d49719aa7dd3622cfc396086d271075"
+        },
+        {
+          "path": "tests/integration/lead-address-editor-browser.test.mjs",
+          "sha256": "7d9b68a88c5a27ecaddb11cbca00cd5edf88040876a274d2514c0ade66b960ea"
+        },
+        {
+          "path": "tests/integration/lead-conversion-editor-browser.test.mjs",
+          "sha256": "46db8526e36f6055e091544f2c8a530779b939668b069896c66dc4131ba12e09"
+        },
+        {
+          "path": "src/app/settings/accounts/screen.tsx",
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
+        },
+        {
+          "path": "src/app/settings/accounts/report-reading-summary.tsx",
+          "sha256": "e32259ba9e9cc569b507b3ef40b2034cbd168cac369b006d74a41a223515acfb"
+        },
+        {
+          "path": "src/app/settings/accounts/screen.module.css",
+          "sha256": "204315a68db82375a37c7d37e727d6db0e0229ca3f47a8222a3acfb4b2c25a94"
+        },
+        {
+          "path": "tests/support/payment-access-recovery.mjs",
+          "sha256": "93fd9dc7342c767f71b788eabeccd0693f99966a14297841877682b1c7700081"
+        },
+        {
+          "path": "tests/support/accounting-report-workspace.mjs",
+          "sha256": "f7c562e8204d60ab3b0d8f7cff6be68a045e99098842abb49e0c88e8ed488967"
+        },
+        {
+          "path": "tests/integration/finance-expense-posting-browser.test.mjs",
+          "sha256": "2b2364206f7a4de59eac96d2da4011c02ce542f83bf782131a1392e6ae2f62e5"
+        },
+        {
+          "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
+          "sha256": "8e94e6f411b22d001d492a2bb75b869b7a6383e59d399867a54593757ce5cb9a"
+        },
+        {
+          "path": "tests/support/work-read-diagnostic.mjs",
+          "sha256": "4657ad936fd2d1c23bc66a5a2a6a0c3fe8f48a89833aa333e305ab6eedbdc8a7"
         }
       ],
       "verification": {
@@ -4301,7 +4485,7 @@
         },
         {
           "path": "tests/support/work-read-diagnostic.mjs",
-          "sha256": "0f9e30cf76e46251cf24ba2cc5ff06f6d81a079511931e1b35657d0078997aa7"
+          "sha256": "4657ad936fd2d1c23bc66a5a2a6a0c3fe8f48a89833aa333e305ab6eedbdc8a7"
         },
         {
           "path": "tests/integration/unfulfilled-cancellation-product-browser.test.mjs",
@@ -4377,7 +4561,7 @@
         },
         {
           "path": "tests/support/work-read-diagnostic.mjs",
-          "sha256": "0f9e30cf76e46251cf24ba2cc5ff06f6d81a079511931e1b35657d0078997aa7"
+          "sha256": "4657ad936fd2d1c23bc66a5a2a6a0c3fe8f48a89833aa333e305ab6eedbdc8a7"
         }
       ],
       "verification": {
@@ -4473,7 +4657,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
         },
         {
           "path": "src/app/leads/page.tsx",
@@ -4497,7 +4681,7 @@
         },
         {
           "path": "src/client/lead-editor-controller.ts",
-          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+          "sha256": "3c69e55038c28fcd3f281bb962947bcb59c5a60ab0842720015a866b8feaec9a"
         },
         {
           "path": "src/client/service-editor-controller.ts",
@@ -4552,7 +4736,7 @@
       "title": "P1 · Accounting home (/settings/accounts)",
       "requirements": "Observed: Reports, Accounts and Setup are a good separation, but the baseline opens a trial-balance form rather than a strong financial overview.\n\nDirection: Create a report workspace with a persistent report picker, date scope, coverage notice, loaded-as-of timestamp and export action. Make posted figures, incomplete coverage and setup status distinct.\n\nDesktop: Use available width for aligned figures and drill-in details.\n\nPhone: Put scope and key verified total before long filters or nested tables.\n\nAcceptance: Do not label incomplete recorded profit as business profit; no attractive summary may hide missing opening balances or costs.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Persistent desktop report library, compact phone choices and verified summaries before still-mounted date controls are implemented. Complete income/ledger and funds/receivables journeys pass both engines, including actual scoped CSV and retained original financial/recovery/export checks. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows. FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md adds scoped max-length names/evidence, actual100/200% Chromium zoom, retained predecessor/audit facts and actual served-font checks; the saved-channel container now wraps valid long labels. Accounting report follow-up on 89e924da: separate validated Ledger/Income/Customer Funds/Receivables dates and report/section survive switching, privacy clearing, explicit access recheck, reload and genuine denied-child sign-in return. Every report denial clears the complete parent private workspace and focuses the notice. Complete original expense/income journeys pass2/2, including all8 denied-report cases and unchanged finance/journal/audit facts; 70 hashed rendered images retained. Build/types/full lint and52 focused navigation checks pass. Default Ledger URL assertion failure0/2 and initial runner-prerequisite failure0/2 remain retained; no fabricated authentication or assertion/deadline weakening. Repeated loaded-report coverage paragraphs are removed while scoped headers remain. This is local source-specific evidence, not physical/device/installed or fresh public acceptance. Further safe returns: complete original account-settings2/2 on4c9b90b verify opaque selected-history/archived-filter privacy/reload/sign-in return, explicit reopen, actual loading/error/retry, close/origin focus and no account-version/audit changes (34 hashed artifacts,16 new return views). Complete fixed-mapping2/2 and category-approval2/2 separately on a3f3c64 verify preserved public lookup purpose/date through pagehide/persisted restore, category attention private-clear/reload/explicit directory recheck, absent private results/query, actual sign-in/immutable approval/recovery/CSV behavior and conserved financial source (158 hashed artifacts,16 new private-return views). Each invocation kept its source fixed and cleaned its owned database. Final build/types/full lint and62 focused navigation/server-page/sign-in checks pass. Original lookup-empty UI expectations are deliberately replaced by safe retained-filter plus private-result absence checks; approval-editor private clearing and all financial assertions remain. These scoped viewport passes do not establish every state, current public/installed or physical-device acceptance.",
+      "implementedOrPresent": "Persistent desktop report library, compact phone choices and verified summaries before still-mounted date controls are implemented. Complete income/ledger and funds/receivables journeys pass both engines, including actual scoped CSV and retained original financial/recovery/export checks. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows. FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md adds scoped max-length names/evidence, actual100/200% Chromium zoom, retained predecessor/audit facts and actual served-font checks; the saved-channel container now wraps valid long labels. Accounting report follow-up on 89e924da: separate validated Ledger/Income/Customer Funds/Receivables dates and report/section survive switching, privacy clearing, explicit access recheck, reload and genuine denied-child sign-in return. Every report denial clears the complete parent private workspace and focuses the notice. Complete original expense/income journeys pass2/2, including all8 denied-report cases and unchanged finance/journal/audit facts; 70 hashed rendered images retained. Build/types/full lint and52 focused navigation checks pass. Default Ledger URL assertion failure0/2 and initial runner-prerequisite failure0/2 remain retained; no fabricated authentication or assertion/deadline weakening. Repeated loaded-report coverage paragraphs are removed while scoped headers remain. This is local source-specific evidence, not physical/device/installed or fresh public acceptance. Further safe returns: complete original account-settings2/2 on4c9b90b verify opaque selected-history/archived-filter privacy/reload/sign-in return, explicit reopen, actual loading/error/retry, close/origin focus and no account-version/audit changes (34 hashed artifacts,16 new return views). Complete fixed-mapping2/2 and category-approval2/2 separately on a3f3c64 verify preserved public lookup purpose/date through pagehide/persisted restore, category attention private-clear/reload/explicit directory recheck, absent private results/query, actual sign-in/immutable approval/recovery/CSV behavior and conserved financial source (158 hashed artifacts,16 new private-return views). Each invocation kept its source fixed and cleaned its owned database. Final build/types/full lint and62 focused navigation/server-page/sign-in checks pass. Original lookup-empty UI expectations are deliberately replaced by safe retained-filter plus private-result absence checks; approval-editor private clearing and all financial assertions remain. These scoped viewport passes do not establish every state, current public/installed or physical-device acceptance. Recovery follow-through: real initial-record and confirmed-child remount races are addressed for selected-lead conversion originals; failed/absent/hidden reads still clear private data and protect original references. Accounting provides parent sign-in/interrupted-save recovery with retained intended section, plus genuine shared report placeholders and reduced motion. Final build/types/full lint and78 focused checks pass; complete income/expense2/2 on8b093a2 verifies four report denials per browser and default journal parent recovery, with76 hashed artifacts. Gated lead invocation25/28 onf94505b retains genuine Chrome503 failures; both address suites, complete Safari conversion and Chrome committed-original gate pass in their own scopes. No full lead or invoice pass is inferred. All native invocations preserve source and owned cleanup. Prior failures remain in LEAD_AND_ACCOUNTING_RECOVERY_FINISH_REVIEW.md. No permission, financial, original-operation, assertion or deadline rule was weakened.",
       "remainingWork": "Complete remaining state/zoom/private-clearing variants; investigate retained tax/session failures and preserve exact-source release/installed/physical-device requirements.",
       "evidence": [
         {
@@ -4589,7 +4773,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -4621,23 +4805,23 @@
         },
         {
           "path": "src/app/settings/accounts/trial-balance.tsx",
-          "sha256": "386a87634f1cfc7c2ee032ea2b043d0fcc43e1a157a79f2aa3cfa67109b7fdff"
+          "sha256": "25c24243e95c13938f639f5ede1df5e2755f385e9fd1b809a061b79a83a4e8b1"
         },
         {
           "path": "src/app/settings/accounts/recorded-income-statement.tsx",
-          "sha256": "470d4ab9712716c99c460dadd634a05bc5d6aa1f6322a0d29fc011c986fbd840"
+          "sha256": "a403ee3f855b1ee25a280305d61ee624433b437867f4fd402e5a7f372e2ee00d"
         },
         {
           "path": "src/app/settings/accounts/customer-funds-report.tsx",
-          "sha256": "b328b3d2c6731e6e98f31c7f41835ec93975003aa6b941a052eafd6d50d5b19c"
+          "sha256": "1ae0b5f9830c9ee73335ffc05211f37b6eb19d00ba2c27ca1f9f194e9951d4da"
         },
         {
           "path": "src/app/settings/accounts/receivable-aging.tsx",
-          "sha256": "f44c68101be0b5a36bddd1e8097e2f09faa82a1c4e0a47fc3c1dd4fac44e2828"
+          "sha256": "09103f83743aead5b0df2ccaa084c79992f6ac65cf6f0edcee383d2de9c09a13"
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
+          "sha256": "2b2364206f7a4de59eac96d2da4011c02ce542f83bf782131a1392e6ae2f62e5"
         },
         {
           "path": "src/client/sign-in-navigation.ts",
@@ -4690,6 +4874,62 @@
         {
           "path": "tests/support/mapping-navigation-review.mjs",
           "sha256": "8c93399e13cb2c499cbeccbd65f83816d826fd51d77cca72d440a4158ec3d9c2"
+        },
+        {
+          "path": "planning/LEAD_AND_ACCOUNTING_RECOVERY_FINISH_REVIEW.md",
+          "sha256": "01a5b4dc1ea7bdae968eb63187675d9def7e514c176e13e79e15aa158f7e4dac"
+        },
+        {
+          "path": "planning/ACCOUNTING_REPORT_LOADING_REVIEW.md",
+          "sha256": "f7c69a60d0bb6e2e910b9dd74d6a15ad82de93a923c04722a1746f10ab008547"
+        },
+        {
+          "path": "planning/DESIGNED_WORKFLOW_STATES.md",
+          "sha256": "445a9f10378365e602adfe363a0b726d5a66c36b21a5685e277abdd80d451235"
+        },
+        {
+          "path": "src/app/leads/leads.tsx",
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
+        },
+        {
+          "path": "src/client/lead-editor-controller.ts",
+          "sha256": "3c69e55038c28fcd3f281bb962947bcb59c5a60ab0842720015a866b8feaec9a"
+        },
+        {
+          "path": "tests/unit/lead-editor-controller.test.ts",
+          "sha256": "00585b4832a5d00b9986332e351ff8900d49719aa7dd3622cfc396086d271075"
+        },
+        {
+          "path": "tests/integration/lead-address-editor-browser.test.mjs",
+          "sha256": "7d9b68a88c5a27ecaddb11cbca00cd5edf88040876a274d2514c0ade66b960ea"
+        },
+        {
+          "path": "tests/integration/lead-conversion-editor-browser.test.mjs",
+          "sha256": "46db8526e36f6055e091544f2c8a530779b939668b069896c66dc4131ba12e09"
+        },
+        {
+          "path": "src/app/settings/accounts/report-reading-summary.tsx",
+          "sha256": "e32259ba9e9cc569b507b3ef40b2034cbd168cac369b006d74a41a223515acfb"
+        },
+        {
+          "path": "src/app/settings/accounts/screen.module.css",
+          "sha256": "204315a68db82375a37c7d37e727d6db0e0229ca3f47a8222a3acfb4b2c25a94"
+        },
+        {
+          "path": "tests/support/payment-access-recovery.mjs",
+          "sha256": "93fd9dc7342c767f71b788eabeccd0693f99966a14297841877682b1c7700081"
+        },
+        {
+          "path": "tests/support/accounting-report-workspace.mjs",
+          "sha256": "f7c562e8204d60ab3b0d8f7cff6be68a045e99098842abb49e0c88e8ed488967"
+        },
+        {
+          "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
+          "sha256": "8e94e6f411b22d001d492a2bb75b869b7a6383e59d399867a54593757ce5cb9a"
+        },
+        {
+          "path": "tests/support/work-read-diagnostic.mjs",
+          "sha256": "4657ad936fd2d1c23bc66a5a2a6a0c3fe8f48a89833aa333e305ab6eedbdc8a7"
         }
       ],
       "verification": {
@@ -4725,7 +4965,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -4777,7 +5017,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/client/accounting-navigation.ts",
@@ -4861,7 +5101,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/client/accounting-navigation.ts",
@@ -4965,7 +5205,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -5009,7 +5249,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+          "sha256": "faed9f3f86506a6623e4893e1d2949b5e26816a99c4d100ae3a2d7598dc0bc29"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -5137,7 +5377,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+          "sha256": "6b51e68a4b3f59b2319fc94e9e5d7295ef1e86341f4f43518775cd7f001161d3"
         },
         {
           "path": "src/app/leads/page.tsx",
@@ -5161,7 +5401,7 @@
         },
         {
           "path": "src/client/lead-editor-controller.ts",
-          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+          "sha256": "3c69e55038c28fcd3f281bb962947bcb59c5a60ab0842720015a866b8feaec9a"
         },
         {
           "path": "src/client/service-editor-controller.ts",
@@ -5461,7 +5701,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/trial-balance.tsx",
-          "sha256": "386a87634f1cfc7c2ee032ea2b043d0fcc43e1a157a79f2aa3cfa67109b7fdff"
+          "sha256": "25c24243e95c13938f639f5ede1df5e2755f385e9fd1b809a061b79a83a4e8b1"
         },
         {
           "path": "planning/REPORT_SCOPE_DESIGN.md",
@@ -5485,7 +5725,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/recorded-income-statement.tsx",
-          "sha256": "470d4ab9712716c99c460dadd634a05bc5d6aa1f6322a0d29fc011c986fbd840"
+          "sha256": "a403ee3f855b1ee25a280305d61ee624433b437867f4fd402e5a7f372e2ee00d"
         },
         {
           "path": "planning/REPORT_SCOPE_DESIGN.md",
@@ -5509,7 +5749,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/receivable-aging.tsx",
-          "sha256": "f44c68101be0b5a36bddd1e8097e2f09faa82a1c4e0a47fc3c1dd4fac44e2828"
+          "sha256": "09103f83743aead5b0df2ccaa084c79992f6ac65cf6f0edcee383d2de9c09a13"
         },
         {
           "path": "planning/RECEIVABLE_AGING_DENSITY_DESIGN.md",
@@ -5533,7 +5773,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/customer-funds-report.tsx",
-          "sha256": "b328b3d2c6731e6e98f31c7f41835ec93975003aa6b941a052eafd6d50d5b19c"
+          "sha256": "1ae0b5f9830c9ee73335ffc05211f37b6eb19d00ba2c27ca1f9f194e9951d4da"
         },
         {
           "path": "planning/REPORT_SCOPE_DESIGN.md",
@@ -5613,7 +5853,7 @@
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
-          "sha256": "e8dc19667f4f710145c9b276032bde6f118cdea4a0e2065e1f13df108f2af5b8"
+          "sha256": "8e94e6f411b22d001d492a2bb75b869b7a6383e59d399867a54593757ce5cb9a"
         },
         {
           "path": "tests/unit/invoice-outstanding-contract.test.ts",

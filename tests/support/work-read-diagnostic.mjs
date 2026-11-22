@@ -12,8 +12,9 @@ export function observeWorkReads(page,fixture,label){
  const responses=[];let phase='initial';
  page.on('response',response=>{
   const route=new URL(response.url()).pathname;
-  if(route==='/api/auth/session'||/^\/api\/business\/scheduling\/[a-z-]{1,64}$/.test(route)){
-   responses.push({phase,route,status:response.status(),at:Date.now()});if(responses.length>32)responses.shift();
+  if(route==='/api/auth/session'||/^\/api\/business\/scheduling\/[a-z-]{1,64}$/.test(route)
+   ||/^\/api\/business\/scheduling\/custody-photo\/(upload|verify|status|file|prepare-original|original)$/.test(route)){
+   responses.push({phase,route,status:response.status(),at:Date.now()});if(responses.length>64)responses.shift();
   }
  });
  const report=async()=>{
