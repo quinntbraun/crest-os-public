@@ -103,10 +103,10 @@ export function SupplierPayableEntryReview({context,bill,lockDraft,draftDirty=fa
  </details>;
 }
 
-export function SupplierPayableRegister({context}:{context:FinanceAccountContext}){
+export function SupplierPayableRegister({context,initialReport=null,initialNotice='',initialThroughOn='',onThroughOnChange}:{context:FinanceAccountContext;initialReport?:Register|null;initialNotice?:string;initialThroughOn?:string;onThroughOnChange?:(value:string)=>void}){
  const active=useRef<AbortController|null>(null);
- const [report,setReport]=useState<Register|null>(null),[throughOn,setThroughOn]=useState('');
- const [status,setStatus]=useState(''),[busy,setBusy]=useState(false);
+ const [report,setReport]=useState<Register|null>(initialReport),[throughOn,setThroughOn]=useState(initialThroughOn||initialReport?.throughOn||'');
+ const [status,setStatus]=useState(initialNotice),[busy,setBusy]=useState(false),[open,setOpen]=useState(initialReport!==null);
  const [lockedPayable,setLockedPayable]=useState<string|null>(null);
  useEffect(()=>()=>active.current?.abort(),[]);
  async function load(next=false,notice=''){
@@ -125,14 +125,14 @@ export function SupplierPayableRegister({context}:{context:FinanceAccountContext
   finally{if(active.current===request){active.current=null;setBusy(false);}}
  }
  return <section className="expense-editor supplier-payable-register" aria-label="Recorded supplier payables" aria-busy={busy}>
-  <details>
+  <details open={open} onToggle={event=>{if(event.target===event.currentTarget)setOpen(event.currentTarget.open);}}>
    <summary>Recorded supplier payables</summary>
    <form className="supplier-payable-filter" onSubmit={event=>{event.preventDefault();if(!lockedPayable)void load();}}>
     <fieldset className="expense-form" disabled={busy||!!lockedPayable}>
      <legend>Payables balance</legend>
      <label>Through date (optional) <input type="date" min="1900-01-01" value={throughOn} onChange={event=>{
       if(lockedPayable)return;
-      setThroughOn(event.target.value);setReport(null);setStatus('');
+      setThroughOn(event.target.value);onThroughOnChange?.(event.target.value);setReport(null);setStatus('');
      }}/></label>
      <button type="submit">Load supplier payables</button>
     </fieldset>

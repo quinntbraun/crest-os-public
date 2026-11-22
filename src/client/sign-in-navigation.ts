@@ -1,6 +1,7 @@
 import {customerDate,customerInstant,customerUuid} from '../customer/customer-contract';
 import {mappingNavigationHref} from './mapping-navigation';
 import {readScheduleNavigation,scheduleNavigationHref} from './schedule-navigation';
+import {readExpenseNavigation} from './expense-navigation';
 
 const destinations=[
  ['home','/','Return to Today'],
@@ -81,7 +82,11 @@ export function readSignInReturn(input:Readonly<Record<string,unknown>>):{href:s
    if(customerUuid(input.trip)&&customerInstant(input.at)){uuid('trip');params.set('at',input.at);}
   }else if(input.job===undefined)uuid('leg');
  }
- if(key==='expenses'&&(input.view==='suppliers'||input.view==='exports'))params.set('view',input.view);
+ if(key==='expenses'){
+  const expense=readExpenseNavigation(input);
+  if(expense.view!=='purchases')params.set('view',expense.view);
+  if(expense.payablesThrough)params.set('payablesThrough',expense.payablesThrough);
+ }
  if(key==='accounting'&&typeof input.view==='string'&&['reports','accounts','setup'].includes(input.view))params.set('view',input.view);
  const href=scheduleNavigationHref(url.pathname+url.search,readScheduleNavigation(input));
  return {href,label:key==='schedule'&&params.has('job')?'Return to saved job':label};

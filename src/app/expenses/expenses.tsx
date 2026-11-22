@@ -9,19 +9,20 @@ import {financeAccounts} from '../../client/finance-accounts';
 import type {FinanceAccountContext} from '../../client/finance-accounts';
 import {ExpenseEditor,ExpenseRecordPlaceholder} from './expense-editor';
 import type {ExpensePane} from './expense-editor';
-import {SupplierBillDrafts} from './supplier-bill-drafts';
-import {SupplierPayableRegister} from './supplier-payables';
-export function ExpensesScreen({initialPane='purchases'}:{initialPane?:ExpensePane}){
+import {SupplierWorkspace} from './supplier-workspace';
+import {expenseNavigationHref,readExpenseNavigation} from '../../client/expense-navigation';
+export function ExpensesScreen({initialPane='purchases',initialPayablesThrough=''}:{initialPane?:ExpensePane;initialPayablesThrough?:string}){
  const client=useMemo(()=>createExpenseClient(authentication.session),[]),active=useRef<AbortController|null>(null),[phase,setPhase]=useState<'checking'|'ready'|'signed-out'|'unavailable'>('checking');
  const receiptService=useMemo(()=>createReceiptClient(authentication.session,false,{
   getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key),
  }),[]);
  const [financeContext,setFinanceContext]=useState<FinanceAccountContext|null>(null);
  const [pane,setPane]=useState<ExpensePane>(initialPane);
+ const [payablesThrough,setPayablesThrough]=useState(()=>readExpenseNavigation({view:'suppliers',payablesThrough:initialPayablesThrough}).payablesThrough);
  function choosePane(next:ExpensePane){
-  setPane(next);const url=new URL('/expenses',window.location.origin);if(next!=='purchases')url.searchParams.set('view',next);
-  window.history.replaceState(null,'',url.pathname+url.search);
+  setPane(next);window.history.replaceState(null,'',expenseNavigationHref(next,payablesThrough));
  }
+ function changePayablesThrough(value:string){const next=readExpenseNavigation({view:'suppliers',payablesThrough:value}).payablesThrough;setPayablesThrough(next);window.history.replaceState(null,'',expenseNavigationHref(pane,next));}
  const accessStatus=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{if(phase==='signed-out')accessStatus.current?.focus();},[phase]);
  const accessDenied=useCallback(()=>{
@@ -51,7 +52,7 @@ export function ExpensesScreen({initialPane='purchases'}:{initialPane?:ExpensePa
   <p className="expense-workbench-status" role="status">Checking expense access…</p>
   <div className="expense-records"><h2>Saved expenses</h2><ExpenseRecordPlaceholder/></div>
  </>;
- if(phase==='signed-out')return <><p ref={accessStatus} tabIndex={-1} role="status">Sign in to view expenses.</p><SignInLink className="primary-action" returnTo="expenses" context={pane==='purchases'?{}:{view:pane}}>Sign in to view expenses</SignInLink></>;
+ if(phase==='signed-out')return <><p ref={accessStatus} tabIndex={-1} role="status">Sign in to view expenses.</p><SignInLink className="primary-action" returnTo="expenses" context={{...(pane==='purchases'?{}:{view:pane}),...(payablesThrough?{payablesThrough}:{})}}>Sign in to view expenses</SignInLink></>;
  if(phase==='unavailable')return <><p role="status">Expense access needs to be checked before private records are shown.</p><button type="button" onClick={()=>{setPhase('checking');checkAccess();}}>Check expense access</button><SignInLink returnTo="expenses">Check sign-in</SignInLink></>;
  const sameDayExpenses=financeContext?.sameDayExpenses===true;
  const suppliers=financeContext?.supplierBillDrafts||financeContext?.supplierPayableReview;
@@ -65,8 +66,7 @@ export function ExpensesScreen({initialPane='purchases'}:{initialPane?:ExpensePa
   <ExpenseEditor client={client} receiptService={receiptService} embedded sameDayExpenses={sameDayExpenses} pane={activePane} onAccessDenied={accessDenied}/>
   {suppliers&&<div className="expense-supplier-panel" hidden={activePane!=='suppliers'}>
    <h2>Supplier bills and payables</h2>
-   {financeContext?.supplierBillDrafts&&<SupplierBillDrafts context={financeContext} onAccessDenied={accessDenied}/>}
-   {financeContext?.supplierPayableReview&&<SupplierPayableRegister context={financeContext}/>}
+   {financeContext&&<SupplierWorkspace key={financeContext.businessId+':'+financeContext.binding} context={financeContext} onAccessDenied={accessDenied} throughOn={payablesThrough} onThroughOnChange={changePayablesThrough}/>}
   </div>}
   <nav aria-label="Expense workspace navigation"><a href="/save-review?kind=bookkeeping.expense.save">Review an interrupted expense</a><SignInLink returnTo="expenses">Check sign-in</SignInLink></nav>
  </>;

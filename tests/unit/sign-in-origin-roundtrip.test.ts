@@ -123,3 +123,23 @@ it.each([{view:'unknown'},{view:'//elsewhere.invalid'},{view:['suppliers']}])('i
  const page=await ExpensesPage({searchParams:Promise.resolve({view})});
  expect(propsOf(page,ExpensesScreen)?.initialPane).toBe('purchases');
 });
+
+it('restores the supplier register date through the actual sign-in and expense pages',async()=>{
+ const returned=await resume('/expenses',{view:'suppliers',payablesThrough:'2024-02-29',vendor:'private',paidCents:'99'});
+ expect(query(returned.href)).toEqual({view:'suppliers',payablesThrough:'2024-02-29'});
+ const page=await ExpensesPage({searchParams:Promise.resolve(query(returned.href))});
+ expect(propsOf(page,ExpensesScreen)?.initialPane).toBe('suppliers');
+ expect(propsOf(page,ExpensesScreen)?.initialPayablesThrough).toBe('2024-02-29');
+});
+
+it.each(['exports','purchases'] as const)('retains the inactive supplier date through the actual %s return page',async view=>{
+ const returned=await resume('/expenses',{view,payablesThrough:'2024-02-29'});
+ const page=await ExpensesPage({searchParams:Promise.resolve(query(returned.href))});
+ expect(propsOf(page,ExpensesScreen)?.initialPane).toBe(view);
+ expect(propsOf(page,ExpensesScreen)?.initialPayablesThrough).toBe('2024-02-29');
+});
+
+it.each(['2026-02-29',['2026-11-22'],'//elsewhere.invalid'])('does not pass an invalid date into the expense workspace %j',async payablesThrough=>{
+ const page=await ExpensesPage({searchParams:Promise.resolve({view:'suppliers',payablesThrough})});
+ expect(propsOf(page,ExpensesScreen)?.initialPayablesThrough).toBe('');
+});

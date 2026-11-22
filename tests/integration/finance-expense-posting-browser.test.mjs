@@ -1,4 +1,5 @@
 import {observeExpenseAccess,prepareExpenseBrowserCode} from '../support/expense-access-diagnostic.mjs';
+import {waitForSessionAdmissionCapacity} from '../support/session-admission-capacity.mjs';
 import assert from 'node:assert/strict';
 import {reviewRecoveryActionPriority,financePriorityFacts} from '../support/recovery-action-priority.mjs';
 import {openReceiptDownloads,captureExpenseState} from '../support/receipt-layout.mjs';
@@ -18,6 +19,7 @@ async function exerciseSupplierBills(page,date,fixture,engine){
  const summary=region.getByText('Unpaid supplier bills',{exact:true});
  const form=region.getByRole('form',{name:'Supplier bill draft',exact:true});
  const status=region.getByRole('status');
+ const facts=async()=>{const values={};for(const table of ['crest.supplier_bill_draft_revisions','crest.financial_events','crest.journal_entries','crest_private.audit_events'])values[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM '+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;return JSON.stringify(values);};
  const save=()=>form.getByRole('button',{name:'Save supplier bill draft',exact:true}).click();
  const fill=async purpose=>{
   await form.getByLabel('Incurred date',{exact:true}).fill(date);
@@ -36,15 +38,68 @@ async function exerciseSupplierBills(page,date,fixture,engine){
  };
  await summary.click();
  await fill('Fictional workshop supplies');
+ // An interrupted request that never reached the server must retain the same
+ // identity after privacy clearing and allow explicit original re-entry.
+ let firstReference;
  await page.route('**/api/business/finance-accounts/supplier-bill-draft-save',async route=>{
+  firstReference=route.request().postDataJSON().reference;await route.abort('failed');
+ },{times:1});
+ await save();await expect(status).toContainText('The save could not be confirmed.');
+ const pendingKey='crest.supplier-bill-draft.pending-reference.v1';
+ const retained=await page.evaluate(key=>sessionStorage.getItem(key),pendingKey);assert(retained);
+ const original=JSON.parse(retained);
+ assert.deepEqual(Object.keys(original).sort(),['schemaVersion','businessId','binding','reference'].sort());
+ assert.deepEqual(Object.keys(original.reference).sort(),['operationId','recoveryEpoch','billId','expectedRevision'].sort());
+ assert.equal(['operationId','recoveryEpoch','billId','expectedRevision'].every(key=>original.reference[key]===firstReference[key]),true,'Only original identities and versions are retained');
+ await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide')));await expect(form).toHaveCount(0);
+ await page.getByRole('button',{name:'Check expense access',exact:true}).click();await summary.click();
+ await region.getByRole('button',{name:'Check original supplier bill save',exact:true}).click();
+ await expect(status).toContainText('Re-enter the original bill details');
+ await expect(form.getByLabel('Business purpose',{exact:true})).toHaveValue('');
+ await fill('Fictional workshop supplies');
+ await page.route('**/api/business/finance-accounts/supplier-bill-draft-save',async route=>{
+  const reference=route.request().postDataJSON().reference;
+  assert.equal(reference.operationId===firstReference.operationId&&reference.billId===firstReference.billId&&reference.recoveryEpoch===firstReference.recoveryEpoch&&reference.expectedRevision===firstReference.expectedRevision,true,'Re-entry must reuse every original identity/version');
   const response=await route.fetch();
   assert.equal(response.status(),200);
   await route.abort('failed');
  },{times:1});
- await save();
+ await form.getByRole('button',{name:'Retry original supplier bill save',exact:true}).click();
  await expect(status).toContainText('The save could not be confirmed.');
+ const pendingCookies=await page.context().cookies(),pendingViewport=page.viewportSize(),beforePendingDenied=await facts();
+ try{
+  await page.context().clearCookies();
+  const denied=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/auth/session'&&r.status()===400);
+  await region.getByRole('button',{name:'Check original supplier bill save',exact:true}).click();await denied;
+  await expect(region).toHaveCount(0);await expect(page.getByText('Sign in to view expenses.',{exact:true})).toBeFocused();
+  const signIn=page.getByRole('link',{name:'Sign in to view expenses',exact:true});await expect(signIn).toHaveAttribute('href','/sign-in?returnTo=expenses&view=suppliers');
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [390,1440]){
+   await page.setViewportSize({width,height:900});await signIn.scrollIntoViewIfNeeded();await signIn.focus();
+   assert(await signIn.evaluate(node=>{const r=node.getBoundingClientRect();return r.height>=44&&document.activeElement===node&&node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}));
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
+   await page.screenshot({path:'.local/review/supplier-original-denied-'+engine+'-'+width+'.png',animations:'disabled'});
+  }
+  assert.equal((await page.evaluate(key=>sessionStorage.getItem(key),pendingKey))===retained,true,'Actual denial retains the exact original reference');
+  assert.equal(await facts()===beforePendingDenied,true,'Denied original lookup preserves supplier, financial, journal and audit facts');
+ }finally{await page.context().addCookies(pendingCookies);await page.setViewportSize(pendingViewport);}
+ await page.getByRole('link',{name:'Sign in to view expenses',exact:true}).click();
+ await page.getByRole('link',{name:'Return to Expenses',exact:true}).click();await summary.click();
+ // The real expense privacy boundary unmounts the supplier task on pagehide.
+ await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide')));
+ await expect(form).toHaveCount(0);
+ await page.getByRole('button',{name:'Check expense access',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Suppliers',exact:true})).toBeVisible();
+ await page.reload();
+ await summary.click();
+ await expect(region.getByRole('button',{name:'Check original supplier bill save',exact:true})).toBeVisible();
+ assert.equal((await page.evaluate(key=>sessionStorage.getItem(key),pendingKey))===retained,true,'The original reference survives privacy clearing and reload byte-for-byte');
+
  await region.getByRole('button',{name:'Check original supplier bill save',exact:true}).click();
  await expect(status).toHaveText('Supplier bill draft saved.');
+ assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null,'Only a verified original result releases its stored reference');
+ assert.equal(await facts()===beforePendingDenied,true,'Original lookup releases the reference without another supplier or financial write');
  await page.reload();
  await page.getByRole('button',{name:'Suppliers',exact:true}).click();
  await summary.click();
@@ -90,7 +145,6 @@ async function exerciseSupplierBills(page,date,fixture,engine){
   await region.getByRole('region',{name:'Selected supplier bill',exact:true}).screenshot({path:'.local/review/finance-supplier-draft-selected-'+engine+'-'+width+'.png'});
  }
  const cookies=await page.context().cookies(),viewport=page.viewportSize();
- const facts=async()=>{const values={};for(const table of ['crest.supplier_bill_draft_revisions','crest.financial_events','crest.journal_entries','crest_private.audit_events'])values[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM '+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;return JSON.stringify(values);};
  const beforeDenied=await facts(),observations=[];
  try{
   await page.context().clearCookies();
@@ -150,7 +204,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const date=(await f.client.query("SELECT (clock_timestamp() AT TIME ZONE 'America/Indiana/Indianapolis')::date::text AS day")).rows[0].day;
   const description='Fictional pH-neutral wash supplies';
   await page.goto(f.origin+'/expenses');
-  if(supplierBills){await page.getByRole('button',{name:'Suppliers',exact:true}).click();await exerciseSupplierBills(page,date,f,name);await page.getByRole('button',{name:'Purchases',exact:true}).click();}
+  if(supplierBills){await page.getByRole('button',{name:'Suppliers',exact:true}).click();await exerciseSupplierBills(page,date,f,name);await page.getByRole('button',{name:'Purchases',exact:true}).click();await waitForSessionAdmissionCapacity(f);}
 
   await page.getByRole('button',{name:'Record expense',exact:true}).click();
   await page.getByLabel('Payment date',{exact:true}).fill(date);

@@ -506,10 +506,44 @@ jobs:
           CREST_SUPPLIER_DOCUMENT_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
           test -n "$CREST_SUPPLIER_DOCUMENT_IMAGE_ID"
           export CREST_SUPPLIER_DOCUMENT_IMAGE_ID
-          node --conditions=react-server --test --test-reporter=tap tests/integration/finance-supplier-payable-browser.test.mjs \
+          node --conditions=react-server --test --test-reporter=tap --test-name-pattern='^(chromium|webkit) reviews a saved supplier draft and reads recorded payables$' tests/integration/finance-supplier-payable-browser.test.mjs \
             | tee .local/supplier-isolated-decoder.log
           grep -Fx '# tests 2' .local/supplier-isolated-decoder.log
           grep -Fx '# pass 2' .local/supplier-isolated-decoder.log
+      - name: Supplier original-request re-entry with the isolated document worker
+        timeout-minutes: 8
+        shell: bash
+        env:
+          CREST_TEST_STATEMENT_MATCH_REVIEW: "1"
+          CREST_TEST_STATEMENT_MATCH_DRAFTS: "1"
+          CREST_TEST_SUPPLIER_BILL_DRAFTS: "1"
+          CREST_TEST_SUPPLIER_PAYABLE_REVIEW: "1"
+          CREST_TEST_SUPPLIER_PAYABLE_POSTING: "1"
+        run: |
+          CREST_SUPPLIER_DOCUMENT_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
+          test -n "$CREST_SUPPLIER_DOCUMENT_IMAGE_ID"
+          export CREST_SUPPLIER_DOCUMENT_IMAGE_ID
+          node --conditions=react-server --test --test-reporter=tap --test-name-pattern='original request re-entry\)$' tests/integration/finance-supplier-payable-browser.test.mjs \
+            | tee .local/supplier-original-reentry-isolated-decoder.log
+          grep -Fx '# tests 2' .local/supplier-original-reentry-isolated-decoder.log
+          grep -Fx '# pass 2' .local/supplier-original-reentry-isolated-decoder.log
+      - name: Supplier original re-entry after new sign-in with the isolated document worker
+        timeout-minutes: 8
+        shell: bash
+        env:
+          CREST_TEST_STATEMENT_MATCH_REVIEW: "1"
+          CREST_TEST_STATEMENT_MATCH_DRAFTS: "1"
+          CREST_TEST_SUPPLIER_BILL_DRAFTS: "1"
+          CREST_TEST_SUPPLIER_PAYABLE_REVIEW: "1"
+          CREST_TEST_SUPPLIER_PAYABLE_POSTING: "1"
+        run: |
+          CREST_SUPPLIER_DOCUMENT_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
+          test -n "$CREST_SUPPLIER_DOCUMENT_IMAGE_ID"
+          export CREST_SUPPLIER_DOCUMENT_IMAGE_ID
+          node --conditions=react-server --test --test-reporter=tap --test-name-pattern='original request re-entry after new sign-in' tests/integration/finance-supplier-payable-browser.test.mjs \
+            | tee .local/supplier-original-reentry-new-signin-isolated-decoder.log
+          grep -Fx '# tests 2' .local/supplier-original-reentry-new-signin-isolated-decoder.log
+          grep -Fx '# pass 2' .local/supplier-original-reentry-new-signin-isolated-decoder.log
       - name: Private expense receipts through the isolated document worker
         timeout-minutes: 12
         shell: bash

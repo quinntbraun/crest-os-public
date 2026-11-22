@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-22T07:46:57.946Z",
+  "assessedAt": "2026-11-22T10:37:14.016Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "336c9abd8c480b3373e832688785830deb93c6b3",
-    "publishedCommit": "df16486f808729f144b1040a8255d2a13e4c50e3",
-    "publishedTree": "4eae650174e3a977d3b6491f173715d06a79b7f8",
-    "localTree": "4eae650174e3a977d3b6491f173715d06a79b7f8"
+    "localCommit": "a3ea51e086f9a713dc5308eebad44376e1d171b6",
+    "publishedCommit": "28eca50b6cbabdf2eb4716d8cf58bccc00eb5e72",
+    "publishedTree": "1551bb73f6abd857125005c66732e2612d71afa5",
+    "localTree": "e8f3635143ee36130eb37ec5183324b602b8155c"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -44,8 +44,8 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "Published draftdf16486f808729f144b1040a8255d2a13e4c50e3/tree4eae650174e3a977d3b6491f173715d06a79b7f8 exactly matches reviewed local336c9abd8c480b3373e832688785830deb93c6b3.38 UTF8 entries reconstruct2684 tracked files/39905330 bytes; strict default scanning reports zero findings (scanner38591819), empty ignore and inline allowances disabled. Canonical sole parent7b091, metadata-before-ref expected-head nonforce update and exact test merge32528771 with ordered base/head parents are verified. Main44999637223, commercial44999637235 and expense44999637247 were discovered queued/live; no acceptance is claimed. Prior77a remains terminal20/22 main with Safari service55/56 and Foundation prerequisite failure; ancillary suites pass. Local43 units/build/types/lint and separate complete Safari1/1, pickup/photo4/4 and expense/supplier/receipt4/4 remain scoped as recorded in current review notes.",
-      "remainingWork": "Observe exactdf164 main44999637223, commercial44999637235 and expense44999637247 without changing public head/title/body while any is live. Retain actual results and finish remaining global state/context and release/installed/owner/physical-iPhone gates.",
+      "implementedOrPresent": "Public28eca50/tree1551bb7 exactly matches local1dda853 and now passes all22 main jobs plus both ancillary workflows, including portable-container, isolated supplier/receipt workers and independent restores. Newer local supplier draft/posting/payment recovery and selected-date context have separate fixed-source evidence; they are not included in that public acceptance.",
+      "remainingWork": "Publish the next coherent, strictly scanned exact-tree batch and require its own fresh full release/worker/upgrade/recovery checks. Matching installed build, owner finance/off-laptop restore and physical iPhone acceptance remain open.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "6d610a9f23a32473ff3bbae424ea0a07a6ccffdc20de4adce2a8fd9d85471399"
+          "sha256": "ef66bfb9992481686a80d959c84de1c255a0d40547ffe7c3e7d50348abd57ef9"
         },
         {
           "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
@@ -93,7 +93,7 @@
         },
         {
           "path": "tests/support/quote-browser-response.mjs",
-          "sha256": "ed71f94967d3e4b21d6cadc000037dc61dda9218bf6c8e4dba15af8960844176"
+          "sha256": "494736bc42c886523036efb1374de1e81527b090e11b4c73ba3a7f1b2ce4a522"
         },
         {
           "path": "planning/ACCEPTANCE_SYNC_TIME_DESIGN.md",
@@ -113,7 +113,7 @@
         },
         {
           "path": "tests/support/amendment-accepted-history.mjs",
-          "sha256": "0779b29e99f683523181afeaca297dade8df541e24fb7cf10a88f8673e58e298"
+          "sha256": "a740cae6d77b7f551477e3b5e37c3821a50736850572153db06a9905886a24a8"
         },
         {
           "path": "tests/integration/google-calendar-settings-product-browser.test.mjs",
@@ -193,7 +193,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "97bc2393542810ce7fcc4761559ac496f24b24317e7abe641f329c49048b8153"
+          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
         },
         {
           "path": "tests/integration/vehicle-http-browser.test.mjs",
@@ -217,7 +217,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
+          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
@@ -229,11 +229,11 @@
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
-          "sha256": "6df671f532da4c4a118015b62f77b909b7808fb77223135699ea02e16a7580c9"
+          "sha256": "d2e8bf9993080e574f46f77104aa233f43669598ff865dc5bdd08d23c45d5125"
         },
         {
           "path": ".github/workflows/ci.yml",
-          "sha256": "ecc9d5d7059731c3e06e4daec2166e62f6547fafe277aa2076de3036c8a26568"
+          "sha256": "5868d48274891b7adcaa9aa32f952dc333c3a3e52c6a183740db18860260331c"
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
@@ -261,11 +261,11 @@
         },
         {
           "path": "src/app/expenses/expenses.tsx",
-          "sha256": "3775873380fba71321ad69eb703a6cc4d1e5155998a3e2c9d63b55c71ce3a251"
+          "sha256": "5a8f8b70327ea806c0ea98ba5458a9cac041b704a2b49832c79f694fdfde8e3b"
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "4bb405baf892265432f77c6a415400d423c8b756b600b99afaf3c01ad8d216eb"
+          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
@@ -277,11 +277,11 @@
         },
         {
           "path": "src/client/sign-in-navigation.ts",
-          "sha256": "560cd8ce4dd51c99ba03fa4c4b1b96cc8a40a8b81ca739fcfdbbe619a8424ea7"
+          "sha256": "cc9ad6841595922752dfa0b8cd7cb4b7682eb54fdbf704816079a10249a02480"
         },
         {
           "path": "tests/unit/sign-in-origin-roundtrip.test.ts",
-          "sha256": "e22e8b00b69a5dca03e89ca7a437592a9b9e8b945d400f725066aad6c9b14aaa"
+          "sha256": "500ed210b2c336dcef21674ee68a8be5b8c82a13d717abf771f1c5939fa80f8f"
         },
         {
           "path": "src/app/schedule/work/direct-receipt.tsx",
@@ -297,11 +297,11 @@
         },
         {
           "path": "tests/support/payment-access-recovery.mjs",
-          "sha256": "c1547449a1599f6b59a08ae3ef05b04e53b44cf0c513c002c7a5329abfce834c"
+          "sha256": "649f7f6882ea5726299aa6d7a7c0515097b44b570dc47587247bf6ea33a76633"
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
-          "sha256": "c9a03e9eb3a129cc1577c89e7e9b6575c7122bfdb2b6256e159a693b02d177c9"
+          "sha256": "e8dc19667f4f710145c9b276032bde6f118cdea4a0e2065e1f13df108f2af5b8"
         },
         {
           "path": "tests/support/record-unavailable-navigation.mjs",
@@ -317,7 +317,87 @@
         },
         {
           "path": "planning/SUPPLIER_ACCESS_AND_VIEW_RETURN.md",
-          "sha256": "ebec0d46ff8cb7dcfd10f4719c69003f7b397431b210ddbe70804eb4075ed2e2"
+          "sha256": "081b037155c464375da61f87300c49bc21d51bd3db296bea142836f1b8cc76f5"
+        },
+        {
+          "path": "planning/DESIGNED_WORKFLOW_STATES.md",
+          "sha256": "22b2a827fe67438f7f23684126c18164235e54e1a3294954b1c28900753065f3"
+        },
+        {
+          "path": "planning/INVOICE_ACCESS_STATE_REVIEW.md",
+          "sha256": "db03bbd7c2f07c228a069208cea362a9a4fa8fb80b06c9442d5c88ca524f8707"
+        },
+        {
+          "path": "planning/AMENDMENT_HISTORY_RESPONSE_REVIEW.md",
+          "sha256": "be489347d69902a75002f9ad90dcfbfdc47dfeb72b33e28399e9340ba5c586ca"
+        },
+        {
+          "path": "planning/SERVICE_EDITOR_FOCUS_REVIEW.md",
+          "sha256": "a3526bb4296564653d8558537c7462d2f1e26b4094529eab032f32d93108ef5b"
+        },
+        {
+          "path": "planning/DASHBOARD_FOLLOW_UP_RESPONSE_REVIEW.md",
+          "sha256": "aab84b544b17aa4a63b25da4dfaefbde2eecb8ec4a84ad48e0e3c5538bb9236f"
+        },
+        {
+          "path": "planning/SUPPLIER_ORIGINAL_RECOVERY_REVIEW.md",
+          "sha256": "67e3c6751f2e930980630a327d8419e745ebd95a03cb6f23a8cafddbe0a37768"
+        },
+        {
+          "path": "src/client/pending-supplier-bill.ts",
+          "sha256": "ce38b225cbc186dc1525abbd29f26ad935339d261b99b54694f25171ca460806"
+        },
+        {
+          "path": "tests/unit/pending-supplier-bill.test.ts",
+          "sha256": "8ace6c3e3bc54cbe0f82843a2bdeadb8478c2c01f6dc9ae96db91b8f705cf28c"
+        },
+        {
+          "path": "tests/support/session-admission-capacity.mjs",
+          "sha256": "3f595056897a5b808a3ceb095998ed1a7ddd0e39f6d2b874e9dfe481d96076ac"
+        },
+        {
+          "path": "planning/SUPPLIER_POSTING_RECOVERY_REVIEW.md",
+          "sha256": "39e6881a6b16619611020282f4a00e641f6d9bb763524a4b3df8a6fea8bded58"
+        },
+        {
+          "path": "planning/SUPPLIER_REGISTER_DATE_RETURN.md",
+          "sha256": "628d8f2a983ad53b57a490e1cd6a1bb37d7b04916f7f920e8050dcb07d2242f6"
+        },
+        {
+          "path": "src/client/pending-supplier-posting.ts",
+          "sha256": "1a472d3799d4dbb12729058c6d4c84c4d8880d1e0200666e01350afee4e8e04e"
+        },
+        {
+          "path": "src/app/expenses/supplier-workspace.tsx",
+          "sha256": "42b2246afd226a91f178948fc6b8908d9acb4fa9b76d2709aa566ab6d55c289b"
+        },
+        {
+          "path": "src/app/expenses/supplier-posting-reentry.ts",
+          "sha256": "4cf3f173d7b6ce963d25437ffc846737b7f72b3574cb1d9f8eb3a4b187f6f33a"
+        },
+        {
+          "path": "src/app/expenses/supplier-payable-confirmation.tsx",
+          "sha256": "510cddc8894206b23f06ffa19ba4c0a620f84e4c40ff31f4a65cbaca4b923d83"
+        },
+        {
+          "path": "src/app/expenses/supplier-payables.tsx",
+          "sha256": "d7d8313de678b93494ed5e77f0860061133fe358de25b91ef6741b03055326cc"
+        },
+        {
+          "path": "tests/unit/pending-supplier-posting.test.ts",
+          "sha256": "3345ee1f48e5a55c599e0764213a85f6024db63b28bbdb772dca83a16808721e"
+        },
+        {
+          "path": "tests/support/supplier-posting-access-recovery.mjs",
+          "sha256": "44dd6db4c98501122b17cda7a3510f8c346274f68fb2737f57a7e6f43ec038ec"
+        },
+        {
+          "path": "src/client/expense-navigation.ts",
+          "sha256": "790a7e55e7fab0f4f5e9fbeb223915d1fe003c7cc0210bb9aeff9144f420a366"
+        },
+        {
+          "path": "tests/unit/expense-navigation.test.ts",
+          "sha256": "e92f4f53ec2f1eec2c0782f5b21d2ad03613bc4d36d0798359d3fd202d92fb31"
         }
       ],
       "verification": {
@@ -345,7 +425,7 @@
         },
         {
           "path": "src/app/expenses/supplier-payables.tsx",
-          "sha256": "1df40eb9b052e8495b1b8d13e9a69403993674a89a7aed81c4bec316976bd394"
+          "sha256": "d7d8313de678b93494ed5e77f0860061133fe358de25b91ef6741b03055326cc"
         },
         {
           "path": "tests/support/supplier-register-layout.mjs",
@@ -353,7 +433,7 @@
         },
         {
           "path": "tests/integration/finance-supplier-payable-browser.test.mjs",
-          "sha256": "529434383e2a66820670d80a6ed72c1af3614959dadd5853e86f00f7b3903cd7"
+          "sha256": "3882a2ff1cb2c2cdb6c68634234be10bc3c57ed21c694f1267cbe83b2776f739"
         },
         {
           "path": "planning/CREST_DESIGN_SYSTEM.md",
@@ -377,7 +457,7 @@
         },
         {
           "path": "scripts/run-browser-group.mjs",
-          "sha256": "f12efc4438ecf0bf59330028353b87888ed9015b2ea7320ef7e00b687a19a80e"
+          "sha256": "3a695b8cd4c9c74f9f6dc74e359052bcba18d7cec5f8f51457887658c47e73de"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -385,7 +465,7 @@
         },
         {
           "path": "src/app/expenses/supplier-bill-drafts.tsx",
-          "sha256": "58299c683c7e28628de63fc6e188f6856b9b189116c70a646ab17d561ad3edaf"
+          "sha256": "b86bc722af4f8b7150fcefc32636f88920dfb7493c97f53159884e4803de03e1"
         },
         {
           "path": "tests/support/supplier-draft-layout.mjs",
@@ -417,7 +497,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
+          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
         },
         {
           "path": "src/app/directory-introduction.tsx",
@@ -430,6 +510,46 @@
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
           "sha256": "77ea9cd1fb215797e89166bea87d6a02b085c3dd9575c7371ad4b44f3ec46863"
+        },
+        {
+          "path": "planning/SUPPLIER_POSTING_RECOVERY_REVIEW.md",
+          "sha256": "39e6881a6b16619611020282f4a00e641f6d9bb763524a4b3df8a6fea8bded58"
+        },
+        {
+          "path": "planning/SUPPLIER_REGISTER_DATE_RETURN.md",
+          "sha256": "628d8f2a983ad53b57a490e1cd6a1bb37d7b04916f7f920e8050dcb07d2242f6"
+        },
+        {
+          "path": "src/client/pending-supplier-posting.ts",
+          "sha256": "1a472d3799d4dbb12729058c6d4c84c4d8880d1e0200666e01350afee4e8e04e"
+        },
+        {
+          "path": "src/app/expenses/supplier-workspace.tsx",
+          "sha256": "42b2246afd226a91f178948fc6b8908d9acb4fa9b76d2709aa566ab6d55c289b"
+        },
+        {
+          "path": "src/app/expenses/supplier-posting-reentry.ts",
+          "sha256": "4cf3f173d7b6ce963d25437ffc846737b7f72b3574cb1d9f8eb3a4b187f6f33a"
+        },
+        {
+          "path": "src/app/expenses/supplier-payable-confirmation.tsx",
+          "sha256": "510cddc8894206b23f06ffa19ba4c0a620f84e4c40ff31f4a65cbaca4b923d83"
+        },
+        {
+          "path": "tests/unit/pending-supplier-posting.test.ts",
+          "sha256": "3345ee1f48e5a55c599e0764213a85f6024db63b28bbdb772dca83a16808721e"
+        },
+        {
+          "path": "tests/support/supplier-posting-access-recovery.mjs",
+          "sha256": "44dd6db4c98501122b17cda7a3510f8c346274f68fb2737f57a7e6f43ec038ec"
+        },
+        {
+          "path": "src/client/expense-navigation.ts",
+          "sha256": "790a7e55e7fab0f4f5e9fbeb223915d1fe003c7cc0210bb9aeff9144f420a366"
+        },
+        {
+          "path": "tests/unit/expense-navigation.test.ts",
+          "sha256": "e92f4f53ec2f1eec2c0782f5b21d2ad03613bc4d36d0798359d3fd202d92fb31"
         }
       ],
       "verification": {
@@ -473,7 +593,7 @@
         },
         {
           "path": "scripts/run-browser-group.mjs",
-          "sha256": "f12efc4438ecf0bf59330028353b87888ed9015b2ea7320ef7e00b687a19a80e"
+          "sha256": "3a695b8cd4c9c74f9f6dc74e359052bcba18d7cec5f8f51457887658c47e73de"
         },
         {
           "path": "planning/SUPPLIER_DIRECTORY_NAVIGATION_DESIGN.md",
@@ -481,7 +601,7 @@
         },
         {
           "path": "src/app/expenses/supplier-bill-drafts.tsx",
-          "sha256": "58299c683c7e28628de63fc6e188f6856b9b189116c70a646ab17d561ad3edaf"
+          "sha256": "b86bc722af4f8b7150fcefc32636f88920dfb7493c97f53159884e4803de03e1"
         },
         {
           "path": "tests/support/supplier-directory-layout.mjs",
@@ -637,7 +757,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "97bc2393542810ce7fcc4761559ac496f24b24317e7abe641f329c49048b8153"
+          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
         },
         {
           "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
@@ -681,7 +801,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
+          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
@@ -693,7 +813,7 @@
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
-          "sha256": "6df671f532da4c4a118015b62f77b909b7808fb77223135699ea02e16a7580c9"
+          "sha256": "d2e8bf9993080e574f46f77104aa233f43669598ff865dc5bdd08d23c45d5125"
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
@@ -709,15 +829,59 @@
         },
         {
           "path": "src/app/expenses/expenses.tsx",
-          "sha256": "3775873380fba71321ad69eb703a6cc4d1e5155998a3e2c9d63b55c71ce3a251"
+          "sha256": "5a8f8b70327ea806c0ea98ba5458a9cac041b704a2b49832c79f694fdfde8e3b"
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "4bb405baf892265432f77c6a415400d423c8b756b600b99afaf3c01ad8d216eb"
+          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
           "sha256": "abc0454067c6c3a138336f0c7cbe6a7852d4b81efa4365839f150b2c615209a2"
+        },
+        {
+          "path": "planning/SUPPLIER_POSTING_RECOVERY_REVIEW.md",
+          "sha256": "39e6881a6b16619611020282f4a00e641f6d9bb763524a4b3df8a6fea8bded58"
+        },
+        {
+          "path": "planning/SUPPLIER_REGISTER_DATE_RETURN.md",
+          "sha256": "628d8f2a983ad53b57a490e1cd6a1bb37d7b04916f7f920e8050dcb07d2242f6"
+        },
+        {
+          "path": "src/client/pending-supplier-posting.ts",
+          "sha256": "1a472d3799d4dbb12729058c6d4c84c4d8880d1e0200666e01350afee4e8e04e"
+        },
+        {
+          "path": "src/app/expenses/supplier-workspace.tsx",
+          "sha256": "42b2246afd226a91f178948fc6b8908d9acb4fa9b76d2709aa566ab6d55c289b"
+        },
+        {
+          "path": "src/app/expenses/supplier-posting-reentry.ts",
+          "sha256": "4cf3f173d7b6ce963d25437ffc846737b7f72b3574cb1d9f8eb3a4b187f6f33a"
+        },
+        {
+          "path": "src/app/expenses/supplier-payable-confirmation.tsx",
+          "sha256": "510cddc8894206b23f06ffa19ba4c0a620f84e4c40ff31f4a65cbaca4b923d83"
+        },
+        {
+          "path": "src/app/expenses/supplier-payables.tsx",
+          "sha256": "d7d8313de678b93494ed5e77f0860061133fe358de25b91ef6741b03055326cc"
+        },
+        {
+          "path": "tests/unit/pending-supplier-posting.test.ts",
+          "sha256": "3345ee1f48e5a55c599e0764213a85f6024db63b28bbdb772dca83a16808721e"
+        },
+        {
+          "path": "tests/support/supplier-posting-access-recovery.mjs",
+          "sha256": "44dd6db4c98501122b17cda7a3510f8c346274f68fb2737f57a7e6f43ec038ec"
+        },
+        {
+          "path": "src/client/expense-navigation.ts",
+          "sha256": "790a7e55e7fab0f4f5e9fbeb223915d1fe003c7cc0210bb9aeff9144f420a366"
+        },
+        {
+          "path": "tests/unit/expense-navigation.test.ts",
+          "sha256": "e92f4f53ec2f1eec2c0782f5b21d2ad03613bc4d36d0798359d3fd202d92fb31"
         }
       ],
       "verification": {
@@ -761,7 +925,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
+          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
         },
         {
           "path": "src/app/quotes/quotes.tsx",
@@ -829,7 +993,7 @@
         },
         {
           "path": "src/app/expenses/supplier-payable-confirmation.tsx",
-          "sha256": "306d9598de570764845c0628bb6c4edd7260f2fb6bc32a5d415f8c55707909a3"
+          "sha256": "510cddc8894206b23f06ffa19ba4c0a620f84e4c40ff31f4a65cbaca4b923d83"
         },
         {
           "path": "src/app/settings/accounts/tax/approval.tsx",
@@ -849,11 +1013,11 @@
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
-          "sha256": "c9a03e9eb3a129cc1577c89e7e9b6575c7122bfdb2b6256e159a693b02d177c9"
+          "sha256": "e8dc19667f4f710145c9b276032bde6f118cdea4a0e2065e1f13df108f2af5b8"
         },
         {
           "path": "tests/support/quote-browser-response.mjs",
-          "sha256": "ed71f94967d3e4b21d6cadc000037dc61dda9218bf6c8e4dba15af8960844176"
+          "sha256": "494736bc42c886523036efb1374de1e81527b090e11b4c73ba3a7f1b2ce4a522"
         },
         {
           "path": "tests/support/record-recovery-layout.mjs",
@@ -897,7 +1061,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "97bc2393542810ce7fcc4761559ac496f24b24317e7abe641f329c49048b8153"
+          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
         },
         {
           "path": "tests/integration/vehicle-http-browser.test.mjs",
@@ -926,6 +1090,46 @@
         {
           "path": "planning/ACTION_PRIORITY_FINAL_REVIEW.md",
           "sha256": "839cc3aafeb6485d9365d6c414d78bb8d3a75844c4cd5c31050f2e1127472538"
+        },
+        {
+          "path": "planning/SUPPLIER_POSTING_RECOVERY_REVIEW.md",
+          "sha256": "39e6881a6b16619611020282f4a00e641f6d9bb763524a4b3df8a6fea8bded58"
+        },
+        {
+          "path": "planning/SUPPLIER_REGISTER_DATE_RETURN.md",
+          "sha256": "628d8f2a983ad53b57a490e1cd6a1bb37d7b04916f7f920e8050dcb07d2242f6"
+        },
+        {
+          "path": "src/client/pending-supplier-posting.ts",
+          "sha256": "1a472d3799d4dbb12729058c6d4c84c4d8880d1e0200666e01350afee4e8e04e"
+        },
+        {
+          "path": "src/app/expenses/supplier-workspace.tsx",
+          "sha256": "42b2246afd226a91f178948fc6b8908d9acb4fa9b76d2709aa566ab6d55c289b"
+        },
+        {
+          "path": "src/app/expenses/supplier-posting-reentry.ts",
+          "sha256": "4cf3f173d7b6ce963d25437ffc846737b7f72b3574cb1d9f8eb3a4b187f6f33a"
+        },
+        {
+          "path": "src/app/expenses/supplier-payables.tsx",
+          "sha256": "d7d8313de678b93494ed5e77f0860061133fe358de25b91ef6741b03055326cc"
+        },
+        {
+          "path": "tests/unit/pending-supplier-posting.test.ts",
+          "sha256": "3345ee1f48e5a55c599e0764213a85f6024db63b28bbdb772dca83a16808721e"
+        },
+        {
+          "path": "tests/support/supplier-posting-access-recovery.mjs",
+          "sha256": "44dd6db4c98501122b17cda7a3510f8c346274f68fb2737f57a7e6f43ec038ec"
+        },
+        {
+          "path": "src/client/expense-navigation.ts",
+          "sha256": "790a7e55e7fab0f4f5e9fbeb223915d1fe003c7cc0210bb9aeff9144f420a366"
+        },
+        {
+          "path": "tests/unit/expense-navigation.test.ts",
+          "sha256": "e92f4f53ec2f1eec2c0782f5b21d2ad03613bc4d36d0798359d3fd202d92fb31"
         }
       ],
       "verification": {
@@ -957,7 +1161,7 @@
         },
         {
           "path": "src/app/expenses/supplier-bill-drafts.tsx",
-          "sha256": "58299c683c7e28628de63fc6e188f6856b9b189116c70a646ab17d561ad3edaf"
+          "sha256": "b86bc722af4f8b7150fcefc32636f88920dfb7493c97f53159884e4803de03e1"
         },
         {
           "path": "tests/support/supplier-draft-layout.mjs",
@@ -965,7 +1169,7 @@
         },
         {
           "path": "tests/integration/finance-supplier-payable-browser.test.mjs",
-          "sha256": "529434383e2a66820670d80a6ed72c1af3614959dadd5853e86f00f7b3903cd7"
+          "sha256": "3882a2ff1cb2c2cdb6c68634234be10bc3c57ed21c694f1267cbe83b2776f739"
         },
         {
           "path": "planning/QUOTE_RETAINED_SURFACES_DESIGN.md",
@@ -1045,7 +1249,7 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "4bb405baf892265432f77c6a415400d423c8b756b600b99afaf3c01ad8d216eb"
+          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
         },
         {
           "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
@@ -1054,6 +1258,50 @@
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
           "sha256": "653bc33ef535640dee58c72052fb07c96bd5db8b90bdb2192b66d8e9cded6831"
+        },
+        {
+          "path": "planning/SUPPLIER_POSTING_RECOVERY_REVIEW.md",
+          "sha256": "39e6881a6b16619611020282f4a00e641f6d9bb763524a4b3df8a6fea8bded58"
+        },
+        {
+          "path": "planning/SUPPLIER_REGISTER_DATE_RETURN.md",
+          "sha256": "628d8f2a983ad53b57a490e1cd6a1bb37d7b04916f7f920e8050dcb07d2242f6"
+        },
+        {
+          "path": "src/client/pending-supplier-posting.ts",
+          "sha256": "1a472d3799d4dbb12729058c6d4c84c4d8880d1e0200666e01350afee4e8e04e"
+        },
+        {
+          "path": "src/app/expenses/supplier-workspace.tsx",
+          "sha256": "42b2246afd226a91f178948fc6b8908d9acb4fa9b76d2709aa566ab6d55c289b"
+        },
+        {
+          "path": "src/app/expenses/supplier-posting-reentry.ts",
+          "sha256": "4cf3f173d7b6ce963d25437ffc846737b7f72b3574cb1d9f8eb3a4b187f6f33a"
+        },
+        {
+          "path": "src/app/expenses/supplier-payable-confirmation.tsx",
+          "sha256": "510cddc8894206b23f06ffa19ba4c0a620f84e4c40ff31f4a65cbaca4b923d83"
+        },
+        {
+          "path": "src/app/expenses/supplier-payables.tsx",
+          "sha256": "d7d8313de678b93494ed5e77f0860061133fe358de25b91ef6741b03055326cc"
+        },
+        {
+          "path": "tests/unit/pending-supplier-posting.test.ts",
+          "sha256": "3345ee1f48e5a55c599e0764213a85f6024db63b28bbdb772dca83a16808721e"
+        },
+        {
+          "path": "tests/support/supplier-posting-access-recovery.mjs",
+          "sha256": "44dd6db4c98501122b17cda7a3510f8c346274f68fb2737f57a7e6f43ec038ec"
+        },
+        {
+          "path": "src/client/expense-navigation.ts",
+          "sha256": "790a7e55e7fab0f4f5e9fbeb223915d1fe003c7cc0210bb9aeff9144f420a366"
+        },
+        {
+          "path": "tests/unit/expense-navigation.test.ts",
+          "sha256": "e92f4f53ec2f1eec2c0782f5b21d2ad03613bc4d36d0798359d3fd202d92fb31"
         }
       ],
       "verification": {
@@ -1068,8 +1316,8 @@
       "title": "P1 · Treat every state as a designed screen",
       "requirements": "Some baseline captures are loading or unavailable. A clean screenshot with no overflow does not establish a completed workflow.\n\nFinish standard: Every important workflow needs loaded, empty, loading, validation, denied, stale, uncertain-save and successful variants with clear next steps.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Existing CRM, field, statement-channel, supplier and financial review notes retain their eight-state source/evidence scopes. New return/credit clearing preserves47 original action functions/425 initializers and operation stores; journal denial clears balance and journal. The financial group1/2 and complete Safari follow-up1/1 remain separate; the latter has13 task denials/26 views and139 artifacts. Initial field6/9 remains retained; corrected full pickup/photo4/4 has58 artifacts, as non-reproduction of its earlier policy-session failure. The complete expense/supplier/receipt file passes4/4 with74 artifacts, including actual Supplier denial, parent clearing and selected-view return.43 focused units/build/types/lint pass. No narrow task check is called global expiry clearing except the explicitly observed expense callback.",
-      "remainingWork": "Finish the remaining important-workflow eight-state source/evidence matrix and configured variants, especially other invoice/setup/supplier nonempty pending-denial and stale paths. Require matching release, installed and device acceptance. Keep failed/passing scopes separate.",
+      "implementedOrPresent": "The19-family eight-state inventory is present and remains a source/evidence index, not exhaustive visual acceptance. Supplier originals now survive private clearing/reload without stored private payloads. Full financial cases pass on6c15479; same-session and new-sign-in focused original re-entry pass2/2 per browser on35003e4 with exact one15025 P14 and current-authorization receipt checks. Both selected-date financial cases pass separately on2cbb8c0, retaining actual request scope and all P14/P15/export/restore checks.49 reference tests and62 navigation/server-page checks pass; final build/types/full lint pass. Prior0/2,2/4 and1/2 invocations remain retained and scoped.",
+      "remainingWork": "Finish remaining important-workflow stale/alternate/private/pending/setup variants and any uncovered eight-state behavior. Keep original requirement scope and source-specific passes/failures separate. Require fresh matching release, installed and physical-device review; an inventory is not proof of every variant.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -1077,7 +1325,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "800c8fa2176a90558da736660f7d6c7615b54b2ca00918e90af7eafee8b0ee9f"
+          "sha256": "226c3281b6c136f42eea68d4f834d15b0a3823aab101ef7c0e2b53868db3d4e0"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -1085,7 +1333,7 @@
         },
         {
           "path": "src/app/expenses/supplier-bill-drafts.tsx",
-          "sha256": "58299c683c7e28628de63fc6e188f6856b9b189116c70a646ab17d561ad3edaf"
+          "sha256": "b86bc722af4f8b7150fcefc32636f88920dfb7493c97f53159884e4803de03e1"
         },
         {
           "path": "tests/support/supplier-draft-layout.mjs",
@@ -1093,7 +1341,7 @@
         },
         {
           "path": "tests/integration/finance-supplier-payable-browser.test.mjs",
-          "sha256": "529434383e2a66820670d80a6ed72c1af3614959dadd5853e86f00f7b3903cd7"
+          "sha256": "3882a2ff1cb2c2cdb6c68634234be10bc3c57ed21c694f1267cbe83b2776f739"
         },
         {
           "path": "planning/STATEMENT_RECOVERY_PRIORITY_REVIEW.md",
@@ -1145,7 +1393,7 @@
         },
         {
           "path": "src/app/expenses/supplier-payable-confirmation.tsx",
-          "sha256": "306d9598de570764845c0628bb6c4edd7260f2fb6bc32a5d415f8c55707909a3"
+          "sha256": "510cddc8894206b23f06ffa19ba4c0a620f84e4c40ff31f4a65cbaca4b923d83"
         },
         {
           "path": "src/app/settings/accounts/tax/approval.tsx",
@@ -1241,7 +1489,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "97bc2393542810ce7fcc4761559ac496f24b24317e7abe641f329c49048b8153"
+          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
         },
         {
           "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
@@ -1261,7 +1509,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
+          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
         },
         {
           "path": "tests/support/directory-loading-journey.mjs",
@@ -1293,7 +1541,7 @@
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
-          "sha256": "6df671f532da4c4a118015b62f77b909b7808fb77223135699ea02e16a7580c9"
+          "sha256": "d2e8bf9993080e574f46f77104aa233f43669598ff865dc5bdd08d23c45d5125"
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
@@ -1317,7 +1565,7 @@
         },
         {
           "path": "src/client/sign-in-navigation.ts",
-          "sha256": "560cd8ce4dd51c99ba03fa4c4b1b96cc8a40a8b81ca739fcfdbbe619a8424ea7"
+          "sha256": "cc9ad6841595922752dfa0b8cd7cb4b7682eb54fdbf704816079a10249a02480"
         },
         {
           "path": "tests/unit/sign-in-navigation.test.ts",
@@ -1341,11 +1589,11 @@
         },
         {
           "path": "src/app/expenses/expenses.tsx",
-          "sha256": "3775873380fba71321ad69eb703a6cc4d1e5155998a3e2c9d63b55c71ce3a251"
+          "sha256": "5a8f8b70327ea806c0ea98ba5458a9cac041b704a2b49832c79f694fdfde8e3b"
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "4bb405baf892265432f77c6a415400d423c8b756b600b99afaf3c01ad8d216eb"
+          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
@@ -1357,7 +1605,7 @@
         },
         {
           "path": "tests/unit/sign-in-origin-roundtrip.test.ts",
-          "sha256": "e22e8b00b69a5dca03e89ca7a437592a9b9e8b945d400f725066aad6c9b14aaa"
+          "sha256": "500ed210b2c336dcef21674ee68a8be5b8c82a13d717abf771f1c5939fa80f8f"
         },
         {
           "path": "src/app/schedule/work/direct-receipt.tsx",
@@ -1373,11 +1621,11 @@
         },
         {
           "path": "tests/support/payment-access-recovery.mjs",
-          "sha256": "c1547449a1599f6b59a08ae3ef05b04e53b44cf0c513c002c7a5329abfce834c"
+          "sha256": "649f7f6882ea5726299aa6d7a7c0515097b44b570dc47587247bf6ea33a76633"
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
-          "sha256": "c9a03e9eb3a129cc1577c89e7e9b6575c7122bfdb2b6256e159a693b02d177c9"
+          "sha256": "e8dc19667f4f710145c9b276032bde6f118cdea4a0e2065e1f13df108f2af5b8"
         },
         {
           "path": "tests/integration/google-calendar-settings-product-browser.test.mjs",
@@ -1393,7 +1641,83 @@
         },
         {
           "path": "planning/SUPPLIER_ACCESS_AND_VIEW_RETURN.md",
-          "sha256": "ebec0d46ff8cb7dcfd10f4719c69003f7b397431b210ddbe70804eb4075ed2e2"
+          "sha256": "081b037155c464375da61f87300c49bc21d51bd3db296bea142836f1b8cc76f5"
+        },
+        {
+          "path": "planning/DESIGNED_WORKFLOW_STATES.md",
+          "sha256": "22b2a827fe67438f7f23684126c18164235e54e1a3294954b1c28900753065f3"
+        },
+        {
+          "path": "planning/INVOICE_ACCESS_STATE_REVIEW.md",
+          "sha256": "db03bbd7c2f07c228a069208cea362a9a4fa8fb80b06c9442d5c88ca524f8707"
+        },
+        {
+          "path": "planning/AMENDMENT_HISTORY_RESPONSE_REVIEW.md",
+          "sha256": "be489347d69902a75002f9ad90dcfbfdc47dfeb72b33e28399e9340ba5c586ca"
+        },
+        {
+          "path": "planning/SERVICE_EDITOR_FOCUS_REVIEW.md",
+          "sha256": "a3526bb4296564653d8558537c7462d2f1e26b4094529eab032f32d93108ef5b"
+        },
+        {
+          "path": "planning/DASHBOARD_FOLLOW_UP_RESPONSE_REVIEW.md",
+          "sha256": "aab84b544b17aa4a63b25da4dfaefbde2eecb8ec4a84ad48e0e3c5538bb9236f"
+        },
+        {
+          "path": "planning/SUPPLIER_ORIGINAL_RECOVERY_REVIEW.md",
+          "sha256": "67e3c6751f2e930980630a327d8419e745ebd95a03cb6f23a8cafddbe0a37768"
+        },
+        {
+          "path": "src/client/pending-supplier-bill.ts",
+          "sha256": "ce38b225cbc186dc1525abbd29f26ad935339d261b99b54694f25171ca460806"
+        },
+        {
+          "path": "tests/unit/pending-supplier-bill.test.ts",
+          "sha256": "8ace6c3e3bc54cbe0f82843a2bdeadb8478c2c01f6dc9ae96db91b8f705cf28c"
+        },
+        {
+          "path": "tests/support/session-admission-capacity.mjs",
+          "sha256": "3f595056897a5b808a3ceb095998ed1a7ddd0e39f6d2b874e9dfe481d96076ac"
+        },
+        {
+          "path": "planning/SUPPLIER_POSTING_RECOVERY_REVIEW.md",
+          "sha256": "39e6881a6b16619611020282f4a00e641f6d9bb763524a4b3df8a6fea8bded58"
+        },
+        {
+          "path": "planning/SUPPLIER_REGISTER_DATE_RETURN.md",
+          "sha256": "628d8f2a983ad53b57a490e1cd6a1bb37d7b04916f7f920e8050dcb07d2242f6"
+        },
+        {
+          "path": "src/client/pending-supplier-posting.ts",
+          "sha256": "1a472d3799d4dbb12729058c6d4c84c4d8880d1e0200666e01350afee4e8e04e"
+        },
+        {
+          "path": "src/app/expenses/supplier-workspace.tsx",
+          "sha256": "42b2246afd226a91f178948fc6b8908d9acb4fa9b76d2709aa566ab6d55c289b"
+        },
+        {
+          "path": "src/app/expenses/supplier-posting-reentry.ts",
+          "sha256": "4cf3f173d7b6ce963d25437ffc846737b7f72b3574cb1d9f8eb3a4b187f6f33a"
+        },
+        {
+          "path": "src/app/expenses/supplier-payables.tsx",
+          "sha256": "d7d8313de678b93494ed5e77f0860061133fe358de25b91ef6741b03055326cc"
+        },
+        {
+          "path": "tests/unit/pending-supplier-posting.test.ts",
+          "sha256": "3345ee1f48e5a55c599e0764213a85f6024db63b28bbdb772dca83a16808721e"
+        },
+        {
+          "path": "tests/support/supplier-posting-access-recovery.mjs",
+          "sha256": "44dd6db4c98501122b17cda7a3510f8c346274f68fb2737f57a7e6f43ec038ec"
+        },
+        {
+          "path": "src/client/expense-navigation.ts",
+          "sha256": "790a7e55e7fab0f4f5e9fbeb223915d1fe003c7cc0210bb9aeff9144f420a366"
+        },
+        {
+          "path": "tests/unit/expense-navigation.test.ts",
+          "sha256": "e92f4f53ec2f1eec2c0782f5b21d2ad03613bc4d36d0798359d3fd202d92fb31"
         }
       ],
       "verification": {
@@ -1473,7 +1797,7 @@
         },
         {
           "path": "src/app/schedule/work/invoice-issue-tax-review.tsx",
-          "sha256": "8df348235acfe63d5be1a0cc992835160a2f9c49ee5b66d4bc7eb746ef609c3c"
+          "sha256": "603980ae481f0f4b923b496fc0478054d7eab7487fc9e59811ff4fd5edac2df4"
         },
         {
           "path": "tests/integration/book-job-product-browser.test.mjs",
@@ -1501,7 +1825,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "800c8fa2176a90558da736660f7d6c7615b54b2ca00918e90af7eafee8b0ee9f"
+          "sha256": "226c3281b6c136f42eea68d4f834d15b0a3823aab101ef7c0e2b53868db3d4e0"
         }
       ],
       "verification": {
@@ -1581,7 +1905,7 @@
         },
         {
           "path": "scripts/run-browser-group.mjs",
-          "sha256": "f12efc4438ecf0bf59330028353b87888ed9015b2ea7320ef7e00b687a19a80e"
+          "sha256": "3a695b8cd4c9c74f9f6dc74e359052bcba18d7cec5f8f51457887658c47e73de"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -1589,7 +1913,7 @@
         },
         {
           "path": "src/app/expenses/supplier-bill-drafts.tsx",
-          "sha256": "58299c683c7e28628de63fc6e188f6856b9b189116c70a646ab17d561ad3edaf"
+          "sha256": "b86bc722af4f8b7150fcefc32636f88920dfb7493c97f53159884e4803de03e1"
         },
         {
           "path": "tests/support/supplier-draft-layout.mjs",
@@ -1597,7 +1921,7 @@
         },
         {
           "path": "tests/integration/finance-supplier-payable-browser.test.mjs",
-          "sha256": "529434383e2a66820670d80a6ed72c1af3614959dadd5853e86f00f7b3903cd7"
+          "sha256": "3882a2ff1cb2c2cdb6c68634234be10bc3c57ed21c694f1267cbe83b2776f739"
         },
         {
           "path": "planning/NAVIGATION_LOCATION_DESIGN.md",
@@ -1729,7 +2053,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
+          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
@@ -1741,7 +2065,7 @@
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
-          "sha256": "6df671f532da4c4a118015b62f77b909b7808fb77223135699ea02e16a7580c9"
+          "sha256": "d2e8bf9993080e574f46f77104aa233f43669598ff865dc5bdd08d23c45d5125"
         },
         {
           "path": "src/app/settings/accounts/screen.module.css",
@@ -1754,6 +2078,50 @@
         {
           "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
           "sha256": "4ae55e32953a6df02aa3d0437f469b14184d63ddb889ace04731f4f4fdc74ec4"
+        },
+        {
+          "path": "planning/SUPPLIER_POSTING_RECOVERY_REVIEW.md",
+          "sha256": "39e6881a6b16619611020282f4a00e641f6d9bb763524a4b3df8a6fea8bded58"
+        },
+        {
+          "path": "planning/SUPPLIER_REGISTER_DATE_RETURN.md",
+          "sha256": "628d8f2a983ad53b57a490e1cd6a1bb37d7b04916f7f920e8050dcb07d2242f6"
+        },
+        {
+          "path": "src/client/pending-supplier-posting.ts",
+          "sha256": "1a472d3799d4dbb12729058c6d4c84c4d8880d1e0200666e01350afee4e8e04e"
+        },
+        {
+          "path": "src/app/expenses/supplier-workspace.tsx",
+          "sha256": "42b2246afd226a91f178948fc6b8908d9acb4fa9b76d2709aa566ab6d55c289b"
+        },
+        {
+          "path": "src/app/expenses/supplier-posting-reentry.ts",
+          "sha256": "4cf3f173d7b6ce963d25437ffc846737b7f72b3574cb1d9f8eb3a4b187f6f33a"
+        },
+        {
+          "path": "src/app/expenses/supplier-payable-confirmation.tsx",
+          "sha256": "510cddc8894206b23f06ffa19ba4c0a620f84e4c40ff31f4a65cbaca4b923d83"
+        },
+        {
+          "path": "src/app/expenses/supplier-payables.tsx",
+          "sha256": "d7d8313de678b93494ed5e77f0860061133fe358de25b91ef6741b03055326cc"
+        },
+        {
+          "path": "tests/unit/pending-supplier-posting.test.ts",
+          "sha256": "3345ee1f48e5a55c599e0764213a85f6024db63b28bbdb772dca83a16808721e"
+        },
+        {
+          "path": "tests/support/supplier-posting-access-recovery.mjs",
+          "sha256": "44dd6db4c98501122b17cda7a3510f8c346274f68fb2737f57a7e6f43ec038ec"
+        },
+        {
+          "path": "src/client/expense-navigation.ts",
+          "sha256": "790a7e55e7fab0f4f5e9fbeb223915d1fe003c7cc0210bb9aeff9144f420a366"
+        },
+        {
+          "path": "tests/unit/expense-navigation.test.ts",
+          "sha256": "e92f4f53ec2f1eec2c0782f5b21d2ad03613bc4d36d0798359d3fd202d92fb31"
         }
       ],
       "verification": {
@@ -1941,7 +2309,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "97bc2393542810ce7fcc4761559ac496f24b24317e7abe641f329c49048b8153"
+          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
         },
         {
           "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
@@ -2125,7 +2493,7 @@
         },
         {
           "path": "tests/support/quote-browser-response.mjs",
-          "sha256": "ed71f94967d3e4b21d6cadc000037dc61dda9218bf6c8e4dba15af8960844176"
+          "sha256": "494736bc42c886523036efb1374de1e81527b090e11b4c73ba3a7f1b2ce4a522"
         },
         {
           "path": "src/bookkeeping/finance-history-recording.ts",
@@ -2173,7 +2541,7 @@
         },
         {
           "path": "tests/support/amendment-accepted-history.mjs",
-          "sha256": "0779b29e99f683523181afeaca297dade8df541e24fb7cf10a88f8673e58e298"
+          "sha256": "a740cae6d77b7f551477e3b5e37c3821a50736850572153db06a9905886a24a8"
         },
         {
           "path": "tests/integration/google-calendar-settings-product-browser.test.mjs",
@@ -2228,8 +2596,8 @@
       "title": "P2 · Protect context through every transition",
       "requirements": "Back links now exist on many deeper routes. Their wording and destinations still vary, and an opened task can lose the visible customer/job context.\n\nFinish standard: Use a common breadcrumb or contextual return row, preserve selected record/date/filter where safe, restore focus and avoid retaining private detail after sign-out.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Validated sign-in returns cover26 destinations, selected CRM/job/planner/lead/trip context and safe Calendar dates without private/write/OAuth input or arbitrary redirects. Return/credit recovery preserves the actual selected customer Payments section. Expenses now records finite Suppliers/Exports hints, validates them in its real server page and restores the selected view through sign-in while access/capabilities are freshly checked.43 focused contracts pass, including actual server-page round trips and invalid metadata rejection. Full expense/supplier/receipt4/4 verifies both real Supplier denied-session returns at390/1440 with unchanged financial facts. Both four-width service journeys pass in the separate bfb6/9 scope; the published service failure and provider non-reproductions remain unproved rather than cured.",
-      "remainingWork": "Finish remaining rendered stale/alternate/private/focus variants and fresh matching release/installed/owner/device acceptance. Do not promote local service/provider non-reproductions into proved cures.",
+      "implementedOrPresent": "Source-specific record/planner/Calendar returns and private clearing remain. Supplier posting/payment recovery now uses actual current authorization after new sign-in, retains only original identities, preserves original re-entry targets and never silently releases a conflicting original. Selected supplier register dates survive sign-in/private clearing/actual reload in both full financial cases. Safe inactive Purchases/Exports context is projected through the actual return/server pages and62 unit checks; new pane-switch browser assertions are registered for release.",
+      "remainingWork": "Review remaining account/report date/selection returns and any unverified stale/alternate/focus/private variants. Require fresh matching release/installed/owner/device acceptance. Do not promote the last inactive-view projection into a fresh full local browser or physical-device claim.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -2261,7 +2629,7 @@
         },
         {
           "path": "src/app/expenses/supplier-bill-drafts.tsx",
-          "sha256": "58299c683c7e28628de63fc6e188f6856b9b189116c70a646ab17d561ad3edaf"
+          "sha256": "b86bc722af4f8b7150fcefc32636f88920dfb7493c97f53159884e4803de03e1"
         },
         {
           "path": "tests/support/supplier-directory-layout.mjs",
@@ -2401,7 +2769,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "97bc2393542810ce7fcc4761559ac496f24b24317e7abe641f329c49048b8153"
+          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
         },
         {
           "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
@@ -2445,7 +2813,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
+          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
@@ -2457,7 +2825,7 @@
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
-          "sha256": "6df671f532da4c4a118015b62f77b909b7808fb77223135699ea02e16a7580c9"
+          "sha256": "d2e8bf9993080e574f46f77104aa233f43669598ff865dc5bdd08d23c45d5125"
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
@@ -2485,7 +2853,7 @@
         },
         {
           "path": "src/client/sign-in-navigation.ts",
-          "sha256": "560cd8ce4dd51c99ba03fa4c4b1b96cc8a40a8b81ca739fcfdbbe619a8424ea7"
+          "sha256": "cc9ad6841595922752dfa0b8cd7cb4b7682eb54fdbf704816079a10249a02480"
         },
         {
           "path": "tests/unit/sign-in-navigation.test.ts",
@@ -2509,11 +2877,11 @@
         },
         {
           "path": "src/app/expenses/expenses.tsx",
-          "sha256": "3775873380fba71321ad69eb703a6cc4d1e5155998a3e2c9d63b55c71ce3a251"
+          "sha256": "5a8f8b70327ea806c0ea98ba5458a9cac041b704a2b49832c79f694fdfde8e3b"
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "4bb405baf892265432f77c6a415400d423c8b756b600b99afaf3c01ad8d216eb"
+          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
@@ -2525,7 +2893,7 @@
         },
         {
           "path": "tests/unit/sign-in-origin-roundtrip.test.ts",
-          "sha256": "e22e8b00b69a5dca03e89ca7a437592a9b9e8b945d400f725066aad6c9b14aaa"
+          "sha256": "500ed210b2c336dcef21674ee68a8be5b8c82a13d717abf771f1c5939fa80f8f"
         },
         {
           "path": "src/app/schedule/work/direct-receipt.tsx",
@@ -2541,11 +2909,11 @@
         },
         {
           "path": "tests/support/payment-access-recovery.mjs",
-          "sha256": "c1547449a1599f6b59a08ae3ef05b04e53b44cf0c513c002c7a5329abfce834c"
+          "sha256": "649f7f6882ea5726299aa6d7a7c0515097b44b570dc47587247bf6ea33a76633"
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
-          "sha256": "c9a03e9eb3a129cc1577c89e7e9b6575c7122bfdb2b6256e159a693b02d177c9"
+          "sha256": "e8dc19667f4f710145c9b276032bde6f118cdea4a0e2065e1f13df108f2af5b8"
         },
         {
           "path": "tests/integration/google-calendar-settings-product-browser.test.mjs",
@@ -2561,7 +2929,87 @@
         },
         {
           "path": "planning/SUPPLIER_ACCESS_AND_VIEW_RETURN.md",
-          "sha256": "ebec0d46ff8cb7dcfd10f4719c69003f7b397431b210ddbe70804eb4075ed2e2"
+          "sha256": "081b037155c464375da61f87300c49bc21d51bd3db296bea142836f1b8cc76f5"
+        },
+        {
+          "path": "planning/DESIGNED_WORKFLOW_STATES.md",
+          "sha256": "22b2a827fe67438f7f23684126c18164235e54e1a3294954b1c28900753065f3"
+        },
+        {
+          "path": "planning/INVOICE_ACCESS_STATE_REVIEW.md",
+          "sha256": "db03bbd7c2f07c228a069208cea362a9a4fa8fb80b06c9442d5c88ca524f8707"
+        },
+        {
+          "path": "planning/AMENDMENT_HISTORY_RESPONSE_REVIEW.md",
+          "sha256": "be489347d69902a75002f9ad90dcfbfdc47dfeb72b33e28399e9340ba5c586ca"
+        },
+        {
+          "path": "planning/SERVICE_EDITOR_FOCUS_REVIEW.md",
+          "sha256": "a3526bb4296564653d8558537c7462d2f1e26b4094529eab032f32d93108ef5b"
+        },
+        {
+          "path": "planning/DASHBOARD_FOLLOW_UP_RESPONSE_REVIEW.md",
+          "sha256": "aab84b544b17aa4a63b25da4dfaefbde2eecb8ec4a84ad48e0e3c5538bb9236f"
+        },
+        {
+          "path": "planning/SUPPLIER_ORIGINAL_RECOVERY_REVIEW.md",
+          "sha256": "67e3c6751f2e930980630a327d8419e745ebd95a03cb6f23a8cafddbe0a37768"
+        },
+        {
+          "path": "src/client/pending-supplier-bill.ts",
+          "sha256": "ce38b225cbc186dc1525abbd29f26ad935339d261b99b54694f25171ca460806"
+        },
+        {
+          "path": "tests/unit/pending-supplier-bill.test.ts",
+          "sha256": "8ace6c3e3bc54cbe0f82843a2bdeadb8478c2c01f6dc9ae96db91b8f705cf28c"
+        },
+        {
+          "path": "tests/support/session-admission-capacity.mjs",
+          "sha256": "3f595056897a5b808a3ceb095998ed1a7ddd0e39f6d2b874e9dfe481d96076ac"
+        },
+        {
+          "path": "planning/SUPPLIER_POSTING_RECOVERY_REVIEW.md",
+          "sha256": "39e6881a6b16619611020282f4a00e641f6d9bb763524a4b3df8a6fea8bded58"
+        },
+        {
+          "path": "planning/SUPPLIER_REGISTER_DATE_RETURN.md",
+          "sha256": "628d8f2a983ad53b57a490e1cd6a1bb37d7b04916f7f920e8050dcb07d2242f6"
+        },
+        {
+          "path": "src/client/pending-supplier-posting.ts",
+          "sha256": "1a472d3799d4dbb12729058c6d4c84c4d8880d1e0200666e01350afee4e8e04e"
+        },
+        {
+          "path": "src/app/expenses/supplier-workspace.tsx",
+          "sha256": "42b2246afd226a91f178948fc6b8908d9acb4fa9b76d2709aa566ab6d55c289b"
+        },
+        {
+          "path": "src/app/expenses/supplier-posting-reentry.ts",
+          "sha256": "4cf3f173d7b6ce963d25437ffc846737b7f72b3574cb1d9f8eb3a4b187f6f33a"
+        },
+        {
+          "path": "src/app/expenses/supplier-payable-confirmation.tsx",
+          "sha256": "510cddc8894206b23f06ffa19ba4c0a620f84e4c40ff31f4a65cbaca4b923d83"
+        },
+        {
+          "path": "src/app/expenses/supplier-payables.tsx",
+          "sha256": "d7d8313de678b93494ed5e77f0860061133fe358de25b91ef6741b03055326cc"
+        },
+        {
+          "path": "tests/unit/pending-supplier-posting.test.ts",
+          "sha256": "3345ee1f48e5a55c599e0764213a85f6024db63b28bbdb772dca83a16808721e"
+        },
+        {
+          "path": "tests/support/supplier-posting-access-recovery.mjs",
+          "sha256": "44dd6db4c98501122b17cda7a3510f8c346274f68fb2737f57a7e6f43ec038ec"
+        },
+        {
+          "path": "src/client/expense-navigation.ts",
+          "sha256": "790a7e55e7fab0f4f5e9fbeb223915d1fe003c7cc0210bb9aeff9144f420a366"
+        },
+        {
+          "path": "tests/unit/expense-navigation.test.ts",
+          "sha256": "e92f4f53ec2f1eec2c0782f5b21d2ad03613bc4d36d0798359d3fd202d92fb31"
         }
       ],
       "verification": {
@@ -2585,7 +3033,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "6d610a9f23a32473ff3bbae424ea0a07a6ccffdc20de4adce2a8fd9d85471399"
+          "sha256": "ef66bfb9992481686a80d959c84de1c255a0d40547ffe7c3e7d50348abd57ef9"
         }
       ],
       "verification": {
@@ -2673,7 +3121,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "97bc2393542810ce7fcc4761559ac496f24b24317e7abe641f329c49048b8153"
+          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
         },
         {
           "path": "tests/integration/field-work-product-browser.test.mjs",
@@ -2801,7 +3249,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "97bc2393542810ce7fcc4761559ac496f24b24317e7abe641f329c49048b8153"
+          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
         }
       ],
       "verification": {
@@ -2893,11 +3341,11 @@
         },
         {
           "path": "tests/integration/owner-expenses-product-browser.test.mjs",
-          "sha256": "5b9ca1c1858ac9d200420c903b2aa8ab9416e35f13e4ad88969c076d1f436ec9"
+          "sha256": "32ba3392afd2c6c025e50231b959c314efe05c94f5257a31e2964660386dcefb"
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "4bb405baf892265432f77c6a415400d423c8b756b600b99afaf3c01ad8d216eb"
+          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
         },
         {
           "path": "tests/integration/owner-expenses-layout.test.mjs",
@@ -2917,7 +3365,7 @@
         },
         {
           "path": "planning/SUPPLIER_ACCESS_AND_VIEW_RETURN.md",
-          "sha256": "ebec0d46ff8cb7dcfd10f4719c69003f7b397431b210ddbe70804eb4075ed2e2"
+          "sha256": "081b037155c464375da61f87300c49bc21d51bd3db296bea142836f1b8cc76f5"
         }
       ],
       "verification": {
@@ -3093,7 +3541,7 @@
         },
         {
           "path": "tests/integration/quote-amendment-acceptance-product-browser.test.mjs",
-          "sha256": "f8a49ba9093866d818be0dd1b36f244c3678bdc8d93648bb7dbd0f2009f2011f"
+          "sha256": "08f532bc3a65a7fc7690595b4d09b21d6d4e87bcbebf3814c49f2d040b55f852"
         }
       ],
       "verification": {
@@ -3577,7 +4025,7 @@
       "evidence": [
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
+          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
@@ -4333,7 +4781,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/work/invoice-issue-tax-review.tsx",
-          "sha256": "8df348235acfe63d5be1a0cc992835160a2f9c49ee5b66d4bc7eb746ef609c3c"
+          "sha256": "603980ae481f0f4b923b496fc0478054d7eab7487fc9e59811ff4fd5edac2df4"
         },
         {
           "path": "planning/INVOICE_OUTSTANDING_HEADER.md",
@@ -4369,7 +4817,7 @@
         },
         {
           "path": "src/app/schedule/work/invoice-drafts.tsx",
-          "sha256": "cc8c4964d123b313b795d3baecfd48ed9865062a603743de483c49176b859acc"
+          "sha256": "febb8eccb7912288c9d06c4d8d923a5c2dbbd01fcb06fbfc5f3844b19745d0f4"
         },
         {
           "path": "src/app/globals.css",
@@ -4389,7 +4837,7 @@
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
-          "sha256": "c9a03e9eb3a129cc1577c89e7e9b6575c7122bfdb2b6256e159a693b02d177c9"
+          "sha256": "e8dc19667f4f710145c9b276032bde6f118cdea4a0e2065e1f13df108f2af5b8"
         },
         {
           "path": "tests/unit/invoice-outstanding-contract.test.ts",
@@ -4545,7 +4993,7 @@
       "evidence": [
         {
           "path": "src/app/expenses/supplier-bill-drafts.tsx",
-          "sha256": "58299c683c7e28628de63fc6e188f6856b9b189116c70a646ab17d561ad3edaf"
+          "sha256": "b86bc722af4f8b7150fcefc32636f88920dfb7493c97f53159884e4803de03e1"
         },
         {
           "path": "planning/SUPPLIER_BILL_DESIGN.md",
@@ -4561,7 +5009,51 @@
         },
         {
           "path": "planning/SUPPLIER_ACCESS_AND_VIEW_RETURN.md",
-          "sha256": "ebec0d46ff8cb7dcfd10f4719c69003f7b397431b210ddbe70804eb4075ed2e2"
+          "sha256": "081b037155c464375da61f87300c49bc21d51bd3db296bea142836f1b8cc76f5"
+        },
+        {
+          "path": "planning/SUPPLIER_POSTING_RECOVERY_REVIEW.md",
+          "sha256": "39e6881a6b16619611020282f4a00e641f6d9bb763524a4b3df8a6fea8bded58"
+        },
+        {
+          "path": "planning/SUPPLIER_REGISTER_DATE_RETURN.md",
+          "sha256": "628d8f2a983ad53b57a490e1cd6a1bb37d7b04916f7f920e8050dcb07d2242f6"
+        },
+        {
+          "path": "src/client/pending-supplier-posting.ts",
+          "sha256": "1a472d3799d4dbb12729058c6d4c84c4d8880d1e0200666e01350afee4e8e04e"
+        },
+        {
+          "path": "src/app/expenses/supplier-workspace.tsx",
+          "sha256": "42b2246afd226a91f178948fc6b8908d9acb4fa9b76d2709aa566ab6d55c289b"
+        },
+        {
+          "path": "src/app/expenses/supplier-posting-reentry.ts",
+          "sha256": "4cf3f173d7b6ce963d25437ffc846737b7f72b3574cb1d9f8eb3a4b187f6f33a"
+        },
+        {
+          "path": "src/app/expenses/supplier-payable-confirmation.tsx",
+          "sha256": "510cddc8894206b23f06ffa19ba4c0a620f84e4c40ff31f4a65cbaca4b923d83"
+        },
+        {
+          "path": "src/app/expenses/supplier-payables.tsx",
+          "sha256": "d7d8313de678b93494ed5e77f0860061133fe358de25b91ef6741b03055326cc"
+        },
+        {
+          "path": "tests/unit/pending-supplier-posting.test.ts",
+          "sha256": "3345ee1f48e5a55c599e0764213a85f6024db63b28bbdb772dca83a16808721e"
+        },
+        {
+          "path": "tests/support/supplier-posting-access-recovery.mjs",
+          "sha256": "44dd6db4c98501122b17cda7a3510f8c346274f68fb2737f57a7e6f43ec038ec"
+        },
+        {
+          "path": "src/client/expense-navigation.ts",
+          "sha256": "790a7e55e7fab0f4f5e9fbeb223915d1fe003c7cc0210bb9aeff9144f420a366"
+        },
+        {
+          "path": "tests/unit/expense-navigation.test.ts",
+          "sha256": "e92f4f53ec2f1eec2c0782f5b21d2ad03613bc4d36d0798359d3fd202d92fb31"
         }
       ],
       "verification": {
