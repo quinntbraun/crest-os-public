@@ -1,5 +1,7 @@
 import {reviewFinancialSaveNotice} from '../support/financial-save-notice.mjs';
 import assert from 'node:assert/strict';
+import {reviewMappingNavigation} from '../support/mapping-navigation-review.mjs';
+import {reviewRecoveryActionPriority} from '../support/recovery-action-priority.mjs';
 import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {test} from 'node:test';
@@ -54,6 +56,8 @@ for(const engine of [chromium,webkit]){
     await load.press('Enter');
     await expect(status).toHaveText('Approval settings loaded.');await expect(status).toHaveAttribute('data-confirmed','false');
     await expect(editor.getByText('No approved mapping yet.',{exact:true})).toBeVisible();
+    await expect(load).toHaveClass('secondary');
+    await reviewRecoveryActionPriority(page,editor,editor.getByRole('button',{name:'Approve mapping',exact:true}),()=>mappingBusinessSource(fixture),'category-loaded-'+engine.name());
     await editor.getByRole('button',{name:'Approve mapping',exact:true}).press('Enter');
     await expect(editor.getByRole('heading',{name:'Approve mapping',exact:true})).toBeFocused();
     const account=editor.getByLabel('Account',{exact:true});
@@ -192,6 +196,7 @@ for(const engine of [chromium,webkit]){
     await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
     await expect(embedded).toHaveCount(0);
     await expect(category).toHaveValue('');
+    await reviewMappingNavigation(page,fixture,engine.name(),true);
    }catch(error){
     t.diagnostic('Recent category response statuses: '+JSON.stringify(responses));
     if(fixture)t.diagnostic('Category session/provider evidence: '+JSON.stringify(await sessionAdmissionDiagnostic(fixture)));

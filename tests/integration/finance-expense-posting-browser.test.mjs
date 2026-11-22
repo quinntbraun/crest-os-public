@@ -1,5 +1,6 @@
 import {observeExpenseAccess,prepareExpenseBrowserCode} from '../support/expense-access-diagnostic.mjs';
 import assert from 'node:assert/strict';
+import {reviewRecoveryActionPriority,financePriorityFacts} from '../support/recovery-action-priority.mjs';
 import {openReceiptDownloads,captureExpenseState} from '../support/receipt-layout.mjs';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
@@ -233,6 +234,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(match.getByText('Every statement row is fully allocated in this preview.',{exact:true})).toBeVisible();
    if(saveMatchDraft){
     await match.getByLabel('Match draft review note',{exact:true}).fill('Fictional statement expense matched');
+    await reviewRecoveryActionPriority(page,match,match.getByRole('button',{name:'Save match draft',exact:true}),()=>financePriorityFacts(f,'statement'),'statement-match-save-'+name);
     await match.getByRole('button',{name:'Save match draft',exact:true}).click();
     await expect(match.getByRole('status')).toHaveText('Match draft saved.');
     await expect(match.getByText('Saved draft revision 1',{exact:false})).toBeVisible();

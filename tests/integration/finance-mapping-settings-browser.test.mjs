@@ -1,5 +1,7 @@
 import {reviewFinancialSaveNotice} from '../support/financial-save-notice.mjs';
 import assert from 'node:assert/strict';
+import {reviewMappingNavigation} from '../support/mapping-navigation-review.mjs';
+import {reviewRecoveryActionPriority} from '../support/recovery-action-priority.mjs';
 import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 import {randomUUID} from 'node:crypto';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -205,6 +207,8 @@ for(const engine of [chromium,webkit]){
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),pendingKey),null);
 
    const approveButton=editor.getByRole('button',{name:'Approve mapping',exact:true});
+   await expect(loadSettings).toHaveClass('secondary');
+   await reviewRecoveryActionPriority(page,editor,approveButton,()=>mappingBusinessSource(fixture),'mapping-loaded-'+engine.name());
    const saveApproval=editor.getByRole('button',{name:'Save approval',exact:true});
    const approvalReason=editor.getByLabel('Approval reason',{exact:true});
    await approveButton.click();
@@ -281,6 +285,7 @@ for(const engine of [chromium,webkit]){
    assert.deepEqual(await mappingBusinessSource(fixture),beforePaging,'paging and CSV do not change approved history or post the proposal');
    await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
    await expect(embedded).toHaveCount(0);await expect(selectPurpose).toHaveValue('');
+   await reviewMappingNavigation(page,fixture,engine.name(),false);
   }finally{
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{

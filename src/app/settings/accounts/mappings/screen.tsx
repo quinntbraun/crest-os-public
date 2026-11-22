@@ -8,6 +8,7 @@ import {expenseCategoryMappingLabels,expenseCategoryMappingPurpose,financeMappin
 import type {ExpenseCategoryMappingPurpose,FinanceMappingPurpose} from '../../../../bookkeeping/finance-mapping-contract';
 import styles from '../screen.module.css';
 import {MappingApprovalHistory} from './history';
+import {mappingNavigationHref} from '../../../../client/mapping-navigation';
 
 type Result=Awaited<ReturnType<typeof financeAccounts.mappingAt>>;
 type History=Awaited<ReturnType<typeof financeAccounts.mappingHistory>>;
@@ -16,12 +17,13 @@ const subscribeToHydration=()=>()=>undefined;
 const displayDate=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
 const dateLabel=(value:string)=>displayDate.format(new Date(value+'T00:00:00Z'));
 
-export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
- const initialMessage=categories?'Select a category to review its posting account and approval history.':'Choose a purpose to look up.';
+export function FinanceMappingsScreen({categories=false,initialPurpose='',initialDate=''}:{categories?:boolean;initialPurpose?:FinanceMappingPurpose|'';initialDate?:string}){
+ const initialMessage=categories?'Review a category’s posting account for a date, or read its approval history.':'Look up a purpose’s account for a date, or read its approval history.';
  const labels=categories?expenseCategoryMappingLabels:fixedFinanceMappingLabels;
  const acceptsPurpose=categories?expenseCategoryMappingPurpose:fixedFinanceMappingPurpose;
- const [purpose,setPurpose]=useState<FinanceMappingPurpose|''>('');
- const [date,setDate]=useState(''),[message,setMessage]=useState(initialMessage);
+ const initialSelection=acceptsPurpose(initialPurpose)?initialPurpose:'';
+ const [purpose,setPurpose]=useState<FinanceMappingPurpose|''>(initialSelection);
+ const [date,setDate]=useState(customerDate(initialDate)?initialDate:''),[message,setMessage]=useState(initialMessage);
  const [mapping,setMapping]=useState<Result>(null),[history,setHistory]=useState<History|null>(null);
  const [checked,setChecked]=useState(false),[query,setQuery]=useState(''),[exceptions,setExceptions]=useState(false);
  const [directory,setDirectory]=useState<{rows:Record<string,Result>;pending:FinanceMappingPurpose|null}|null>(null);
@@ -32,6 +34,12 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
  const historyHeading=useRef<HTMLHeadingElement>(null),accountHeading=useRef<HTMLHeadingElement>(null);
  const resultFocus=useRef<'history'|'account'|null>(null);
  const categoryHeading=useRef<HTMLHeadingElement>(null),categorySearch=useRef<HTMLInputElement>(null);
+ const purposeInput=useRef<HTMLSelectElement>(null),restoreSelection=useRef(!!initialSelection);
+ useLayoutEffect(()=>{
+  if(controlsDisabled||!restoreSelection.current)return;
+  const target=categories?categoryHeading.current:purposeInput.current;
+  if(target){restoreSelection.current=false;target.focus();target.scrollIntoView({block:'nearest'});}
+ },[controlsDisabled,categories]);
  const categoryFocus=useRef<'selected'|'directory'|null>(null);
  useLayoutEffect(()=>{
   if(!categoryFocus.current)return;
@@ -62,11 +70,16 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
  function resetResults(){
   setMapping(null);setHistory(null);setChecked(false);setMessage(initialMessage);
  }
+ function rememberLookup(selected:FinanceMappingPurpose|'',lookupDate:string){
+  const path='/settings/accounts/mappings'+(categories?'/categories':'');
+  if(window.location.pathname===path)
+   window.history.replaceState(null,'',mappingNavigationHref(categories,false,{purpose:selected,lookupOn:lookupDate})+window.location.hash);
+ }
  function chooseCategory(selected:ExpenseCategoryMappingPurpose){
   if(purpose===selected){categoryHeading.current?.focus();categoryHeading.current?.scrollIntoView({block:'nearest'});return;}
-  categoryFocus.current='selected';setPurpose(selected);resetResults();
+  categoryFocus.current='selected';setPurpose(selected);rememberLookup(selected,date);resetResults();
  }
- function backToCategories(){categoryFocus.current='directory';setPurpose('');resetResults();}
+ function backToCategories(){categoryFocus.current='directory';setPurpose('');rememberLookup('',date);resetResults();}
  async function load(kind:'date'|'history'|'more'|'directory',selected=purpose){
   const needsDate=kind==='date'||kind==='directory';
   if(active.current||kind!=='directory'&&!selected||needsDate&&!customerDate(date))return;
@@ -131,7 +144,7 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
   label.toLowerCase().includes(query.trim().toLowerCase())&&(!exceptions||!directory?.rows[key]||directory.pending===key));
  const approvalHistory=history?<MappingApprovalHistory history={history} purpose={purpose} categories={categories} heading={historyHeading} disabled={controlsDisabled} download={download} more={()=>void load('more')}/>:<section className="mapping-history-introduction" aria-label="Approval history introduction"><h2>Review approved changes</h2><p>Choose a {categories?'category':'purpose'}, then view its approval history to compare accounts and effective periods.</p><p>The date lookup checks which approved account is usable on a specific date.</p></section>;
  const effectiveDate=<div><label htmlFor="mapping-date">Effective date</label><input id="mapping-date" type="date" required disabled={controlsDisabled} value={date} onChange={event=>{
-  setDate(event.target.value);setDirectory(null);setExceptions(false);resetResults();
+  setDate(event.target.value);rememberLookup(purpose,event.target.value);setDirectory(null);setExceptions(false);resetResults();
  }}/></div>;
  return <section className={styles.workspace} aria-label="Account mapping lookup" aria-busy={busy}>
   <p ref={status} tabIndex={-1} role="status">{message}</p>
@@ -170,8 +183,8 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
    {!categories&&<div className={styles.lookupFields}>
     <div>
      <label htmlFor="mapping-purpose">Purpose</label>
-     <select id="mapping-purpose" required disabled={controlsDisabled} value={purpose} onChange={event=>{
-      const value=event.target.value;setPurpose(acceptsPurpose(value)?value:'');resetResults();
+     <select ref={purposeInput} id="mapping-purpose" required disabled={controlsDisabled} value={purpose} onChange={event=>{
+      const value=event.target.value,selected=acceptsPurpose(value)?value:'';setPurpose(selected);rememberLookup(selected,date);resetResults();
      }}>
       <option value="">Select a purpose</option>
       {Object.entries(labels).map(([value,label])=><option value={value} key={value}>{label}</option>)}
@@ -183,6 +196,7 @@ export function FinanceMappingsScreen({categories=false}:{categories?:boolean}){
     <button type="submit" disabled={controlsDisabled||!purpose||!customerDate(date)}>Check account</button>
     <button type="button" className="secondary" disabled={controlsDisabled||!purpose} onClick={()=>void load('history')}>View approval history</button>
    </div>
+   {purpose&&<a className="record-return-link" href={mappingNavigationHref(categories,true,{purpose,lookupOn:date})}>Manage approvals for this {categories?'category':'purpose'}</a>}
   </form>
   {mapping&&<section className="mapping-summary-card" aria-label="Approved account">
    <h2 ref={accountHeading} className="editor-heading" tabIndex={-1}>Account on {dateLabel(date)}</h2>

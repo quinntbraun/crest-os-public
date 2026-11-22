@@ -53,11 +53,11 @@ export function ServiceScreen(){
  const dirty=serviceDraftChanged(draft,original);
  useLayoutEffect(()=>{
   if(focus.current===undefined||view.busy)return;
-  if(view.phase==='ready'&&view.draft&&(view.selected?.service.id??null)===focus.current){
-   (editing?formHeading:profileHeading).current?.focus();
+  if(showRecord&&view.phase==='ready'&&view.draft&&(view.selected?.service.id??null)===focus.current){
+   (editing?preview?previewHeading:formHeading:profileHeading).current?.focus();
   }
   focus.current=undefined;
- },[editing,view]);
+ },[editing,preview,showRecord,view]);
  useEffect(()=>{
   const c=createServiceEditorController({
    store:createPendingServiceStore({getItem:k=>sessionStorage.getItem(k),setItem:(k,v)=>sessionStorage.setItem(k,v),removeItem:k=>sessionStorage.removeItem(k)}),
@@ -122,8 +122,8 @@ export function ServiceScreen(){
   });
  }
  function returnToRecord(){
+  focus.current=selected?.service.id??null;
   setShowRecord(true);
-  requestAnimationFrame(()=>(editing?preview?previewHeading:formHeading:profileHeading).current?.focus());
  }
  const canEdit=editing&&draft!==null;
  return <section aria-label="Service directory" aria-busy={view.busy}>

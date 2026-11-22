@@ -3,6 +3,7 @@ import {useFinancialNotice} from './use-financial-notice';
 import {FinanceHistoryComparison,previousLoadedFinanceVersion} from './history-comparison';
 import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from './history-recording';
 import {useCallback,useEffect,useRef,useState} from 'react';
+import {useSearchParams} from 'next/navigation';
 import type {FormEvent} from 'react';
 import {InvoiceSetup} from './invoice-setup';
 import {StatementStaging} from './statement-staging';
@@ -52,6 +53,8 @@ const initialMessage='Checking accounting access…';
 type Area='reports'|'setup'|'accounts';
 
 export function FinanceAccountsScreen(){
+ const navigation=useSearchParams(),requested=navigation?.getAll('view')??[];
+ const entryArea:Area|null=requested.length===1&&(requested[0]==='reports'||requested[0]==='setup'||requested[0]==='accounts')?requested[0]:null;
  const {message,setMessage,confirmed:saveConfirmed,resetConfirmation}=useFinancialNotice(initialMessage);
  const [workspace,setWorkspace]=useState<Workspace|null>(null),[editor,setEditor]=useState<Editor|null>(null);
  const [history,setHistory]=useState<AccountHistory|null>(null),[pending,setPending]=useState<Pending|null>(null);
@@ -249,9 +252,14 @@ export function FinanceAccountsScreen(){
  const context=workspace?.context;
  const hasSetupLinks=context&&(context.fixedMappings||context.moneyChannels||context.categoryMappings||context.taxProfiles);
  const hasSetup=!!(hasSetupLinks||context?.invoiceIssue||context?.openingWorksheet||context?.statementStaging);
- const activeArea=area==='setup'&&hasSetup?'setup':area==='accounts'||!context?.trialBalance?'accounts':'reports';
+ const currentArea=area??entryArea;
+ const activeArea=currentArea==='setup'&&hasSetup?'setup':currentArea==='accounts'||!context?.trialBalance?'accounts':'reports';
  function selectArea(next:Area){
   setArea(next);
+  if(window.location.pathname==='/settings/accounts'){
+   const url=new URL(window.location.href);url.searchParams.set('view',next);
+   window.history.replaceState(null,'',url.pathname+url.search+url.hash);
+  }
   if(next===activeArea)document.getElementById('finance-'+next+'-heading')?.focus();
   else focusArea.current=next;
  }

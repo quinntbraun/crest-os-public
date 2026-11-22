@@ -33,6 +33,7 @@ for(const engine of [chromium,webkit]){
    await page.goto(fixture.origin+'/settings');
    await page.getByRole('link',{name:'Fictional account setup',exact:true}).click();
    await page.getByRole('button',{name:'Setup',exact:true}).click();
+   await expect(page).toHaveURL(fixture.origin+'/settings/accounts?view=setup');
    await page.getByRole('link',{name:'Money channels',exact:true}).click();
 
    const panel=page.getByRole('region',{name:'Money channel reviews',exact:true}),status=panel.getByRole('status');
@@ -247,6 +248,34 @@ for(const engine of [chromium,webkit]){
    await expect(panel.locator('.channel-directory > li')).toHaveCount(0);
    await page.goBack();
    await expect(page.getByRole('heading',{name:'Accounting',level:1,exact:true})).toBeVisible();
+   const accounting=page.getByRole('region',{name:'Account settings',exact:true});
+   await expect(accounting).toHaveAttribute('aria-busy','false');
+   const recheck=accounting.getByRole('button',{name:'Check accounting access',exact:true});
+   if(await recheck.isVisible())await recheck.click();
+   await expect(page.getByRole('heading',{name:'Finance setup',exact:true})).toBeVisible();
+   await expect(page.getByRole('button',{name:'Setup',exact:true})).toHaveAttribute('aria-current','true');
+   await expect(page).toHaveURL(fixture.origin+'/settings/accounts?view=setup');
+   await page.getByRole('link',{name:'Money channels',exact:true}).click();
+   const setupReturn=page.getByRole('link',{name:'Back to finance setup',exact:true});
+   await expect(setupReturn).toHaveAttribute('href','/settings/accounts?view=setup');
+   const beforeReturn=await facts(),returnRequests=fixture.requests.length;
+   for(const width of [360,390,430,1440]){
+    await page.setViewportSize({width,height:900});await setupReturn.focus();
+    assert(await setupReturn.evaluate(node=>{const box=node.getBoundingClientRect(),x=box.x+box.width/2,y=box.y+box.height/2;return box.height>=44&&x>=0&&x<innerWidth&&y>=0&&y<innerHeight&&node.contains(document.elementFromPoint(x,y));}));
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+    await page.screenshot({path:'.local/review/finance-setup-return-'+engine.name()+'-'+width+'.png',animations:'disabled'});
+   }
+   assert.equal(fixture.requests.length,returnRequests,'Inspecting the return link makes no API request');
+   assert.deepEqual(await facts(),beforeReturn,'Inspecting navigation preserves financial and audit history');
+   await setupReturn.press('Enter');
+   await expect(page.getByRole('heading',{name:'Finance setup',exact:true})).toBeVisible();
+   await expect(page.getByRole('button',{name:'Setup',exact:true})).toHaveAttribute('aria-current','true');
+   for(const query of ['view=reports','view=setup&view=reports','view=unknown']){
+    await page.goto(fixture.origin+'/settings/accounts?'+query);
+    await expect(page.getByRole('heading',{name:'Chart of accounts',exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Reports',exact:true})).toHaveCount(0);
+   }
   }finally{
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{

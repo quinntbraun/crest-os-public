@@ -1,5 +1,6 @@
 // Genuine Next/Node/MFA browser acceptance for the isolated completion candidate.
 import assert from 'node:assert/strict';
+import {reviewRecoveryActionPriority} from '../support/recovery-action-priority.mjs';
 import {randomUUID} from 'node:crypto';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {test} from 'node:test';
@@ -265,6 +266,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await capture('editor');
   await page.setViewportSize({width:390,height:844});
   let submissions=0;
+  let savedSummaryReads=0;
+  await page.route('**/api/business/scheduling/completion-context',async route=>{
+   const response=await route.fetch();
+   assert.equal(response.status(),200);
+   savedSummaryReads++;
+   await route.abort('failed');
+  },{times:1});
   await page.route('**/api/business/scheduling/complete',async route=>{
    submissions++;
    const response=await route.fetch();
@@ -288,7 +296,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    assert(pending&&!pending.includes('Synthetic')&&!pending.includes('https:'));
    await page.getByRole('button',{name:'Check original completion',exact:true}).click();
   }
-  await expect(status).toHaveText('Job completion saved.');
+  await expect(status).toHaveText('Job completion saved. Reload to see its saved outcomes and follow-up.');
+  assert.equal(savedSummaryReads,1,'The genuine saved completion read failed once after the save was confirmed');
+  const completion=page.getByRole('region',{name:'Job completion',exact:true});
+  const reloadCompletion=completion.getByRole('button',{name:'Reload saved completion',exact:true});
+  await expect(completion.getByRole('link',{name:'Open updated job in Schedule',exact:true})).toHaveClass('primary-action secondary');
+  await reviewRecoveryActionPriority(page,completion,reloadCompletion,previewFacts,'completion-reload-'+name);
+  await reloadCompletion.press('Enter');
+  await expect(status).toHaveText('Saved completion loaded.');
   const summary=page.getByRole('region',{name:'Saved completion',exact:true});
   await expect(summary.getByRole('heading',{name:partial?'Partial completion':'Full completion',exact:true})).toBeVisible();
   await expect(summary).toContainText('Invoice review · Open');

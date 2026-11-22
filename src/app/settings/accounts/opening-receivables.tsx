@@ -238,7 +238,7 @@ export function OpeningReceivables({worksheet}:{worksheet:OpeningReceipt}){
      </fieldset>)}
      <button type="button" className="secondary" disabled={reductions.length>=20}
       onClick={()=>setReductions([...reductions,'ar-adjustment-'+crypto.randomUUID()])}>Add prior payment or credit</button>
-     <button type="submit" disabled={lines.length>=20}>Add receivable to preview</button>
+     <button type="submit" className={lines.length>0?'secondary':undefined} disabled={lines.length>=20}>Add receivable to preview</button>
     </fieldset>
    </form>}
    {lines.length>0&&<>
@@ -248,7 +248,7 @@ export function OpeningReceivables({worksheet}:{worksheet:OpeningReceipt}){
       setLines(lines.filter((_,position)=>position!==index));setPreview(null);
      }}>Remove receivable {index+1}</button>
     </li>)}</ul>
-    <button type="button" disabled={busy} onClick={review}>Review opening receivables</button>
+    <button type="button" className={preview&&saved!==undefined?'secondary':undefined} disabled={busy} onClick={review}>Review opening receivables</button>
    </>}
    {preview&&<div><h3>Opening receivables preview</h3>
     <p>Total remaining · ${dollars(preview.totals.remainingCents)} USD</p>

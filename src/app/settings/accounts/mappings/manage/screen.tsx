@@ -284,7 +284,7 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
     </div>
    </div>
    <div className={styles.actions}>
-    <button type="button" disabled={controlsDisabled||!purpose} onClick={()=>load()}>Load approval settings</button>
+    <button className={workspace?'secondary':undefined} type="button" disabled={controlsDisabled||!purpose} onClick={()=>load()}>Load approval settings</button>
     <button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>load(true)}>Review interrupted approval</button>
    </div>
    </div>
