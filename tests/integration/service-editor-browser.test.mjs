@@ -104,6 +104,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    const rows=(await f.client.query('SELECT version::text AS version FROM crest.services WHERE business_id=$1',[f.business])).rows;assert.deepEqual(rows,[{version:'3'}]);
   });
   await t.test('canceling draft abandonment, history-preserving deactivation and back navigation',async()=>{
+   const responses=[];
+   const observeResponse=response=>{const path=new URL(response.url()).pathname;if(path==='/api/auth/session'||path.startsWith('/api/business/services/')){responses.push({path,status:response.status()});if(responses.length>32)responses.shift();}};
+   page.on('response',observeResponse);
+   try{
    await edit();
    await page.getByLabel('Service name',{exact:true}).fill('Unsaved private scope');
    await page.getByRole('button',{name:'Back to services',exact:true}).click();
@@ -117,11 +121,22 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await openService();await edit();
    await page.getByLabel('Active — available for future selection',{exact:true}).uncheck();await page.getByRole('button',{name:'Save service',exact:true}).click();await expect(status()).toContainText('Service saved');await page.getByRole('button',{name:'Load current services',exact:true}).click();await expect(page.getByRole('button',{name:/Synthetic scope/})).toHaveCount(0);await page.getByLabel('Include inactive services',{exact:true}).check();await page.getByRole('button',{name:'Search',exact:true}).click();await page.getByRole('button',{name:/Synthetic scope/}).click();await expect(page.getByRole('region',{name:'Saved history',exact:true})).toContainText('Revision 4 · Made inactive');
    const selectedService=new URL(page.url()).searchParams.get('service');assert(selectedService);
+   const navigationTrace=[];
+   const navigationSnapshot=tag=>{const url=new URL(page.url());return {tag,path:url.pathname,hasService:url.searchParams.has('service'),sameService:url.searchParams.get('service')===selectedService};};
+   const observeNavigation=frame=>{if(frame===page.mainFrame()){navigationTrace.push(navigationSnapshot('frame'));if(navigationTrace.length>16)navigationTrace.shift();}};
+   navigationTrace.push(navigationSnapshot('before-leaving'));page.on('framenavigated',observeNavigation);
    const returnedReads=[],observeReturn=response=>{if(new URL(response.url()).pathname==='/api/business/services/history')returnedReads.push(response.status());};
    await page.goto(f.origin+'/customers');page.on('response',observeReturn);
    try{
-    await page.goBack();assert.equal(new URL(page.url()).searchParams.get('service'),selectedService);
+    await page.goBack();
+    // Back can return before the destination document commits. Wait for the
+    // existing service-ready condition before checking the same exact pointer.
     await expect(status()).toContainText(/cleared|Review service details and retained history before saving/);
+    try{assert.equal(new URL(page.url()).searchParams.get('service'),selectedService);}
+    catch(error){
+     navigationTrace.push(navigationSnapshot('checked-service-return'));
+     t.diagnostic('Service return navigation '+JSON.stringify({engine:name,navigationTrace}));throw error;
+    }
     await expect(page.getByLabel('Service name',{exact:true})).toHaveCount(0);
     if((await status().textContent()).includes('Review service details')){
      assert.deepEqual(returnedReads,[200],'A freshly restored profile requires one genuine checked history read');
@@ -134,7 +149,17 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await expect(page.getByRole('button',{name:'Reopen selected service',exact:true})).toBeVisible();
      await expect(page.getByLabel('Include inactive services',{exact:true})).toBeChecked();
     }
-   }finally{page.off('response',observeReturn);}
+   }finally{page.off('response',observeReturn);page.off('framenavigated',observeNavigation);}
+   }catch(error){
+    const admissions=await f.client.query(`SELECT a.bucket,count(*)::int AS recent FROM crest_private.session_request_admissions a
+     JOIN crest_private.app_sessions s ON s.id=a.session_id
+     WHERE s.actor_id IN(SELECT m.actor_id FROM crest.memberships m WHERE m.business_id=$1)
+       AND a.admitted_at>clock_timestamp()-interval '1 minute' GROUP BY a.bucket`,[f.business]).then(result=>result.rows).catch(()=>null);
+    const message=await status().textContent().catch(()=>null);
+    t.diagnostic('Service failure state '+JSON.stringify({engine:name,path:new URL(page.url()).pathname,message,responses,admissions}));
+    await page.screenshot({path:'.local/review/service-return-failure-'+name+'.png',fullPage:true}).catch(()=>{});
+    throw error;
+   }finally{page.off('response',observeResponse);}
   });
  }finally{await browser?.close();await f.close();}
 });

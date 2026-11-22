@@ -18,9 +18,12 @@ import {collectJournalSources,journalCollectionContext} from './source-export-jo
 import {collectServiceCatalogSources,catalogCollectionContext} from './service-catalog-collection.ts';
 import {captureFinanceSourceExport} from '../bookkeeping/finance-source-export.ts';
 import {verifyFinanceSourceExport} from '../tooling/verify-finance-source-export.ts';
+import {schemaMigrationLock} from './schema-migration-lock.ts';
+import {captureCurrentBusinessRows} from './current-business-source.ts';
+import type {CurrentBusinessRows} from './current-business-source.ts';
 
 type FinanceSourceVersion=5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23;
-type Configuration=Readonly<{connectionString:string;environment:'production'|'test';businessId:string}>;
+type Configuration=Readonly<{connectionString:string;environment:'production'|'test';businessId:string;migrationIdentity?:readonly Readonly<{version:string;name:string}>[]}>;
 type Group='configuration'|'identity'|'history';
 type Context=Readonly<{schemaVersion:1;scope:string;businessId:string;snapshotToken:string;observedAt:string;recordCounts:Readonly<Record<string,string>>}>;
 type Row=Readonly<{kind:string;recordId:string;representation:'snapshot_projection';canonicalEvidence:string;evidenceHash:string}>;
@@ -40,6 +43,7 @@ type PostedFinanceCapture=Readonly<{
  completePortableExport:false;completeBackup:false;
 }>;
 export type PostedFinanceSourceCapture=Readonly<{forFinanceServer:()=>PostedFinanceCapture;toJSON:()=>never}>;
+export type CurrentBusinessSourceCapture=Readonly<{forCurrentBusinessServer:()=>CurrentBusinessRows;toJSON:()=>never}>;
 export class BusinessFoundationCollectionError extends Error{
  constructor(){super('BUSINESS_FOUNDATION_COLLECTION_REVIEW_REQUIRED');this.name='BusinessFoundationCollectionError';}
 }
@@ -132,12 +136,20 @@ export function createPairedPostedFinanceSourceCollector(config:Configuration){r
 export function createServiceRefundSourceCollector(config:Configuration,includeExcessReceipts=false,includeExcessReturns=false,includeTipReturns=false,includeCollectionFailures=false,includeRefundTransferAdjustments=false,includeDirectReceiptTips=false,includeRefundTransferFees=false,includeCollectionFailureRecredits=false,includeCollectionFailureGroupedRecredits=false,includeRestoredTips=false,includeOpeningWorksheets=false,includeStatementStaging=false,includeOpeningReceivables=false,includeStatementMatchDrafts=false,includeSupplierBillDrafts=false,includeSupplierPayables=false){
  return createCollector(config,false,false,false,true,includeSupplierPayables?23:includeSupplierBillDrafts?22:includeStatementMatchDrafts?21:includeOpeningReceivables?20:includeStatementStaging?19:includeOpeningWorksheets?18:includeRestoredTips?17:includeCollectionFailureGroupedRecredits?16:includeCollectionFailureRecredits?15:includeRefundTransferFees?14:includeDirectReceiptTips?13:includeRefundTransferAdjustments?12:includeCollectionFailures?11:includeTipReturns?10:includeExcessReturns?9:includeExcessReceipts?8:7);
 }
+export function createCurrentBusinessSourceCollector(config:Configuration){
+ if(!config.migrationIdentity)throw new BusinessFoundationCollectionError();
+ return createCollector(config,false,false,false,false,5,true);
+}
+function createCollector(config:Configuration,includeCrm:false,includeJournal:false,includeCatalog:false,includeFinance:false,financeProfile:FinanceSourceVersion,includeCurrent:true):(signal:AbortSignal)=>Promise<CurrentBusinessSourceCapture>;
 function createCollector(config:Configuration,includeCrm:false,includeJournal:false,includeCatalog:false,includeFinance:true,financeProfile?:FinanceSourceVersion):(signal:AbortSignal)=>Promise<PostedFinanceSourceCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal:true,includeCatalog:true):(signal:AbortSignal)=>Promise<BusinessSourceCatalogCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal:true):(signal:AbortSignal)=>Promise<BusinessSourceJournalCapture>;
 function createCollector(config:Configuration,includeCrm:true,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessSourceCapture>;
 function createCollector(config:Configuration,includeCrm:false,includeJournal?:false):(signal:AbortSignal)=>Promise<BusinessFoundationCapture>;
-function createCollector(config:Configuration,includeCrm:boolean,includeJournal=false,includeCatalog=false,includeFinance=false,financeProfile:FinanceSourceVersion=5){
+function createCollector(config:Configuration,includeCrm:boolean,includeJournal=false,includeCatalog=false,includeFinance=false,financeProfile:FinanceSourceVersion=5,includeCurrent=false){
+ const captureLifetime=includeCurrent?900000:lifetime;
+ const expected=config.migrationIdentity?.map(entry=>Object.freeze({...entry}));
+ if(expected&&(!expected.length||expected.length>999||expected.some((entry,index)=>!/^\d{14}$/.test(entry.version)||!/^[a-z0-9_]+$/.test(entry.name)||index>0&&expected[index-1]!.version>=entry.version)))throw new BusinessFoundationCollectionError();
  let connectionString:string,businessId:string,ssl:false|{rejectUnauthorized:true};
  try{
   const url=new URL(config.connectionString);
@@ -150,11 +162,11 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
   const controller=new AbortController(),combined=AbortSignal.any([signal,controller.signal]),started=performance.now();
   let client:pg.Client|undefined,transport:Socket|undefined,closed=false,timer:ReturnType<typeof setTimeout>|undefined,interrupted:()=>void=()=>{};
   const stop=()=>{if(closed)return;closed=true;try{void client?.end().catch(()=>{});}catch{/* fixed outer error only */}finally{transport?.destroy();}};
-  const check=()=>require(!closed&&!combined.aborted&&performance.now()-started<lifetime);
+   const check=()=>require(!closed&&!combined.aborted&&performance.now()-started<captureLifetime);
   try{
    client=new pg.Client({connectionString,ssl,stream:()=>{transport=new Socket();return transport;},connectionTimeoutMillis:1000,statement_timeout:3000,lock_timeout:2000,query_timeout:3500,idle_in_transaction_session_timeout:4000,options:'-c role=crest_export',application_name:'crest_business_capture'});
    const owned=client,failed=()=>controller.abort();owned.on('error',failed);owned.once('end',failed);
-   timer=setTimeout(failed,lifetime);timer.unref();
+   timer=setTimeout(failed,captureLifetime);timer.unref();
    const interruption=new Promise<never>((_,reject)=>{interrupted=()=>{stop();reject(new BusinessFoundationCollectionError());};combined.addEventListener('abort',interrupted,{once:true});});
    const query=async(sql:string,values?:unknown[])=>{check();const result=await owned.query(sql,values);check();return result;};
    const work=(async()=>{
@@ -166,7 +178,19 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
      AND EXISTS(SELECT 1 FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles r ON r.oid=m.roleid WHERE m.member=(SELECT oid FROM pg_catalog.pg_roles WHERE rolname=session_user) AND r.rolname=$1 AND NOT m.admin_option AND m.set_option AND NOT m.inherit_option)
      AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_auth_members m WHERE m.member=(SELECT oid FROM pg_catalog.pg_roles WHERE rolname=$1)) AS allowed`,['crest_export']);
     require(guard.rows.length===1&&exact(guard.rows[0],['allowed'])&&guard.rows[0].allowed===true);
+    // Wait for the coordinator's exclusive lock before taking the MVCC
+    // snapshot. Closing this owned connection releases the shared lock.
+    if(expected)await query('SELECT pg_advisory_lock_shared($1::integer,$2::integer)',[...schemaMigrationLock]);
     require((await query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')).command==='BEGIN');
+    if(expected){
+      const observed=await query('SELECT version,name FROM supabase_migrations.schema_migrations ORDER BY version');
+      require(observed.rows.length===expected.length&&observed.rows.every((row,index)=>exact(row,['version','name'])&&row.version===expected[index]!.version&&row.name===expected[index]!.name));
+    }
+    if(includeCurrent){
+     const value=await captureCurrentBusinessRows(businessId,async(sql,args)=>(await query(sql,args)).rows,check);
+     require((await query('COMMIT')).command==='COMMIT');check();
+     return Object.freeze({forCurrentBusinessServer:()=>value,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
+    }
     if(includeFinance){
      const capture=(await captureFinanceSourceExport(businessId,async(sql,args)=>(await query(sql,args)).rows,{
       includeCorrections:true,includeFundApplications:true,includeTips:true,includeCredits:true,includePairedCredits:financeProfile>=6,

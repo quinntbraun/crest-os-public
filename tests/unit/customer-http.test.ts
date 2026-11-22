@@ -1,7 +1,7 @@
 import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import {beforeEach,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-const calls=vi.hoisted(()=>({csrf:vi.fn(),admit:vi.fn(),save:vi.fn(),list:vi.fn(),history:vi.fn(),lookup:vi.fn(),context:vi.fn()}));
+const calls=vi.hoisted(()=>({csrf:vi.fn(),admit:vi.fn(),save:vi.fn(),list:vi.fn(),history:vi.fn(),lookup:vi.fn(),context:vi.fn(),profile:vi.fn()}));
 vi.mock('../../src/security/session-request-guard.ts',()=>({createSessionCsrfVerifier:()=>calls.csrf}));
 vi.mock('../../src/security/session-request-admission.ts',()=>({createSessionRequestAdmission:()=>calls.admit}));
 vi.mock('../../src/security/business-settings-context.ts',()=>({createBusinessSettingsContextReader:()=>calls.context}));
@@ -11,6 +11,7 @@ import {CustomerDirectoryError} from '../../src/customer/customer-directory.ts';
 import {draftFromCustomer} from '../../src/customer/customer-contract.ts';
 import {customerFixture,customerBusiness} from '../support/customer-fixture.ts';
 import {transportFixture} from '../support/transport';
+import {createProductionCapabilities,productionCapabilityNames} from '../../src/security/production-capabilities';
 const origin='https://crest.example.com',opaque=randomBytes(32).toString('base64url'),cookie=`__Host-crest_session=${opaque}`,epoch=randomUUID(),operation=randomUUID(),row=customerFixture();
 const config={origin,businessId:customerBusiness,environment:'production' as const,ingress:{kind:'direct' as const},connectionString:'unused'};
 const dispatch=()=>createCustomerHttp(config,{} as never,{} as never);
@@ -24,6 +25,15 @@ async function failure(response:Response,status=400,error='CUSTOMER_REQUEST_FAIL
   expect(response.status).toBe(status);expect(await response.json()).toEqual({error});expect(response.headers.get('cache-control')).toContain('no-store');expect(response.headers.get('content-security-policy')).toContain("default-src 'none'");expect(response.headers.has('set-cookie')).toBe(false);expect(response.headers.has('access-control-allow-origin')).toBe(false);
 }
 it('requires a canonical configured business',()=>expect(()=>createCustomerHttp({...config,businessId:'browser supplied'},{} as never,{} as never)).toThrow('CUSTOMER_HTTP_CONFIGURATION_REQUIRED'));
+it('adopts production customer profiles only through matching accepted composition and required history',async()=>{
+ const enabled={...config,recordJobHistory:true,customerProfile:true,productionCapabilities:createProductionCapabilities({productionActivation:'ready'},customerBusiness,productionCapabilityNames)};
+ const input={customerId:row.id,afterAssociationId:null,pageSize:10};calls.profile.mockResolvedValue(projection({scope:'private-profile-port'}));
+ const run=createCustomerHttp(enabled,{} as never,{} as never),response=await run(request('profile',input),transportFixture());
+ expect(response.status).toBe(200);expect(calls.profile).toHaveBeenCalledWith(opaque,customerBusiness,input,expect.any(AbortSignal));
+ expect(calls.admit.mock.invocationCallOrder[0]).toBeLessThan(calls.profile.mock.invocationCallOrder[0]!);
+ const context=await run(request(),transportFixture());expect(context.headers.get('X-Crest-Customer-Profile')).toBe('1');
+ for(const refused of [{...config,recordJobHistory:true,customerProfile:true},{...enabled,recordJobHistory:false},{...enabled,productionCapabilities:createProductionCapabilities({productionActivation:'ready'},randomUUID(),productionCapabilityNames)}])expect(()=>createCustomerHttp(refused,{} as never,{} as never)).toThrow('CUSTOMER_HTTP_CONFIGURATION_REQUIRED');
+});
 it('context checks crm read and current authority after committed admission, returning a session-bound advisory edit marker',async()=>{
  const session=randomUUID();calls.csrf.mockResolvedValue(session);const response=await dispatch()(request(),transportFixture());
  expect(await response.json()).toEqual({schemaVersion:1,businessId:customerBusiness,writeState:'ready',recoveryEpoch:epoch});expect(calls.list).toHaveBeenCalledWith(opaque,{businessId:customerBusiness,search:'',afterId:null,includeArchived:false,pageSize:1},expect.any(AbortSignal));

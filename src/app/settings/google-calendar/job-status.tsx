@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { readSyntheticCalendarJobStatus } from '../../../client/google-calendar-consent';
 import type { GoogleCalendarJobStatus } from '../../../operations/google-calendar-job-status';
+import {AuthenticationError} from '../../../client/authentication';
 
 const descriptions: Record<GoogleCalendarJobStatus['state'], string> = {
   disconnected: 'Calendar is disconnected.',
@@ -20,8 +21,9 @@ export const calendarJobStatusLabels: Record<GoogleCalendarJobStatus['state'], s
   disconnected: 'Disconnected', not_queued: 'Not queued', pending: 'Waiting', in_progress: 'In progress',
   synced: 'Synced · fictional', removed: 'Removed · fictional', delayed: 'Unconfirmed', reconnect: 'Reconnect', review: 'Needs review',
 };
+export function calendarJobStatusLabel(state:GoogleCalendarJobStatus['state'],simulated=true){return !simulated&&(state==='synced'||state==='removed')?(state==='synced'?'Synced':'Removed'):calendarJobStatusLabels[state];}
 
-export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSequence, onReloadActivity }: { jobId: string; recoveryEpoch: string; appointmentSequence?:string; onReloadActivity?:()=>void }) {
+export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSequence, onReloadActivity, onAccessDenied,simulated=true }: { jobId: string; recoveryEpoch: string; appointmentSequence?:string; onReloadActivity?:()=>void; onAccessDenied?:()=>void;simulated?:boolean }) {
   const [status, setStatus] = useState<GoogleCalendarJobStatus | null>(null);
   const [message, setMessage] = useState('Checking Calendar status…');
   const [busy, setBusy] = useState(false);
@@ -55,11 +57,15 @@ export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSe
           return;
         }
         setStatus(result);
-        setMessage(descriptions[result.state]);
+        setMessage(simulated?descriptions[result.state]:descriptions[result.state].replace('fictional calendar','Crest Jobs calendar'));
       }
-    } catch {
+    } catch (error) {
       if (!signal.aborted) {
         setCheckFailed(true);
+        if(error instanceof AuthenticationError&&error.kind==='denied'){
+          setMessage('Sign in again to review Calendar status.');
+          onAccessDenied?.();return;
+        }
         setMessage('Crest could not verify Calendar status for this saved job.');
       }
     } finally {
@@ -68,7 +74,7 @@ export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSe
         setBusy(false);
       }
     }
-  }, [jobId, recoveryEpoch, appointmentSequence]);
+  }, [jobId, recoveryEpoch, appointmentSequence, onAccessDenied,simulated]);
 
   useEffect(() => {
     function hide() {
@@ -98,11 +104,11 @@ export function SyntheticCalendarJobStatus({ jobId, recoveryEpoch, appointmentSe
 
   return <section className="calendar-job-summary" aria-label="Saved appointment sync" aria-busy={busy}>
     <h2 tabIndex={-1}>Saved appointment sync</h2>
-    <p className="field-help">Fictional calendar · No events are sent to Google.</p>
+    <p className="field-help">{simulated?'Fictional calendar · No events are sent to Google.':'Status reflects the saved Google Calendar result.'}</p>
     <ul className="calendar-activity-list" role="list" aria-label="Appointment sync activity">
     <li className="calendar-activity-row" data-state={busy?'checking':status?.state??(checkFailed?'failed':'unverified')}>
     <div className="calendar-activity-body">
-      <div className="calendar-activity-heading"><h3>Selected appointment</h3><span className="calendar-activity-state">{busy?'Checking':status?calendarJobStatusLabels[status.state]:checkFailed?'Check failed':'Not verified'}</span></div>
+      <div className="calendar-activity-heading"><h3>Selected appointment</h3><span className="calendar-activity-state">{busy?'Checking':status?calendarJobStatusLabel(status.state,simulated):checkFailed?'Check failed':'Not verified'}</span></div>
       <p role="status">{message}</p>
       {status&&<p className="calendar-activity-version">Appointment version <strong>{status.appointmentVersion}</strong></p>}
       {status?.lastConfirmedAt && <details className="calendar-sync-evidence"><summary>Sync evidence</summary><dl className="calendar-setup-facts">

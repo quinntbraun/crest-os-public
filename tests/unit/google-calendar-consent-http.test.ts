@@ -8,6 +8,7 @@ vi.mock('../../src/security/session-lifecycle.ts', () => ({ createSessionLifecyc
 import { createGoogleCalendarConsentHttp, googleCalendarConsentPrefix } from '../../src/operations/google-calendar-consent-http.ts';
 import { googleCalendarInitialConsentPreview } from '../../src/operations/google-calendar-initial-consent.ts';
 import { transportFixture } from '../support/transport';
+import {createProductionCapabilities,productionCalendarWorkerBaseCapabilities} from '../../src/security/production-capabilities';
 
 const origin = 'https://crest.example.com', businessId = randomUUID(), actorId = randomUUID(), appSessionId = randomUUID();
 const provider = { issuer: 'https://auth.example.com/auth/v1', subject: randomUUID(), sessionId: randomUUID(), expiresAt: Date.now() + 3600_000 };
@@ -16,7 +17,7 @@ const destinationId = randomUUID(), credentialId = randomUUID(), recoveryEpoch =
 const common = { destinationId, credentialId, recoveryEpoch }, disclosure = { clientName: false, serviceLabel: true, workAddress: false };
 const previewInput = { ...common, ...disclosure };
 const confirmInput = { ...previewInput, reviewId, payloadReviewed: true, sharingReviewed: true, notificationsReviewed: true };
-const config = { origin, businessId, environment: 'production' as const, ingress: { kind: 'direct' as const }, connectionString: 'unused' };
+const config = { origin, businessId, environment: 'production' as const, ingress: { kind: 'direct' as const }, connectionString: 'unused',productionCapabilities:createProductionCapabilities({productionActivation:'ready'},businessId,[...productionCalendarWorkerBaseCapabilities,'googleCalendar']) };
 const connection = { prepareConsent: calls.prepare, confirmConsent: calls.confirm, lookupConsent: calls.lookup };
 const create = (enabled?: boolean) => createGoogleCalendarConsentHttp(config, {} as never, {} as never, connection, enabled);
 

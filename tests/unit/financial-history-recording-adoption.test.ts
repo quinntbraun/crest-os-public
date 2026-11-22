@@ -1,11 +1,13 @@
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {expect,it} from 'vitest';
-import registry from '../../supabase/migration-checksums.json';
+// This historical adoption proof stays pinned to its original registered124
+// inputs; current schema coverage is verified against the applied catalog.
+import registry from '../support/registered124-migration-checksums.json';
 import previous from '../support/registered123-migration-checksums.json';
-import coverage from '../../planning/SECURITY_EXPORT_COVERAGE.json';
+import coverage from '../support/registered124-export-coverage.json';
 import previousCoverage from '../support/registered123-export-coverage.json';
-import compatibility from '../../release/compatibility.json';
+import compatibility from '../support/registered124-compatibility.json';
 import previousCompatibility from '../support/registered123-compatibility.json';
 const bytes=(path:string)=>readFileSync(new URL('../../'+path,import.meta.url));
 const hash=(path:string)=>createHash('sha256').update(bytes(path)).digest('hex');

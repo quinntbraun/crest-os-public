@@ -43,7 +43,7 @@ export function createSourceExportDatabaseJournal(config:SessionDatabaseConfigur
   if(stage==='authorize'){require(exact(r,claimKeys));current=r;}
   else if(stage==='snapshot'||stage==='ready'){
    require(exact(r,stage==='snapshot'?['plan','planSha256']:['plan','planSha256','parts'])&&r.plan!==null&&typeof r.plan==='object'&&!Array.isArray(r.plan));const plan=r.plan as Record<string,unknown>;
-   require(plan.sourceSchemaVersion===43&&plan.appReleaseId===job.app_release_id&&uuid(plan.generationId));current=plan.claim;generationId=plan.generationId;
+   require(plan.sourceSchemaVersion===job.source_schema_version&&plan.appReleaseId===job.app_release_id&&uuid(plan.generationId));current=plan.claim;generationId=plan.generationId;
   }else{require(exact(r,['claim','generationId','planSha256','partId','intent'])&&uuid(r.generationId));current=r.claim;generationId=r.generationId;}
   require(exact(current,claimKeys)&&claimKeys.every(k=>current[k]===expected[k as keyof typeof expected]));
   // SQL owns full closed-shape, duplicate-key, original inventory and authority

@@ -1,4 +1,5 @@
 import {randomBytes,randomUUID} from 'node:crypto';
+import {createProductionCapabilities} from '../../src/security/production-capabilities';
 import {beforeEach,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
 const calls=vi.hoisted(()=>({csrf:vi.fn(),admit:vi.fn(),save:vi.fn(),list:vi.fn(),history:vi.fn(),lookup:vi.fn(),context:vi.fn()}));
@@ -10,11 +11,13 @@ import {createServiceHttp} from '../../src/commercial/service-http';
 import {ServiceDirectoryError} from '../../src/commercial/service-directory';
 import {serviceStorageFixture} from '../support/service-storage-fixture';
 import {transportFixture} from '../support/transport';
-const f=serviceStorageFixture(),origin='https://crest.example.com',opaque=randomBytes(32).toString('base64url'),config={origin,businessId:f.business,environment:'production' as const,ingress:{kind:'direct' as const},connectionString:'unused'},binding=randomUUID();
+// Prospective composition fixture, not actual release or authentication evidence.
+const f=serviceStorageFixture(),origin='https://crest.example.com',opaque=randomBytes(32).toString('base64url'),config={origin,businessId:f.business,productionCapabilities:createProductionCapabilities({productionActivation:'ready'},f.business,['catalog']),environment:'production' as const,ingress:{kind:'direct' as const},connectionString:'unused'},binding=randomUUID();
 const projection=(v:unknown)=>({forServer:()=>v});
 const body=()=>{const {businessId,payload,...ref}=f.request;void businessId;return{...ref,code:payload.code,active:payload.active,...payload.definition};};
 function request(route='context',input:unknown={},patch:Record<string,string>={},method='POST',signal?:AbortSignal){return new Request(origin+'/api/business/services/'+route,{method,headers:{origin,'content-type':'application/json',cookie:'__Host-crest_session='+opaque,'x-crest-csrf':randomBytes(32).toString('base64url'),...patch},...(method==='POST'?{body:typeof input==='string'?input:JSON.stringify(input)}:{}),...(signal?{signal}:{})});}
 const dispatch=(enabled=true)=>createServiceHttp(config,{} as never,{} as never,enabled);
+it('refuses enabled production composition without the release capability',()=>{const {productionCapabilities,...unaccepted}=config;void productionCapabilities;expect(()=>createServiceHttp(unaccepted,{} as never,{} as never,true)).toThrow('SERVICE_HTTP_CONFIGURATION_REQUIRED');});
 beforeEach(()=>{vi.resetAllMocks();calls.csrf.mockResolvedValue(binding);calls.admit.mockResolvedValue(true);calls.save.mockResolvedValue(projection(f.committed));calls.list.mockResolvedValue(projection(f.directory));calls.history.mockResolvedValue(projection(f.history));calls.lookup.mockResolvedValue(projection(f.committed));calls.context.mockResolvedValue(projection({schemaVersion:1,businessId:f.business,writeState:'ready',recoveryEpoch:f.epoch}));});
 it('stays closed by default without session/domain IO',async()=>{const run=createServiceHttp(config,{} as never,{} as never);expect((await run(request(),transportFixture())).status).toBe(404);expect(calls.csrf).not.toHaveBeenCalled();expect(calls.list).not.toHaveBeenCalled();});
 it('injects only configured business, preserves exact definitions and gates work behind CSRF/admission',async()=>{const response=await dispatch()(request('save',body()),transportFixture());expect(response.status).toBe(200);expect(await response.json()).toEqual(f.committed);expect(calls.save).toHaveBeenCalledExactlyOnceWith(opaque,f.request,expect.any(AbortSignal));expect(calls.csrf.mock.invocationCallOrder[0]).toBeLessThan(calls.admit.mock.invocationCallOrder[0]!);expect(calls.admit.mock.invocationCallOrder[0]).toBeLessThan(calls.save.mock.invocationCallOrder[0]!);expect(response.headers.get('cache-control')).toContain('no-store');});

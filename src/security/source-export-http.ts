@@ -11,8 +11,14 @@ import {customerUuid as uuid} from '../customer/customer-contract.ts';
 import {sourceExportBodyLimit,sourceExportReferenceWireKeys,sourceExportRetirementWireKeys,sourceExportStatusWireKeys,parseSourceExportReferenceWire,parseSourceExportRetirementWire,parseSourceExportStatusWire} from './source-export-http-contract.ts';
 import type {SessionDatabaseConfiguration} from './session-database.ts';
 import {sourceExportListWireKeys,parseSourceExportListWire} from './source-export-owner-list.ts';
+import {productionCapability} from './production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from './production-capabilities.ts';
+import {sourceExportRuntimeBelongsTo} from '../server/production-source-export-runtime.ts';
+import type {ProductionSourceExportRuntime} from '../server/production-source-export-runtime.ts';
+import {SourceExportExecutionAccessError} from './source-export-execution-access.ts';
+import {parseSourceExportStopWire} from './source-export-stop-contract.ts';
 
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;appReleaseId:string};
+type Configuration=SessionDatabaseConfiguration&ProductionCapabilityConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;appReleaseId:string};
 const prefix='/api/business/exports/';
 function failure(status:400|404|405|503=400,error='SOURCE_EXPORT_REQUEST_FAILED'){
  const response=privateJsonResponse({error},status);if(status===405)response.headers.set('Allow','POST');return response;
@@ -20,42 +26,51 @@ function failure(status:400|404|405|503=400,error='SOURCE_EXPORT_REQUEST_FAILED'
 export function sourceExportFailureResponse(status:400|404|405|503=503){return failure(status);}
 // Private composition only, disabled by default. This does not register a
 // route, adopt schema43, dispatch a worker or authorize file downloads.
-export function createSourceExportHttp(config:Configuration,provider:Parameters<typeof createSourceExportOwnerAccess>[1],tokens:Parameters<typeof createSourceExportOwnerAccess>[2],enabled=false){
+export function createSourceExportHttp(config:Configuration,provider:Parameters<typeof createSourceExportOwnerAccess>[1],tokens:Parameters<typeof createSourceExportOwnerAccess>[2],enabled=false,runtime?:ProductionSourceExportRuntime){
  if(!uuid(config.businessId)||typeof config.appReleaseId!=='string'||!/^[a-f0-9]{40}$/.test(config.appReleaseId)||typeof enabled!=='boolean')throw new Error('SOURCE_EXPORT_HTTP_CONFIGURATION_REQUIRED');
+ if(runtime!==undefined&&(config.environment!=='production'||!enabled||!productionCapability(config,'businessExports')||!sourceExportRuntimeBelongsTo(runtime,config.businessId,config.appReleaseId)))throw Error('SOURCE_EXPORT_HTTP_CONFIGURATION_REQUIRED');
  const businessId=config.businessId,appReleaseId=config.appReleaseId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
- const access=enabled?createSourceExportOwnerAccess(config,provider,tokens,businessId,appReleaseId):undefined;
+ const access=enabled?createSourceExportOwnerAccess(config,provider,tokens,businessId,appReleaseId,runtime!==undefined):undefined;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{
-  let mutation:'request'|'resolution'|undefined,workStarted=false;
+  let mutation:'request'|'resolution'|'stop'|undefined,workStarted=false;
   try{
    const signal=AbortSignal.any([request.signal,AbortSignal.timeout(40000)]);if(signal.aborted)throw new Error();resolve(request,peer);
    const url=new URL(request.url),route=url.pathname.slice(prefix.length);
-   if(!enabled||url.search||url.hash||!url.pathname.startsWith(prefix)||!['context','list','request','status','original','retire','resolution'].includes(route))return failure(404);
+   if(!enabled||url.search||url.hash||!url.pathname.startsWith(prefix)||!['context','list','request','status','original','retire','resolution','stop','stop-original'].includes(route)||(route==='stop'||route==='stop-original')&&!runtime)return failure(404);
    if(request.method!=='POST')return failure(405);
    protect.requireOrigin(request);const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;if(!cookie)throw new Error();
    const input=await readFlatJsonBody(bounded,route==='context'?[]:route==='list'?sourceExportListWireKeys:route==='retire'?sourceExportRetirementWireKeys:route==='status'?sourceExportStatusWireKeys:sourceExportReferenceWireKeys,sourceExportBodyLimit);
    const cursor=route==='list'?parseSourceExportListWire(input):undefined;
    const retirement=route==='retire'?parseSourceExportRetirementWire(input,businessId):undefined;
    const jobId=route==='status'?parseSourceExportStatusWire(input):undefined;
-   const original=jobId||route==='context'||route==='list'?undefined:retirement?.original??parseSourceExportReferenceWire(input,businessId);
+   const stop=route==='stop'||route==='stop-original'?parseSourceExportStopWire(input,businessId):undefined;
+   const original=stop||jobId||route==='context'||route==='list'?undefined:retirement?.original??parseSourceExportReferenceWire(input,businessId);
    if(route==='request'&&original?.reference.appReleaseId!==appReleaseId)throw Error();
+   if(route==='request'&&original?.reference.profile!==(runtime?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1'))throw Error();
    await csrf(bounded,cookie,signal);workStarted=true;
    if(!await admit(cookie,'ordinary',signal)){const response=privateJsonResponse({error:'SOURCE_EXPORT_REQUEST_LIMITED'},429);response.headers.set('Retry-After','60');return response;}
    if(signal.aborted)throw new Error();
    let value:object;
    if(route==='context')value=(await access!.context(cookie,signal)).forServer();
+   else if(stop){if(route==='stop')mutation='stop';const result=(await (route==='stop'?access!.stop(cookie,stop,signal):access!.lookupStop(cookie,stop,signal))).forServer();if(result.state==='committed')runtime!.cancel(stop.reference.exportJobId);value=result;}
    else if(route==='list')value=(await access!.list(cookie,cursor,signal)).forServer();
-   else if(route==='request'){mutation='request';value=(await access!.request(cookie,original,signal)).forServer();}
+   else if(route==='request'){mutation='request';if(runtime){const created=await runtime.request(cookie,original,signal);if(created.state==='created')runtime.schedule(created,cookie);value=created.forServer();}else value=(await access!.request(cookie,original,signal)).forServer();}
    else if(retirement){mutation='resolution';value=(await access!.retireRequest(cookie,retirement,signal)).forServer();}
    else if(jobId)value=(await access!.status(cookie,jobId,signal)).forServer();
    else if(route==='original')value=(await access!.lookupRequest(cookie,original,signal)).forServer();
    else value=(await access!.lookupResolution(cookie,original,signal)).forServer();
    if(signal.aborted)throw new Error();return privateJsonResponse(value);
   }catch(error){
+   if(error instanceof SourceExportExecutionAccessError){
+    if(error.message==='RECOVERY_REVIEW_REQUIRED')return privateJsonResponse({error:'RECOVERY_REVIEW_REQUIRED'},409);
+    if(error.message==='SOURCE_EXPORT_EXECUTION_NOT_SUBMITTED')return failure(503,'SOURCE_EXPORT_REQUEST_NOT_SUBMITTED');
+    if(error.message==='SOURCE_EXPORT_EXECUTION_OUTCOME_UNKNOWN')return failure(503,'SOURCE_EXPORT_REQUEST_OUTCOME_UNKNOWN');
+   }
    if(error instanceof SourceExportOwnerAccessError){
     if(error.message==='RECOVERY_REVIEW_REQUIRED')return privateJsonResponse({error:'RECOVERY_REVIEW_REQUIRED'},409);
-    if(['SOURCE_EXPORT_REQUEST_NOT_SUBMITTED','SOURCE_EXPORT_REQUEST_OUTCOME_UNKNOWN','SOURCE_EXPORT_RESOLUTION_NOT_SUBMITTED','SOURCE_EXPORT_RESOLUTION_OUTCOME_UNKNOWN','SOURCE_EXPORT_READ_FAILED'].includes(error.message))return failure(503,error.message);
+    if(['SOURCE_EXPORT_REQUEST_NOT_SUBMITTED','SOURCE_EXPORT_REQUEST_OUTCOME_UNKNOWN','SOURCE_EXPORT_STOP_NOT_SUBMITTED','SOURCE_EXPORT_STOP_OUTCOME_UNKNOWN','SOURCE_EXPORT_RESOLUTION_NOT_SUBMITTED','SOURCE_EXPORT_RESOLUTION_OUTCOME_UNKNOWN','SOURCE_EXPORT_READ_FAILED'].includes(error.message))return failure(503,error.message);
    }
-   return failure(workStarted?503:400,mutation==='request'?'SOURCE_EXPORT_REQUEST_OUTCOME_UNKNOWN':mutation==='resolution'?'SOURCE_EXPORT_RESOLUTION_OUTCOME_UNKNOWN':'SOURCE_EXPORT_REQUEST_FAILED');
+   return failure(workStarted?503:400,mutation==='request'?'SOURCE_EXPORT_REQUEST_OUTCOME_UNKNOWN':mutation==='stop'?'SOURCE_EXPORT_STOP_OUTCOME_UNKNOWN':mutation==='resolution'?'SOURCE_EXPORT_RESOLUTION_OUTCOME_UNKNOWN':'SOURCE_EXPORT_REQUEST_FAILED');
   }
  };
 }

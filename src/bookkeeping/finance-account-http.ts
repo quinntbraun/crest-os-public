@@ -8,7 +8,10 @@ import {createBusinessSettingsContextReader} from '../security/business-settings
 import {privateJsonResponse,readNestedJsonBody} from '../security/private-http.ts';
 import {createRequestProtection} from '../security/request-protection.ts';
 import {sessionCredentialHash} from '../security/session-credential.ts';
-import {financePreviewDatabase} from '../security/session-database.ts';
+import {financePreviewDatabase,productionFinanceDatabase} from '../security/session-database.ts';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../security/production-capabilities.ts';
+import {validateFinanceRuntimeConnection} from './finance-runtime-configuration.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
 import {createSessionLifecycle} from '../security/session-lifecycle.ts';
 import {createSessionRequestAdmission} from '../security/session-request-admission.ts';
@@ -245,7 +248,7 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'invoice-draft-lookup':['operationId','recoveryEpoch','draftId','jobId','expectedRevision'],
  'invoice-draft-save':['reference','draft'], 'invoice-draft-retire':['reference','reviewEpoch','reason']} as const;
 const authority='$1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid';
-type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;productionCapabilities?:ProductionCapabilities};
 
 export function financeAccountFailure(status:400|404|405|503=400){
  const response=privateJsonResponse({error:'FINANCE_ACCOUNT_REQUEST_FAILED'},status);
@@ -257,7 +260,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,mappingHistoryEvidence=false,historyEvidence=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,invoiceOutstanding=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false,collectionFailureGroupedRecredits=false,collectionFailureTipReinstatements=false,openingWorksheet=false,openingArPreview=false,statementStaging=false,statementMatchReview=false,statementMatchDrafts=false,supplierBillDrafts=false,supplierPayableReview=false,supplierPayablePosting=false,supplierOriginalUploads=false,recordedIncomeStatement=false}:Readonly<{
   fixedMappings?:boolean;mappingHistoryEvidence?:boolean;historyEvidence?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;invoiceOutstanding?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;recordedIncomeStatement?:boolean;
  }>={}){
- check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
+ check((config.environment==='test'||productionCapability(config,'finance'))&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
  check(typeof historyEvidence==='boolean');
  check(typeof mappingHistoryEvidence==='boolean'&&(!mappingHistoryEvidence||fixedMappings));
  check(typeof invoiceOutstanding==='boolean'&&(!invoiceOutstanding||invoiceIssue));
@@ -289,9 +292,10 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  check(typeof recordedIncomeStatement==='boolean'&&(!recordedIncomeStatement||trialBalance&&refundTransfers));
  check(typeof openingArPreview==='boolean'&&(!openingArPreview||openingWorksheet));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
+ if(config.environment==='production')validateFinanceRuntimeConnection(config.connectionString,connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
- const database=financePreviewDatabase({connectionString,environment:'test'});
+ const database=config.environment==='production'?productionFinanceDatabase({...config,connectionString}):financePreviewDatabase({connectionString,environment:'test'});
  const transport=createTrustedTransport(config),protect=createRequestProtection(config);
  const csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
  const sessions=createSessionLifecycle(config,provider,tokens),context=createBusinessSettingsContextReader(config,provider,tokens);

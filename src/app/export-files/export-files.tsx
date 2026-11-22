@@ -1,8 +1,9 @@
 'use client';
-import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {createSourceExportController,initialSourceExportView} from '../../client/source-export-controller';
 import type {SourceExportView} from '../../client/source-export-controller';
 import {SourceExportDownloadScreen} from './export-downloads';
+import {ExportStopScreen} from './export-stop';
 const exportDate=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'});
 type ExportAction='load'|'older'|'request'|'checkOriginal'|'checkResolution'|'retire'|'checkJob';
 
@@ -12,7 +13,7 @@ export function SourceExportControls({view,action,editReason,selectJob,statusRef
  return <section className="export-files export-source" aria-label="Business data exports" aria-busy={view.busy}>
   <header className="export-collection-header">
    <h2>Business export requests</h2>
-   <p>Request a package of business records or download the files from a saved export.</p><dl className="export-attributes"><div><dt>Included records</dt><dd>Defined by the source manifest</dd></div><div><dt>Date scope</dt><dd>Captured record set; no date filter</dd></div><div><dt>Format</dt><dd>CSV and JSON parts</dd></div></dl>
+   <p>Request a package of business records or download the files from a saved export.</p><dl className="export-attributes"><div><dt>Included records</dt><dd>Defined by the source manifest</dd></div><div><dt>Date scope</dt><dd>Captured record set; no date filter</dd></div><div><dt>Format</dt><dd>{view.currentFormat?'CSV, Excel and JSON':'CSV and JSON parts'}</dd></div></dl>
   </header>
   <p className="export-status" ref={statusRef} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{view.message}</p>
   <div className="export-actions">
@@ -58,6 +59,7 @@ export function SourceExportControls({view,action,editReason,selectJob,statusRef
 // Product and API access remain opt-in at the trusted server boundary.
 export function SourceExportScreen({onAccessDenied,focusOnLoad=false}:{onAccessDenied?:()=>void;focusOnLoad?:boolean}={}){
  const [view,setView]=useState(initialSourceExportView),current=useRef<ReturnType<typeof createSourceExportController>|null>(null),status=useRef<HTMLParagraphElement>(null);
+ const refreshAfterStop=useCallback(()=>{void current.current?.load();},[]);
  useEffect(()=>{
   const controller=createSourceExportController({storage:{getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)},change:setView,...onAccessDenied?{onAccessDenied}:{}});current.current=controller;void controller.load().then(()=>{if(focusOnLoad&&current.current===controller)status.current?.focus();});
   const review=()=>controller.reviewOnReturn(),restore=(event:PageTransitionEvent)=>{if(event.persisted)review();};window.addEventListener('pagehide',review);window.addEventListener('pageshow',restore);document.addEventListener('visibilitychange',review);
@@ -66,6 +68,7 @@ export function SourceExportScreen({onAccessDenied,focusOnLoad=false}:{onAccessD
  async function action(kind:ExportAction){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
  return <div className="export-collection">
   <SourceExportControls view={view} statusRef={status} action={kind=>{void action(kind);}} editReason={value=>current.current?.editReason(value)} selectJob={value=>current.current?.selectJob(value)}>
+  {!view.busy&&view.currentFormat&&view.jobId&&['ready','confirmed'].includes(view.phase)&&<ExportStopScreen key={view.jobId} jobId={view.jobId} onResolved={refreshAfterStop} {...onAccessDenied?{onAccessDenied}:{}}/>}
   {!view.busy&&view.jobId&&view.jobState==='Ready'&&['ready','confirmed'].includes(view.phase)&&<SourceExportDownloadScreen key={view.jobId} jobId={view.jobId} {...onAccessDenied?{onAccessDenied}:{}}/>}
   </SourceExportControls>
  </div>;

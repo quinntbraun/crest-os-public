@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilityConfiguration,ProductionCapability} from '../security/production-capabilities.ts';
 import {sessionDatabase} from '../security/session-database.ts';
 import {createSessionLifecycle} from '../security/session-lifecycle.ts';
 import {sessionCredentialHash} from '../security/session-credential.ts';
@@ -37,10 +39,11 @@ import {dropoffCustodyConflicts,dropoffCustodyOriginal,parseDropoffCustody,parse
  parseDropoffPolicySave,parseDropoffPolicyCommitted,parseDropoffPolicyAcknowledgement} from './dropoff-custody-contract.ts';
 export class FieldDirectoryError extends Error{constructor(code:string){super(code);this.name='FieldDirectoryError';}}
 class PrivateValue<T>{#value:T;constructor(value:T){this.#value=value;}forServer(){return this.#value;}toJSON():never{throw new FieldDirectoryError('FIELD_VALUE_PRIVATE');}}
-export function createFieldDirectory(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
- if(config.environment!=='test')throw new FieldDirectoryError('FIELD_CONFIGURATION_REQUIRED');
+export function createFieldDirectory(config:SessionDatabaseConfiguration&ProductionCapabilityConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
+ if(config.environment!=='test'&&!productionCapability(config,'fieldSessions'))throw new FieldDirectoryError('FIELD_CONFIGURATION_REQUIRED');
  const database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
- async function readResult(credential:string,businessId:string,signal:AbortSignal,sql:string,keys:readonly (string|null)[]){
+ async function readResult(credential:string,businessId:string,signal:AbortSignal,sql:string,keys:readonly (string|null)[],capability:ProductionCapability='fieldSessions'){
+  if(config.environment==='production'&&!productionCapability({...config,businessId},capability))throw new FieldDirectoryError('FIELD_REQUEST_FAILED');
   const bounded=AbortSignal.any([signal,AbortSignal.timeout(35000)]),hash=sessionCredentialHash(credential);
   try{
    const verified=await sessions.verify(credential,bounded,'background');
@@ -159,6 +162,11 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
      command:'change_field_session',committed:(observed:unknown)=>parseFieldSessionCommitted(observed,request)};
    })();
    const {request,original}=prepared,bounded=AbortSignal.any([signal,AbortSignal.timeout(35000)]);
+   if(config.environment==='production'){
+    const adopted:Partial<Record<typeof action,ProductionCapability>>={session:'fieldSessions',interruption:'fieldSessions',cancellation:'unfulfilledCancellation','work-boundary':'workBoundary','work-start':'workStart','work-end':'workEnd','mobile-departure':'mobileDeparture','review-outcome':'reviewOutcome',maintenance:'maintenanceFollowUp',custody:'dropoffCustody','custody-policy':'dropoffCustody','custody-policy-revision':'dropoffPolicyRevision','pickup-trip':'pickupTrips','pickup-collection':'pickupCollection','pickup-policy':'pickupPolicy','pickup-release':'pickupRelease','pickup-return-failure':'pickupReturnFailure'};
+    const capability=adopted[action];if(!capability||!productionCapability({...config,businessId:request.businessId},capability))throw Error();
+    if(action==='session'&&'body'in request&&'action'in request.body&&request.body.action==='start_pickup'&&!productionCapability({...config,businessId:request.businessId},'pickupWork'))throw Error();
+   }
    if(bounded.aborted)throw Error();hash=sessionCredentialHash(credential);const verified=await sessions.verify(credential,bounded,'background');if(bounded.aborted)throw Error();
    const args=[hash,verified.sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,verified.provider.sessionId,new Date(verified.provider.expiresAt),request.businessId];
    const readOriginal=async(...[query,current]:Parameters<Parameters<typeof database.transaction>[0]>)=>{
@@ -247,14 +255,14 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
  return Object.freeze({
   async pickupPolicy(credential:string,businessId:string,beforeSequence:string|null,signal:AbortSignal){
    const value=await readResult(credential,businessId,signal,
-    'SELECT crest_commands.read_pickup_policy($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::bigint) AS result',[beforeSequence]);
+    'SELECT crest_commands.read_pickup_policy($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::bigint) AS result',[beforeSequence],'pickupPolicy');
    return new PrivateValue(parsePickupPolicyPage(value,businessId,beforeSequence));
   },
   savePickupPolicy:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'pickup-policy'),
   async pickupCollection(credential:string,businessId:string,jobId:string,jobVehicleId:string,signal:AbortSignal){
    const value=await readResult(credential,businessId,signal,
     'SELECT crest_commands.read_pickup_collection($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid) AS result',
-    [jobId,jobVehicleId]);
+    [jobId,jobVehicleId],'pickupCollection');
    if(value===null||typeof value!=='object')throw new FieldDirectoryError('PICKUP_COLLECTION_DATA_REQUIRED');
    parsePickupCollectionContext(value,{businessId,jobId,jobVehicleId});
    return new PrivateValue(value);
@@ -265,7 +273,7 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
   async pickupTrips(credential:string,businessId:string,jobId:string,cursor:PickupTripCursor,signal:AbortSignal){
    const value=await readResult(credential,businessId,signal,
     'SELECT crest_commands.read_pickup_trips($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::timestamptz,$11::uuid) AS result',
-    [jobId,cursor.beforeDepartedAt,cursor.beforeLegId]);
+    [jobId,cursor.beforeDepartedAt,cursor.beforeLegId],'pickupTrips');
    return new PrivateValue(parsePickupTripDatabasePage(value,{businessId,jobId},cursor));
   },
   savePickupTrip:(credential:string,input:unknown,signal:AbortSignal)=>save(credential,input,signal,'pickup-trip'),
@@ -283,7 +291,7 @@ export function createFieldDirectory(config:SessionDatabaseConfiguration,provide
    const cursor=parseCollectionCursor(input),command=kind==='pickup'?'list_pickup_returns':'list_dropoff_collections';
    const value=await readResult(credential,businessId,signal,
     'SELECT crest_commands.'+command+'($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::timestamptz,$10::uuid) AS result',
-    [cursor.afterReceivedAt,cursor.afterCaseId]);
+    [cursor.afterReceivedAt,cursor.afterCaseId],kind==='pickup'?'pickupReturnFailure':'fieldSessions');
    const parse=kind==='pickup'?parsePickupReturnPage:parseCollectionPage;
    return new PrivateValue(parse(value,businessId,cursor));
   },

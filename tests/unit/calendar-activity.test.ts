@@ -5,6 +5,7 @@ import {bookingContextFixture} from '../fixtures/booking-context';
 import type {GoogleCalendarJobStatus} from '../../src/operations/google-calendar-job-status';
 import {parseJobListPage} from '../../src/operations/confirmed-job-read-contract';
 import {scheduling} from '../../src/client/scheduling';
+import {AuthenticationError} from '../../src/client/authentication';
 function setup(){
  const f=bookingContextFixture(),epoch=randomUUID(),proof={csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000};
  const context={binding:randomBytes(32).toString('base64url'),googleCalendarAvailable:true as const,context:{schemaVersion:1 as const,businessId:f.q.businessId,operatorId:f.q.payload.operatorId,timezone:'America/Indiana/Indianapolis',modeVersion:null,writeState:'ready' as const,recoveryEpoch:epoch}};
@@ -21,6 +22,9 @@ it('uses the actual business date, a bounded page and original read APIs, then r
 });
 it('rejects a wrong recovery epoch before listing records',async()=>{const x=setup();await expect(x.read({epoch:randomUUID()},x.signal())).rejects.toMatchObject({kind:'unavailable'});expect(x.list).not.toHaveBeenCalled();});
 it('does not label a failed row read as a successful or waiting sync',async()=>{const x=setup();x.status.mockRejectedValueOnce(Error('temporary read failure'));const page=await x.read({epoch:x.epoch},x.signal());expect(page.rows[0]!.status).toBeNull();expect(x.workspace).toHaveBeenCalledTimes(2);});
+it('propagates ended access before listing any appointments',async()=>{const x=setup(),denied=new AuthenticationError('denied');x.session.mockRejectedValueOnce(denied);await expect(x.read({epoch:x.epoch},x.signal())).rejects.toBe(denied);expect(x.workspace).not.toHaveBeenCalled();expect(x.list).not.toHaveBeenCalled();});
+it('stops immediately on definite ended access during a nested sync read',async()=>{const x=setup(),denied=new AuthenticationError('denied');x.status.mockRejectedValueOnce(denied);await expect(x.read({epoch:x.epoch},x.signal())).rejects.toBe(denied);expect(x.session).toHaveBeenCalledTimes(1);expect(x.workspace).toHaveBeenCalledTimes(1);});
+it('never returns already read appointments after the final sign-in check is denied',async()=>{const x=setup(),denied=new AuthenticationError('denied');x.session.mockResolvedValueOnce(x.proof).mockRejectedValueOnce(denied);await expect(x.read({epoch:x.epoch},x.signal())).rejects.toBe(denied);expect(x.list).toHaveBeenCalledTimes(1);expect(x.status).toHaveBeenCalledTimes(1);expect(x.workspace).toHaveBeenCalledTimes(1);});
 it('does not expose a page when fresh authority verification fails',async()=>{const x=setup();x.workspace.mockResolvedValueOnce(x.context).mockRejectedValueOnce(Error('revoked'));await expect(x.read({epoch:x.epoch},x.signal())).rejects.toThrow();expect(x.list).toHaveBeenCalledTimes(1);expect(x.status).toHaveBeenCalledTimes(1);});
 it('rejects changed binding after status reads before returning private rows',async()=>{const x=setup();x.workspace.mockResolvedValueOnce(x.context).mockResolvedValueOnce({...x.context,binding:'different-binding'});await expect(x.read({epoch:x.epoch},x.signal())).rejects.toMatchObject({kind:'changed'});expect(x.status).toHaveBeenCalledTimes(1);});
 it('binds confirmation to appointment sequence rather than job version',async()=>{const x=setup();x.status.mockResolvedValueOnce({...x.value,appointmentVersion:String(BigInt(x.f.summary.appointmentSequence)+1n)});await expect(x.read({epoch:x.epoch},x.signal())).rejects.toMatchObject({kind:'changed'});});

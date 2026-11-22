@@ -10,6 +10,8 @@ import { createSessionCsrfVerifier } from '../security/session-request-guard.ts'
 import { createTrustedTransport } from '../security/trusted-transport.ts';
 import type { IngressConfiguration, transportFromIncomingMessage } from '../security/trusted-transport.ts';
 import type { SessionDatabaseConfiguration } from '../security/session-database.ts';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from '../security/production-capabilities.ts';
 import type { createGoogleCalendarConnection, GoogleCalendarConnectionAuthority } from './google-calendar-connection.ts';
 
 export const googleCalendarConsentPrefix = '/api/business/google-calendar/consent/';
@@ -22,7 +24,7 @@ const inputs = {
   status: [...common, 'reviewId'],
 } as const;
 
-type Config = SessionDatabaseConfiguration & Readonly<{
+type Config = SessionDatabaseConfiguration & ProductionCapabilityConfiguration & Readonly<{
   origin: string;
   businessId: string;
   ingress: IngressConfiguration;
@@ -45,7 +47,7 @@ export function googleCalendarConsentFailure(status: 400 | 404 | 405 | 409 | 429
 export function createGoogleCalendarConsentHttp(config: Config, provider: Provider, tokens: Tokens,
   connection: Connection, enabled = false): (request: Request, peer: Peer) => Promise<Response> {
   if (enabled !== true) return async () => googleCalendarConsentFailure(404);
-  if (!customerUuid(config.businessId)) throw Error('GOOGLE_CALENDAR_CONSENT_CONFIGURATION_REQUIRED');
+  if (!customerUuid(config.businessId)||config.environment==='production'&&!productionCapability(config,'googleCalendar')) throw Error('GOOGLE_CALENDAR_CONSENT_CONFIGURATION_REQUIRED');
   const { origin, businessId } = config;
   const protect = createRequestProtection(config);
   const resolve = createTrustedTransport(config);

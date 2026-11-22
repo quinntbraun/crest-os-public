@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../security/production-capabilities.ts';
 import {createHash} from 'node:crypto';
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
@@ -12,14 +14,14 @@ import type {SessionDatabaseConfiguration} from '../security/session-database.ts
 import {customerUuid,customerVersion} from '../customer/customer-contract.ts';
 import {createHoldDirectory,HoldDirectoryError} from './appointment-hold-directory.ts';
 import {holdPayloadKeys,parseHoldSave,requireHold as check} from './appointment-hold-contract.ts';
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;productionCapabilities?:ProductionCapabilities};
 const prefix='/api/business/appointment-holds/';
 const fields={context:[],list:['afterId','pageSize'],history:['holdId','afterSequence','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','holdId','expectedSequence',...holdPayloadKeys]} as const;
 type Route=keyof typeof fields;
 export function holdFailureResponse(status:400|404|405|503=400){const r=privateJsonResponse({error:'HOLD_REQUEST_FAILED'},status);if(status===405)r.headers.set('Allow','POST');return r;}
 // Explicit trusted synthetic composition only, pending coordinated source adoption.
 export function createHoldHttp(config:Configuration,provider:Parameters<typeof createHoldDirectory>[1],tokens:Parameters<typeof createHoldDirectory>[2],enabled=false){
- if(!customerUuid(config.businessId)||typeof enabled!=='boolean'||enabled&&config.environment!=='test')throw Error('HOLD_HTTP_CONFIGURATION_REQUIRED');
+ if(!customerUuid(config.businessId)||typeof enabled!=='boolean'||enabled&&config.environment!=='test'&&!productionCapability(config,'appointmentHolds'))throw Error('HOLD_HTTP_CONFIGURATION_REQUIRED');
  const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createHoldDirectory(config,provider,tokens):undefined,context=enabled?createBusinessSettingsContextReader(config,provider,tokens):undefined;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>)=>{let submitted=false,workStarted=false;
   try{

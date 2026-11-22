@@ -6,6 +6,7 @@ import {customerUuid as uuid} from '../customer/customer-contract.ts';
 import {parseSourceExportCommand,parseSourceExportJob,parseSourceExportCommitted} from './source-export-job-contract.ts';
 import {parseExportRequestRetirement,parseExportRequestResolution} from './source-export-request-resolution.ts';
 import {parseSourceExportOwnerContext} from './source-export-owner-context.ts';
+import {parseSourceExportStopCommand,parseSourceExportStopOutcome} from './source-export-stop-contract.ts';
 import {parseSourceExportCursor,parseSourceExportList} from './source-export-owner-list.ts';
 import {downloadObject,parseSourceExportDownloadPageRequest,parseSourceExportDownloadPartRequest,parseSourceExportDownloadCatalogue} from './source-export-download-contract.ts';
 import {parseSourceExportDownloadPermit,parseSourceExportDownloadHandoff,sourceExportDownloadPermitRecord,parseSourceExportDownloadAccessReceipt} from './source-export-download-permit.ts';
@@ -14,7 +15,7 @@ import type {SourceExportCommand} from './source-export-job-contract.ts';
 import type {createProviderBoundary} from './provider-auth.ts';
 import type {createProviderTokenStore} from './provider-token-store.ts';
 
-type Code='SOURCE_EXPORT_ACCESS_INPUT_REQUIRED'|'SOURCE_EXPORT_REQUEST_NOT_SUBMITTED'|'SOURCE_EXPORT_REQUEST_OUTCOME_UNKNOWN'|'SOURCE_EXPORT_RESOLUTION_NOT_SUBMITTED'|'SOURCE_EXPORT_RESOLUTION_OUTCOME_UNKNOWN'|'SOURCE_EXPORT_READ_FAILED'|'SOURCE_EXPORT_ACCESS_PRIVATE'|'RECOVERY_REVIEW_REQUIRED';
+type Code='SOURCE_EXPORT_ACCESS_INPUT_REQUIRED'|'SOURCE_EXPORT_REQUEST_NOT_SUBMITTED'|'SOURCE_EXPORT_REQUEST_OUTCOME_UNKNOWN'|'SOURCE_EXPORT_STOP_NOT_SUBMITTED'|'SOURCE_EXPORT_STOP_OUTCOME_UNKNOWN'|'SOURCE_EXPORT_RESOLUTION_NOT_SUBMITTED'|'SOURCE_EXPORT_RESOLUTION_OUTCOME_UNKNOWN'|'SOURCE_EXPORT_READ_FAILED'|'SOURCE_EXPORT_ACCESS_PRIVATE'|'RECOVERY_REVIEW_REQUIRED';
 export class SourceExportOwnerAccessError extends Error{constructor(code:Code){super(code);this.name='SourceExportOwnerAccessError';}}
 function require(v:unknown):asserts v{if(!v)throw new SourceExportOwnerAccessError('SOURCE_EXPORT_ACCESS_INPUT_REQUIRED');}
 function exact(v:unknown,keys:readonly string[]):v is Record<string,unknown>{return v!==null&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k));}
@@ -22,8 +23,8 @@ function privateResult<T>(value:T){return Object.freeze({forServer:()=>value,toJ
 
 // Trusted server boundary, fixed business only. No route, automatic dispatch,
 // retry, current lease or download authority follows from historical receipts.
-export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>,businessId:string,appReleaseId?:string){
- require(uuid(businessId)&&(appReleaseId===undefined||typeof appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(appReleaseId)));const scope=businessId,release=appReleaseId,database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
+export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>,businessId:string,appReleaseId?:string,currentProfile=false){
+ require(uuid(businessId)&&typeof currentProfile==='boolean'&&(appReleaseId===undefined||typeof appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(appReleaseId)));const scope=businessId,release=appReleaseId,database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
  function requestCommand(input:unknown):Extract<SourceExportCommand,{commandType:'export.request'}>{
   try{const command=parseSourceExportCommand(input);require(command.businessId===scope&&command.commandType==='export.request');return command;}
   catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_ACCESS_INPUT_REQUIRED');}
@@ -36,6 +37,18 @@ export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguratio
   }finally{hash?.fill(0);}
  }
  return Object.freeze({
+  async stop(credential:string,input:unknown,external:AbortSignal){
+   require(currentProfile);const command=parseSourceExportStopCommand(input,scope),r=command.reference;let submitted=false;
+   try{return privateResult(await authorized(credential,external,(args,actor,signal)=>database.commandTransaction(async(query,current)=>{
+    submitted=true;const value=await query('SELECT crest_commands.stop_source_export($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid,$12::bigint) AS result',[...args,r.recoveryEpoch,r.operationId,r.exportJobId,r.expectedVersion]);require(!current.aborted);return parseSourceExportStopOutcome(value,command,actor);
+   },signal)));}catch(error){if(error instanceof Error&&error.message==='RECOVERY_REVIEW_REQUIRED')throw new SourceExportOwnerAccessError('RECOVERY_REVIEW_REQUIRED');throw new SourceExportOwnerAccessError(submitted?'SOURCE_EXPORT_STOP_OUTCOME_UNKNOWN':'SOURCE_EXPORT_STOP_NOT_SUBMITTED');}
+  },
+  async lookupStop(credential:string,input:unknown,external:AbortSignal){
+   require(currentProfile);const command=parseSourceExportStopCommand(input,scope);
+   try{return privateResult(await authorized(credential,external,async(args,actor,signal)=>{
+    const value=await database('SELECT crest_commands.lookup_source_export_operation($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid) AS result',[...args,command.reference.operationId],signal);require(!signal.aborted);return parseSourceExportStopOutcome(value,command,actor,true);
+   }));}catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_READ_FAILED');}
+  },
   async recordDownloadAccess(credential:string,input:unknown,expected:unknown,external:AbortSignal){
    const request=parseSourceExportDownloadPartRequest(input);
    // Copy and validate before provider I/O; then bind again to its fresh actor.
@@ -69,12 +82,13 @@ export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguratio
     require(release!==undefined);return privateResult(await authorized(credential,external,async(args,actor,signal)=>{
      const value=await database('SELECT crest_commands.read_business_settings_context($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid) AS result',args,signal);
      require(!signal.aborted&&exact(value,['schemaVersion','businessId','legalName','businessVersion','writeState','recoveryEpoch'])&&value.schemaVersion===1&&value.businessId===scope);
-     return parseSourceExportOwnerContext({schemaVersion:1,businessId:scope,actorId:actor,appReleaseId:release,profile:'crest.business-source-journal-bundle.v1',sourceSchemaVersion:43,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
+     return parseSourceExportOwnerContext({schemaVersion:1,businessId:scope,actorId:actor,appReleaseId:release,profile:currentProfile?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1',sourceSchemaVersion:currentProfile?134:43,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
     }));
    }catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_READ_FAILED');}
   },
   async request(credential:string,input:unknown,external:AbortSignal){
    const command=requestCommand(input),r=command.reference;let submitted=false;
+   require(!currentProfile&&r.profile==='crest.business-source-journal-bundle.v1');
    try{
     const result=await authorized(credential,external,(args,actor,signal)=>{
      submitted=true;return database.commandTransaction(async(query,current)=>{

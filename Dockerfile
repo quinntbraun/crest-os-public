@@ -21,9 +21,13 @@ FROM dependencies AS builder
 COPY next.config.ts next-env.d.ts tsconfig.json ./
 COPY src ./src
 COPY public ./public
-COPY scripts/build-server.mjs ./scripts/build-server.mjs
+COPY scripts/build-server.mjs scripts/server-build-identity.mjs scripts/install-pdf-tools.mjs scripts/install-heic-tools.mjs scripts/fetch-release-asset.mjs ./scripts/
+COPY Dockerfile ./Dockerfile
+COPY supabase/migrations ./supabase/migrations
+COPY supabase/migration-checksums.json ./supabase/migration-checksums.json
 COPY release/toolchain.json ./release/toolchain.json
 COPY release/third-party ./release/third-party
+COPY release/compatibility.json ./release/compatibility.json
 RUN npm run build
 
 FROM dependencies AS runtime-dependencies
@@ -42,5 +46,5 @@ COPY --from=builder --chown=node:node /app/release/third-party ./release/third-p
 COPY --from=builder --chown=node:node /app/public ./public
 USER node
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD ["node", "server/health.mjs"]
 CMD ["node", "server/main.mjs"]

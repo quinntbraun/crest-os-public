@@ -3,8 +3,10 @@ import {IncomingMessage} from 'node:http';
 import type {TLSSocket} from 'node:tls';
 import {normalizeClientAddress} from './client-address.ts';
 import {createRequestProtection} from './request-protection.ts';
+import {isRenderIngress} from './render-ingress.ts';
+import type {RenderIngress} from './render-ingress.ts';
 
-export type IngressConfiguration={kind:'direct'}|{kind:'proxy';peers:readonly string[]};
+export type IngressConfiguration={kind:'direct'}|{kind:'proxy';peers:readonly string[]}|RenderIngress;
 type Snapshot=Readonly<{address:string;encrypted:boolean;hosts:readonly string[];forwarded:readonly string[];protocols:readonly string[]}>;
 const snapshots=new WeakMap<TransportPeer,Snapshot>();
 export class TransportError extends Error{
@@ -35,9 +37,10 @@ export function createTrustedTransport(config:{origin:string;environment:'produc
   const origin=new URL(config.origin),kind=config.ingress?.kind,environment=config.environment;
   let peers:Set<string>;
   try{
-    if(kind!=='direct'&&kind!=='proxy')throw new Error();
-    const values=kind==='proxy'?(config.ingress as Extract<IngressConfiguration,{kind:'proxy'}>).peers:[];
-    if(kind==='proxy'&&(!Array.isArray(values)||values.length<1||values.length>16))throw new Error();
+    if(kind!=='direct'&&kind!=='proxy'&&kind!=='render')throw new Error();
+    if(kind==='render'&&(environment!=='production'||!isRenderIngress(config.ingress)))throw new Error();
+    const values=kind==='proxy'||kind==='render'?(config.ingress as Exclude<IngressConfiguration,{kind:'direct'}>).peers:[];
+    if(kind!=='direct'&&(!Array.isArray(values)||values.length<1||values.length>16))throw new Error();
     peers=new Set(values.map(normalizeClientAddress));
     if(peers.size!==values.length)throw new Error();
   }catch{throw new Error('INGRESS_CONFIGURATION_REQUIRED');}
@@ -45,7 +48,7 @@ export function createTrustedTransport(config:{origin:string;environment:'produc
     try{
       const state=snapshots.get(peer),url=new URL(request.url);
       if(!state||url.origin!==origin.origin||url.username||url.password||state.hosts.length!==1
-        ||state.hosts[0]!.toLowerCase()!==origin.host||environment==='production'&&!state.encrypted)throw new TransportError();
+        ||state.hosts[0]!.toLowerCase()!==origin.host||environment==='production'&&!state.encrypted&&kind!=='render')throw new TransportError();
       if(kind==='direct')return state.address; // Forwarding headers have no authority here.
       if(!peers.has(state.address)||state.protocols.length!==1||state.protocols[0]!=='https'||state.forwarded.length!==1)throw new TransportError();
       const raw=state.forwarded[0]!;

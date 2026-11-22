@@ -1,6 +1,6 @@
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {createHash} from 'node:crypto';
-import {createSourceExportBrowserSave} from '../../src/client/source-export-browser-save.ts';
+import {createSourceExportBrowserSave,createCurrentSourceBrowserSave} from '../../src/client/source-export-browser-save.ts';
 import {sourceExportDownloadFixture} from '../support/source-export-download-fixture.ts';
 import {parseSourceExportDownloadHeader,parseSourceExportDownloadFile} from '../../src/security/source-export-download-contract.ts';
 import type {SourceExportBrowserFile} from '../../src/client/source-export-downloads.ts';
@@ -13,6 +13,11 @@ function fixture(){
  return{value,blobs,anchors,create,revoke,append,element,make:(expired?:()=>void)=>{const result=createSourceExportBrowserSave(expired);instances.push(result);return result;},expires:()=>Date.now()+120000};
 }
 beforeEach(()=>{instances=[];f=fixture();});afterEach(()=>{for(const save of instances)save.dispose();vi.useRealTimers();vi.restoreAllMocks();vi.unstubAllGlobals();});
+it('prepares a verified current workbook with its actual name and MIME while preserving legacy file limits',async()=>{
+ const save=createCurrentSourceBrowserSave(),header={...f.value.header,profile:'crest.current-business-source-bundle.v1' as const,sourceSchemaVersion:134 as const},logicalFile={fileName:'business_records.xlsx',contentType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',bytes:f.value.bytes.length,sha256:createHash('sha256').update(f.value.bytes).digest('hex')};
+ try{await save.prepare({header,logicalFile,bytes:f.value.bytes},signal(),f.expires());expect(f.blobs[0]!.type).toBe(logicalFile.contentType);save.request(signal());expect(f.anchors[0]!.download).toBe(logicalFile.fileName);expect(save.view()?.state).toBe('requested');}finally{save.dispose();}
+ await expect(f.make().prepare({...f.value,file:{...f.value.file,fileName:'business_records.xlsx'}},signal(),f.expires())).rejects.toThrow(error);
+});
 it('prepares an actual independent Blob without clicking or exposing its private URL, then requests one explicit save',async()=>{
  const save=f.make(),before=f.value.bytes.slice();await save.prepare(f.value,signal(),f.expires());expect(f.element).not.toHaveBeenCalled();expect(f.blobs).toHaveLength(1);expect(new Uint8Array(await f.blobs[0]!.arrayBuffer())).toEqual(before);expect(f.value.bytes).toEqual(before);expect(save.view()).toMatchObject({fileName:f.value.file.fileName,bytes:32,state:'prepared'});expect(JSON.stringify(save.view())).not.toContain('blob:');expect(()=>JSON.stringify(save)).toThrow(error);
  expect(save.request(signal())).toEqual({state:'requested',fileName:f.value.file.fileName});expect(f.element).toHaveBeenCalledWith('a');expect(f.anchors[0]).toMatchObject({href:'blob:synthetic-1',download:f.value.file.fileName,rel:'noopener noreferrer',hidden:true});expect(f.anchors[0]!.click).toHaveBeenCalledOnce();expect(f.anchors[0]!.remove).toHaveBeenCalledOnce();expect(save.view()?.state).toBe('requested');expect(()=>save.request(signal())).toThrow(error);expect(f.anchors).toHaveLength(1);expect(f.revoke).toHaveBeenCalledWith('blob:synthetic-1');

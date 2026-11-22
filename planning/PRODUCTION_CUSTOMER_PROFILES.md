@@ -1,0 +1,11 @@
+# Production customer profiles
+
+The existing bounded customer profile is now part of explicit production composition. Enable `customerProfiles` in the private production capability list. It requires customers, vehicle associations, catalog access and recorded job history; those dependencies retain their own scheduling, vehicle and operation-resolution requirements. The capability belongs to the actual configured business and requires the accepted-release capability object. A plain JSON flag, another business's grant or a synthetic fixture flag cannot enable this production route.
+
+The Node adapter passes the enabled profile capability to the existing customer HTTP handler. The handler also requires recorded-history composition and advertises profile availability only through its trusted response header. Legacy import and synthetic-profile construction guards retain their test-only rules.
+
+Profile requests retain the existing canonical origin/TLS boundary, CSRF, committed request admission, session/provider verification and private response handling. The directory still calls the registered `read_customer_profile` command, whose existing migration rechecks CRM and catalog authority and scopes all reads to the actual business/customer. Association pagination remains bounded to 25 rows. No browser business selector, new database grant, schema change, test-data promotion or financial mutation is introduced.
+
+Focused HTTP ports check matching production authority, missing/foreign capability refusal, required history and admission-before-profile selection. Capability tests check dependencies. These ports are not genuine owner authentication or installed-phone acceptance. The actual bundled release remains blocked until full release, export/recovery, deployment and owner/device requirements are proved. No live account or business data was provisioned by this change.
+
+On source `5da27c6`, 285 focused cases across 15 customer/composition/Calendar files and the full Next/server production build passed. Type checking and targeted lint also passed. The Calendar registered-through-130 database journey passed on source `4368548` before the separate customer-profile composition change; its result is scoped to that source and its explicit provider fixtures. Current release acceptance and real deployment remain unproved.

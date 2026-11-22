@@ -2,8 +2,12 @@ import 'server-only';
 import { createHash } from 'node:crypto';
 import { customerUuid as uuid, customerVersion as version, exactCustomerObject as exact } from '../customer/customer-contract.ts';
 import { createGoogleCalendarCredentialStore } from './google-calendar-credential-store.ts';
-import { googleCalendarWorkerStatements as sql, syntheticGoogleCalendarWorkerDatabase } from './google-calendar-database.ts';
+import { googleCalendarWorkerStatements as sql, syntheticGoogleCalendarWorkerDatabase,productionGoogleCalendarWorkerDatabase } from './google-calendar-database.ts';
+import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from '../security/production-capabilities.ts';
 import { createGoogleCalendarOAuthTransport } from './google-calendar-oauth-transport.ts';
+import {googleCalendarOAuthClient} from './google-calendar-oauth.ts';
 import { projectGoogleCalendarAppointment } from './google-calendar-projection.ts';
 import type { CalendarDisclosure, GoogleCalendarEvent } from './google-calendar-projection.ts';
 import { createGoogleCalendarProvider, googleCalendarMutationBody } from './google-calendar-provider.ts';
@@ -12,6 +16,7 @@ import type { CalendarMutation, ConfirmedCalendarEvent } from './google-calendar
 import { parseScheduleTime } from './schedule-time.ts';
 import { syntheticGoogleCalendarIdentity } from './google-calendar-runtime.ts';
 import { startCalendarRunner } from './google-calendar-runner.ts';
+import {createGoogleCalendarRefresh} from './google-calendar-refresh.ts';
 
 type Target = Readonly<{ businessId: string; destinationId: string; jobId: string; recoveryEpoch: string; generation: string }>;
 type Outcome = 'published' | 'removed' | 'no_effect' | 'delayed' | 'reconnect' | 'review' | 'uncertain';
@@ -58,9 +63,30 @@ export async function createSyntheticGoogleCalendarWorker(config: Readonly<{
     throw Error('GOOGLE_CALENDAR_SYNTHETIC_WORKER_CONFIGURATION_REQUIRED');
   const database = syntheticGoogleCalendarWorkerDatabase(config);
   const { clientId, credentialKeyId } = syntheticGoogleCalendarIdentity;
+  return createCalendarWorkerCore(config,provider,database,{clientId,credentialKeyId,clientSecret:'fictional-calendar-only',calendarId:syntheticCalendarId});
+}
+
+export type ProductionCalendarWorkerConfiguration=SessionDatabaseConfiguration&ProductionCapabilityConfiguration&Readonly<{
+ businessId:string;origin:string;clientId:string;clientSecret:string;credentialKeyId:string;calendarKeyMaterial:Uint8Array;
+}>;
+export async function createProductionGoogleCalendarWorker(config:ProductionCalendarWorkerConfiguration){
+ try{
+  const origin=new URL(config.origin);
+  if(!productionCapability(config,'googleCalendar')||origin.protocol!=='https:'||origin.origin!==config.origin||!uuid(config.businessId)||!(config.calendarKeyMaterial instanceof Uint8Array)||config.calendarKeyMaterial.byteLength!==32)throw Error();
+  googleCalendarOAuthClient(config.clientId,config.origin+'/api/google-calendar/callback');
+  const scopedBusiness=config.businessId;
+  const core=await createCalendarWorkerCore({origin:config.origin,calendarKeyMaterial:Buffer.from(config.calendarKeyMaterial)},{request:globalThis.fetch.bind(globalThis)},productionGoogleCalendarWorkerDatabase(config),{
+   clientId:config.clientId,credentialKeyId:config.credentialKeyId,clientSecret:config.clientSecret,refresh:true});
+  return async(target:Target,signal:AbortSignal)=>target.businessId===scopedBusiness?core(target,signal):unavailable;
+ }catch{throw Error('GOOGLE_CALENDAR_PRODUCTION_WORKER_CONFIGURATION_REQUIRED');}
+}
+
+async function createCalendarWorkerCore(config:Readonly<{origin:string;calendarKeyMaterial:Uint8Array}>,provider:{request:typeof fetch},database:ReturnType<typeof syntheticGoogleCalendarWorkerDatabase>,identity:Readonly<{clientId:string;credentialKeyId:string;clientSecret:string;calendarId?:string;refresh?:boolean}>){
+  const {clientId,credentialKeyId}=identity;
   const store = await createGoogleCalendarCredentialStore({ activeKeyId: credentialKeyId, calendarKeyMaterial: config.calendarKeyMaterial });
   const oauth = createGoogleCalendarOAuthTransport({ clientId, callbackUri: config.origin + '/api/google-calendar/callback',
-    clientSecret: 'fictional-calendar-only', request: provider.request, admit: async () => false });
+    clientSecret: identity.clientSecret, request: provider.request, admit: async () => false });
+  const refresh=identity.refresh?createGoogleCalendarRefresh({clientId,clientSecret:identity.clientSecret,callbackUri:config.origin+'/api/google-calendar/callback',credentialKeyId,store,query:database,request:provider.request}):undefined;
 
   return async (target: Target, external: AbortSignal) => {
     const { businessId, destinationId, jobId, generation, recoveryEpoch } = target;
@@ -77,7 +103,8 @@ export async function createSyntheticGoogleCalendarWorker(config: Readonly<{
       !version(lease.appointmentSequence) || (lease.action !== 'publish' && lease.action !== 'remove') ||
       (lease.mode !== 'dispatch' && lease.mode !== 'reconcile') || typeof lease.sourceCurrent !== 'boolean' ||
       typeof lease.eventId !== 'string' || !/^[a-f0-9]{32}$/.test(lease.eventId) || !uuid(lease.marker) ||
-      lease.providerCalendarId !== syntheticCalendarId) return unavailable;
+      typeof lease.providerCalendarId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._+-]{0,254}@group\.calendar\.google\.com$/.test(lease.providerCalendarId)||
+      identity.calendarId!==undefined&&lease.providerCalendarId!==identity.calendarId) return unavailable;
     const claimed = [...scope, lease.leaseId];
     const { eventId, marker } = lease;
     const href = config.origin + '/schedule?job=' + jobId;
@@ -111,10 +138,16 @@ export async function createSyntheticGoogleCalendarWorker(config: Readonly<{
       const text = (value: unknown) => typeof value === 'string' ? value : null;
       const optional = { clientName: text(fields.clientName), serviceLabel: text(fields.serviceLabel), workAddress: text(fields.workAddress) };
       if (!uuid(credential.credentialId) || credential.clientId !== clientId || !version(credential.version)) return finish('reconnect');
-      const grant = await store.open({ businessId, destinationId, connectionGeneration: generation, recoveryEpoch, clientId,
+      let grant = await store.open({ businessId, destinationId, connectionGeneration: generation, recoveryEpoch, clientId,
         credentialId: credential.credentialId, version: credential.version }, { keyId: credential.keyId, envelope: credential.envelope }, oauth.openRetained)
         .catch(() => null);
-      if (!grant || grant.expiresAt <= Date.now()) return finish('reconnect');
+      if(!grant)return finish('reconnect');
+      if(grant.expiresAt<=Date.now()+60000&&refresh){
+        const result=await refresh({businessId,destinationId,recoveryEpoch,generation},signal);
+        if(result.state!=='refreshed')return finish(result.state==='delayed'?'delayed':result.state==='review'?'review':'reconnect');
+        grant=result.grant;
+      }
+      if(grant.expiresAt<=Date.now())return finish('reconnect');
       const previous = material.previous === null ? null :
         exact(material.previous, ['body', 'sha256', 'etag']) ? parsePrior(material.previous.body, material.previous.sha256, material.previous.etag, disclosure) : undefined;
       if (previous === undefined) return finish('review');
@@ -124,7 +157,7 @@ export async function createSyntheticGoogleCalendarWorker(config: Readonly<{
       const intent = projectGoogleCalendarAppointment(mapping, lease.action === 'remove' ? { ...appointment, action: 'cancel', confirmation: 'cancelled' }
         : { ...appointment, action: 'confirm', confirmation: 'confirmed', time: parseScheduleTime(material.time) },
       { trustedOrigin: config.origin, disclosure, fields: optional });
-      const bridge = createGoogleCalendarProvider({ calendarId: syntheticCalendarId, eventUuid, marker, request: provider.request,
+      const bridge = createGoogleCalendarProvider({ calendarId: lease.providerCalendarId, eventUuid, marker, request: provider.request,
         async admit(kind, requestSignal) {
           if (grant.expiresAt <= Date.now()) return null;
           const admission = await database(sql.admit, [...claimed, kind], requestSignal);
@@ -190,6 +223,17 @@ export async function prepareSyntheticGoogleCalendarRunner(config: Parameters<ty
   const database = syntheticGoogleCalendarWorkerDatabase(config);
   if (!uuid(config.businessId)) throw Error('GOOGLE_CALENDAR_SYNTHETIC_RUNNER_CONFIGURATION_REQUIRED');
   return () => startCalendarRunner(config.businessId, { next: signal => database(sql.next, [config.businessId], signal), dispatch });
+}
+export async function prepareProductionGoogleCalendarTick(config:ProductionCalendarWorkerConfiguration){
+  const businessId=config.businessId,database=productionGoogleCalendarWorkerDatabase(config),dispatch=await createProductionGoogleCalendarWorker(config);
+  return async(signal:AbortSignal)=>{
+    try{
+      const value=await database(sql.next,[businessId],signal);
+      if(value===null&&!signal.aborted)return {state:'idle' as const};
+      if(signal.aborted||!exact(value,['businessId','destinationId','jobId','recoveryEpoch','generation'])||value.businessId!==businessId||!uuid(value.destinationId)||!uuid(value.jobId)||!uuid(value.recoveryEpoch)||!version(value.generation))return unavailable;
+      return await dispatch({businessId,destinationId:value.destinationId,jobId:value.jobId,recoveryEpoch:value.recoveryEpoch,generation:value.generation},signal);
+    }catch{return unavailable;}
+  };
 }
 
 export function createSyntheticGoogleCalendarEvents() {

@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../security/production-capabilities.ts';
 import {createHash} from 'node:crypto';
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
@@ -18,7 +20,7 @@ import {createCustomerDirectory,CustomerDirectoryError} from './customer-directo
 import {parseCustomerDraft,customerUuid,customerVersion,requireCustomer} from './customer-contract.ts';
 import {customerProfileFields,parseCustomerProfileRequest} from './customer-profile-contract.ts';
 
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;recordJobHistory?:boolean;customerProfile?:boolean};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;recordJobHistory?:boolean;customerProfile?:boolean;productionCapabilities?:ProductionCapabilities};
 const prefix='/api/business/customers/';
 const draftKeys=['displayName','phone','email','contactPreference','outreachOptOut','notes','customerSince','archived','archiveReason'] as const;
 const fields={'legacy-matches':['kind','hints'],context:[],list:['search','afterId','includeArchived','pageSize'],history:['customerId','afterVersion','pageSize'],profile:customerProfileFields,operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','customerId','expectedVersion',...draftKeys]} as const;
@@ -31,7 +33,7 @@ export function customerFailureResponse(status:400|404|405|503=400):Response{
 export function createCustomerHttp(config:Configuration,provider:Parameters<typeof createCustomerDirectory>[1],tokens:Parameters<typeof createCustomerDirectory>[2],reviewHistoryEnabled=false,maintenanceEnabled=false,legacyBatchesEnabled=false,legacyEffectsEnabled=false,legacyTargetsEnabled=false,legacyDecisionsEnabled=false,legacyApprovalsEnabled=false,legacyApplicationsEnabled:boolean|'background'=false,legacyDownloadsEnabled=false){
   if(!customerUuid(config.businessId)||typeof reviewHistoryEnabled!=='boolean'||typeof maintenanceEnabled!=='boolean'||typeof legacyBatchesEnabled!=='boolean'||typeof legacyEffectsEnabled!=='boolean'||legacyEffectsEnabled&&!legacyBatchesEnabled||typeof legacyTargetsEnabled!=='boolean'||legacyTargetsEnabled&&!legacyEffectsEnabled||typeof legacyDecisionsEnabled!=='boolean'||legacyDecisionsEnabled&&!legacyTargetsEnabled||typeof legacyApprovalsEnabled!=='boolean'||legacyApprovalsEnabled&&!legacyDecisionsEnabled||(typeof legacyApplicationsEnabled!=='boolean'&&legacyApplicationsEnabled!=='background')||legacyApplicationsEnabled&&!legacyApprovalsEnabled||
     typeof legacyDownloadsEnabled!=='boolean'||legacyDownloadsEnabled&&legacyApplicationsEnabled!=='background'||
-    (reviewHistoryEnabled||maintenanceEnabled||legacyBatchesEnabled||config.customerProfile===true)&&config.environment!=='test')throw new Error('CUSTOMER_HTTP_CONFIGURATION_REQUIRED');
+    legacyBatchesEnabled&&config.environment!=='test'||config.environment==='production'&&(config.customerProfile===true&&(!productionCapability(config,'customerProfiles')||config.recordJobHistory!==true)||reviewHistoryEnabled&&!productionCapability(config,'reviewHistory')||maintenanceEnabled&&!productionCapability(config,'maintenanceFollowUp')||config.recordJobHistory===true&&!productionCapability(config,'recordJobHistory')))throw new Error('CUSTOMER_HTTP_CONFIGURATION_REQUIRED');
   const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
   const csvCsrf=legacyBatchesEnabled?createLegacyCsvCsrfVerifier(config):undefined;
   const directory=createCustomerDirectory(config,provider,tokens),context=createBusinessSettingsContextReader(config,provider,tokens);

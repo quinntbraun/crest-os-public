@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 124,
+  "migrationCount": 134,
   "tables": [
     {
       "table": "crest.businesses",
@@ -4014,6 +4014,70 @@
         "lease_expires_at"
       ],
       "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_creation_abandonments",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "attempt_id",
+        "actor_id",
+        "app_session_id",
+        "recovery_epoch",
+        "operation_id",
+        "abandoned_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_account_bindings",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "destination_id",
+        "client_id",
+        "provider_issuer",
+        "credential_id",
+        "source_attempt",
+        "recovery_epoch",
+        "actor_id",
+        "bound_at"
+      ],
+      "excluded": [
+        {
+          "column": "provider_subject",
+          "reason": "calendar_account_identifier"
+        }
+      ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest_private.google_calendar_reconnection_stagings",
+      "scope": "business",
+      "required": [
+        "business_id",
+        "attempt_id",
+        "destination_id",
+        "credential_id",
+        "generation",
+        "recovery_epoch",
+        "actor_id",
+        "app_session_id",
+        "provider_issuer",
+        "staged_at"
+      ],
+      "excluded": [
+        {
+          "column": "provider_subject",
+          "reason": "calendar_account_identifier"
+        },
+        {
+          "column": "reviewed_google_owner",
+          "reason": "calendar_account_identifier"
+        }
+      ],
       "partialEvidenceGroup": null
     }
   ]

@@ -6,6 +6,8 @@ import { customerUuid, customerVersion } from '../customer/customer-contract.ts'
 
 export const googleCalendarOAuthIssuer = 'https://accounts.google.com';
 export const googleCalendarOAuthScope = 'https://www.googleapis.com/auth/calendar.app.created';
+export const googleCalendarIdentityScope = googleCalendarOAuthScope+' openid';
+export function googleCalendarGrantedIdentityScope(value:unknown){return typeof value==='string'&&value.split(' ').length===2&&new Set(value.split(' ')).size===2&&value.split(' ').every(scope=>scope===googleCalendarOAuthScope||scope==='openid');}
 const authorizationEndpoint = googleCalendarOAuthIssuer + '/o/oauth2/v2/auth';
 const callbackPath = '/api/google-calendar/callback';
 const cleanResultPath = '/settings/google-calendar';
@@ -88,19 +90,21 @@ function digest(value: string) {
   return createHash('sha256').update(value, 'ascii').digest();
 }
 
-function makeAuthorizationUrl(client: Client, state: string, challenge: string) {
+function identityNonce(scope:Scope,verifier:string){return createHash('sha256').update('crest.google-calendar-identity-nonce.v1\0').update(associatedData(scope)).update('\0'+verifier,'ascii').digest('base64url');}
+function makeAuthorizationUrl(client: Client, state: string, challenge: string, nonce?:string) {
   const url = new URL(authorizationEndpoint);
   url.search = new URLSearchParams({
     client_id: client.clientId, redirect_uri: client.callbackUri, response_type: 'code', scope: googleCalendarOAuthScope,
     access_type: 'offline', include_granted_scopes: 'false', state, code_challenge: challenge, code_challenge_method: 'S256',
   }).toString();
+  if(nonce){url.searchParams.set('scope',googleCalendarIdentityScope);url.searchParams.set('nonce',nonce);url.searchParams.set('prompt','consent');}
   return url.href;
 }
 
 type ParsedCallback = Readonly<{ attemptId: string; state: string }> &
   (Readonly<{ code: string }> | Readonly<{ error: 'denied' | 'review' }>);
 
-function parseCallback(request: Request, client: Client): ParsedCallback {
+function parseCallback(request: Request, client: Client,withIdentity=false): ParsedCallback {
   requireOAuth(request.method === 'GET' && request.url.length <= client.callbackUri.length + maximumQuery + 1 &&
     request.url.startsWith(client.callbackUri + '?'));
   const query = request.url.slice(client.callbackUri.length + 1);
@@ -127,7 +131,7 @@ function parseCallback(request: Request, client: Client): ParsedCallback {
   requireOAuth(code !== null && oauthCode.test(code) && !fields.has('error_description') && !fields.has('error_uri'));
   // Callback scope is advisory. The token exchange must independently verify
   // the issued grant even if Google supplies the requested scope here.
-  if (scope !== null && scope !== googleCalendarOAuthScope) return { attemptId, state, error: 'review' };
+  if (scope !== null && (withIdentity?!googleCalendarGrantedIdentityScope(scope):scope!==googleCalendarOAuthScope)) return { attemptId, state, error: 'review' };
   return { attemptId, state, code };
 }
 
@@ -136,20 +140,22 @@ class ExchangeMaterial {
   #verifier: string;
   #client: Client;
   #released = false;
+  #nonce:string|undefined;
   readonly attemptId: string;
 
-  constructor(code: string, verifier: string, client: Client, attemptId: string) {
+  constructor(code: string, verifier: string, client: Client, attemptId: string, nonce?:string) {
     this.#code = code;
     this.#verifier = verifier;
     this.#client = client;
     this.attemptId = attemptId;
+    this.#nonce=nonce;
     Object.freeze(this);
   }
 
   takeForOAuthLibrary() {
     requireOAuth(!this.#released);
     this.#released = true;
-    const payload = Object.freeze({ code: this.#code, codeVerifier: this.#verifier, ...this.#client, scope: googleCalendarOAuthScope });
+    const payload = Object.freeze({ code: this.#code, codeVerifier: this.#verifier, ...this.#client, scope: this.#nonce?googleCalendarIdentityScope:googleCalendarOAuthScope,...(this.#nonce?{nonce:this.#nonce}:{}) });
     this.#code = this.#verifier = '';
     return payload;
   }
@@ -175,6 +181,7 @@ export async function createGoogleCalendarOAuth(config: Readonly<{
   verifierKeyId: string;
   calendarKeyMaterial: Uint8Array;
   store: GoogleCalendarOAuthAttemptStore;
+  withIdentity?:true;
 }>) {
   let client: Client, key: CryptoKey, keyId: string;
   try {
@@ -213,7 +220,7 @@ export async function createGoogleCalendarOAuth(config: Readonly<{
           Number.isFinite(expiry) && expiry > now && expiry <= now + 5 * 60_000 + 1_000);
         signal.throwIfAborted();
         return new Response(null, { status: 303, headers: { ...safeHeaders,
-          Location: makeAuthorizationUrl(client, state, digest(verifier).toString('base64url')) } });
+          Location: makeAuthorizationUrl(client, state, digest(verifier).toString('base64url'),config.withIdentity?identityNonce(scope,verifier):undefined) } });
       } catch {
         throw new GoogleCalendarOAuthError();
       }
@@ -223,7 +230,7 @@ export async function createGoogleCalendarOAuth(config: Readonly<{
       try {
         signal.throwIfAborted();
         request.signal.throwIfAborted();
-        const owner = ownerBinding(input), parsed = parseCallback(request, client);
+        const owner = ownerBinding(input), parsed = parseCallback(request, client,config.withIdentity);
         const scope = Object.freeze({ owner, client, attemptId: parsed.attemptId, stateDigest: digest(parsed.state) });
         const receipt = await store.consume(scope, signal);
         signal.throwIfAborted();
@@ -246,7 +253,7 @@ export async function createGoogleCalendarOAuth(config: Readonly<{
         signal.throwIfAborted();
         request.signal.throwIfAborted();
         if ('error' in parsed) return { state: parsed.error };
-        return { state: 'exchange_pending', exchange: new ExchangeMaterial(parsed.code, verifier, client, parsed.attemptId) };
+        return { state: 'exchange_pending', exchange: new ExchangeMaterial(parsed.code, verifier, client, parsed.attemptId,config.withIdentity?identityNonce(scope,verifier):undefined) };
       } catch {
         return { state: 'restart' };
       }

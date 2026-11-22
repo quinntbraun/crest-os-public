@@ -5,9 +5,10 @@ import {parseExportRequestReference,parseExportRequestRetirement,parseExportRequ
 import {sourceExportReferenceToWire,sourceExportRetirementToWire,sourceExportBodyLimit} from '../security/source-export-http-contract';
 import {parseSourceExportOwnerContext} from '../security/source-export-owner-context';
 import {parseSourceExportCursor,parseSourceExportList,sourceExportListToWire} from '../security/source-export-owner-list';
+import {parseSourceExportStopCommand,parseSourceExportStopOutcome,sourceExportStopToWire} from '../security/source-export-stop-contract';
 
 type Kind='input'|'not_submitted'|'recovery'|'limited'|'unknown'|'unavailable';
-type Route='context'|'list'|'request'|'status'|'original'|'retire'|'resolution';
+type Route='context'|'list'|'request'|'status'|'original'|'retire'|'resolution'|'stop'|'stop-original';
 export class SourceExportClientError extends Error{readonly kind:Kind;constructor(kind:Kind){super('SOURCE_EXPORT_REQUEST_FAILED');this.name='SourceExportClientError';this.kind=kind;}}
 function require(value:unknown):asserts value{if(!value)throw new Error();}
 async function readResponse(response:Response,signal:AbortSignal){
@@ -25,7 +26,7 @@ async function readResponse(response:Response,signal:AbortSignal){
  require((text.match(/"(?:[^"\\]|\\.)*"|:/g)??[]).filter(token=>token===':').length===fields);return value;
 }
 async function post(route:Route,body:object,proof:Proof,external:AbortSignal){
- const mutation=route==='request'||route==='retire';let sent=false;
+ const mutation=route==='request'||route==='retire'||route==='stop';let sent=false;
  try{
   const csrfToken=proof?.csrfToken,expiresAt=proof?.expiresAt;
   require(typeof csrfToken==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(csrfToken)&&Number.isSafeInteger(expiresAt)&&expiresAt>Date.now());
@@ -35,7 +36,7 @@ async function post(route:Route,body:object,proof:Proof,external:AbortSignal){
   if(exact(value,['error'])){
    if(response.status===429&&value.error==='SOURCE_EXPORT_REQUEST_LIMITED')throw new SourceExportClientError('limited');
    if(response.status===409&&value.error==='RECOVERY_REVIEW_REQUIRED')throw new SourceExportClientError('recovery');
-   if(mutation&&response.status===503&&value.error===(route==='request'?'SOURCE_EXPORT_REQUEST_NOT_SUBMITTED':'SOURCE_EXPORT_RESOLUTION_NOT_SUBMITTED'))throw new SourceExportClientError('not_submitted');
+   if(mutation&&response.status===503&&value.error===(route==='request'?'SOURCE_EXPORT_REQUEST_NOT_SUBMITTED':route==='stop'?'SOURCE_EXPORT_STOP_NOT_SUBMITTED':'SOURCE_EXPORT_RESOLUTION_NOT_SUBMITTED'))throw new SourceExportClientError('not_submitted');
    throw new Error();
   }
   require(response.status===200);return value;
@@ -80,4 +81,14 @@ export function createSourceExportClient(businessId:string,actorId:string){
    try{return parseExportRequestResolution(value,command);}catch{throw new SourceExportClientError('unavailable');}
   }
  });
+}
+export function createSourceExportStopClient(businessId:string,actorId:string){
+ if(!uuid(businessId)||!uuid(actorId))throw new SourceExportClientError('input');
+ const base=createSourceExportClient(businessId,actorId);
+ async function action(route:'stop'|'stop-original',input:unknown,proof:Proof,signal:AbortSignal){
+  let command:ReturnType<typeof parseSourceExportStopCommand>;try{command=parseSourceExportStopCommand(input,businessId);}catch{throw new SourceExportClientError('input');}
+  const result=await post(route,sourceExportStopToWire(command),proof,signal);
+  try{return parseSourceExportStopOutcome(result,command,actorId,route==='stop-original');}catch{throw new SourceExportClientError(route==='stop'?'unknown':'unavailable');}
+ }
+ return Object.freeze({stop:(input:unknown,proof:Proof,signal:AbortSignal)=>action('stop',input,proof,signal),lookup:(input:unknown,proof:Proof,signal:AbortSignal)=>action('stop-original',input,proof,signal),status:base.status});
 }

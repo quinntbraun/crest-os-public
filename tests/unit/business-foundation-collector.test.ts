@@ -43,6 +43,18 @@ beforeEach(()=>{
  }
 });
 afterEach(()=>vi.useRealTimers());
+it('locks migration changes before opening the snapshot and requires the exact applied migration identities',async()=>{
+ const migrationIdentity=[{version:'20270125180000',name:'export_migration_metadata'}];
+ db.query.mockImplementation((sql:string,args:unknown[])=>sql.startsWith('SELECT pg_advisory_lock_shared')?{rows:[{}]}:sql.startsWith('SELECT version,name')?{rows:migrationIdentity}:answer(sql,args));
+ await createBusinessFoundationCollector({...config(),migrationIdentity})(signal());
+ const calls=db.query.mock.calls.map(call=>call[0] as string);
+ expect(calls.indexOf('SELECT pg_advisory_lock_shared($1::integer,$2::integer)')).toBeLessThan(calls.indexOf('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY'));
+ expect(calls.indexOf('SELECT version,name FROM supabase_migrations.schema_migrations ORDER BY version')).toBeLessThan(calls.findIndex(sql=>sql.includes('_context(')));
+ db.query.mockClear();
+ await expect(createBusinessFoundationCollector({...config(),migrationIdentity:[{...migrationIdentity[0]!,name:'different'}]})(signal())).rejects.toThrow(error);
+ expect(db.query.mock.calls.some(call=>(call[0] as string).includes('_context('))).toBe(false);
+ expect(db.end).toHaveBeenCalledTimes(2);
+});
 it('collects all three groups on one closed-role connection/snapshot and seals only after commit acknowledgment',async()=>{
  const out=await createBusinessFoundationCollector(config())(signal()),value=out.forServer();
  expect(()=>JSON.stringify(out)).toThrow('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');expect(Object.isFrozen(value)).toBe(true);

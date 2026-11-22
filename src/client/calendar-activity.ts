@@ -1,4 +1,4 @@
-import {authentication} from './authentication';
+import {authentication,AuthenticationError} from './authentication';
 import {scheduling} from './scheduling';
 import {readSyntheticCalendarJobStatus} from './google-calendar-consent';
 import {scheduleDateWindow} from './schedule-reader';
@@ -34,7 +34,7 @@ export function createCalendarActivitySource(dependencies:Partial<Dependencies>=
   const rows:Readonly<{job:JobSummary;status:GoogleCalendarJobStatus|null}>[]=[];
   for(const job of page.jobs){
    let current:GoogleCalendarJobStatus|null=null;
-   try{current=await status(job.jobId,input.epoch,signal);}catch{signal.throwIfAborted();}
+   try{current=await status(job.jobId,input.epoch,signal);}catch(error){signal.throwIfAborted();if(error instanceof AuthenticationError&&error.kind==='denied')throw error;}
    signal.throwIfAborted();
    // Appointment sequence, not mutable job version, binds the status to its date.
    if(current&&(current.jobId!==job.jobId||current.appointmentVersion!==job.appointmentSequence))throw new CalendarActivityReadError('changed');

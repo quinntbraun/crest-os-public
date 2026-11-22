@@ -8,6 +8,7 @@ import {createLegacyContactImportDispatcher} from '../security/session-database.
 import {startLegacyContactImportRunner} from '../customer/legacy-contact-import-runner.ts';
 export {openSyntheticSupplierStore,readSupplierProfile} from './synthetic-supplier-store.ts';
 export {createAuthenticationRuntime} from './authentication-runtime.ts';
+export {getServerBuildIdentity} from './build-identity.ts';
 export {createTenantContextReader} from '../security/tenant-read.ts';
 export {createMutationTransaction} from '../security/mutation-transaction.ts';
 export {createBusinessOperationLookup} from '../security/business-operation-lookup.ts';
@@ -63,13 +64,16 @@ export async function createCrestApplication(config:NodeConfiguration){
     return {server,close:async()=>{
       if(startCalendar)server.off('listening',startCalendar);
       if(startContactImport)server.off('listening',startContactImport);
-      const stopped=Promise.all([stopCalendar?.(),stopContactImport?.()]);
+      const stopped=Promise.all([stopCalendar?.(),stopContactImport?.(),config.productionSourceExports?.close()]);
+      config.productionExpenseReceipts?.close?.();
+      config.productionDropoffPhotos?.close?.();
+      config.productionSupplierOriginals?.close?.();
       server.closeAllConnections();
       await new Promise<void>(resolve=>server.close(()=>resolve()));
       await stopped;
       await app.close();
     }};
-  }catch{await app.close();throw new Error('APPLICATION_START_FAILED');}
+  }catch{await config.productionSourceExports?.close();config.productionExpenseReceipts?.close?.();config.productionDropoffPhotos?.close?.();config.productionSupplierOriginals?.close?.();await app.close();throw new Error('APPLICATION_START_FAILED');}
 }
 export {createCustomerAddressDirectory} from '../customer/customer-address-directory.ts';
 
@@ -86,3 +90,6 @@ export {createOriginalOperationHttp} from '../security/original-operation-http.t
 
 export {createSourceExportHttp} from '../security/source-export-http.ts';
 export {createSourceExportDownloadHttp} from '../security/source-export-download-http.ts';
+export {createCurrentBusinessSourceCollector} from '../security/business-foundation-collector.ts';
+export {formatCurrentBusinessPortableSource} from '../security/current-business-portable-source.ts';
+export {createCurrentBusinessExportWorker} from '../security/business-source-export-worker.ts';

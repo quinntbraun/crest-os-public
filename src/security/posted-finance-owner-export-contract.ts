@@ -22,6 +22,9 @@ export const openingReceivablesExportProfile='crest.posted-finance-source.v20';
 export const statementStagingExportProfile='crest.posted-finance-source.v19';
 
 export function postedFinanceProfileForSchema(sourceSchemaVersion:number){
- return sourceSchemaVersion>=109?supplierPayablesExportProfile:sourceSchemaVersion>=108?supplierBillDraftsExportProfile:sourceSchemaVersion>=107?statementMatchDraftsExportProfile:sourceSchemaVersion>=105?openingReceivablesExportProfile:sourceSchemaVersion>=103?statementStagingExportProfile:sourceSchemaVersion>=102?openingWorksheetExportProfile:sourceSchemaVersion>=101?restoredTipExportProfile:sourceSchemaVersion>=100?collectionFailureGroupedRecreditExportProfile:sourceSchemaVersion>=99?collectionFailureRecreditExportProfile:sourceSchemaVersion>=98?refundTransferFeeExportProfile:sourceSchemaVersion>=97?directReceiptTipExportProfile:sourceSchemaVersion>=96?refundTransferExportProfile:sourceSchemaVersion>=95?collectionFailureExportProfile:sourceSchemaVersion>=94?tipReturnExportProfile:sourceSchemaVersion>=93?excessReturnExportProfile
-  :sourceSchemaVersion>=91?excessReceiptExportProfile:postedFinanceExportProfile;
+ const schema=financePostingSchema(sourceSchemaVersion);
+ if(!Number.isSafeInteger(sourceSchemaVersion)||schema===undefined||schema<89||schema>109)throw Error('POSTED_FINANCE_EXPORT_CONFIGURATION_REQUIRED');
+ return schema>=109?supplierPayablesExportProfile:schema>=108?supplierBillDraftsExportProfile:schema>=107?statementMatchDraftsExportProfile:schema>=105?openingReceivablesExportProfile:schema>=103?statementStagingExportProfile:schema>=102?openingWorksheetExportProfile:schema>=101?restoredTipExportProfile:schema>=100?collectionFailureGroupedRecreditExportProfile:schema>=99?collectionFailureRecreditExportProfile:schema>=98?refundTransferFeeExportProfile:schema>=97?directReceiptTipExportProfile:schema>=96?refundTransferExportProfile:schema>=95?collectionFailureExportProfile:schema>=94?tipReturnExportProfile:schema>=93?excessReturnExportProfile
+  :schema>=91?excessReceiptExportProfile:postedFinanceExportProfile;
 }
+import {financePostingSchema} from '../bookkeeping/finance-posting-schema.ts';

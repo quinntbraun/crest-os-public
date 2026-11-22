@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../security/production-capabilities.ts';
 import {createHash} from 'node:crypto';
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
@@ -15,12 +17,12 @@ const prefix='/api/business/services/';
 const definitionKeys=['name','inclusions','exclusions','internalGuidance','rangeLowCents','rangeHighCents','estimatedSeconds'] as const;
 const fields={context:[],list:['search','afterId','includeInactive','pageSize'],history:['serviceId','afterRevision','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','serviceId','expectedRevision','code','active',...definitionKeys]} as const;
 type Route=keyof typeof fields;
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;productionCapabilities?:ProductionCapabilities};
 export function serviceFailureResponse(status:400|404|405|503=400){const r=privateJsonResponse({error:'SERVICE_REQUEST_FAILED'},status);if(status===405)r.headers.set('Allow','POST');return r;}
-// Candidate construction only. No ordinary runtime route/flag selects this;
-// registered catalog/source/recovery adoption must precede product exposure.
+// Explicit trusted application composition only. Registered catalog/source/
+// recovery acceptance and release activation precede production exposure.
 export function createServiceHttp(config:Configuration,provider:Parameters<typeof createServiceDirectory>[1],tokens:Parameters<typeof createServiceDirectory>[2],enabled=false){
- if(!serviceId(config.businessId)||typeof enabled!=='boolean')throw new Error('SERVICE_HTTP_CONFIGURATION_REQUIRED');
+ if(!serviceId(config.businessId)||typeof enabled!=='boolean'||enabled&&config.environment==='production'&&!productionCapability(config,'catalog'))throw new Error('SERVICE_HTTP_CONFIGURATION_REQUIRED');
  const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
  const directory=enabled?createServiceDirectory(config,provider,tokens):undefined,context=enabled?createBusinessSettingsContextReader(config,provider,tokens):undefined;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{

@@ -1,6 +1,8 @@
 import 'server-only';
-import { GoogleCalendarOAuthError, googleCalendarOAuthClient, googleCalendarOAuthIssuer, googleCalendarOAuthScope } from './google-calendar-oauth.ts';
+import { GoogleCalendarOAuthError, googleCalendarOAuthClient, googleCalendarOAuthIssuer, googleCalendarOAuthScope,googleCalendarIdentityScope,googleCalendarGrantedIdentityScope } from './google-calendar-oauth.ts';
 import type { GoogleCalendarExchangeMaterial } from './google-calendar-oauth.ts';
+import {googleCalendarProviderSubject} from './google-calendar-identity.ts';
+import type {GoogleCalendarProviderIdentity,createGoogleCalendarIdentityVerifier} from './google-calendar-identity.ts';
 
 const tokenEndpoint = 'https://oauth2.googleapis.com/token';
 const revokeEndpoint = 'https://oauth2.googleapis.com/revoke';
@@ -18,19 +20,21 @@ class GoogleCalendarGrant {
   readonly clientId: string;
   readonly expiresAt: number;
   readonly refreshExpiresAt: number | null;
+  readonly identity:GoogleCalendarProviderIdentity|undefined;
 
-  constructor(input: Readonly<{ clientId: string; accessToken: string; refreshToken: string; expiresAt: number; refreshExpiresAt: number | null }>) {
+  constructor(input: Readonly<{ clientId: string; accessToken: string; refreshToken: string; expiresAt: number; refreshExpiresAt: number | null;identity?:GoogleCalendarProviderIdentity }>) {
     this.clientId = input.clientId;
     this.#accessToken = input.accessToken;
     this.#refreshToken = input.refreshToken;
     this.expiresAt = input.expiresAt;
     this.refreshExpiresAt = input.refreshExpiresAt;
+    this.identity=input.identity?Object.freeze({...input.identity}):undefined;
     Object.freeze(this);
   }
 
   forPrivateCredentialStore() {
     return Object.freeze({ clientId: this.clientId, accessToken: this.#accessToken, refreshToken: this.#refreshToken,
-      scope: googleCalendarOAuthScope, expiresAt: this.expiresAt, refreshExpiresAt: this.refreshExpiresAt });
+      scope: this.identity?googleCalendarIdentityScope:googleCalendarOAuthScope, expiresAt: this.expiresAt, refreshExpiresAt: this.refreshExpiresAt,...(this.identity?{identity:this.identity}:{}) });
   }
 
   toJSON(): never { throw new GoogleCalendarOAuthError(); }
@@ -54,12 +58,14 @@ function isBearer(value: unknown): value is string {
 
 export function parseGoogleCalendarStoredGrant(input: unknown, clientId: string): StoredGrant {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new GoogleCalendarOAuthError();
-  const fields = ['clientId', 'scope', 'accessToken', 'refreshToken', 'expiresAt', 'refreshExpiresAt'];
+  const identified=Object.hasOwn(input,'identity');
+  const fields = ['clientId', 'scope', 'accessToken', 'refreshToken', 'expiresAt', 'refreshExpiresAt',...(identified?['identity']:[])];
   if (Object.keys(input).length !== fields.length || !fields.every(field => Object.hasOwn(input, field))) throw new GoogleCalendarOAuthError();
-  const { clientId: storedClient, scope, accessToken, refreshToken, expiresAt, refreshExpiresAt } = input as Record<string, unknown>;
-  if (storedClient !== clientId || scope !== googleCalendarOAuthScope || !isBearer(accessToken) || !isBearer(refreshToken) ||
+  const { clientId: storedClient, scope, accessToken, refreshToken, expiresAt, refreshExpiresAt,identity } = input as Record<string, unknown>;
+  if(identified&&(!identity||typeof identity!=='object'||Array.isArray(identity)||Object.keys(identity).length!==2||!('issuer'in identity)||identity.issuer!==googleCalendarOAuthIssuer||!('subject'in identity)||!googleCalendarProviderSubject(identity.subject)))throw new GoogleCalendarOAuthError();
+  if (storedClient !== clientId || scope !== (identified?googleCalendarIdentityScope:googleCalendarOAuthScope) || !isBearer(accessToken) || !isBearer(refreshToken) ||
     !validExpiry(expiresAt) || !(refreshExpiresAt === null || validExpiry(refreshExpiresAt))) throw new GoogleCalendarOAuthError();
-  return Object.freeze({ clientId, accessToken, refreshToken, scope, expiresAt, refreshExpiresAt });
+  return Object.freeze({ clientId, accessToken, refreshToken, scope, expiresAt, refreshExpiresAt,...(identified?{identity:Object.freeze({...identity as GoogleCalendarProviderIdentity})}:{}) });
 }
 
 async function readReply(response: Response, signal: AbortSignal): Promise<Record<string, unknown>> {
@@ -109,15 +115,22 @@ function classifiedError(status: number, reply: Record<string, unknown>): Failur
   return { state: 'review' };
 }
 
-function granted(reply: Record<string, unknown>, clientId: string, observedAt: number, previous?: StoredGrant): TokenResult {
+async function granted(reply: Record<string, unknown>, clientId: string, observedAt: number, previous:StoredGrant|undefined,verifyIdentity:ReturnType<typeof createGoogleCalendarIdentityVerifier>|undefined,nonce:string|undefined,signal:AbortSignal): Promise<TokenResult> {
   const { access_token, expires_in, refresh_token, refresh_token_expires_in, scope, token_type } = reply;
   // A refresh response can omit scope or a replacement refresh token. The
   // prior grant must already have been verified for this exact client/scope.
-  if (scope !== googleCalendarOAuthScope && (scope !== undefined || !previous)) return { state: 'review' };
+  const identified=nonce!==undefined||previous?.identity!==undefined;
+  if ((identified?!googleCalendarGrantedIdentityScope(scope):scope!==googleCalendarOAuthScope) && (scope !== undefined || !previous)) return { state: 'review' };
   if (!isBearer(access_token) || token_type !== 'Bearer' || !boundedSeconds(expires_in, 86_400) ||
     (refresh_token_expires_in !== undefined && !boundedSeconds(refresh_token_expires_in, 315_576_000)) ||
     Object.hasOwn(reply, 'error')) return { state: 'uncertain' };
-  if (Object.hasOwn(reply, 'id_token')) return { state: 'review' };
+  let identity=previous?.identity;
+  if(identified){
+    if(Object.hasOwn(reply,'id_token')){
+      if(!verifyIdentity)return {state:'review'};
+      identity=await verifyIdentity(reply.id_token,access_token,nonce,signal,identity);
+    }else if(nonce!==undefined||!identity)return {state:'review'};
+  }else if(Object.hasOwn(reply,'id_token'))return {state:'review'};
   if (refresh_token !== undefined && !isBearer(refresh_token)) return { state: 'uncertain' };
   const refreshToken = refresh_token ?? previous?.refreshToken;
   if (!refreshToken) return { state: 'reconnect' };
@@ -127,7 +140,7 @@ function granted(reply: Record<string, unknown>, clientId: string, observedAt: n
   const refreshExpiresAt = originalExpiry === null ? expiryHint : expiryHint === null ? originalExpiry : Math.min(originalExpiry, expiryHint);
   const expiresAt = observedAt + expires_in * 1_000;
   if (expiresAt <= Date.now() || (refreshExpiresAt !== null && refreshExpiresAt <= Date.now())) return { state: 'reconnect' };
-  return { state: 'granted', grant: new GoogleCalendarGrant({ clientId, accessToken: access_token, refreshToken, expiresAt, refreshExpiresAt }) };
+  return { state: 'granted', grant: new GoogleCalendarGrant({ clientId, accessToken: access_token, refreshToken, expiresAt, refreshExpiresAt,...(identity?{identity}:{}) }) };
 }
 
 // Runtime composition supplies a bounded maintained OAuth transport and a
@@ -141,6 +154,7 @@ export function createGoogleCalendarOAuthTransport(config: Readonly<{
   admit: (request: Admission, signal: AbortSignal) => Promise<boolean>;
   request: typeof fetch;
   timeoutMs?: number;
+  verifyIdentity?:ReturnType<typeof createGoogleCalendarIdentityVerifier>;
 }>) {
   const { clientId, clientSecret, callbackUri, admit, request } = config;
   const timeoutMs = config.timeoutMs ?? 8_000;
@@ -156,10 +170,10 @@ export function createGoogleCalendarOAuthTransport(config: Readonly<{
   }
 
   async function send(kind: 'exchange' | 'refresh', admission: Admission, body: () => URLSearchParams, external: AbortSignal,
-    previous?: StoredGrant): Promise<TokenResult>;
+    previous?: StoredGrant,identityNonce?:()=>string|undefined): Promise<TokenResult>;
   async function send(kind: 'revoke', admission: Admission, body: () => URLSearchParams, external: AbortSignal):
     Promise<Failure | Readonly<{ state: 'revoked' }>>;
-  async function send(kind: Kind, admission: Admission, body: () => URLSearchParams, external: AbortSignal, previous?: StoredGrant):
+  async function send(kind: Kind, admission: Admission, body: () => URLSearchParams, external: AbortSignal, previous?: StoredGrant,identityNonce?:()=>string|undefined):
     Promise<TokenResult | Readonly<{ state: 'revoked' }>> {
     const signal = AbortSignal.any([external, AbortSignal.timeout(timeoutMs)]);
     try {
@@ -188,7 +202,7 @@ export function createGoogleCalendarOAuthTransport(config: Readonly<{
       if (response.status >= 500) return { state: 'uncertain' };
       if (response.status === 401) return { state: 'review' };
       if (response.status !== 200) return classifiedError(response.status, await readReply(response, signal));
-      return granted(await readReply(response, signal), clientId, observedAt, previous);
+      return await granted(await readReply(response, signal), clientId, observedAt, previous,config.verifyIdentity,identityNonce?.(),signal);
     } catch {
       // A dropped response or malformed successful reply can conceal a
       // committed grant change. Never surface transport errors or retry it.
@@ -201,13 +215,15 @@ export function createGoogleCalendarOAuthTransport(config: Readonly<{
   return Object.freeze({
     openRetained,
     exchange(material: GoogleCalendarExchangeMaterial, signal: AbortSignal) {
+      let nonce:string|undefined;
       return send('exchange', { kind: 'exchange', attemptId: material.attemptId }, () => {
         const value = material.takeForOAuthLibrary();
         if (value.issuer !== googleCalendarOAuthIssuer || value.clientId !== clientId || value.callbackUri !== callbackUri ||
-          value.scope !== googleCalendarOAuthScope) throw new GoogleCalendarOAuthError();
+          value.scope !== (value.nonce?googleCalendarIdentityScope:googleCalendarOAuthScope)||value.nonce&&!config.verifyIdentity) throw new GoogleCalendarOAuthError();
+        nonce=value.nonce;
         return new URLSearchParams({ grant_type: 'authorization_code', client_id: clientId, client_secret: clientSecret,
           redirect_uri: callbackUri, code: value.code, code_verifier: value.codeVerifier });
-      }, signal);
+      }, signal,undefined,()=>nonce);
     },
     refresh(retained: GoogleCalendarGrant, signal: AbortSignal): Promise<TokenResult> {
       const previous = retained.forPrivateCredentialStore();

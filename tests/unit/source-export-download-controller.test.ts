@@ -7,7 +7,7 @@ import {SourceExportDownloadClientError} from '../../src/client/source-export-do
 import type {createSourceExportDownloadClient} from '../../src/client/source-export-downloads.ts';
 import type {createSourceExportBrowserSave} from '../../src/client/source-export-browser-save.ts';
 import type {authentication} from '../../src/client/authentication.ts';
-import type {sourceExportOwnerContext} from '../../src/client/source-exports.ts';
+import {SourceExportClientError,type sourceExportOwnerContext} from '../../src/client/source-exports.ts';
 import {parseSourceExportOwnerContext} from '../../src/security/source-export-owner-context.ts';
 import {parseSourceExportDownloadCatalogue,parseSourceExportDownloadHeader,parseSourceExportDownloadFile} from '../../src/security/source-export-download-contract.ts';
 import {sourceExportDownloadFixture} from '../support/source-export-download-fixture.ts';
@@ -24,6 +24,14 @@ it.each(['actorId','businessId'] as const)('notifies the workspace of a changed 
 it('does not classify a transport error as ended workspace access',async()=>{
  const f=fixture();await f.c.load();f.session.mockRejectedValueOnce(Error('connection unavailable'));await f.c.prepare(f.first.files[0]!.partId);
  expect(f.onAccessDenied).not.toHaveBeenCalled();expect(f.c.view()).toMatchObject({phase:'unavailable',files:[],prepared:null});
+});
+it('hides current-export metadata at a rate limit and rechecks the principal before resuming its saved catalogue',async()=>{
+ const f=fixture(),current={...f.contextValue,profile:'crest.current-business-source-bundle.v1' as const,sourceSchemaVersion:134 as const};f.context.mockResolvedValue(current);await f.c.load();
+ f.context.mockRejectedValueOnce(new SourceExportClientError('limited'));await f.c.prepare(f.first.files[0]!.partId);
+ expect(f.c.view()).toMatchObject({phase:'review',files:[],packageInfo:null,total:null,loaded:0,prepared:null,canContinue:true,canPrepare:false});expect(f.api.receive).not.toHaveBeenCalled();
+ await f.c.continueLoading();expect(f.c.view()).toMatchObject({phase:'ready',loaded:7,total:7,canPrepare:true});expect(f.api.catalogue).toHaveBeenCalledTimes(2);
+ f.context.mockRejectedValueOnce(new SourceExportClientError('limited'));await f.c.prepare(f.first.files[0]!.partId);f.context.mockResolvedValueOnce({...current,actorId:randomUUID()});await f.c.continueLoading();
+ expect(f.onAccessDenied).toHaveBeenCalledOnce();expect(f.c.view()).toMatchObject({files:[],packageInfo:null,prepared:null,canContinue:false});expect(f.api.receive).not.toHaveBeenCalled();
 });
 function fixture(onAccessDenied=vi.fn()){
  const f=sourceExportDownloadFixture(),bodies=f.files.map((_,i)=>new Uint8Array(32).fill(65+i));for(const [i,file]of f.files.entries())file.sha256=createHash('sha256').update(bodies[i]!).digest('hex');for(const h of [f.header,f.first,f.second])h.manifestSha256=f.files.at(-1)!.sha256;

@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from './production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from './production-capabilities.ts';
 import {randomUUID} from 'node:crypto';
 import pg from 'pg';
 import {supplierPayableReviewRefusals as supplierPayableReadRefusals} from '../bookkeeping/expenses/supplier-payable-review-contract.ts';
@@ -7,15 +9,22 @@ type Query=(text:string,values:unknown[])=>Promise<unknown>;
 type ConnectionProfile='read'|'admission'|'refresh'|'command'|'contact-import';
 // Trusted server SQL only. No caller-supplied identifiers or browser exposure.
 export function sessionDatabase(config:SessionDatabaseConfiguration){return databaseForRole(config,'crest_web');}
-export function custodyPhotoDispatcherDatabase(config:SessionDatabaseConfiguration){
+export function custodyPhotoDispatcherDatabase(config:SessionDatabaseConfiguration&ProductionCapabilityConfiguration){
+  if(config.environment==='production'&&!productionCapability(config,'dropoffPhotos'))throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');
   return databaseForRole(config,'crest_custody_photo_dispatch');
 }
-export function supplierDocumentWorkerDatabase(config:SessionDatabaseConfiguration){
-  if(config.environment!=='test')throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');
+export function supplierDocumentWorkerDatabase(config:SessionDatabaseConfiguration&ProductionCapabilityConfiguration){
+  if(config.environment==='production'&&!productionCapability(config,'supplierOriginals'))throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');
   return databaseForRole(config,'crest_supplier_bill_document_worker');
 }
 export function financePreviewDatabase(config:SessionDatabaseConfiguration){
   if(config.environment!=='test')throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');
+  return databaseForRole(config,'crest_finance_preview');
+}
+export function productionFinanceDatabase(config:SessionDatabaseConfiguration&ProductionCapabilityConfiguration){
+  if(!productionCapability(config,'finance'))throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');
+  // Retain the existing closed command role and its historical name. No new
+  // grants, direct table access, fixture controls or business data are created.
   return databaseForRole(config,'crest_finance_preview');
 }
 export function createLegacyContactImportDispatcher(config:SessionDatabaseConfiguration){
@@ -74,7 +83,7 @@ function databaseForRole(config:SessionDatabaseConfiguration,role:'crest_web'|'c
             AND NOT (r.rolsuper OR r.rolbypassrls OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolinherit))
           AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles r ON r.oid=m.roleid
             WHERE m.member=(SELECT oid FROM pg_catalog.pg_roles WHERE rolname=session_user) AND r.rolname<>$1::name)
-          ${importWorker?`AND EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname=$1::name
+          ${importWorker||config.environment==='production'&&['crest_finance_preview','crest_custody_photo_dispatch','crest_supplier_bill_document_worker'].includes(role)?`AND EXISTS (SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname=$1::name
             AND NOT (r.rolcanlogin OR r.rolsuper OR r.rolbypassrls OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolinherit)
             AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m WHERE m.member=r.oid)
             AND EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members m

@@ -136,7 +136,7 @@ function WorkspaceSearch({searchRef}:{searchRef:Ref<OpenToolSearch>}){
 }
 
 // Document navigation preserves the editors' native unsaved-change warning.
-export function WorkspaceFrame({children}:{children:ReactNode}){
+export function WorkspaceFrame({children,workspaceMode='test'}:{children:ReactNode;workspaceMode?:'test'|'production'}){
   const path=usePathname(),signIn=path==='/sign-in';
   const navigation=useRef<HTMLElement>(null);
   const search=useRef<OpenToolSearch>(null);
@@ -190,7 +190,7 @@ export function WorkspaceFrame({children}:{children:ReactNode}){
         </nav>
       </details>
     </div>
-    <p className="workspace-test-notice"><i aria-hidden="true"/>Test workspace · Use fictional records only</p>
+    {workspaceMode==='test'&&<p className="workspace-test-notice"><i aria-hidden="true"/>Test workspace · Use fictional records only</p>}
     </header>
     {!signIn&&<nav ref={navigation} className="workspace-destinations" aria-label="Main navigation">{destinations.map(([href,label,icon])=>
       <a key={href} href={href} aria-current={navigationState(path,href)}><span className="destination-glyph" aria-hidden="true"><WorkspaceIcon name={icon}/></span><span className="destination-label">{label}</span></a>)}

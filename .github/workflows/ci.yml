@@ -395,6 +395,7 @@ jobs:
           npm test
           node --test tests/integration/synthetic-workspace-tls.test.mjs
           npm run test:private-files
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/receipt-worker-transport.test.mjs
           npm run test:image-validation
           npm run test:pdf-validation
           npm run test:heic-validation

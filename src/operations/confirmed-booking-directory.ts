@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../security/production-capabilities.ts';
 import {sessionDatabase} from '../security/session-database.ts';
 import {createSessionLifecycle} from '../security/session-lifecycle.ts';
 import {sessionCredentialHash} from '../security/session-credential.ts';
@@ -21,11 +23,12 @@ import {parseBookingConflictRequest,parseBookingConflictReview} from './booking-
 import type {BookingConflictRequest} from './booking-conflict-review-contract.ts';
 export class BookingDirectoryError extends Error{constructor(code:string){super(code);this.name='BookingDirectoryError';}}
 class PrivateValue<T>{#value:T;constructor(value:T){this.#value=value;}forServer(){return this.#value;}toJSON():never{throw new BookingDirectoryError('BOOKING_VALUE_PRIVATE');}}
-export function createBookingDirectory(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>,amendedEnabled=false){
- if(typeof amendedEnabled!=='boolean'||amendedEnabled&&config.environment!=='test')throw new BookingDirectoryError('BOOKING_CONFIGURATION_REQUIRED');
+export function createBookingDirectory(config:SessionDatabaseConfiguration&{businessId?:string;productionCapabilities?:ProductionCapabilities},provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>,amendedEnabled=false){
+ if(typeof amendedEnabled!=='boolean'||amendedEnabled&&config.environment!=='test'&&!productionCapability(config,'quoteAmendmentAcceptance'))throw new BookingDirectoryError('BOOKING_CONFIGURATION_REQUIRED');
  const database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
  async function authorized<T>(credential:string,businessId:string,signal:AbortSignal,work:(args:unknown[],bounded:AbortSignal)=>Promise<T>){
   requireBooking(customerUuid(businessId));const bounded=AbortSignal.any([signal,AbortSignal.timeout(35000)]);if(bounded.aborted)throw Error();let hash:Buffer|undefined;
+  if(config.productionCapabilities!==undefined&&!productionCapability({...config,businessId},'scheduling'))throw new BookingDirectoryError('BOOKING_REQUEST_FAILED');
   try{hash=sessionCredentialHash(credential);const verified=await sessions.verify(credential,bounded,'background');if(bounded.aborted)throw Error();return await work([hash,verified.sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,verified.provider.sessionId,new Date(verified.provider.expiresAt),businessId],bounded);}finally{hash?.fill(0);}
  }
  return Object.freeze({

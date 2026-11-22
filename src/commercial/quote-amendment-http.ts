@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../security/production-capabilities.ts';
 import {parseQuoteAmendmentTargetsRequest} from './quote-amendment-targets.ts';
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
@@ -26,12 +28,12 @@ const fields={
  'draft-operation':['reference'],'send-operation':['reference']
 } as const;
 type Route=keyof typeof fields;
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;productionCapabilities?:ProductionCapabilities};
 export function quoteAmendmentFailureResponse(status:400|404|405|503=400){const response=privateJsonResponse({error:'QUOTE_AMENDMENT_REQUEST_FAILED'},status);if(status===405)response.headers.set('Allow','POST');return response;}
-// Separate synthetic-only opt-in, closed by default. Registered52 preparation
-// uses the normal authenticated server; production activation remains refused.
+// Explicit opt-in, closed by default. Production additionally requires the
+// business-scoped capability from accepted trusted release composition.
 export function createQuoteAmendmentHttp(config:Configuration,provider:Parameters<typeof createQuoteAmendmentDirectory>[1],tokens:Parameters<typeof createQuoteAmendmentDirectory>[2],enabled=false,acceptanceEnabled=false){
- if(!quoteId(config.businessId)||typeof enabled!=='boolean'||typeof acceptanceEnabled!=='boolean'||acceptanceEnabled&&!enabled||enabled&&config.environment==='production')throw Error('QUOTE_AMENDMENT_HTTP_CONFIGURATION_REQUIRED');
+ if(!quoteId(config.businessId)||typeof enabled!=='boolean'||typeof acceptanceEnabled!=='boolean'||acceptanceEnabled&&!enabled||config.environment==='production'&&(enabled&&!productionCapability(config,'quoteAmendments')||acceptanceEnabled&&!productionCapability(config,'quoteAmendmentAcceptance')))throw Error('QUOTE_AMENDMENT_HTTP_CONFIGURATION_REQUIRED');
  const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createQuoteAmendmentDirectory(config,provider,tokens):undefined;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{
   let submitted=false,workStarted=false;

@@ -620,6 +620,56 @@
       "version": "20270117180000",
       "file": "20270117180000_finance_history_recording.sql",
       "sha256": "80e002a2bd865e06ad95717e04dff462900ed368aaca7a484f9622125bae8c17"
+    },
+    {
+      "version": "20270118180000",
+      "file": "20270118180000_google_calendar_shared_admission.sql",
+      "sha256": "c3076759d7d1e040324b71e3da1796eb114bf9994b5eebd6a5415bbfb88d9981"
+    },
+    {
+      "version": "20270119180000",
+      "file": "20270119180000_google_calendar_disconnect_runtime.sql",
+      "sha256": "8da3f7cad081511f8408acf5565a42c3069d0c3da0413acd55f34d250801c265"
+    },
+    {
+      "version": "20270120180000",
+      "file": "20270120180000_google_calendar_unsent_restart.sql",
+      "sha256": "dbb42995d4b94d090049ac005d49aaf23cc831623696677a43af2a9c289b1a73"
+    },
+    {
+      "version": "20270121180000",
+      "file": "20270121180000_google_calendar_initial_identity.sql",
+      "sha256": "bbdafca2ff343ebb91e2cfd0cf0cf88925de141a6afe2b060c8ba20e6be8411f"
+    },
+    {
+      "version": "20270122180000",
+      "file": "20270122180000_google_calendar_verified_reconnect.sql",
+      "sha256": "80c801adb6662440017553c806b154ee238171a5328ce8a85640655818f61ac2"
+    },
+    {
+      "version": "20270123180000",
+      "file": "20270123180000_google_calendar_reconnect_result.sql",
+      "sha256": "72ba0c621e8e6687278d5e3ac16527608b0e8d457b17e6338fa138ea601469c9"
+    },
+    {
+      "version": "20270124180000",
+      "file": "20270124180000_google_calendar_current_source.sql",
+      "sha256": "b09d20b9454b3f036dae711681b38f1c2cc187cbe3bc0c67d1b14fd4b7272a9c"
+    },
+    {
+      "version": "20270125180000",
+      "file": "20270125180000_export_migration_metadata.sql",
+      "sha256": "1fdac8b0d46df10d526a636b140c0263ba3d5dd126ce80d28ad42722de5eff77"
+    },
+    {
+      "version": "20270126180000",
+      "file": "20270126180000_current_business_source.sql",
+      "sha256": "3f18ef277257168fad004bd7a9551fee2fa2f2c863698be15a1ac1b4ce578e25"
+    },
+    {
+      "version": "20270127180000",
+      "file": "20270127180000_current_source_export_jobs.sql",
+      "sha256": "1c4e38684b7bddac84da52ea3852c250d5fd8f912416457b1dda6d70305d4ece"
     }
   ]
 }

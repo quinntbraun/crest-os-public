@@ -8,6 +8,8 @@ import {createBusinessSettingsContextReader} from '../security/business-settings
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from '../security/production-capabilities.ts';
 import {boundedFileStream} from '../files/bounded-file-stream.ts';
 import {maximumFileBytes} from '../files/private-object-store.ts';
 import type {createPrivateObjectStore} from '../files/private-object-store.ts';
@@ -26,12 +28,14 @@ const fields={
  verify:scopeFields,
  file:[...scopeFields,'variant']
 } as const;
-type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
-export type SyntheticDropoffPhotoRuntime=Readonly<{
+type Config=SessionDatabaseConfiguration&ProductionCapabilityConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+export type DropoffPhotoRuntime=Readonly<{
  objects:ReturnType<typeof createPrivateObjectStore>;
  stagingOrigin:string;
  dispatch:(credential:string,scope:DropoffPhotoScope,signal:AbortSignal)=>Promise<unknown>;
+ close?:()=>void;
 }>;
+export type SyntheticDropoffPhotoRuntime=DropoffPhotoRuntime;
 export const dropoffPhotoFailure=(status=400)=>privateJsonResponse({error:'DROPOFF_PHOTO_REQUEST_FAILED'},status);
 const photoTypes=['image/jpeg','image/png','image/heic'];
 function check(ok:unknown):asserts ok{if(!ok)throw Error('DROPOFF_PHOTO_REQUEST_FAILED');}
@@ -42,8 +46,9 @@ export function createDropoffPhotoHttp(config:Config,provider:Parameters<typeof 
  tokens:Parameters<typeof createDropoffPhotoDirectory>[2],runtime:SyntheticDropoffPhotoRuntime,pickupEnabled=false,returnEnabled=false){
  check(typeof returnEnabled==='boolean'&&(!returnEnabled||pickupEnabled));
  const storage=new URL(runtime.stagingOrigin);
- check(config.environment==='test'&&uuid(config.businessId)&&storage.origin===runtime.stagingOrigin&&
-  storage.hostname==='127.0.0.1'&&storage.port&&['http:','https:'].includes(storage.protocol));
+ check(uuid(config.businessId)&&storage.origin===runtime.stagingOrigin&&(config.environment==='test'
+  ?storage.hostname==='127.0.0.1'&&storage.port&&['http:','https:'].includes(storage.protocol)
+  :productionCapability(config,'dropoffPhotos')&&(!pickupEnabled||productionCapability(config,'pickupPhotos'))&&(!returnEnabled||productionCapability(config,'pickupRelease'))&&/^https:\/\/[a-f0-9]{32}\.r2\.cloudflarestorage\.com$/.test(runtime.stagingOrigin)));
  const resolve=createTrustedTransport(config),csrf=createSessionCsrfVerifier(config),uploadCsrf=createConditionPhotoCsrfVerifier(config);
  const admit=createSessionRequestAdmission(config);
  const directory=createDropoffPhotoDirectory(config,provider,tokens),access=createDropoffPhotoAccess(directory,runtime.objects);
@@ -67,7 +72,7 @@ export function createDropoffPhotoHttp(config:Config,provider:Parameters<typeof 
    const input=route==='upload'?{jobVehicleId:request.headers.get('x-crest-job-vehicle'),photoId:request.headers.get('x-crest-photo')}:
     await readFlatJsonBody(bounded,fields[route as keyof typeof fields],4096);
    check(uuid(input.jobVehicleId)&&uuid(input.photoId));
-   const scope={businessId:config.businessId,jobVehicleId:input.jobVehicleId,photoId:input.photoId};
+   const scope=Object.freeze({businessId:config.businessId,jobVehicleId:input.jobVehicleId,photoId:input.photoId});
    if(route==='reserve'||route==='reserve-pickup'||route==='reserve-return'){
     check('epoch'in input&&uuid(input.epoch)&&uuid(input.caseId)&&(input.handoff===1||input.handoff===2)&&
      typeof input.contentType==='string'&&photoTypes.includes(input.contentType)&&typeof input.byteSize==='number'&&

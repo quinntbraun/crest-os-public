@@ -51,7 +51,10 @@ export function newPreviewKey(businessId:string){validBusiness(businessId);retur
 
 // Only the trusted server composition root supplies credentials. No ambient AWS credentials,
 // arbitrary URL, public bucket hostname, browser configuration or automatic write retry.
-export function createR2ObjectStore(config:{accountId:string;bucket:string;accessKeyId:string;secretAccessKey:string}){
+export type R2ObjectConfiguration=Readonly<{accountId:string;bucket:string;accessKeyId:string;secretAccessKey:string}>;
+// Trusted composition seam shared by private originals and receipt storage.
+// Never supply this client or its configuration to a browser or ordinary log.
+export function createR2ObjectClient(config:R2ObjectConfiguration){
   if(!/^[a-f0-9]{32}$/.test(config.accountId)
     ||![config.accessKeyId,config.secretAccessKey].every(v=>typeof v==='string'&&v.length>=16&&v.length<=512
       &&!Array.from(v).some(c=>c.charCodeAt(0)<=32||c.charCodeAt(0)===127||/\s/.test(c))))fail('OBJECT_INPUT_INVALID');
@@ -60,6 +63,10 @@ export function createR2ObjectStore(config:{accountId:string;bucket:string;acces
     credentials:{accessKeyId:config.accessKeyId,secretAccessKey:config.secretAccessKey},forcePathStyle:true,maxAttempts:1,
     requestChecksumCalculation:'WHEN_REQUIRED',responseChecksumValidation:'WHEN_REQUIRED',
     requestHandler:{connectionTimeout:5000,requestTimeout:60000,throwOnRequestTimeout:true}});
+  return client;
+}
+export function createR2ObjectStore(config:R2ObjectConfiguration){
+  const client=createR2ObjectClient(config);
   return {store:createPrivateObjectStore(client,config.bucket),close:()=>client.destroy()};
 }
 

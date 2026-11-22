@@ -7,10 +7,11 @@ import { promisify } from "node:util";
 import pg from "pg";
 import { sha256, validateMigrationSet } from "./migrations.ts";
 import type { MigrationRegistry } from "./migrations.ts";
+import {schemaMigrationLock as migrationLock} from '../security/schema-migration-lock.ts';
 import { migrationCliDiagnostic } from "./migration-cli-diagnostic.ts";
 
 const execute = promisify(execFile);
-export const migrationLock = [8291, 2] as const;
+export {migrationLock};
 export const cliVersion = "2.121.0";
 class MigrationCoordinatorError extends Error {}
 function safeFailure(error: unknown, fallback = "MIGRATION_FAILED_REVIEW_REQUIRED"): Error {

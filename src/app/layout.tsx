@@ -5,6 +5,7 @@ import { requireDocumentNonce } from "../security/document-policy.ts";
 import "./globals.css";
 import "./workspace-design.css";
 import {WorkspaceFrame} from './workspace-frame';
+import {workspaceRuntimeMode} from '../server/workspace-runtime-mode';
 
 export const metadata: Metadata = {
   title: "Crest OS",
@@ -16,5 +17,5 @@ export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   requireDocumentNonce(await headers());
-  return <html lang="en"><body><WorkspaceFrame>{children}</WorkspaceFrame></body></html>;
+  return <html lang="en"><body><WorkspaceFrame workspaceMode={workspaceRuntimeMode()}>{children}</WorkspaceFrame></body></html>;
 }

@@ -7,7 +7,9 @@ import {it,expect} from 'vitest';
 import {sha256,validateMigrationSet} from '../../src/tooling/migrations';
 import type {MigrationRegistry} from '../../src/tooling/migrations';
 import {verifyExportCoverage} from '../../src/tooling/export-coverage';
-import currentRegistry from '../../supabase/migration-checksums.json';
+// Historical adoption matrix through registered124; later applied-schema
+// inventory has separate native coverage and retains these frozen inputs.
+import currentRegistry from '../support/registered124-migration-checksums.json';
 import registered55 from '../support/registered55-migration-checksums.json';
 import coverage55 from '../support/registered55-export-coverage.json';
 import registered56 from '../support/registered56-migration-checksums.json';
@@ -111,13 +113,13 @@ import previous from '../support/registered53-migration-checksums.json';
 import previousCoverage from '../support/registered53-export-coverage.json';
 import previousCompatibility from '../support/registered53-compatibility.json';
 import coverage from '../support/field54-export-coverage.json';
-import currentCoverage from '../../planning/SECURITY_EXPORT_COVERAGE.json';
+import currentCoverage from '../support/registered124-export-coverage.json';
 import compatibility from '../support/registered54-compatibility.json';
 import {restoredTipSourceColumns} from '../../src/bookkeeping/restored-tip-source.ts';
 import {openingWorksheetSourceCoverage} from '../../src/bookkeeping/opening-worksheet-source.ts';
 import {statementSourceCoverage} from '../../src/bookkeeping/statement-staging-source.ts';
 import registered100 from '../support/registered100-migration-checksums.json';
-import currentCompatibility from '../../release/compatibility.json';
+import currentCompatibility from '../support/registered124-compatibility.json';
 import registration from '../../planning/FIELD54_REGISTRATION.json';
 const bytes=(path:string)=>readFileSync(new URL('../../'+path,import.meta.url));
 it('registers the exact reviewed13-part54 package with the entire immutable53 prefix',()=>{

@@ -5,7 +5,8 @@ import {createCalendarActivitySource,CalendarActivityReadError} from '../../../c
 import type {CalendarActivityCursor,CalendarActivityPage} from '../../../client/calendar-activity';
 import {customerUuid} from '../../../customer/customer-contract';
 import {calendarRangeLabel} from '../../../client/schedule-calendar';
-import {calendarJobStatusLabels,SyntheticCalendarJobStatus} from './job-status';
+import {calendarJobStatusLabel,SyntheticCalendarJobStatus} from './job-status';
+import {AuthenticationError} from '../../../client/authentication';
 
 type Dates=Readonly<{fromDate:string;throughDate:string}>;
 type FocusRequest=Readonly<{target:'list'|'selected'|'feedback';trigger?:HTMLElement}>;
@@ -27,7 +28,7 @@ function updateLocation(job:string|null,dates:Dates|undefined,method:'push'|'rep
  const target=url.pathname+url.search;if(target===window.location.pathname+window.location.search)return;
  if(method==='push')window.history.pushState(null,'',target);else window.history.replaceState(null,'',target);
 }
-export function CalendarAppointmentActivity({initialJobId,recoveryEpoch}:{initialJobId:string|null;recoveryEpoch:string}){
+export function CalendarAppointmentActivity({initialJobId,recoveryEpoch,onAccessDenied,simulated=true}:{initialJobId:string|null;recoveryEpoch:string;onAccessDenied?:()=>void;simulated?:boolean}){
  const [page,setPage]=useState<CalendarActivityPage|null>(null),pageRef=useRef<CalendarActivityPage|null>(null);
  const [fields,setFields]=useState<Dates>(()=>locationDates()??{fromDate:'',throughDate:''});
  const [filtersOpen,setFiltersOpen]=useState(false);
@@ -51,12 +52,18 @@ export function CalendarAppointmentActivity({initialJobId,recoveryEpoch}:{initia
    if(moveFocus)setFocusRequest({target:'list'});
   }catch(error){
    if(controller.signal.aborted||active.current!==controller)return;
+   if(error instanceof AuthenticationError&&error.kind==='denied'){
+    choose(null);setCursor(null);setPrevious([]);
+    setFields({fromDate:'',throughDate:''});setFiltersOpen(false);
+    setMessage('Sign in again to review appointment activity.');
+    onAccessDenied?.();return;
+   }
    choose(null);setCursor(null);setPrevious([]);updateLocation(null,undefined,'replace');
    if(error instanceof CalendarActivityReadError&&error.kind==='input')setFiltersOpen(true);
    setMessage(error instanceof CalendarActivityReadError&&error.kind==='input'?'Choose valid dates spanning at most 92 days in the business time zone.':error instanceof CalendarActivityReadError&&error.kind==='changed'?'Appointment or access details changed. Reload the list before reviewing sync.':'Crest could not verify appointment activity. Check access and reload.');
    if(moveFocus)setFocusRequest({target:'feedback'});
   }finally{if(active.current===controller){active.current=null;setBusy(false);}}
- },[choose,recoveryEpoch]);
+ },[choose,recoveryEpoch,onAccessDenied]);
  useEffect(()=>{
   const initial=window.setTimeout(()=>void load(locationDates(),null,[],true,false),0);
   function restore(){
@@ -77,7 +84,7 @@ export function CalendarAppointmentActivity({initialJobId,recoveryEpoch}:{initia
  function close(){choose(null);updateLocation(null,pageRef.current?.dates,'push');setFocusRequest({target:'list',...trigger.current?{trigger:trigger.current}:{}});}
  function cancel(){active.current?.abort();active.current=null;pageRef.current=null;setPage(null);choose(null);setBusy(false);setMessage('Activity loading cancelled. Reload when you are ready.');updateLocation(null,undefined,'replace');setFocusRequest({target:'feedback'});}
  return <section className="calendar-activity-workspace" aria-label="Appointment activity workspace" data-selected={selected!==null}>
-  <header><h2>Appointment activity</h2><p className="field-help">Fictional calendar · No events are sent to Google.</p></header>
+  <header><h2>Appointment activity</h2><p className="field-help">{simulated?'Fictional calendar · No events are sent to Google.':'Saved appointments and their confirmed Google Calendar status.'}</p></header>
   <div className="calendar-activity-columns">
    <section className="calendar-directory" aria-label="Appointment activity directory" aria-busy={busy}>
     <h3 ref={directory} tabIndex={-1}>Appointments in range</h3>
@@ -97,7 +104,7 @@ export function CalendarAppointmentActivity({initialJobId,recoveryEpoch}:{initia
     {busy&&<div className="calendar-activity-loading" aria-hidden="true">{[0,1,2].map(key=><div key={key}><div className="workspace-skeleton"/><div className="workspace-skeleton"/></div>)}</div>}
     {page&&<ul className="calendar-activity-list" role="list" aria-label="Appointments in chosen dates">
      {page.rows.map(({job,status})=><li key={job.jobId} className="calendar-activity-row calendar-directory-row">
-      <div className="calendar-activity-body"><div className="calendar-activity-heading"><h3><a href={'/settings/google-calendar?'+new URLSearchParams({job:job.jobId,activityFrom:page.dates.fromDate,activityThrough:page.dates.throughDate})} aria-current={selected===job.jobId?'true':undefined} onClick={event=>{if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();trigger.current=event.currentTarget;choose(job.jobId);updateLocation(job.jobId,page.dates,'push');setFocusRequest({target:'selected'});}}>{job.customerName}</a></h3><span className="calendar-activity-state">{status?calendarJobStatusLabels[status.state]:'Check failed'}</span></div>
+      <div className="calendar-activity-body"><div className="calendar-activity-heading"><h3><a href={'/settings/google-calendar?'+new URLSearchParams({job:job.jobId,activityFrom:page.dates.fromDate,activityThrough:page.dates.throughDate})} aria-current={selected===job.jobId?'true':undefined} onClick={event=>{if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();trigger.current=event.currentTarget;choose(job.jobId);updateLocation(job.jobId,page.dates,'push');setFocusRequest({target:'selected'});}}>{job.customerName}</a></h3><span className="calendar-activity-state">{status?calendarJobStatusLabel(status.state,simulated):'Check failed'}</span></div>
        <p><time dateTime={job.startAt}>{new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:job.timezone}).formatRange(new Date(job.startAt),new Date(job.endAt))}</time> · {job.timezone}</p>
        <p className="field-help">{job.vehicleCount} vehicle{job.vehicleCount===1?'':'s'} · Saved job: {job.state.replaceAll('_',' ')}{status?'':' · Reload or open this appointment to check its sync.'}</p>
       </div></li>)}
@@ -108,7 +115,7 @@ export function CalendarAppointmentActivity({initialJobId,recoveryEpoch}:{initia
    {selected&&<div ref={inspector} className="calendar-activity-inspector" aria-busy={busy}><button type="button" className="secondary" onClick={close}>Back to appointment activity</button>
     {busy?<p role="status">Loading appointment activity before checking this visit…</p>:<>
      {selectedRow?<header className="calendar-selected-identity"><p className="eyebrow">Listed appointment</p><h3>{selectedRow.job.customerName}</h3><p><time dateTime={selectedRow.job.startAt}>{new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeStyle:'short',timeZone:selectedRow.job.timezone}).formatRange(new Date(selectedRow.job.startAt),new Date(selectedRow.job.endAt))}</time> · {selectedRow.job.timezone}</p></header>:<p className="field-help">This appointment is outside the loaded page. Open its saved job for full details.</p>}
-     <SyntheticCalendarJobStatus key={selected+recoveryEpoch+(selectedRow?.job.appointmentSequence??'')} jobId={selected} recoveryEpoch={recoveryEpoch} {...selectedRow?{appointmentSequence:selectedRow.job.appointmentSequence}:{}} onReloadActivity={()=>void load(pageRef.current?.dates,null,[])}/>
+     <SyntheticCalendarJobStatus key={selected+recoveryEpoch+(selectedRow?.job.appointmentSequence??'')} jobId={selected} recoveryEpoch={recoveryEpoch} simulated={simulated} {...selectedRow?{appointmentSequence:selectedRow.job.appointmentSequence}:{}} {...onAccessDenied?{onAccessDenied}:{}} onReloadActivity={()=>void load(pageRef.current?.dates,null,[])}/>
     </>}
    </div>}
   </div>

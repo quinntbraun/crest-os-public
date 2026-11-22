@@ -1,5 +1,6 @@
 import {downloadObject,downloadHeaderKeys,parseSourceExportDownloadHeader,parseSourceExportDownloadFile} from '../security/source-export-download-contract.ts';
 import type {SourceExportBrowserFile} from './source-export-downloads.ts';
+import type {CurrentSourceBrowserFile} from './current-source-file-reader.ts';
 
 export class SourceExportBrowserSaveError extends Error{constructor(){super('SOURCE_EXPORT_BROWSER_SAVE_FAILED');this.name='SourceExportBrowserSaveError';}}
 function require(v:unknown):asserts v{if(!v)throw new SourceExportBrowserSaveError();}
@@ -9,17 +10,28 @@ async function bounded<T>(work:Promise<T>,signal:AbortSignal):Promise<T>{
 // One private, short-lived Blob URL. Requesting the browser save proves no
 // persistence. Blob/browser-internal immutable copies cannot be wiped by JS.
 export function createSourceExportBrowserSave(onExpired:()=>void=()=>{}){
+ return createBrowserSave(onExpired,false);
+}
+export function createCurrentSourceBrowserSave(onExpired:()=>void=()=>{}){
+ return createBrowserSave(onExpired,true);
+}
+function logicalFile(input:unknown){
+ const file=downloadObject(input,['fileName','contentType','bytes','sha256']);require(typeof file.fileName==='string'&&/^[a-z][a-z0-9_]{0,79}\.(csv|json|txt|xlsx)$/.test(file.fileName)&&Number.isSafeInteger(file.bytes)&&(file.bytes as number)>=1&&(file.bytes as number)<=33554432&&typeof file.sha256==='string'&&/^[a-f0-9]{64}$/.test(file.sha256));
+ const type=file.fileName.endsWith('.xlsx')?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':file.fileName.endsWith('.csv')?'text/csv; charset=utf-8':file.fileName.endsWith('.json')?'application/json':'text/plain; charset=utf-8';require(file.contentType===type);
+ return {fileName:file.fileName,contentType:type,bytes:file.bytes as number,sha256:file.sha256};
+}
+function createBrowserSave<T extends boolean>(onExpired:()=>void,currentLogical:T){
  if(typeof globalThis.document?.createElement!=='function'||!globalThis.document.body||typeof globalThis.URL?.createObjectURL!=='function'||typeof globalThis.URL?.revokeObjectURL!=='function'||typeof globalThis.Blob!=='function'||typeof globalThis.crypto?.subtle?.digest!=='function')throw new SourceExportBrowserSaveError();
  const doc=globalThis.document,BlobType=globalThis.Blob,create=globalThis.URL.createObjectURL.bind(globalThis.URL),revoke=globalThis.URL.revokeObjectURL.bind(globalThis.URL),digest=globalThis.crypto.subtle.digest.bind(globalThis.crypto.subtle);
  let disposed=false,running=false,serial=0,held:Readonly<{url:string;fileName:string;bytes:number;expiresAt:number}>|undefined,requested=false,timer:ReturnType<typeof setTimeout>|undefined,detach:undefined|(()=>void),current:AbortController|undefined;
  function clear(){serial++;current?.abort();current=undefined;if(timer!==undefined)clearTimeout(timer);timer=undefined;detach?.();detach=undefined;const old=held;held=undefined;requested=false;if(old){try{revoke(old.url);}catch{/* Cleanup does not expose private URLs. */}}}
  return Object.freeze({
-  async prepare(input:SourceExportBrowserFile,external:AbortSignal,proofExpiresAt:number){
+  async prepare(input:T extends true?CurrentSourceBrowserFile:SourceExportBrowserFile,external:AbortSignal,proofExpiresAt:number){
    let owned:Uint8Array<ArrayBuffer>|undefined,entered=false;
    try{
     require(!disposed&&!running&&!external.aborted);clear();const token=serial,controller=new AbortController();current=controller;running=true;entered=true;
-    const value=downloadObject(input,['header','file','bytes']),raw=downloadObject(value.header,downloadHeaderKeys),header=parseSourceExportDownloadHeader(raw,raw.businessId as string,raw.exportJobId as string,raw.generationId as string),file=parseSourceExportDownloadFile(value.file);
-    require(value.bytes instanceof Uint8Array&&value.bytes.byteLength===file.bytes&&file.ordinal<=header.fileCount&&file.bytes<=header.totalBytes&&Date.parse(header.completedAt)<=Date.now()&&Number.isSafeInteger(proofExpiresAt));
+    const value=downloadObject(input,currentLogical?['header','logicalFile','bytes']:['header','file','bytes']),raw=downloadObject(value.header,downloadHeaderKeys),header=parseSourceExportDownloadHeader(raw,raw.businessId as string,raw.exportJobId as string,raw.generationId as string),physical=currentLogical?undefined:parseSourceExportDownloadFile(value.file),file=physical??logicalFile(value.logicalFile);
+    require((!currentLogical||header.profile==='crest.current-business-source-bundle.v1'&&header.sourceSchemaVersion===134)&&(!physical||physical.ordinal<=header.fileCount)&&value.bytes instanceof Uint8Array&&value.bytes.byteLength===file.bytes&&file.bytes<=header.totalBytes&&Date.parse(header.completedAt)<=Date.now()&&Number.isSafeInteger(proofExpiresAt));
     const expiresAt=Math.min(proofExpiresAt,Date.parse(header.expiresAt),Date.now()+60000);require(expiresAt>Date.now());const signal=AbortSignal.any([external,controller.signal,AbortSignal.timeout(expiresAt-Date.now())]);require(!signal.aborted);
     owned=new Uint8Array(value.bytes);const hash=Array.from(new Uint8Array(await bounded(digest('SHA-256',owned),signal)),b=>b.toString(16).padStart(2,'0')).join('');require(hash===file.sha256&&!disposed&&!signal.aborted&&serial===token&&expiresAt>Date.now());
     const blob=new BlobType([owned],{type:file.contentType}),url=create(blob);if(typeof url!=='string'||!url.startsWith('blob:')){try{revoke(url);}catch{/* Reject even an invalid native URL without exposing it. */}throw new SourceExportBrowserSaveError();}

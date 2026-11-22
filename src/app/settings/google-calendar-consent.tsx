@@ -4,6 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { googleCalendarConsent, googleCalendarConsentReferenceStore } from '../../client/google-calendar-consent';
 import type { CalendarConsentContext, CalendarConsentReference } from '../../client/google-calendar-consent';
 import styles from './google-calendar-consent.module.css';
+import {AuthenticationError} from '../../client/authentication';
 
 const minimal = { clientName: false, serviceLabel: false, workAddress: false };
 const fields = [
@@ -34,15 +35,15 @@ function store(context: CalendarConsentContext) {
   return googleCalendarConsentReferenceStore(context, window.sessionStorage);
 }
 
-export function GoogleCalendarConsentPanel({ context, saved = false, simulated = false, onConsentSaved }:
-  { context: CalendarConsentContext | null; saved?: boolean; simulated?: boolean; onConsentSaved?: () => void }) {
+export function GoogleCalendarConsentPanel({ context, saved = false, simulated = false, onConsentSaved, onAccessDenied }:
+  { context: CalendarConsentContext | null; saved?: boolean; simulated?: boolean; onConsentSaved?: () => void; onAccessDenied?: () => void }) {
   if (!context) return null;
   // A new setup/session fence gets a new in-memory review and no stale fields.
   return <StagedCalendarConsent key={context.destinationId + context.credentialId + context.recoveryEpoch}
-    context={context} saved={saved} simulated={simulated} onConsentSaved={onConsentSaved}/>;
+    context={context} saved={saved} simulated={simulated} onConsentSaved={onConsentSaved} onAccessDenied={onAccessDenied}/>;
 }
 
-function StagedCalendarConsent({ context, saved, simulated, onConsentSaved }: { context: CalendarConsentContext; saved: boolean; simulated: boolean; onConsentSaved: (() => void) | undefined }) {
+function StagedCalendarConsent({ context, saved, simulated, onConsentSaved, onAccessDenied }: { context: CalendarConsentContext; saved: boolean; simulated: boolean; onConsentSaved: (() => void) | undefined; onAccessDenied: (() => void) | undefined }) {
   const { destinationId, credentialId, recoveryEpoch } = context;
   const id = useId();
   const [state, setState] = useState<State>({ step: 'loading', message: 'Checking for an interrupted setup…' });
@@ -130,8 +131,14 @@ function StagedCalendarConsent({ context, saved, simulated, onConsentSaved }: { 
         settle(result);
         succeeded = true;
       }
-    } catch {
-      if (active.current === controller && !controller.signal.aborted) failed();
+    } catch (error) {
+      if (active.current === controller && !controller.signal.aborted) {
+        if(error instanceof AuthenticationError&&error.kind==='denied'){
+          setSelected(minimal);setReviewed(unreviewed);completed.current=null;
+          setState({step:'blocked',message:'Sign in again to review Calendar consent.'});
+          onAccessDenied?.();
+        }else failed();
+      }
     } finally {
       if (active.current === controller) {
         active.current = null;

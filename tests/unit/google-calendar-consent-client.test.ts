@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { googleCalendarConsent, googleCalendarConsentReferenceStore } from '../../src/client/google-calendar-consent';
+import { googleCalendarConsent, googleCalendarConsentReferenceStore,readSyntheticCalendarSetup,abandonGoogleCalendarAuthorization } from '../../src/client/google-calendar-consent';
 import { googleCalendarInitialConsentPreview } from '../../src/operations/google-calendar-initial-consent';
 
 const origin = 'https://crest.example.test';
@@ -40,6 +40,33 @@ function privateJson(value: object, status = 200) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Google Calendar consent browser boundary', () => {
+  it('preserves an interrupted old review while allowing explicit review of a new credential',()=>{
+    const values=new Map<string,string>(),storage={getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value);},removeItem:(key:string)=>{values.delete(key);}};
+    values.set('crest.calendar-consent.pending.v1',JSON.stringify(reference));
+    const nextContext={...context,credentialId:consentId},nextReference={...nextContext,reviewId:context.destinationId};
+    const next=googleCalendarConsentReferenceStore(nextContext,storage);expect(next.read()).toBeNull();next.retain(nextReference);expect(next.read()).toEqual(nextReference);
+    expect(googleCalendarConsentReferenceStore(context,storage).read()).toEqual(reference);
+    next.clear(nextReference);expect(values.get('crest.calendar-consent.pending.v1')).toBe(JSON.stringify(reference));
+    const old=googleCalendarConsentReferenceStore(context,storage);old.clear(reference);expect(old.read()).toBeNull();
+  });
+  it('accepts a renewed generation only from a matching saved consent receipt',async()=>{
+    transport([privateJson({schemaVersion:1,state:'active',destinationId:context.destinationId,consentId,generation:'4'})]);
+    expect(await googleCalendarConsent.status(reference,signal)).toEqual({state:'active',consentId,generation:'4'});
+    transport([privateJson({schemaVersion:1,state:'active',destinationId:context.destinationId,consentId,generation:'0'})]);
+    await expect(googleCalendarConsent.status(reference,signal)).rejects.toThrow();
+  });
+  it('accepts only an identified, server-proved unsent authorization as restartable',async()=>{
+    transport([privateJson({schemaVersion:1,state:'authorization_pending',attemptId:reference.reviewId})]);
+    expect(await readSyntheticCalendarSetup(context.recoveryEpoch,signal)).toEqual({state:'authorization_pending',attemptId:reference.reviewId,context:null});
+    transport([privateJson({schemaVersion:1,state:'authorization_pending'})]);
+    await expect(readSyntheticCalendarSetup(context.recoveryEpoch,signal)).rejects.toThrow();
+  });
+  it('requires a matching saved abandonment before accepting a restart',async()=>{
+    transport([privateJson({schemaVersion:1,state:'abandoned',attemptId:context.destinationId})]);
+    await expect(abandonGoogleCalendarAuthorization(context.recoveryEpoch,reference.reviewId,context.credentialId,signal)).rejects.toThrow();
+    transport([privateJson({schemaVersion:1,state:'abandoned',attemptId:reference.reviewId})]);
+    await expect(abandonGoogleCalendarAuthorization(context.recoveryEpoch,reference.reviewId,context.credentialId,signal)).resolves.toBeUndefined();
+  });
   it('submits only owner-selected booleans and validates the real minimal projection', async () => {
     const fetch = transport([privateJson(ready())]);
     const result = await googleCalendarConsent.preview(context, minimal, signal);

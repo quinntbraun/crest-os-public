@@ -8,10 +8,67 @@ import { chromium, expect, webkit } from '@playwright/test';
 import { reviewBusinessSettingsIndex } from '../support/business-settings-index.mjs';
 import { recoveryCluster } from '../support/recovery-drill.mjs';
 import { sourceExportBrowserFixture } from '../support/source-export-browser-fixture.mjs';
+import {reviewCalendarNestedAccess,expectCalendarAccessCleared} from '../support/calendar-private-access.mjs';
 
 const prefix = '/api/business/google-calendar/';
 const settings = '/settings/google-calendar';
 const referenceKey = 'crest.calendar-consent.pending.v1';
+
+for(const engine of [chromium,webkit])test('Calendar clears denied consent reviews and preserves a committed original in '+engine.name(),{timeout:240000},async()=>{
+ const previous=process.env.CREST_TEST_DATABASE_URL,cluster=previous?null:await recoveryCluster();
+ if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
+ let fixture,browser;
+ try{
+  fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,quoteCommercial:true,scheduling:true,googleCalendar:true});
+  browser=await engine.launch();
+  const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:900}}),page=await context.newPage();
+  page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(20000);
+  await mkdir(new URL('../../.local/review/',import.meta.url),{recursive:true});
+  await page.goto(fixture.origin+'/sign-in');const credentials=fixture.credentials();
+  await page.getByLabel('Email',{exact:true}).fill(credentials.email);await page.getByLabel('Password',{exact:true}).fill(credentials.password);await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('status')).toContainText('Signed in');
+  const cookies=await context.cookies(),setup=page.getByRole('region',{name:'Fictional Calendar setup'}),url=fixture.origin+settings;
+  const facts=async()=>{const result={};for(const table of ['google_calendar_destinations','google_calendar_consents','google_calendar_outbox','google_calendar_dispatch_sends','google_calendar_dispatch_results'])result[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.'+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;result.audit=(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows;return result;};
+  await page.goto(url);await setup.getByRole('button',{name:'Prepare fictional calendar',exact:true}).click();
+  await setup.locator('summary').filter({hasText:'Optional details to share'}).click();
+  await setup.getByLabel('Client display name',{exact:true}).check();
+  const beforePreview=await facts();await context.clearCookies();
+  let denied=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/auth/session'&&r.status()===400);
+  await setup.getByRole('button',{name:'Review shared event',exact:true}).click();await denied;
+  await expectCalendarAccessCleared(page,engine.name(),'consent-preview',url);assert.deepEqual(await facts(),beforePreview);
+  assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),referenceKey),null);
+  await context.addCookies(cookies);await page.goto(url);
+  await expect(setup.getByLabel('Client display name',{exact:true})).not.toBeChecked();
+  await setup.getByRole('button',{name:'Review shared event',exact:true}).click();
+  await expect(setup.getByRole('heading',{name:'Review what Google receives',exact:true})).toBeVisible();
+  for(const label of [/I reviewed the example event fields/,/I read how to check who can access/,/I read how to check notifications/])await setup.getByLabel(label).check();
+  let originalCommitted=false;
+  const loseReply=async route=>{const response=await route.fetch();assert.equal(response.status(),200);originalCommitted=true;await route.abort();};
+  await page.route('**/api/business/google-calendar/consent/confirm',loseReply);
+  try{
+   await setup.getByRole('button',{name:'Save Calendar consent',exact:true}).click();
+   await expect(setup.getByRole('button',{name:'Check save status',exact:true})).toBeEnabled();
+   await expect(setup.getByText('Crest could not confirm the save. Check its status before continuing.',{exact:true})).toBeVisible();
+   assert.equal(originalCommitted,true);
+  }finally{await page.unroute('**/api/business/google-calendar/consent/confirm',loseReply);}
+  const original=await page.evaluate(key=>sessionStorage.getItem(key),referenceKey);assert(original);
+  const beforeStatus=await facts();await context.clearCookies();
+  denied=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/auth/session'&&r.status()===400);
+  await setup.getByRole('button',{name:'Check save status',exact:true}).click();await denied;
+  await expectCalendarAccessCleared(page,engine.name(),'consent-original',url);
+  assert.equal((await page.evaluate(key=>sessionStorage.getItem(key),referenceKey))===original,true,'Original consent reference remains byte-identical after denial');
+  assert.deepEqual(await facts(),beforeStatus);
+  await context.addCookies(cookies);await page.goto(url);
+  await expect(setup.getByRole('button',{name:'Check save status',exact:true})).toBeEnabled();
+  assert.equal((await page.evaluate(key=>sessionStorage.getItem(key),referenceKey))===original,true);
+  assert.deepEqual(await facts(),beforeStatus,'Authorized return does not automatically save or check the original');
+  await setup.getByRole('button',{name:'Check save status',exact:true}).click();
+  await expect(setup.getByText('Crest confirmed that your Calendar consent was saved.',{exact:true})).toBeVisible();
+  assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),referenceKey),null);
+  assert.deepEqual(await facts(),beforeStatus,'Checking the real committed original does not duplicate the consent');
+ }finally{
+  try{await browser?.close();await fixture?.close();}finally{if(previous===undefined)delete process.env.CREST_TEST_DATABASE_URL;else process.env.CREST_TEST_DATABASE_URL=previous;await cluster?.close();}
+ }
+});
 
 test('signed-in Calendar pages six protected native bookings and retains phone return context', {timeout:240000}, async t=>{
  const previous=process.env.CREST_TEST_DATABASE_URL,cluster=previous?null:await recoveryCluster();
@@ -68,6 +125,7 @@ test('signed-in Calendar pages six protected native bookings and retains phone r
     await rows.first().locator('h3 a').press('Enter');await expect(sync.locator('.calendar-activity-version')).toBeVisible();
     const returnJob=new URL(page.url()).searchParams.get('job');assert(fixture.calendarActivityJobIds.includes(returnJob));
     const signInReturn='/sign-in?returnTo=calendar&'+new URLSearchParams({job:returnJob,activityFrom:'2026-11-02',activityThrough:'2026-11-04'});
+    await reviewCalendarNestedAccess(page,fixture,engine.name(),facts);
     await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));
     await expect(page.getByRole('region',{name:'Appointment activity workspace'})).toHaveCount(0);await expect(page.getByRole('region',{name:'Setup overview'})).toHaveCount(0);
     await context.clearCookies();assert.equal((await context.cookies()).length,0);

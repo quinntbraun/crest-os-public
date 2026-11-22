@@ -3,6 +3,7 @@ import {createProviderBoundary} from '../security/provider-auth.ts';
 import {createLiveProviderSessionLookup} from '../security/provider-session-db.ts';
 import {createProviderTokenStore} from '../security/provider-token-store.ts';
 import type {AuthenticationConfiguration} from './node-server.ts';
+import {isRenderIngress} from '../security/render-ingress.ts';
 
 type Configuration={
   database:Parameters<typeof createLiveProviderSessionLookup>[0];
@@ -24,7 +25,8 @@ export async function createAuthenticationRuntime(config:Configuration){
     if(config.database.environment!==config.provider.environment||!(config.loginKey instanceof Uint8Array)||config.loginKey.byteLength!==32
       ||![config.owner.subject,config.owner.factorId].every(value=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value)))throw new Error();
     const provider=createProviderBoundary({...config.provider},createLiveProviderSessionLookup({...config.database}));
-    const ingress=config.ingress.kind==='direct'?Object.freeze({kind:'direct' as const}):Object.freeze({kind:'proxy' as const,peers:Object.freeze([...config.ingress.peers])});
+    if(config.ingress.kind==='render'&&(!isRenderIngress(config.ingress)||config.database.environment!=='production'))throw new Error();
+    const ingress=config.ingress.kind==='direct'?Object.freeze({kind:'direct' as const}):isRenderIngress(config.ingress)?config.ingress:Object.freeze({kind:'proxy' as const,peers:Object.freeze([...config.ingress.peers])});
     const configuration=Object.freeze({...config.database,loginKey:new Uint8Array(config.loginKey),owner:Object.freeze({...config.owner}),ingress});
     const tokens=await createProviderTokenStore(config.activeKeyId,config.keys);
     return new AuthenticationRuntime(Object.freeze({configuration,provider,tokens}));

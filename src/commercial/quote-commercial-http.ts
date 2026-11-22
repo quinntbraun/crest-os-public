@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../security/production-capabilities.ts';
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
 import {createRequestProtection} from '../security/request-protection.ts';
@@ -16,12 +18,12 @@ const prefix='/api/business/quotes/commercial/';
 const common=['schemaVersion','operationId','recoveryEpoch','familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','expectedHash'] as const;
 const fields={read:['familyId','revisionId'],send:[...common,'sendId','approvalId','body'],accept:[...common,'acceptanceId','agreementId','body'],operation:['operationId'],replacement:['schemaVersion','operationId','recoveryEpoch','familyId','revisionId','expectedFamilyVersion','content']} as const;
 type Route=keyof typeof fields;
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;productionCapabilities?:ProductionCapabilities};
 export function quoteCommercialFailureResponse(status:400|404|405|503=400){const response=privateJsonResponse({error:'QUOTE_COMMERCIAL_REQUEST_FAILED'},status);if(status===405)response.headers.set('Allow','POST');return response;}
 // Separate construction opt-in; approval is not sharing and manual confirmation
 // never sends a message, signs a customer contract, or moves money.
 export function createQuoteCommercialHttp(config:Configuration,provider:Parameters<typeof createQuoteCommercialDirectory>[1],tokens:Parameters<typeof createQuoteCommercialDirectory>[2],enabled=false){
- if(!quoteId(config.businessId)||typeof enabled!=='boolean')throw Error('QUOTE_COMMERCIAL_HTTP_CONFIGURATION_REQUIRED');
+ if(!quoteId(config.businessId)||typeof enabled!=='boolean'||enabled&&config.environment==='production'&&!productionCapability(config,'quoteCommercial'))throw Error('QUOTE_COMMERCIAL_HTTP_CONFIGURATION_REQUIRED');
  const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createQuoteCommercialDirectory(config,provider,tokens):undefined,replacements=enabled?createQuoteReplacementDirectory(config,provider,tokens):undefined;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{
   let submitted=false,workStarted=false,isReplacement=false;

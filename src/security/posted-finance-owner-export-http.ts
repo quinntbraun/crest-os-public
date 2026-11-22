@@ -4,6 +4,10 @@ import {zipSync} from 'fflate';
 import {customerInstant,customerUuid} from '../customer/customer-contract.ts';
 import {verifyFinanceSourceExport} from '../tooling/verify-finance-source-export.ts';
 import {createServiceRefundSourceCollector} from './business-foundation-collector.ts';
+import {productionCapability} from './production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from './production-capabilities.ts';
+import {getServerBuildIdentity,getServerMigrationIdentity} from '../server/build-identity.ts';
+import {validateFinanceExportConnection} from '../server/production-finance-export-configuration.ts';
 import {readBrowserCookies} from './browser-http.ts';
 import {readFlatJsonBody,privateJsonResponse} from './private-http.ts';
 import {createRequestProtection} from './request-protection.ts';
@@ -18,7 +22,7 @@ import {createTrustedTransport} from './trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from './trusted-transport.ts';
 import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceProfileForSchema} from './posted-finance-owner-export-contract.ts';
 
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;
+type Configuration=SessionDatabaseConfiguration&ProductionCapabilityConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;
  exportConnectionString:string;appReleaseId:string;sourceSchemaVersion:number};
 const authority='$1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid';
 const digest=(bytes:string|Uint8Array)=>createHash('sha256').update(bytes).digest('hex');
@@ -33,13 +37,19 @@ export function postedFinanceExportFailure(status=503){
 export function createPostedFinanceOwnerExportHttp(config:Configuration,provider:Parameters<typeof createSessionLifecycle>[1],
  tokens:Parameters<typeof createSessionLifecycle>[2]){
  const {businessId,environment,appReleaseId,sourceSchemaVersion}=config;
- if(environment!=='test'||!customerUuid(businessId)||!/^[a-f0-9]{40}$/.test(appReleaseId)
+ const identity=environment==='production'?getServerBuildIdentity():null;
+ const migrationIdentity=environment==='production'?getServerMigrationIdentity():null;
+ if(!['production','test'].includes(environment)||!customerUuid(businessId)||!/^[a-f0-9]{40}$/.test(appReleaseId)
   ||!Number.isSafeInteger(sourceSchemaVersion)||sourceSchemaVersion<89||sourceSchemaVersion>999)
   throw Error('POSTED_FINANCE_EXPORT_CONFIGURATION_REQUIRED');
+ if(environment==='production'){
+  if(!productionCapability(config,'financeExports')||!identity||!migrationIdentity||identity.appReleaseId!==appReleaseId||identity.sourceSchemaVersion!==sourceSchemaVersion)throw Error('POSTED_FINANCE_EXPORT_CONFIGURATION_REQUIRED');
+  validateFinanceExportConnection(config.connectionString,{connectionString:config.exportConnectionString});
+ }
  const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config);
  const admit=createSessionRequestAdmission(config),database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
  const profile=postedFinanceProfileForSchema(sourceSchemaVersion);
- const collect=createServiceRefundSourceCollector({businessId,environment,connectionString:config.exportConnectionString},
+ const collect=createServiceRefundSourceCollector({businessId,environment,connectionString:config.exportConnectionString,...migrationIdentity?{migrationIdentity}:{}},
   sourceSchemaVersion>=91,sourceSchemaVersion>=93,sourceSchemaVersion>=94,sourceSchemaVersion>=95,sourceSchemaVersion>=96,sourceSchemaVersion>=97,sourceSchemaVersion>=98,sourceSchemaVersion>=99,sourceSchemaVersion>=100,sourceSchemaVersion>=101,sourceSchemaVersion>=102,sourceSchemaVersion>=103,sourceSchemaVersion>=105,sourceSchemaVersion>=107,sourceSchemaVersion>=108,sourceSchemaVersion>=109);
  let active=false;
  async function authorized<T>(credential:string,signal:AbortSignal,work:(args:unknown[],actorId:string)=>Promise<T>){

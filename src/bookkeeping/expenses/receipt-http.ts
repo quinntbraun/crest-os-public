@@ -9,6 +9,8 @@ import {boundedFileStream} from '../../files/bounded-file-stream.ts';
 import {createPrivateFileCsrfVerifier,createSessionCsrfVerifier} from '../../security/session-request-guard.ts';
 import {createSessionRequestAdmission} from '../../security/session-request-admission.ts';
 import type {SessionDatabaseConfiguration} from '../../security/session-database.ts';
+import {productionCapability} from '../../security/production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from '../../security/production-capabilities.ts';
 import {expenseCheck as check,expenseId,expenseRevision} from './expense-contract.ts';
 import {createReceiptDirectory} from './receipt-directory.ts';
 import {createReceiptDownload} from './receipt-workflow.ts';
@@ -18,22 +20,26 @@ import {parseReceiptOriginal} from './receipt-contract.ts';
 import {fileTypes} from '../../files/validation-contract.ts';
 import type {FileType} from '../../files/validation-contract.ts';
 const fields={operation:['operationId','recoveryEpoch','receiptId','expenseId','expenseRevision','expectedRevision'],list:['expenseId'],status:['receiptId'],reserve:['recoveryEpoch','operationId','receiptId','expenseId','expenseRevision','declaredType','byteSize'],upload:['receiptId'],publish:['recoveryEpoch','operationId','receiptId','expenseId','expenseRevision'],download:['receiptId','variant']} as const;
-type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Config=SessionDatabaseConfiguration&ProductionCapabilityConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
 // This is an operator-supplied isolated dispatcher transport, never browser
 // candidate metadata or a Docker socket handed to the ordinary web process.
 export type ReceiptDispatch=(credential:string,businessId:string,receiptId:string,operationId:string,signal:AbortSignal)=>Promise<void>;
 export const receiptPrefix='/api/business/expense-receipts/';
 export function receiptFailure(status=503){return privateJsonResponse({error:'RECEIPT_REQUEST_FAILED'},status);}
-export type SyntheticExpenseReceiptRuntime=Readonly<{
- objects:ReturnType<typeof createReceiptObjectStore>;dispatch:ReceiptDispatch;stagingOrigin:string;
+export type ExpenseReceiptRuntime=Readonly<{
+ objects:ReturnType<typeof createReceiptObjectStore>;dispatch:ReceiptDispatch;stagingOrigin:string;close?:()=>void;
 }>;
+export type SyntheticExpenseReceiptRuntime=ExpenseReceiptRuntime;
 export const receiptView=(record:ReceiptRecord)=>Object.freeze({receiptId:record.reservation.receiptId,expenseId:record.reservation.expenseId,expenseRevision:record.reservation.expenseRevision,receiptVersion:record.receiptVersion,status:record.candidate?'available' as const:'reserved' as const,declaredType:record.reservation.declaredType,byteSize:record.reservation.byteSize,sourceSha256:record.candidate?.source.sha256??null});
-// Explicit test-only construction. Production worker/routing/source/recovery
-// adoption is still required; this is not an ordinary runtime enable switch.
+// Trusted runtime composition only. Production additionally requires a scoped
+// capability, fixed provider origin and a separately supplied isolated dispatcher.
 export function createReceiptHttp(config:Config,provider:Parameters<typeof createReceiptDirectory>[1],tokens:Parameters<typeof createReceiptDirectory>[2],objects:ReturnType<typeof createReceiptObjectStore>|undefined,dispatch:ReceiptDispatch|undefined,enabled=false,stagingOrigin?:string){
- check(expenseId(config.businessId)&&typeof enabled==='boolean'&&(!enabled||config.environment==='test'&&objects&&dispatch));const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createReceiptDirectory(config,provider,tokens):undefined,download=enabled?createReceiptDownload(directory!,objects!,true):undefined;
+ check(expenseId(config.businessId)&&typeof enabled==='boolean'&&(!enabled||(config.environment==='test'||productionCapability(config,'expenseReceipts'))&&objects&&dispatch));const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createReceiptDirectory(config,provider,tokens):undefined,download=enabled?createReceiptDownload(directory!,objects!,true):undefined;
  const storage=stagingOrigin===undefined?undefined:new URL(stagingOrigin);
- if(storage)check(enabled&&storage.origin===stagingOrigin&&storage.hostname==='127.0.0.1'&&storage.port&&['http:','https:'].includes(storage.protocol));
+ if(storage)check(enabled&&storage.origin===stagingOrigin&&(config.environment==='test'
+  ?storage.hostname==='127.0.0.1'&&storage.port&&['http:','https:'].includes(storage.protocol)
+  :/^https:\/\/[a-f0-9]{32}\.r2\.cloudflarestorage\.com$/.test(stagingOrigin!)));
+ if(enabled&&config.environment==='production')check(storage);
  const fileCsrf=createPrivateFileCsrfVerifier(config);
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>)=>{let submitted=false;try{
   resolve(request,peer);const url=new URL(request.url),route=url.pathname.slice(receiptPrefix.length) as keyof typeof fields|'upload-file';

@@ -60,8 +60,8 @@ export function createQuoteAmendmentDirectory(config:SessionDatabaseConfiguratio
     if(result===null)throw new QuoteAmendmentDirectoryError('QUOTE_AMENDMENT_DENIED');return result;
    }catch(error){return changeFailure(error,submitted);}
   },
-  // Separately gated synthetic construction. Owner/production activation still
-  // requires acceptance migration, export/recovery and full release checks.
+  // The HTTP caller separately gates acceptance capability. Actual owner/
+  // production activation still requires migration, export/recovery and release checks.
   async accept(credential:string,input:unknown,signal:AbortSignal){
    let submitted=false;try{
     const request=parseQuoteAmendmentAccept(input),pending=quoteAmendmentAcceptReference(request);

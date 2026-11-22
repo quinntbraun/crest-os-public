@@ -1,4 +1,6 @@
 import {customerUuid as uuid,customerInstant as instant} from '../customer/customer-contract.ts';
+import {sourceExportProfileMatches} from './source-export-profile.ts';
+import type {SourceExportProfileBinding} from './source-export-profile.ts';
 export class SourceExportDownloadError extends Error{constructor(){super('SOURCE_EXPORT_DOWNLOAD_REVIEW_REQUIRED');this.name='SourceExportDownloadError';}}
 function require(v:unknown):asserts v{if(!v)throw new SourceExportDownloadError();}
 export function downloadObject(input:unknown,keys:readonly string[]){
@@ -12,9 +14,9 @@ export function parseSourceExportDownloadPartRequest(input:unknown){const v=down
 export const downloadHeaderKeys=Object.freeze(['schemaVersion','businessId','exportJobId','generationId','profile','appReleaseId','sourceSchemaVersion','completedAt','expiresAt','fileCount','totalBytes','manifestSha256'] as const);
 export function parseSourceExportDownloadHeader(input:unknown,businessId:string,exportJobId:string,generationId:string|null){
  const v=downloadObject(input,downloadHeaderKeys);require(v.schemaVersion===1&&uuid(businessId)&&v.businessId===businessId&&uuid(exportJobId)&&v.exportJobId===exportJobId&&uuid(v.generationId)&&(generationId===null||v.generationId===generationId));
- require(v.profile==='crest.business-source-journal-bundle.v1'&&v.sourceSchemaVersion===43&&typeof v.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(v.appReleaseId)&&hash(v.manifestSha256)&&integer(v.fileCount,2,1024)&&integer(v.totalBytes,v.fileCount,67108864));
+ require(sourceExportProfileMatches(v.profile,v.sourceSchemaVersion)&&typeof v.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(v.appReleaseId)&&hash(v.manifestSha256)&&integer(v.fileCount,2,1024)&&integer(v.totalBytes,v.fileCount,67108864));
  require(stamp(v.completedAt)&&stamp(v.expiresAt)&&Date.parse(v.expiresAt)-Date.parse(v.completedAt)===604800000&&v.completedAt.slice(19)===v.expiresAt.slice(19));
- return Object.freeze({schemaVersion:1 as const,businessId,exportJobId,generationId:v.generationId as string,profile:'crest.business-source-journal-bundle.v1' as const,appReleaseId:v.appReleaseId,sourceSchemaVersion:43 as const,completedAt:v.completedAt,expiresAt:v.expiresAt,fileCount:v.fileCount,totalBytes:v.totalBytes,manifestSha256:v.manifestSha256});
+ return Object.freeze({schemaVersion:1 as const,businessId,exportJobId,generationId:v.generationId as string,profile:v.profile as SourceExportProfileBinding['profile'],appReleaseId:v.appReleaseId,sourceSchemaVersion:v.sourceSchemaVersion as SourceExportProfileBinding['sourceSchemaVersion'],completedAt:v.completedAt,expiresAt:v.expiresAt,fileCount:v.fileCount,totalBytes:v.totalBytes,manifestSha256:v.manifestSha256});
 }
 export function parseSourceExportDownloadFile(input:unknown){
  const v=downloadObject(input,['ordinal','partId','fileName','contentType','bytes','sha256']);require(integer(v.ordinal,1,1024)&&uuid(v.partId)&&typeof v.fileName==='string'&&/^[a-z][a-z0-9_]{0,79}\.(csv|json|txt)$/.test(v.fileName)&&integer(v.bytes,1,8388608)&&hash(v.sha256));
