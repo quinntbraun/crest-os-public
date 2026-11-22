@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
 import {ScheduleLink} from './navigation';
 
 import {useCallback,useEffect,useRef,useState} from 'react';
@@ -74,7 +76,7 @@ export function VehicleCustodyQueue({timezone,kind}:{timezone:string;kind:'picku
    <p className="field-help">{pickup?'All dates · Vehicles remain here until a handoff is saved.':
     'All dates · Completed work awaiting collection and cancelled jobs requiring return.'}</p>
    <p role="status" tabIndex={-1} ref={status}>{view.message}</p>
-   {view.signedOut?<ScheduleLink href="/sign-in">Sign in</ScheduleLink>:<button type="button" className={pickup||view.loaded?'secondary':undefined} disabled={view.busy} onClick={()=>void load()}>
+   {view.signedOut?<SignInLink returnTo="schedule">Sign in</SignInLink>:<button type="button" className={pickup||view.loaded?'secondary':undefined} disabled={view.busy} onClick={()=>void load()}>
     {(view.loaded?'Reload ':'Load ')+action}</button>}
    {view.loaded&&view.loaded.rows.length>0&&<ul className="customer-list">{view.loaded.rows.map(row=><li key={row.caseId}>
     <p><strong>{row.customerName}</strong> · {row.vehicleLabel}</p>

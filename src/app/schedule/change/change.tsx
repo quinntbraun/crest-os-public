@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../sign-in-link";
+
 import {ScheduleLink} from '../navigation';
 
 import {useEffect,useId,useRef,useState} from 'react';
@@ -140,7 +142,7 @@ export function JobChangeScreen({jobId,kind}:{jobId:string;kind:JobChangeKind}){
  return <section aria-label="Saved job change" aria-busy={view.busy}>
   <p className="job-change-status" data-phase={view.phase} ref={status} tabIndex={-1} role="status">{view.message}</p>
   {view.phase==='loading'&&<div className="workspace-skeleton appointment-change-loading" aria-hidden="true"/>}
-  {view.phase==='signed-out'&&<ScheduleLink className="primary-action" href="/sign-in">Sign in to change this job</ScheduleLink>}
+  {view.phase==='signed-out'&&<SignInLink className="primary-action" returnTo="schedule">Sign in to change this job</SignInLink>}
   {view.phase==='ready'&&view.resources&&view.context&&<ChangeForm key={view.resources.head.job.id+':'+view.resources.head.job.version+':'+kind} view={view} kind={kind} save={async payload=>{
    const controller=current.current;if(!controller)return;
    await controller.save(payload);if(controller===current.current)status.current?.focus();

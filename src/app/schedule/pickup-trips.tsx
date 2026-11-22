@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
 import {ScheduleLink} from './navigation';
 
 
@@ -288,7 +290,7 @@ export function PickupTrips({resources,canChange,workAvailable}:{resources:Saved
  return <details ref={panel} onToggle={event=>{if(!event.currentTarget.open)clear();}}>
   <summary>Pickup travel</summary>
   <p role="status" ref={status} tabIndex={-1}>{view.message}</p>
-  {view.signedOut&&<p><ScheduleLink href="/sign-in">Sign in</ScheduleLink></p>}
+  {view.signedOut&&<p><SignInLink returnTo="schedule">Sign in</SignInLink></p>}
   <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>{view.page?'Reload pickup travel':'Load pickup travel'}</button>
   {view.pending&&<p><ScheduleLink href={'/save-review?kind='+pickupTripKind}>Open Save review</ScheduleLink></p>}
   {view.page&&!view.pending&&canChange&&activeLeg&&<ArrivalForm key={activeLeg.legId} busy={view.busy}

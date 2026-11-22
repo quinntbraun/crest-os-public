@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../../sign-in-link";
+
 import {useFinancialNotice} from '../use-financial-notice';
 
 import {useCallback,useEffect,useRef,useState} from 'react';
@@ -157,7 +159,7 @@ export function TaxApprovalEditor({scope,applicabilityLabel,disabled,onSaved,onT
  const locked=disabled||busy;
  return <section aria-label="Manage tax approvals" aria-busy={busy}>
    <p role="status" className={styles.notice} data-confirmed={saveConfirmed&&!busy} tabIndex={-1} ref={status}>{message}</p>
-   {signedOut&&<a href="/sign-in">Sign in again</a>}
+   {signedOut&&<SignInLink returnTo="tax-profiles">Sign in again</SignInLink>}
    {!reviewed&&<div className={styles.actions}>
     {!pending&&<button type="button" className="secondary" disabled={locked||!scope} onClick={()=>load()}>Load approval settings</button>}
     <button type="button" className={pending?undefined:'secondary'} disabled={locked} onClick={()=>load(true)}>Check interrupted approval</button>

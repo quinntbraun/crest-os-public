@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
 import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
 import type {DirectoryOrigin} from '../../client/directory-origin';
@@ -209,7 +211,7 @@ export function LeadSourceScreen(){
   </section>}
   {['review','unavailable','blocked'].includes(view.phase)&&<div className="lead-source-recovery">
    <button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current lead sources</button>
-   {view.phase==='unavailable'&&<a href="/sign-in">Device sign-in</a>}
+   {view.phase==='unavailable'&&<SignInLink returnTo="lead-sources">Device sign-in</SignInLink>}
    <a href="/save-review">Review interrupted saves</a>
   </div>}
  </div>;

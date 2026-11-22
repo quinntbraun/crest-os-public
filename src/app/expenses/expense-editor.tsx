@@ -23,7 +23,7 @@ export function ExpenseRecordPlaceholder(){
  </div>;
 }
 // The parent supplies an authenticated client; mounting this component grants no access.
-export function ExpenseEditor({client,receiptClient,receiptService,embedded=false,sameDayExpenses=false,pane='purchases'}:{client:ReturnType<typeof createExpenseClient>;receiptClient?:ReturnType<typeof createReceiptClient>;receiptService?:ReturnType<typeof createReceiptClient>;embedded?:boolean;sameDayExpenses?:boolean;pane?:ExpensePane}){
+export function ExpenseEditor({client,receiptClient,receiptService,embedded=false,sameDayExpenses=false,pane='purchases',onAccessDenied}:{client:ReturnType<typeof createExpenseClient>;receiptClient?:ReturnType<typeof createReceiptClient>;receiptService?:ReturnType<typeof createReceiptClient>;embedded?:boolean;sameDayExpenses?:boolean;pane?:ExpensePane;onAccessDenied?:()=>void}){
  const choiceId=useId();
  const [formOpen,setFormOpen]=useState(false),[search,setSearch]=useState(''),[selectedId,setSelectedId]=useState<string|null>(null);
  const [receiptStates,setReceiptStates]=useState<ReadonlyMap<string,ReceiptDirectoryState>>(()=>new Map());
@@ -172,7 +172,7 @@ export function ExpenseEditor({client,receiptClient,receiptService,embedded=fals
    {embedded&&<><dl className="expense-profile-facts"><div><dt>Vendor</dt><dd>{row.payload.vendor??'Not recorded'}</dd></div><div><dt>Payment method</dt><dd>{row.payload.paymentMethod}</dd></div><div><dt>Reference</dt><dd>{row.payload.reference??'Not recorded'}</dd></div></dl>{row.payload.notes&&<section className="expense-profile-notes" aria-label="Saved expense notes"><h4>Notes</h4><p>{row.payload.notes}</p></section>}{receiptStates.get(row.expenseId)?.active&&<p className="field-help">Finish or clear the receipt task before correcting this expense. Switching records keeps its selected file and original request.</p>}</>}
    <details><summary>History ({row.revision} {row.revision==='1'?'revision':'revisions'})</summary><ExpenseRevisionHistory revisions={rows.filter(r=>r.expenseId===row.expenseId)}/></details>
    {activeReceiptClient&&context&&<ExpenseReceipts expense={row} context={context} client={activeReceiptClient} visible={!embedded||pane==='purchases'&&!formOpen&&selectedId===row.expenseId} {...embedded?{onDirectoryStateChange:reportReceiptState}:{}}/>}
-   {sameDayExpenses&&context&&!row.payload.voided&&<SameDayExpense businessId={context.businessId} expenseId={row.expenseId} onPosted={markPosted}/>}
+   {sameDayExpenses&&context&&!row.payload.voided&&<SameDayExpense businessId={context.businessId} expenseId={row.expenseId} onPosted={markPosted} {...onAccessDenied?{onAccessDenied}:{}}/>}
   </article>)}
   </div></div></div>
   <section className="expense-export-panel" hidden={embedded&&pane!=='exports'}>

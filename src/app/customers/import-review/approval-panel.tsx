@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../sign-in-link";
+
 
 import {useEffect,useEffectEvent,useId,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
@@ -223,7 +225,7 @@ export function LegacyApprovalPanel({businessId,batch,recoveryEpoch,revision,aut
   {!receipt&&!queued&&<p className="field-help">Review the planned changes, then approve the saved decisions. Applying them is a separate action.</p>}
   <p role="status" aria-label="Import approval status">{message}</p>
   {!receipt&&review&&!current&&<p className="notice">A row decision may have changed. Check saved decisions again.</p>}
-  {!receipt&&failed&&current&&<a href="/sign-in">Open sign-in</a>}
+  {!receipt&&failed&&current&&<SignInLink returnTo="contact-import">Open sign-in</SignInLink>}
   {receipt&&<ApplicationResults receipt={receipt} page={resultPage} busy={busy} focusOnLoad={focusResults} retry={()=>loadResult(1)}
    download={downloadsAvailable&&recoveryEpoch?download:undefined}
    previous={afterRow>1?()=>loadResult(Math.max(1,afterRow-25)):undefined}

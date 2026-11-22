@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../../sign-in-link";
+
 import {useCallback,useEffect,useLayoutEffect,useRef,useState,useSyncExternalStore} from 'react';
 import type {FormEvent} from 'react';
 import {authentication,AuthenticationError} from '../../../../client/authentication';
@@ -123,6 +125,7 @@ export function FinanceMappingsScreen({categories=false,initialPurpose='',initia
    if(signal.aborted)return;
    controller.abort();setHistory(null);
    const denied=error instanceof AuthenticationError&&error.kind==='denied';
+   if(denied){setMapping(null);setDirectory(null);setChecked(false);resultFocus.current=null;}
    setSignedOut(denied);setMessage(denied?'Sign in to check account mappings.':'The mapping could not be verified. Try again.');
   }finally{
    if(active.current===controller){active.current=null;setBusy(false);if(!resultFocus.current)status.current?.focus();}
@@ -148,7 +151,7 @@ export function FinanceMappingsScreen({categories=false,initialPurpose='',initia
  }}/></div>;
  return <section className={styles.workspace} aria-label="Account mapping lookup" aria-busy={busy}>
   <p ref={status} tabIndex={-1} role="status">{message}</p>
-  {signedOut&&<a href="/sign-in">Sign in again</a>}
+  {signedOut&&<SignInLink returnTo={categories?'category-mappings':'account-mappings'}>Sign in again</SignInLink>}
   {categories&&<form className="category-mapping-date" aria-label="Category mapping date" onSubmit={event=>{event.preventDefault();void load('directory');}}>
    {effectiveDate}<button type="submit" className="secondary" disabled={controlsDisabled||!customerDate(date)}>Check categories for selected date</button>
    <p className="field-help">A category is available for classification. Only a reviewed mapping supplies its posting account for a date.</p>

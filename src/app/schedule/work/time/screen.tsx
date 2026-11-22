@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../../sign-in-link";
+
 import {ScheduleLink} from '../../navigation';
 
 import {TaskPrerequisite} from '../../../task-prerequisite';
@@ -207,7 +209,7 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
  const when=(value:string)=>format!.format(new Date(value));
  return <section aria-label="Saved work time" aria-busy={state.phase==='loading'} className="field-work-form work-time-screen">
   <p role="status">{state.message}</p>
-  {state.phase==='signed-out'&&<ScheduleLink href="/sign-in">Sign in to view work time</ScheduleLink>}
+  {state.phase==='signed-out'&&<SignInLink returnTo="work-time">Sign in to view work time</SignInLink>}
   {state.phase==='unavailable'&&jobId&&<button type="button" className="work-time-refresh" onClick={()=>reload()}>Refresh totals</button>}
   {state.phase==='pending'&&<p><button type="button" onClick={()=>reload()}>Check original correction</button> <ScheduleLink href="/save-review">Open Save review</ScheduleLink></p>}
   {state.phase==='ready'&&(()=>{

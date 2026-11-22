@@ -5,7 +5,7 @@ import AxeBuilder from '@axe-core/playwright';
 import {mappingBusinessSource,verifyMappingSignIn} from './mapping-workbench.mjs';
 import {sessionAdmissionDiagnostic} from './session-admission-diagnostic.mjs';
 
-export async function reviewMappingNavigation(originalPage,fixture,engine,categories){
+export async function reviewMappingNavigation(originalPage,fixture,engine,categories,receiptReference){
  const context=await originalPage.context().browser().newContext({ignoreHTTPSErrors:true,viewport:originalPage.viewportSize()});
  try{
  const page=await context.newPage();
@@ -86,7 +86,64 @@ export async function reviewMappingNavigation(originalPage,fixture,engine,catego
   if(!categories)await expect(page.getByLabel('Purpose',{exact:true})).toHaveValue('');
   assert.deepEqual(requests,[],'Navigating safe context does not load or write financial records');
   assert.deepEqual(await mappingBusinessSource(fixture),before,'Navigation and the explicit approval review preserve mapping and audit facts');
-  await writeFile('.local/review/mapping-return-'+kind+'-'+engine+'.json',JSON.stringify({observations,businessRequests:requests,sourceFactsPreserved:true,lookupDateNotApprovalDate:true,invalidQueryRejected:true,privateClearingPreserved:true},null,2)+'\n');
+  page.off('request',observe);
+  await page.goto(fixture.origin+expectedManage);
+  await expect(load).toBeEnabled();
+  if(receiptReference){
+   await page.evaluate(async reference=>{
+    const proof=await (await fetch('/api/auth/session',{method:'POST',headers:{'content-type':'application/json'},body:'{}'})).json();
+    const response=await fetch('/api/business/finance-accounts/context',{method:'POST',headers:{'content-type':'application/json','x-crest-csrf':proof.csrfToken},body:'{}'});
+    if(!response.ok)throw Error('FICTIONAL_MAPPING_CONTEXT_UNAVAILABLE');
+    const context=await response.json();
+    const binding=response.headers.get('x-crest-edit-binding');
+    if(!binding)throw Error('FICTIONAL_MAPPING_BINDING_UNAVAILABLE');
+    sessionStorage.setItem('crest.finance-mapping.pending-reference.v1',JSON.stringify({businessId:context.businessId,binding,reference}));
+   },receiptReference);
+   await editor.getByRole('button',{name:'Review interrupted approval',exact:true}).click();
+   await expect(editor.getByRole('status')).toHaveText('The original approval was confirmed.');
+   await expect(editor.getByRole('region',{name:'Saved mapping change',exact:true})).toBeVisible();
+  }else{
+   await load.click();await expect(editor.getByRole('status')).toHaveText('Approval settings loaded.');
+  }
+  await expect(editor.getByRole('region',{name:'Saved approval settings',exact:true})).toBeVisible();
+  await context.clearCookies();
+  await load.click();
+  await expect(editor.getByRole('status')).toHaveText('Sign in again to review mapping approvals.');
+  await expect(editor.getByRole('region',{name:'Saved mapping change',exact:true})).toHaveCount(0);
+  await expect(editor.getByRole('region',{name:'Saved approval settings',exact:true})).toHaveCount(0);
+  const signIn=editor.getByRole('link',{name:'Sign in again',exact:true});
+  const signInHref='/sign-in?returnTo='+(categories?'category-approvals':'mapping-approvals')+'&purpose='+purpose+'&lookupOn='+date;
+  await expect(signIn).toHaveAttribute('href',signInHref);
+  await signIn.click();
+  const nextCredentials=fixture.credentials();
+  await page.getByLabel('Email',{exact:true}).fill(nextCredentials.email);
+  await page.getByLabel('Password',{exact:true}).fill(nextCredentials.password);
+  await page.getByLabel('Authenticator code',{exact:true}).fill(nextCredentials.code);
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await verifyMappingSignIn(page,fixture);
+  const resume=page.getByRole('link',{name:categories?'Return to category approvals':'Return to mapping approvals',exact:true});
+  await expect(resume).toHaveAttribute('href',expectedManage);
+  await resume.press('Enter');
+  await expect(choice).toBeEnabled();await expect(choice).toHaveValue(purpose);
+  await expect(editor.getByRole('region',{name:'Saved approval settings',exact:true})).toHaveCount(0);
+  await page.getByRole('link',{name:returnLabel,exact:true}).click();
+  await expect(page.getByLabel('Effective date',{exact:true})).toBeEnabled();
+  await expect(page.getByLabel('Effective date',{exact:true})).toHaveValue(date);
+  await expect(categories?page.locator('.category-mapping-selected h2'):page.getByLabel('Purpose',{exact:true})).toBeFocused();
+  if(categories){
+   await page.getByLabel('Effective date',{exact:true}).fill('2026-02-15');
+   await page.getByRole('button',{name:'Check account',exact:true}).click();
+   const approved=page.getByRole('region',{name:'Approved account',exact:true});
+   await expect(approved.getByText('5100',{exact:true})).toBeVisible();
+   await context.clearCookies();
+   await page.getByRole('button',{name:'View approval history',exact:true}).click();
+   await expect(page.getByRole('status')).toHaveText('Sign in to check account mappings.');
+   await expect(approved).toHaveCount(0);
+   await expect(page.getByRole('region',{name:'No mapping on this date',exact:true})).toHaveCount(0);
+   await expect(page.getByRole('link',{name:'Sign in again',exact:true})).toHaveAttribute('href','/sign-in?returnTo=category-mappings&purpose='+purpose+'&lookupOn=2026-02-15');
+  }
+  assert.deepEqual(await mappingBusinessSource(fixture),before,'Session recovery and receipt lookup do not change mappings or their audit trail');
+  await writeFile('.local/review/mapping-return-'+kind+'-'+engine+'.json',JSON.stringify({observations,businessRequests:requests,sourceFactsPreserved:true,lookupDateNotApprovalDate:true,invalidQueryRejected:true,privateClearingPreserved:true,signInReturnVerified:true,privateReceiptClearedOnDenial:!!receiptReference,privateLookupClearedOnDenial:categories},null,2)+'\n');
  }finally{page.off('request',observe);await page.setViewportSize(viewport);}
  }catch(error){
   try{

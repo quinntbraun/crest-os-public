@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../sign-in-link";
+
 
 import { useEffect, useRef, useState } from 'react';
 import { AuthenticationError, authentication } from '../../../client/authentication';
@@ -132,7 +134,7 @@ export function SyntheticGoogleCalendarSettings({ jobId }: { jobId: string | nul
     {context && <GoogleCalendarConsentPanel context={context} saved={consentSaved} simulated onConsentSaved={confirmSavedConsent}/>}
     {loaded?.status.state === 'active' && !loaded.status.context && <p>Calendar consent is saved.</p>}
     {jobId && loaded && !consentSaved && <SyntheticCalendarJobStatus key={jobId + loaded.recoveryEpoch} jobId={jobId} recoveryEpoch={loaded.recoveryEpoch}/>}
-    {signInRequired&&!busy&&<a className="primary-action" href="/sign-in">Sign in again</a>}
+    {signInRequired&&!busy&&<SignInLink className="primary-action" returnTo="calendar">Sign in again</SignInLink>}
     {(!loaded || loaded.status.state === 'review') && !busy && !signInRequired && <button className="secondary" type="button"
       onClick={() => void loadState(undefined, true)}>Check setup status</button>}
     </div>

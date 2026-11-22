@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../sign-in-link";
+
 import {ScheduleLink} from '../navigation';
 
 import {useEffect,useId,useRef,useState} from 'react';
@@ -62,7 +64,7 @@ export function FulfillmentModesScreen(){
  async function action(kind:'load'|'more'|'check'|'retry'){const current=controller.current;if(!current)return;setDownloadMessage('');await current[kind]();if(current===controller.current)status.current?.focus();}
  async function download(){const current=controller.current;if(!current||view.busy)return;let bytes:Uint8Array<ArrayBuffer>|undefined;setDownloadMessage('Checking retained service-arrangement history…');try{bytes=await current.archive();if(!bytes||current!==controller.current||current.view().phase!=='ready')throw Error();revoke();const copy=url.current=URL.createObjectURL(new Blob([bytes],{type:'application/zip'})),link=document.createElement('a');link.href=copy;link.download='crest-service-arrangements.zip';link.hidden=true;document.body.append(link);try{link.click();}finally{link.remove();setTimeout(()=>{if(url.current===copy)revoke();},1000);}setDownloadMessage('History download requested. Check your browser’s downloads. This is not a complete business export or backup.');}catch{if(current===controller.current)setDownloadMessage('No file could be prepared. Reload and try again. History retrieval is limited to 1,000 versions and 8 MiB.');}finally{bytes?.fill(0);}}
  return <section aria-label="Service arrangements workspace" aria-busy={view.busy}><p className="mode-status" ref={status} tabIndex={-1} role="status">{view.message}</p>
-  {view.phase==='signed-out'&&<ScheduleLink className="primary-action" href="/sign-in">Sign in to review arrangements</ScheduleLink>}
+  {view.phase==='signed-out'&&<SignInLink className="primary-action" returnTo="arrangements">Sign in to review arrangements</SignInLink>}
   {view.phase==='ready'&&view.context&&<>
    <SettingsForm key={view.context.context.modeVersion?.id??'initial'} view={view} save={async payload=>{const current=controller.current;if(!current)return;setDownloadMessage('');await current.save(payload);if(current===controller.current)status.current?.focus();}}/>{view.context.dropoffCustodyAvailable===true&&view.context.context.modeVersion&&<DropoffPolicySettings businessId={view.context.context.businessId}
    current={view.context.context.modeVersion} history={view.history} canWrite={!view.busy&&view.context.context.writeState==='ready'}

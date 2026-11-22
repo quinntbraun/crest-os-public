@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../sign-in-link";
+
 import {ScheduleLink} from '../navigation';
 
 import {mileageEvidenceChanges} from './mileage-evidence-presentation';
@@ -325,7 +327,7 @@ export function MileageScreen({jobId,legId,initialTrip}:{jobId:string;legId:stri
  }
  return <section className="mileage-screen" aria-label="Saved trip mileage" aria-busy={view.busy}>
   <p className={view.selectionNeeded?'visually-hidden':'job-change-status'} ref={status} role="status" tabIndex={-1}>{view.message}</p>
-  {view.phase==='signed-out'&&<ScheduleLink className="primary-action" href="/sign-in">Sign in to view mileage</ScheduleLink>}
+  {view.phase==='signed-out'&&<SignInLink className="primary-action" returnTo="mileage">Sign in to view mileage</SignInLink>}
   {view.selectionNeeded&&<TaskPrerequisite kind="mileage"/>}
   {!view.selectionNeeded&&(view.phase==='review'||view.phase==='unavailable')&&<button type="button" disabled={view.busy} onClick={()=>void action(current=>current.load())}>Reload saved trips</button>}
   {view.phase==='pending'&&<>

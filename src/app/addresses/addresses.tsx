@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
 import {DirectoryLoading} from '../directory-loading';
 import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
 import type {DirectoryOrigin} from '../../client/directory-origin';
@@ -235,6 +237,6 @@ export function AddressScreen({customerId,assist:Assist}:{customerId:string|null
   {view.phase==='pending'&&<><p className="field-help">An earlier address save is awaiting review. Its original customer is used even if you opened a different customer link. No retry runs automatically.</p><button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check address save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original address change</button>}{view.reference&&<details className="save-review-reference"><summary>Original save reference</summary><p className="save-reference"><code>{view.reference}</code></p></details>}</>}
   {view.phase==='choose-customer'&&<AddressCustomerChooser/>}
   {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current addresses</button>}
-  {view.phase!=='ready'&&view.phase!=='loading'&&<nav aria-label="Address help">{view.phase!=='choose-customer'&&<a href="/customers">Customer directory</a>}<a href="/save-review">Review interrupted save</a><a href="/sign-in">Device sign-in</a></nav>}
+  {view.phase!=='ready'&&view.phase!=='loading'&&<nav aria-label="Address help">{view.phase!=='choose-customer'&&<a href="/customers">Customer directory</a>}<a href="/save-review">Review interrupted save</a><SignInLink returnTo="addresses">Device sign-in</SignInLink></nav>}
  </section>;
 }

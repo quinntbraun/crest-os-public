@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
 import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
 import type {DirectoryOrigin} from '../../client/directory-origin';
 import {DirectoryLoading} from '../directory-loading';
@@ -183,7 +185,7 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
     </>}
     {view.phase==='pending'&&<><p className="field-help">Keep the original save reference until the outcome is confirmed. No retry runs automatically.</p><button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check vehicle save status</button>{view.canRetry&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>void action('retry')}>Retry original vehicle change</button>}{view.reference&&<details className="save-review-reference"><summary>Original save reference</summary><p className="save-reference"><code>{view.reference}</code></p></details>}</>}
     {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current vehicles</button>}
-    {view.phase!=='ready'&&view.phase!=='loading'&&<nav aria-label="Vehicle help"><a href="/save-review">Review interrupted save</a><a href="/sign-in">Device sign-in</a></nav>}
+    {view.phase!=='ready'&&view.phase!=='loading'&&<nav aria-label="Vehicle help"><a href="/save-review">Review interrupted save</a><SignInLink returnTo="vehicles">Device sign-in</SignInLink></nav>}
 
   </section>;
 }

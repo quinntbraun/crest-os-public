@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../sign-in-link";
+
 import {ScheduleLink} from '../navigation';
 
 import {useEffect,useId,useLayoutEffect,useRef,useState} from 'react';
@@ -328,7 +330,7 @@ export function SupportTripScreen({initialTrip}:{initialTrip:{legId:string;depar
  }
  return <section className="travel-screen" aria-label="Saved standalone travel" aria-busy={view.busy}>
   <p role="status" className="job-change-status">{view.message}</p>
-  {view.phase==='signed-out'&&<ScheduleLink className="primary-action" href="/sign-in">Sign in to view travel</ScheduleLink>}
+  {view.phase==='signed-out'&&<SignInLink className="primary-action" returnTo="travel">Sign in to view travel</SignInLink>}
   {(view.phase==='unavailable'||view.phase==='review')&&<button type="button" onClick={()=>void controller.current?.load()} disabled={view.busy}>Reload saved travel</button>}
   {view.phase==='pending'&&<>
    {view.pending&&<p className="save-reference">Original trip reference <code>{view.pending.reference}</code></p>}

@@ -141,6 +141,32 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   const posting=row.getByRole('region',{name:'Accounting entry',exact:true});
   await posting.getByRole('button',{name:'Load accounting review',exact:true}).press('Enter');
   await expect(posting.getByRole('status')).toHaveText('Review the original purchase and how you paid.');
+  const retainedCookies=await context.cookies();
+  try{
+   await context.clearCookies();
+   const deniedSession=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/auth/session'&&response.status()===400);
+   await posting.getByRole('button',{name:'Reload review',exact:true}).click();await deniedSession;
+   await expect(posting.getByLabel('Incurred date',{exact:true})).toHaveCount(0);
+   await expect(posting.getByText('Fictional detailing warehouse',{exact:true})).toHaveCount(0);
+   await expect(row).toHaveCount(0);
+   await expect(page.getByText('Fictional detailing warehouse',{exact:true})).toHaveCount(0);
+   await expect(page.getByText('Sign in to view expenses.',{exact:true})).toBeFocused();
+   await expect(page.getByRole('link',{name:'Sign in to view expenses',exact:true})).toHaveAttribute('href','/sign-in?returnTo=expenses');
+   await mkdir('.local/review',{recursive:true});
+   for(const width of [390,1440]){
+    await page.setViewportSize({width,height:900});
+    const signIn=page.getByRole('link',{name:'Sign in to view expenses',exact:true});await signIn.focus();
+    assert(await signIn.evaluate(node=>node.getBoundingClientRect().height>=44&&document.activeElement===node));
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa']).analyze()).violations.map(v=>v.id),[]);
+    await page.screenshot({path:'.local/review/expense-accounting-denied-'+name+'-'+width+'.png',fullPage:true});
+   }
+   await page.setViewportSize({width:390,height:844});
+  }finally{await context.addCookies(retainedCookies);}
+  await page.reload();
+  await page.getByRole('button',{name:'Open expense: '+description,exact:true}).click();
+  await posting.getByRole('button',{name:'Load accounting review',exact:true}).click();
+  await expect(posting.getByRole('status')).toHaveText('Review the original purchase and how you paid.');
   await posting.getByLabel('Incurred date',{exact:true}).fill(date);
   await posting.getByLabel('Actual payment date',{exact:true}).fill(date);
   await posting.getByLabel('Paid from',{exact:true}).selectOption({label:'Fictional checking'});
@@ -172,6 +198,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert(original);
   assert.deepEqual(Object.keys(JSON.parse(original)).sort(),['binding','businessId','expenseId','reference']);
   assert(!original.includes('Fictional'));
+  const pendingCookies=await context.cookies();
+  try{
+   await context.clearCookies();
+   await posting.getByRole('button',{name:'Check original posting',exact:true}).click();
+   await expect(page.getByText('Sign in to view expenses.',{exact:true})).toBeVisible();
+   await expect(row).toHaveCount(0);
+   await expect(posting.getByLabel('Incurred date',{exact:true})).toHaveCount(0);
+   await expect(posting.getByRole('button',{name:'Download posted expense CSV',exact:true})).toHaveCount(0);
+   assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.expense-post.pending-reference.v1')),original);
+  }finally{await context.addCookies(pendingCookies);}
   await page.reload();
   await page.getByRole('button',{name:'Open expense: '+description,exact:true}).click();
   await posting.getByRole('button',{name:'Load accounting review',exact:true}).click();

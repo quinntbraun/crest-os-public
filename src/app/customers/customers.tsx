@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
 import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
 import type {DirectoryOrigin} from '../../client/directory-origin';
 import {DirectoryLoading} from '../directory-loading';
@@ -244,7 +246,7 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
 <nav aria-label="Customer tools" className="customer-directory-tools">
  {view.phase==='ready'&&<a href="/customers/import-review">Review a contact CSV</a>}
  <a href="/addresses">Address save review</a>
- {view.phase!=='ready'&&view.phase!=='loading'&&<a href="/sign-in">Check sign-in</a>}
+ {view.phase!=='ready'&&view.phase!=='loading'&&<SignInLink returnTo="customers">Check sign-in</SignInLink>}
  <a href="/save-review">Review interrupted save</a>
 </nav>
   </section>;

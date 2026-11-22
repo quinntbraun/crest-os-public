@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
 import {useEffect,useId,useRef,useState} from 'react';
 import {createHoldController,initialHoldView,emptyHoldPayload} from '../../client/appointment-hold-controller';
 import {createPendingHoldStore} from '../../client/pending-appointment-hold';
@@ -106,6 +108,6 @@ export function AppointmentHoldScreen(){
    {view.history&&<section className="proposal-history settings-card" aria-label="Proposal history"><h2>Retained versions</h2>{view.selected&&<SavedHoldHistoryDownload key={view.selected.id} head={view.selected} disabled={view.busy} archive={async()=>{const c=current.current;if(!c)return;const bytes=await c.archive();if(c!==current.current||c.view().phase!=='ready'){bytes?.fill(0);return;}return bytes;}}/>}<ProposalVersions rows={view.history.versions}/>{view.history.hasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>void action('moreHistory')}>Next proposal history page</button>}</section>}
   </>}
   {view.phase==='pending'&&<><p>Keep the original save reference. Nothing retries automatically.</p><a className="text-action" href="/save-review?kind=operations.appointment_hold.save">Review this original proposal request</a>{view.reference&&<p className="save-reference">Save reference: <code>{view.reference}</code></p>}<button type="button" disabled={view.busy} onClick={()=>void action('check')}>Check proposal save status</button>{view.canRetry&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>void action('retry')}>Retry unchanged original proposal</button>}</>}
-  {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current proposals</button>}{view.phase==='unavailable'&&<p><a href="/sign-in">Check sign-in</a></p>}
+  {['review','unavailable','blocked'].includes(view.phase)&&<button type="button" disabled={view.busy} onClick={()=>void action('load')}>Load current proposals</button>}{view.phase==='unavailable'&&<p><SignInLink returnTo="appointment-proposals">Check sign-in</SignInLink></p>}
  </section>;
 }

@@ -1,3 +1,5 @@
+
+import {SignInLink} from "../sign-in-link";
 import {SourceExportScreen} from './export-files';
 import {PostedFinanceExport} from './posted-finance-export';
 export const dynamic='force-dynamic';
@@ -15,6 +17,6 @@ export default function ExportFilesPage(){
    <PostedFinanceExport/>
    <SourceExportScreen/>
   </div>
-  <nav aria-label="Export navigation"><a href="/customers">Customers</a><a href="/settings">Business settings</a><a href="/sign-in">Device sign-in and sign-out</a><a href="/">Crest OS home</a></nav>
+  <nav aria-label="Export navigation"><a href="/customers">Customers</a><a href="/settings">Business settings</a><SignInLink returnTo="exports">Device sign-in and sign-out</SignInLink><a href="/">Crest OS home</a></nav>
  </main>;
 }

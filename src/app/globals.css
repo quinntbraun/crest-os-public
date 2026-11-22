@@ -756,6 +756,7 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .service-record,.service-saved-details { display:grid; gap:1rem; min-width:0; }
 .service-record > *, .service-saved-details > *, .service-edit-grid > * { min-width:0; }
 .service-record .service-mobile-control { width:auto; margin:0; justify-self:start; }
+.service-catalog-back { width:auto; margin:.75rem 0 0; }
 .service-profile-title { display:flex; gap:.5rem 1rem; align-items:start; justify-content:space-between; flex-wrap:wrap; }
 .service-profile-title > div { min-width:0; }
 .service-profile-title button,.service-edit-actions button { width:auto; margin:0; }
@@ -795,7 +796,6 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
  .service-edit-actions button { flex:1 1 100%; }
 }
 @media (min-width:768px) {
- .service-directory-panel > .service-mobile-control { display:none; }
  .service-saved-facts { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:1099px) {

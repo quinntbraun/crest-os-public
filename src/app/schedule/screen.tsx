@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
 import {ScheduleLink,ScheduleNavigationProvider,useScheduleNavigation} from './navigation';
 import {scheduleNavigationHref} from '../../client/schedule-navigation';
 
@@ -161,7 +163,7 @@ export function ScheduleScreen({initialJobId,initialJobVehicleId,visitsSource}:{
    <div className="workspace-skeleton"/>
   </div>}
   {view.phase==='signed-out'&&<ScheduleLink className="primary-action" href={'/sign-in?returnTo=schedule'+(initialJobId?'&job='+encodeURIComponent(initialJobId):'')}>Sign in to view your schedule</ScheduleLink>}
-  {view.phase==='unavailable'&&<><p>Private schedule records stay hidden until access is checked again.</p><button type="button" disabled={view.busy} onClick={()=>void action('load')}>Check schedule access</button><ScheduleLink href="/sign-in">Check sign-in</ScheduleLink></>}
+  {view.phase==='unavailable'&&<><p>Private schedule records stay hidden until access is checked again.</p><button type="button" disabled={view.busy} onClick={()=>void action('load')}>Check schedule access</button><SignInLink returnTo="schedule">Check sign-in</SignInLink></>}
   {view.phase==='ready'&&linkedJob&&jobReview}
   {view.phase==='ready'&&!linkedJob&&<>
    <div className="schedule-intro"><p className="field-help">Business time zone: {view.timezone}.</p>{view.supportTripsAvailable&&<ScheduleLink href="/schedule/travel">Standalone travel</ScheduleLink>}</div>

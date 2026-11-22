@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
 import {ScheduleLink} from './navigation';
 
 
@@ -249,7 +251,7 @@ export function PickupCollection({businessId,jobId,jobVehicleId,jobVersion,timez
   <h4>Pickup collection</h4>
   <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>{context?'Reload pickup collection':'Load pickup collection'}</button>
   <p ref={status} role="status" tabIndex={-1}>{view.message}</p>
-  {view.signedOut&&<p><ScheduleLink href="/sign-in">Sign in</ScheduleLink></p>}
+  {view.signedOut&&<p><SignInLink returnTo="schedule">Sign in</SignInLink></p>}
   {view.pending&&<p><ScheduleLink href={'/save-review?kind='+view.pending}>Open Save review</ScheduleLink></p>}
   {(context?.state==='ready'||context?.state==='photo_required'&&photosAvailable)&&!view.pending&&canChange&&context.policy&&context.arrival&&
    <HandoffForm policy={context.policy} arrival={context.arrival} timezone={timezone} busy={view.busy} save={save}

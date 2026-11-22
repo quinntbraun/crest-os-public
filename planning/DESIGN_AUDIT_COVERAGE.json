@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-22T04:11:50.843Z",
+  "assessedAt": "2026-11-22T05:32:43.412Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "3224f993f6d546d67330232a0d9db69766884731",
-    "publishedCommit": "bedc94f58956f3eea90481e0f48fb6e415f7f42b",
-    "publishedTree": "c692a07e59e9749ec9c13e31cad52ba344c6a78c",
-    "localTree": "2a9d3e4f2e90735b4750e579a5dbad12f1f56d19"
+    "localCommit": "fd458dc31cde84ebc62182a36ef5f0e4978fffad",
+    "publishedCommit": "726a296072ddabae8d2d2ba83b461b3853def563",
+    "publishedTree": "5c8838d8399a24408a32b90f26ed92680cda1297",
+    "localTree": "5f60d989376b99b03ec3947463e0ac2d5f3d2ebe"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -44,8 +44,8 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "Published bedc94f/tree c692a07 matches local0c0fc72. All three exact-head runs are terminal: commercial and expense pass; main20/22 jobs pass. Workspace-records55/56 fails WebKit restored service-name assertion at390px before pagination: unsaved name retained, Save enabled, all13 observed responses200. Root cause unproved. Foundation stops at prerequisite gate; worker/container acceptance did not execute. Strict publication proof and prior c94 green baseline remain separate. New local mapping context and branded route/layout recovery are implemented, with5 focused unit contracts passing and production build/types/full lint passing on4baa4a7. Browser source scopes are retained2/4 plus targeted2/2; no single final4/4 or new release acceptance. A coherent new draft candidate is next.",
-      "remainingWork": "Diagnose the service draft/input failure without weakening return/pagination checks. Complete remaining S04/S06/S13 work, fresh release/upgrade/recovery/worker and delivered/installed/owner/device acceptance.",
+      "implementedOrPresent": "Published726a296072ddabae8d2d2ba83b461b3853def563/tree5c8838d8399a24408a32b90f26ed92680cda1297 exactly matches reviewed local3ebd6f5. All36 UTF8 entries reconstruct the complete2672-file tree; strict default scanning covers39793370 bytes (scanner38479859), zero findings, empty ignore and inline allows disabled. Canonical sole parentbed, nonforce expected-head lease and exact draft title/body are verified. Canonical test merge5252e38456cc9a91388de552399261c8199ca7d4 has ordered baseea06/head726 parents and identical tree. Main44984348481, commercial44984348504 and expense44984348491 are fresh exact-head queued runs. Native mapping/recovery/action proofs remain separately scoped in their feature notes. Priorbed is terminal with20/22 main jobs, workspace55/56 service restored-name failure and a correctly stopped Foundation gate; ancillary runs pass. No new release acceptance or installation is claimed. Public726 workflow prerequisites now21/21 success, workspace-records56/56 and accounting-settings10/10; separate commercial/expense pass. Foundation remains live. Genuine Next route/root failures now have16 native observations and four fresh GET recoveries on11b11ad, with unchanged source and cleaned owned servers. Native screenshot CSP injection is diagnosed separately without weakening security. Localcf2a preserves validated sign-in returns across31 generic links/30 screens and clears denied saved confirmations.43c9 clears denied loaded mappings/directory/false-empty state. Sixteen focused units, build/types/lint pass. Both complete fixed journeys pass in retained2/4 (category startup overlapped a build); both complete category journeys then pass targeted2/2 after build completion. Separate18-artifact scopes retain real MFA returns, source/audit conservation and cleanup; no combined4/4 or full state/device acceptance follows. Expense accounting denial now removes the entire Expenses workspace through an explicit callback to its existing access state. Original posting references remain untouched. Service Back moves above both columns, keeping desktop profile/list tops aligned; Return remains available at desktop and phone sizes. Original production-route expense/service journeys pass16/16 on frozen dbde358 in Chromium/WebKit with no skips/cancellations, unchanged source and owned cleanup. Build/types/lint pass. Published726 remains21/22 main jobs: all workflow prerequisites succeed, Foundation fails its separate original service layout check and stops later container/worker acceptance; commercial/expense pass. New local proof does not establish Linux release acceptance.",
+      "remainingWork": "Publish the coherent locally verified recovery fixes after strict source review; require fresh exact-head workflows, remaining global review and installed/owner/physical-iPhone acceptance.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "778a0e5f11e1d15c40c581cfd1746eefdd2192bff4aeacd130f8fb5e044ba9e1"
+          "sha256": "ad8e21b3efc8b19a903e19242ab1faa4fe92e0a384e460c6c0bf28cf9db98516"
         },
         {
           "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
@@ -173,11 +173,11 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "53f7919a7703a1bbb2bffd838f4902036b7c57731097f019c6b19e1809a92c47"
+          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "14027cddf205d04c992ad5b7116cb092426c601f541ae187b76832767c10c946"
+          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
         },
         {
           "path": "src/client/customer-editor-controller.ts",
@@ -213,15 +213,15 @@
         },
         {
           "path": "src/app/addresses/addresses.tsx",
-          "sha256": "fb10fabdfdfaa20d03f3bb97599a30fb4fc4635f7949d69048a416824a1cf37f"
+          "sha256": "34bf7cd0619c3cfa2c0559d09176a081dbb21b4f6e4dc3bee72b1d9828579ef3"
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "c2fcbd32705ac3bd3b40890c0af1a6a160ea8b068d98b04cafa7994082b1fb83"
+          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
-          "sha256": "e3b46729545331a0cdac3119ae1ae667fef5bf92a5533ee1b13cc0ca1b78e78d"
+          "sha256": "9cf8edf3a7cadf21aa523937198b48804edfe42fe71403caf899bea1cb9d62bb"
         },
         {
           "path": "src/app/leads/leads.tsx",
@@ -249,7 +249,27 @@
         },
         {
           "path": "planning/MAPPING_RETURN_AND_SCREEN_RECOVERY.md",
-          "sha256": "30c8d2db24448332e203d065e9808e717cecaadd6030745b307c1645f58c6fcc"
+          "sha256": "d0e9159730e61b197d80aa3abc8185282698ea48883c597af2dad90df2d86c6b"
+        },
+        {
+          "path": "planning/EXPENSE_SESSION_AND_SERVICE_RETURN_REVIEW.md",
+          "sha256": "ca66ab2bdd35e00c3b5b3cfc74eee6728e9b6014e295ebed86a74997f718df4a"
+        },
+        {
+          "path": "src/app/expenses/same-day-expense.tsx",
+          "sha256": "ec320cc23f64bc23712567ee8dae5cfff52ea05e3984d40f3e01ac81923aa2e7"
+        },
+        {
+          "path": "src/app/expenses/expenses.tsx",
+          "sha256": "e39b7ae7ac39420a521a68935fc2658b8ee0645cd112b81cd126d11c01234f02"
+        },
+        {
+          "path": "tests/integration/finance-expense-posting-browser.test.mjs",
+          "sha256": "8ac8feaf75dc402b9e73b58b1d1375adc9ebaaead46d8322152b8c9f61775a9c"
+        },
+        {
+          "path": "tests/integration/service-editor-browser.test.mjs",
+          "sha256": "abc0454067c6c3a138336f0c7cbe6a7852d4b81efa4365839f150b2c615209a2"
         }
       ],
       "verification": {
@@ -341,15 +361,15 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "53f7919a7703a1bbb2bffd838f4902036b7c57731097f019c6b19e1809a92c47"
+          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "14027cddf205d04c992ad5b7116cb092426c601f541ae187b76832767c10c946"
+          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "c2fcbd32705ac3bd3b40890c0af1a6a160ea8b068d98b04cafa7994082b1fb83"
+          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
         },
         {
           "path": "src/app/directory-introduction.tsx",
@@ -357,7 +377,7 @@
         },
         {
           "path": "src/app/globals.css",
-          "sha256": "674d60b6c63e6b26726268f0478224a0cb9f24a0a1633a7d5c6d2c4cd91776d3"
+          "sha256": "d39acdc9c970d77a9459b47639632332a231bcbf971844717fb2ebeb892c1f9e"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
@@ -376,8 +396,8 @@
       "title": "P1 · Phone record detail should replace the directory",
       "requirements": "Long quote and completion captures show how a desktop composition becomes a long stacked phone document. Opening a record should put the record first and preserve the list for a clean return.\n\nFinish standard: At 360–430 px, open a selected record, reach its main action, return to the exact list position and continue without re-searching.",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "The main record-first phone composition and safe return implementation is addressed across customer, vehicle, address, service, source and lead directories, with quote/completion/saved-job tasks covered in their recorded notes. Shared ephemeral origins restore exact position/focus and retain safe draft/filter/page context; changed geometry uses visible focus. Four-width360/390/430/1440 deeper-directory evidence retains separate2/6,7/10 and test-only3/3 scopes, including both original follow-up passes. A WebKit address read remains unexplained; its later pass is non-reproduction. Separate genuine CRM zoom1/1 covers48 long-name directory/editor/history observations and exact200%/390 customer/vehicle return. Earlier quote24/24, planner/task and CRM proofs retain their source limits. See DEEPER_DIRECTORY_RETURN.md, CRM_ACTUAL_ZOOM_REVIEW.md and linked workflow notes. This is main local implementation/review, not final all-state/installed/device acceptance. Published338 workspace-records fails on WebKit service next-page row028; later e371 service cases pass separately and are non-reproduction, not a cure.",
-      "remainingWork": "Resolve the new WebKit service pagination release failure and retained address/sign-in failures; complete alternate-origin, exact-head delivered/installed/owner/physical-device acceptance.",
+      "implementedOrPresent": "The main record-first phone composition and safe return implementation is addressed across customer, vehicle, address, service, source and lead directories, with quote/completion/saved-job tasks covered in their recorded notes. Shared ephemeral origins restore exact position/focus and retain safe draft/filter/page context; changed geometry uses visible focus. Four-width360/390/430/1440 deeper-directory evidence retains separate2/6,7/10 and test-only3/3 scopes, including both original follow-up passes. A WebKit address read remains unexplained; its later pass is non-reproduction. Separate genuine CRM zoom1/1 covers48 long-name directory/editor/history observations and exact200%/390 customer/vehicle return. Earlier quote24/24, planner/task and CRM proofs retain their source limits. See DEEPER_DIRECTORY_RETURN.md, CRM_ACTUAL_ZOOM_REVIEW.md and linked workflow notes. This is main local implementation/review, not final all-state/installed/device acceptance. Published338 workspace-records fails on WebKit service next-page row028; later e371 service cases pass separately and are non-reproduction, not a cure. Fresh exact726 Linux workspace-records137091537177 passes56/56, including the previously failing service return. This establishes that new scope without explaining every older failure. Expense accounting denial now removes the entire Expenses workspace through an explicit callback to its existing access state. Original posting references remain untouched. Service Back moves above both columns, keeping desktop profile/list tops aligned; Return remains available at desktop and phone sizes. Original production-route expense/service journeys pass16/16 on frozen dbde358 in Chromium/WebKit with no skips/cancellations, unchanged source and owned cleanup. Build/types/lint pass. Published726 remains21/22 main jobs: all workflow prerequisites succeed, Foundation fails its separate original service layout check and stops later container/worker acceptance; commercial/expense pass. New local proof does not establish Linux release acceptance.",
+      "remainingWork": "Verify both separate service workflows on fresh Linux source and finish alternate-origin/state and delivered/device acceptance.",
       "evidence": [
         {
           "path": "src/app/workspace-design.css",
@@ -485,7 +505,7 @@
         },
         {
           "path": "src/app/schedule/screen.tsx",
-          "sha256": "b34996593ca27f629116ba78ba4efe698766e473f568edba17eb080046bbd790"
+          "sha256": "934836b26de0b96fd10ba4a38b10768cbd53b8387c1ddd90d08e9807859295b3"
         },
         {
           "path": "src/app/schedule/page.tsx",
@@ -501,7 +521,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "14027cddf205d04c992ad5b7116cb092426c601f541ae187b76832767c10c946"
+          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -541,7 +561,7 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "53f7919a7703a1bbb2bffd838f4902036b7c57731097f019c6b19e1809a92c47"
+          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
         },
         {
           "path": "src/app/schedule/back-to-saved-job.tsx",
@@ -609,15 +629,15 @@
         },
         {
           "path": "src/app/addresses/addresses.tsx",
-          "sha256": "fb10fabdfdfaa20d03f3bb97599a30fb4fc4635f7949d69048a416824a1cf37f"
+          "sha256": "34bf7cd0619c3cfa2c0559d09176a081dbb21b4f6e4dc3bee72b1d9828579ef3"
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "c2fcbd32705ac3bd3b40890c0af1a6a160ea8b068d98b04cafa7994082b1fb83"
+          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
-          "sha256": "e3b46729545331a0cdac3119ae1ae667fef5bf92a5533ee1b13cc0ca1b78e78d"
+          "sha256": "9cf8edf3a7cadf21aa523937198b48804edfe42fe71403caf899bea1cb9d62bb"
         },
         {
           "path": "src/app/leads/leads.tsx",
@@ -630,6 +650,26 @@
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
           "sha256": "25c6b0a97d0d987a19bf60a13a5b123e999b803f474cf9fc76b0737c3e73315b"
+        },
+        {
+          "path": "planning/EXPENSE_SESSION_AND_SERVICE_RETURN_REVIEW.md",
+          "sha256": "ca66ab2bdd35e00c3b5b3cfc74eee6728e9b6014e295ebed86a74997f718df4a"
+        },
+        {
+          "path": "src/app/expenses/same-day-expense.tsx",
+          "sha256": "ec320cc23f64bc23712567ee8dae5cfff52ea05e3984d40f3e01ac81923aa2e7"
+        },
+        {
+          "path": "src/app/expenses/expenses.tsx",
+          "sha256": "e39b7ae7ac39420a521a68935fc2658b8ee0645cd112b81cd126d11c01234f02"
+        },
+        {
+          "path": "tests/integration/finance-expense-posting-browser.test.mjs",
+          "sha256": "8ac8feaf75dc402b9e73b58b1d1375adc9ebaaead46d8322152b8c9f61775a9c"
+        },
+        {
+          "path": "tests/integration/service-editor-browser.test.mjs",
+          "sha256": "abc0454067c6c3a138336f0c7cbe6a7852d4b81efa4365839f150b2c615209a2"
         }
       ],
       "verification": {
@@ -661,19 +701,19 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "93a0cf8d939898fafd58d4524c75b3af1e26189f37996dd4772ba0ffb0d3fc29"
+          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "2282547120dbb785104a794ae15f5ac617a3aba426a9f94f9b98610f0677cc81"
+          "sha256": "4b53598aa792013958f340140bcf4a34a6673fff7be16d53a62158ea6a130bae"
         },
         {
           "path": "src/app/expenses/expense-editor.tsx",
-          "sha256": "6627191dc0785ba7e90ac470100bcf8010416a03a20e9ce92ec3b50e011d89c8"
+          "sha256": "bac99781d43881e18639b3ca4d0dff3fbf4cd1a38d5602f66d2cc04263bee131"
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "c2fcbd32705ac3bd3b40890c0af1a6a160ea8b068d98b04cafa7994082b1fb83"
+          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
         },
         {
           "path": "src/app/quotes/quotes.tsx",
@@ -685,7 +725,7 @@
         },
         {
           "path": "src/app/schedule/new/booking.tsx",
-          "sha256": "109446633710493e9cfc0b91154426241ca7d3f34894aa78abeaf11f2afe9bc4"
+          "sha256": "179f593ba160b1e5f3faaff4690bbbc650b08fc47f1261848de40dc6c7a5e25b"
         },
         {
           "path": "src/app/schedule/booking-fields.tsx",
@@ -709,7 +749,7 @@
         },
         {
           "path": "src/app/schedule/vehicle-custody-queue.tsx",
-          "sha256": "dfd14f5b510c84bb1db6d32a00179eac79d9e56e7423972d71548ee836e847af"
+          "sha256": "489d5c1f24be8978d11c299c9e61d216e9b87b1641c941f7fe25f448a79b2766"
         },
         {
           "path": "planning/STATEMENT_RECOVERY_PRIORITY_REVIEW.md",
@@ -725,7 +765,7 @@
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
-          "sha256": "21987583d72dd90dcf6594a7f41f8f8db7f4a810a2e586231dc44b27c7956259"
+          "sha256": "df49e4b1455cfc26eccdcd3057b15e34ab27090b0d9f98d28f9471b6f44ba944"
         },
         {
           "path": "planning/OPENING_BALANCE_RECOVERY_PRIORITY_REVIEW.md",
@@ -745,11 +785,11 @@
         },
         {
           "path": "src/app/settings/accounts/tax/approval.tsx",
-          "sha256": "44890c74ad9cb18df7f949d4e96957ca8f5c7fe214725c819c7be3fe568c3115"
+          "sha256": "7a34e9f1a4ad83a22b7f9fffe2243493b7d51511fa19fb9747777fa28c83d585"
         },
         {
           "path": "src/app/expenses/same-day-expense.tsx",
-          "sha256": "9018592ce1ee54178715adc3335099354de6ce6a1b641412fa954494149699ac"
+          "sha256": "ec320cc23f64bc23712567ee8dae5cfff52ea05e3984d40f3e01ac81923aa2e7"
         },
         {
           "path": "src/app/customers/grouped-payment-recredit.tsx",
@@ -757,7 +797,7 @@
         },
         {
           "path": "src/app/schedule/work/time/screen.tsx",
-          "sha256": "76ce0d34cc4d0fcb9bf7aa4f099903e5663e0ab1d52a14befe914cd4776c19dd"
+          "sha256": "0711ebdb709919206b9872e23447b22bf94ab5026032c5872e9de9368d3963ff"
         },
         {
           "path": "tests/integration/finance-invoice-issue-product-browser.test.mjs",
@@ -777,7 +817,7 @@
         },
         {
           "path": "src/app/schedule/change/change.tsx",
-          "sha256": "f95134610ed6f62c734867b8260b0686505c26b646e3af93658dd163232b9af3"
+          "sha256": "e88f1c0d59fc2c7976ada7937307af0d6cabc32c95f215230f35c8b1f4d63dcd"
         },
         {
           "path": "planning/CRM_LOADING_SAVE_FEEDBACK.md",
@@ -789,11 +829,11 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "53f7919a7703a1bbb2bffd838f4902036b7c57731097f019c6b19e1809a92c47"
+          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "14027cddf205d04c992ad5b7116cb092426c601f541ae187b76832767c10c946"
+          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
         },
         {
           "path": "src/client/customer-editor-controller.ts",
@@ -901,7 +941,7 @@
         },
         {
           "path": "src/app/schedule/new/booking.tsx",
-          "sha256": "109446633710493e9cfc0b91154426241ca7d3f34894aa78abeaf11f2afe9bc4"
+          "sha256": "179f593ba160b1e5f3faaff4690bbbc650b08fc47f1261848de40dc6c7a5e25b"
         },
         {
           "path": "src/app/schedule/booking-fields.tsx",
@@ -949,7 +989,7 @@
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "2282547120dbb785104a794ae15f5ac617a3aba426a9f94f9b98610f0677cc81"
+          "sha256": "4b53598aa792013958f340140bcf4a34a6673fff7be16d53a62158ea6a130bae"
         },
         {
           "path": "tests/integration/work-completion-product-browser.test.mjs",
@@ -957,11 +997,11 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "86cc526e346dda01731360487caeaf6bc1fc95f45791cf26acb8187a550e7f1d"
+          "sha256": "8ac8feaf75dc402b9e73b58b1d1375adc9ebaaead46d8322152b8c9f61775a9c"
         },
         {
           "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
-          "sha256": "39559371b0faa4fc488d5b7fb6beaffe0aba2d01d9908a806340b77a0be0a507"
+          "sha256": "f168280a2b6f81ce24f24f748eb276b167603d3c29f4f04c7e461f0f6d9e55b2"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
@@ -980,8 +1020,8 @@
       "title": "P1 · Treat every state as a designed screen",
       "requirements": "Some baseline captures are loading or unavailable. A clean screenshot with no overflow does not establish a completed workflow.\n\nFinish standard: Every important workflow needs loaded, empty, loading, validation, denied, stale, uncertain-save and successful variants with clear next steps.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Important loaded, empty, loading, validation, denied, stale, uncertain-save and successful states exist in the source and named workflow proofs. CRM_STATE_REVIEW.md reconciles the first eight-state family with explicit source/visual limitations. New initial loading and active-save protection for leads/services/addresses passes its separately scoped new2/2; missing/revoked CRM navigation passes2/2; deeper-directory draft/filter/page/privacy cases retain separate7/10 and3/3 evidence. Verified outcome markers stay neutral for stale/unknown results and require committed acknowledgment/reference cleanup. Earlier baseline and financial/history/worker evidence retain their own source scopes. The global configured eight-state inventory and missing exact-source visuals remain unfinished; no72-capture or scoped success is treated as complete coverage. FIELD_TASK_FINISH_REVIEW.md reconciles eight source states for standalone travel, recorded time/corrections and unfulfilled cancellation. Empty work time links to the selected job status; both original work-time journeys pass with eight empty-state captures. Other new field proof remains the exact11/12 and4/4 scopes. Financial long-content review adds the eight-state source reconciliation for accounts, channels and tax profiles/approvals, with separately scoped full channel recovery and genuine financial zoom evidence. ACTION_PRIORITY_FINAL_REVIEW.md adds genuine opening-receivable review/save/re-entry states with scoped no-request/source conservation; it does not complete the global eight-state inventory. New error/global-error boundaries share the existing branded missing-page presentation, focus the heading, offer screen reset/Save review/Today and omit private exception text/digests. Five focused unit contracts pass including recovery privacy. Actual component review passes eight native observations across two engines/four widths, with real logo/fonts, accessibility/focus/44px/no-overflow, delegated reset and no external/business requests. Preview setup/interop/readiness failures remain scoped; no real Next exception/root failure injection is claimed.",
-      "remainingWork": "Complete the global important-workflow eight-state source/evidence matrix and missing configured states, including a real route/layout exception. Keep all earlier access/timeout/probe failures separate; finish matching delivered/installed/physical-device acceptance.",
+      "implementedOrPresent": "Important loaded, empty, loading, validation, denied, stale, uncertain-save and successful states exist in the source and named workflow proofs. CRM_STATE_REVIEW.md reconciles the first eight-state family with explicit source/visual limitations. New initial loading and active-save protection for leads/services/addresses passes its separately scoped new2/2; missing/revoked CRM navigation passes2/2; deeper-directory draft/filter/page/privacy cases retain separate7/10 and3/3 evidence. Verified outcome markers stay neutral for stale/unknown results and require committed acknowledgment/reference cleanup. Earlier baseline and financial/history/worker evidence retain their own source scopes. The global configured eight-state inventory and missing exact-source visuals remain unfinished; no72-capture or scoped success is treated as complete coverage. FIELD_TASK_FINISH_REVIEW.md reconciles eight source states for standalone travel, recorded time/corrections and unfulfilled cancellation. Empty work time links to the selected job status; both original work-time journeys pass with eight empty-state captures. Other new field proof remains the exact11/12 and4/4 scopes. Financial long-content review adds the eight-state source reconciliation for accounts, channels and tax profiles/approvals, with separately scoped full channel recovery and genuine financial zoom evidence. ACTION_PRIORITY_FINAL_REVIEW.md adds genuine opening-receivable review/save/re-entry states with scoped no-request/source conservation; it does not complete the global eight-state inventory. New error/global-error boundaries share the existing branded missing-page presentation, focus the heading, offer screen reset/Save review/Today and omit private exception text/digests. Five focused unit contracts pass including recovery privacy. Actual component review passes eight native observations across two engines/four widths, with real logo/fonts, accessibility/focus/44px/no-overflow, delegated reset and no external/business requests. Preview setup/interop/readiness failures remain scoped; no real Next exception/root failure injection is claimed. Genuine Next route/root failures now have16 native observations and four fresh GET recoveries on11b11ad, with unchanged source and cleaned owned servers. Native screenshot CSP injection is diagnosed separately without weakening security. Localcf2a preserves validated sign-in returns across31 generic links/30 screens and clears denied saved confirmations.43c9 clears denied loaded mappings/directory/false-empty state. Sixteen focused units, build/types/lint pass. Both complete fixed journeys pass in retained2/4 (category startup overlapped a build); both complete category journeys then pass targeted2/2 after build completion. Separate18-artifact scopes retain real MFA returns, source/audit conservation and cleanup; no combined4/4 or full state/device acceptance follows. Expense accounting denial now removes the entire Expenses workspace through an explicit callback to its existing access state. Original posting references remain untouched. Service Back moves above both columns, keeping desktop profile/list tops aligned; Return remains available at desktop and phone sizes. Original production-route expense/service journeys pass16/16 on frozen dbde358 in Chromium/WebKit with no skips/cancellations, unchanged source and owned cleanup. Build/types/lint pass. Published726 remains21/22 main jobs: all workflow prerequisites succeed, Foundation fails its separate original service layout check and stops later container/worker acceptance; commercial/expense pass. New local proof does not establish Linux release acceptance.",
+      "remainingWork": "Complete remaining important workflow eight-state source/evidence review, particularly payment task denied/stale recovery and other configured variants; retain all failed scopes and matching release/device gates.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -989,7 +1029,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "1e6d4005de866822cbab670e0890a124eaa087dde3e88974be905a72daae3747"
+          "sha256": "3bd25f933f023a2554a9545dd90fbf35d1789f6b5ae61499708c795da2ae54e5"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -1033,15 +1073,15 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "93a0cf8d939898fafd58d4524c75b3af1e26189f37996dd4772ba0ffb0d3fc29"
+          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
-          "sha256": "21987583d72dd90dcf6594a7f41f8f8db7f4a810a2e586231dc44b27c7956259"
+          "sha256": "df49e4b1455cfc26eccdcd3057b15e34ab27090b0d9f98d28f9471b6f44ba944"
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "2282547120dbb785104a794ae15f5ac617a3aba426a9f94f9b98610f0677cc81"
+          "sha256": "4b53598aa792013958f340140bcf4a34a6673fff7be16d53a62158ea6a130bae"
         },
         {
           "path": "planning/OPENING_BALANCE_RECOVERY_PRIORITY_REVIEW.md",
@@ -1061,7 +1101,7 @@
         },
         {
           "path": "src/app/settings/accounts/tax/approval.tsx",
-          "sha256": "44890c74ad9cb18df7f949d4e96957ca8f5c7fe214725c819c7be3fe568c3115"
+          "sha256": "7a34e9f1a4ad83a22b7f9fffe2243493b7d51511fa19fb9747777fa28c83d585"
         },
         {
           "path": "tests/unit/business-response-capture.test.ts",
@@ -1081,7 +1121,7 @@
         },
         {
           "path": "src/app/schedule/screen.tsx",
-          "sha256": "b34996593ca27f629116ba78ba4efe698766e473f568edba17eb080046bbd790"
+          "sha256": "934836b26de0b96fd10ba4a38b10768cbd53b8387c1ddd90d08e9807859295b3"
         },
         {
           "path": "src/app/schedule/page.tsx",
@@ -1097,7 +1137,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "14027cddf205d04c992ad5b7116cb092426c601f541ae187b76832767c10c946"
+          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -1137,7 +1177,7 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "53f7919a7703a1bbb2bffd838f4902036b7c57731097f019c6b19e1809a92c47"
+          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
         },
         {
           "path": "src/client/customer-editor-controller.ts",
@@ -1169,11 +1209,11 @@
         },
         {
           "path": "src/app/addresses/addresses.tsx",
-          "sha256": "fb10fabdfdfaa20d03f3bb97599a30fb4fc4635f7949d69048a416824a1cf37f"
+          "sha256": "34bf7cd0619c3cfa2c0559d09176a081dbb21b4f6e4dc3bee72b1d9828579ef3"
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "c2fcbd32705ac3bd3b40890c0af1a6a160ea8b068d98b04cafa7994082b1fb83"
+          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
         },
         {
           "path": "tests/support/directory-loading-journey.mjs",
@@ -1201,7 +1241,7 @@
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
-          "sha256": "e3b46729545331a0cdac3119ae1ae667fef5bf92a5533ee1b13cc0ca1b78e78d"
+          "sha256": "9cf8edf3a7cadf21aa523937198b48804edfe42fe71403caf899bea1cb9d62bb"
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
@@ -1221,7 +1261,47 @@
         },
         {
           "path": "planning/MAPPING_RETURN_AND_SCREEN_RECOVERY.md",
-          "sha256": "30c8d2db24448332e203d065e9808e717cecaadd6030745b307c1645f58c6fcc"
+          "sha256": "d0e9159730e61b197d80aa3abc8185282698ea48883c597af2dad90df2d86c6b"
+        },
+        {
+          "path": "src/app/sign-in-link.tsx",
+          "sha256": "546eab45c9db04610c3057f2800ab0e31ae24226c218fe4a32e034e8730771c2"
+        },
+        {
+          "path": "src/client/sign-in-navigation.ts",
+          "sha256": "e3db92360d876a25cca8b6ddadf7e3233af065a86e16116a789b3fa43dbc5fcd"
+        },
+        {
+          "path": "tests/unit/sign-in-navigation.test.ts",
+          "sha256": "bf69ed4712424e5d046fc168d009194929412ceb7ae2982a6f834faab0415de2"
+        },
+        {
+          "path": "tests/unit/workspace-recovery.test.ts",
+          "sha256": "2660d7fddc15fe1bb36ac2c28f823006c5d47e5d4bb81e23b788a8e1ec292cfa"
+        },
+        {
+          "path": "tests/support/mapping-navigation-review.mjs",
+          "sha256": "df05cb4809dff326b7d90e29e7099d5e47fa92906490f694599b67c9f55e717f"
+        },
+        {
+          "path": "planning/EXPENSE_SESSION_AND_SERVICE_RETURN_REVIEW.md",
+          "sha256": "ca66ab2bdd35e00c3b5b3cfc74eee6728e9b6014e295ebed86a74997f718df4a"
+        },
+        {
+          "path": "src/app/expenses/same-day-expense.tsx",
+          "sha256": "ec320cc23f64bc23712567ee8dae5cfff52ea05e3984d40f3e01ac81923aa2e7"
+        },
+        {
+          "path": "src/app/expenses/expenses.tsx",
+          "sha256": "e39b7ae7ac39420a521a68935fc2658b8ee0645cd112b81cd126d11c01234f02"
+        },
+        {
+          "path": "tests/integration/finance-expense-posting-browser.test.mjs",
+          "sha256": "8ac8feaf75dc402b9e73b58b1d1375adc9ebaaead46d8322152b8c9f61775a9c"
+        },
+        {
+          "path": "tests/integration/service-editor-browser.test.mjs",
+          "sha256": "abc0454067c6c3a138336f0c7cbe6a7852d4b81efa4365839f150b2c615209a2"
         }
       ],
       "verification": {
@@ -1277,7 +1357,7 @@
         },
         {
           "path": "src/app/sign-in/page.tsx",
-          "sha256": "fbb3c22c7c6e12ed6d954901b032876726cc73584af3502873dd86f82d2b1468"
+          "sha256": "f17c0218bf5fe3838b88de0465b405213dc6689956f4553a5e90e4d19331279f"
         },
         {
           "path": "src/app/workspace-design.css",
@@ -1329,7 +1409,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "1e6d4005de866822cbab670e0890a124eaa087dde3e88974be905a72daae3747"
+          "sha256": "3bd25f933f023a2554a9545dd90fbf35d1789f6b5ae61499708c795da2ae54e5"
         }
       ],
       "verification": {
@@ -1349,7 +1429,7 @@
       "evidence": [
         {
           "path": "src/app/globals.css",
-          "sha256": "674d60b6c63e6b26726268f0478224a0cb9f24a0a1633a7d5c6d2c4cd91776d3"
+          "sha256": "d39acdc9c970d77a9459b47639632332a231bcbf971844717fb2ebeb892c1f9e"
         },
         {
           "path": "planning/WORKSPACE_TEXT_RESIZE_REFINEMENT.md",
@@ -1469,15 +1549,15 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "93a0cf8d939898fafd58d4524c75b3af1e26189f37996dd4772ba0ffb0d3fc29"
+          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
-          "sha256": "21987583d72dd90dcf6594a7f41f8f8db7f4a810a2e586231dc44b27c7956259"
+          "sha256": "df49e4b1455cfc26eccdcd3057b15e34ab27090b0d9f98d28f9471b6f44ba944"
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "2282547120dbb785104a794ae15f5ac617a3aba426a9f94f9b98610f0677cc81"
+          "sha256": "4b53598aa792013958f340140bcf4a34a6673fff7be16d53a62158ea6a130bae"
         },
         {
           "path": "planning/FINANCIAL_HISTORY_COMPARISON.md",
@@ -1497,7 +1577,7 @@
         },
         {
           "path": "src/app/schedule/screen.tsx",
-          "sha256": "b34996593ca27f629116ba78ba4efe698766e473f568edba17eb080046bbd790"
+          "sha256": "934836b26de0b96fd10ba4a38b10768cbd53b8387c1ddd90d08e9807859295b3"
         },
         {
           "path": "src/app/schedule/page.tsx",
@@ -1513,7 +1593,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "14027cddf205d04c992ad5b7116cb092426c601f541ae187b76832767c10c946"
+          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -1553,15 +1633,15 @@
         },
         {
           "path": "src/app/addresses/addresses.tsx",
-          "sha256": "fb10fabdfdfaa20d03f3bb97599a30fb4fc4635f7949d69048a416824a1cf37f"
+          "sha256": "34bf7cd0619c3cfa2c0559d09176a081dbb21b4f6e4dc3bee72b1d9828579ef3"
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "c2fcbd32705ac3bd3b40890c0af1a6a160ea8b068d98b04cafa7994082b1fb83"
+          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
-          "sha256": "e3b46729545331a0cdac3119ae1ae667fef5bf92a5533ee1b13cc0ca1b78e78d"
+          "sha256": "9cf8edf3a7cadf21aa523937198b48804edfe42fe71403caf899bea1cb9d62bb"
         },
         {
           "path": "src/app/leads/leads.tsx",
@@ -1613,11 +1693,11 @@
         },
         {
           "path": "src/app/schedule/new/booking.tsx",
-          "sha256": "109446633710493e9cfc0b91154426241ca7d3f34894aa78abeaf11f2afe9bc4"
+          "sha256": "179f593ba160b1e5f3faaff4690bbbc650b08fc47f1261848de40dc6c7a5e25b"
         },
         {
           "path": "src/app/schedule/change/change.tsx",
-          "sha256": "f95134610ed6f62c734867b8260b0686505c26b646e3af93658dd163232b9af3"
+          "sha256": "e88f1c0d59fc2c7976ada7937307af0d6cabc32c95f215230f35c8b1f4d63dcd"
         },
         {
           "path": "tests/support/booking-motion.mjs",
@@ -1641,7 +1721,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "93a0cf8d939898fafd58d4524c75b3af1e26189f37996dd4772ba0ffb0d3fc29"
+          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
         },
         {
           "path": "src/app/settings/accounts/screen.module.css",
@@ -1649,15 +1729,15 @@
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
-          "sha256": "21987583d72dd90dcf6594a7f41f8f8db7f4a810a2e586231dc44b27c7956259"
+          "sha256": "df49e4b1455cfc26eccdcd3057b15e34ab27090b0d9f98d28f9471b6f44ba944"
         },
         {
           "path": "src/app/settings/accounts/tax/approval.tsx",
-          "sha256": "44890c74ad9cb18df7f949d4e96957ca8f5c7fe214725c819c7be3fe568c3115"
+          "sha256": "7a34e9f1a4ad83a22b7f9fffe2243493b7d51511fa19fb9747777fa28c83d585"
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "2282547120dbb785104a794ae15f5ac617a3aba426a9f94f9b98610f0677cc81"
+          "sha256": "4b53598aa792013958f340140bcf4a34a6673fff7be16d53a62158ea6a130bae"
         },
         {
           "path": "tests/support/financial-save-notice.mjs",
@@ -1677,7 +1757,7 @@
         },
         {
           "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
-          "sha256": "39559371b0faa4fc488d5b7fb6beaffe0aba2d01d9908a806340b77a0be0a507"
+          "sha256": "f168280a2b6f81ce24f24f748eb276b167603d3c29f4f04c7e461f0f6d9e55b2"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
@@ -1697,7 +1777,7 @@
         },
         {
           "path": "src/app/schedule/screen.tsx",
-          "sha256": "b34996593ca27f629116ba78ba4efe698766e473f568edba17eb080046bbd790"
+          "sha256": "934836b26de0b96fd10ba4a38b10768cbd53b8387c1ddd90d08e9807859295b3"
         },
         {
           "path": "src/app/schedule/page.tsx",
@@ -1713,7 +1793,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "14027cddf205d04c992ad5b7116cb092426c601f541ae187b76832767c10c946"
+          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -1753,7 +1833,7 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "53f7919a7703a1bbb2bffd838f4902036b7c57731097f019c6b19e1809a92c47"
+          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
         },
         {
           "path": "src/client/customer-editor-controller.ts",
@@ -1785,7 +1865,7 @@
         },
         {
           "path": "src/app/globals.css",
-          "sha256": "674d60b6c63e6b26726268f0478224a0cb9f24a0a1633a7d5c6d2c4cd91776d3"
+          "sha256": "d39acdc9c970d77a9459b47639632332a231bcbf971844717fb2ebeb892c1f9e"
         },
         {
           "path": "src/app/workspace-design.css",
@@ -1821,7 +1901,7 @@
         },
         {
           "path": "src/app/appointment-holds/screen.tsx",
-          "sha256": "d49d9509dace99c8758dc12170d6980904b92a082912fd13c7f8bafc0928d1a3"
+          "sha256": "d01fa25a39196c5baab2853e9a21f006b88b3612e0ef6b1374244e12cbe4299e"
         },
         {
           "path": "planning/PROPOSAL_HISTORY_TIMELINE_DESIGN.md",
@@ -2017,15 +2097,15 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "93a0cf8d939898fafd58d4524c75b3af1e26189f37996dd4772ba0ffb0d3fc29"
+          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
         },
         {
           "path": "src/app/settings/accounts/tax/screen.tsx",
-          "sha256": "cb937fa3bd91ce1dace3c128670452c329de495ee20eb5685ba2ab1c087439a5"
+          "sha256": "c7841d17287e77661b35a7c0f280ea3b983ffaa1d3fdd179f3a910f9ca9450ad"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
-          "sha256": "21987583d72dd90dcf6594a7f41f8f8db7f4a810a2e586231dc44b27c7956259"
+          "sha256": "df49e4b1455cfc26eccdcd3057b15e34ab27090b0d9f98d28f9471b6f44ba944"
         },
         {
           "path": "tests/support/financial-history-comparison.mjs",
@@ -2056,8 +2136,8 @@
       "title": "P2 · Protect context through every transition",
       "requirements": "Back links now exist on many deeper routes. Their wording and destinations still vary, and an opened task can lose the visible customer/job context.\n\nFinish standard: Use a common breadcrumb or contextual return row, preserve selected record/date/filter where safe, restore focus and avoid retaining private detail after sign-out.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Six core directory families now capture accepted entry controls and exact in-memory positions, retaining safe drafts/filters/pages and clearing metadata on accepted replacement/private clearing. Contextual saved-job and server-return anchors preserve approved date/view/job/vehicle context; quote, supplier, Calendar and other task notes retain their source-specific return evidence. Missing/revoked CRM explanations receive focus and private rows clear. Deeper-directory cases cover explicit resume/discard, cancelled search/pagination, resize and bfcache clearing; genuine200% CRM returns preserve exact position/source. Retained WebKit read and genuine sign-in failures remain unresolved, with later passes labeled non-reproduction. Alternate/outdated task links and final release/installed/owner/device transitions still require review. New-trip close/cross-task discard now requires an explicit decision; declined actions preserve all entered fields and submit nothing, accepted close restores its opener, and drafts participate in the unload warning. Both complete travel engines pass on unchanged7a app code after the test-only keyboard correction. Empty work-time navigation follows the actual selected job. Repeated b6 failure now includes a screenshot and request shape. c7 adds explicit restored-field/disabled-Save observation before an accepted service page change, plus accurate nested-label/editor diagnostics. Both full four-width service cases pass2/2 with eight captures/two reports; no deadline/transport/original assertion is weakened and no release cure is claimed. Local b9c18c7 preserves the Accounting section through a single known capability-checked URL view and shares four Back to finance setup links. Four complete channel/base paid-expense-report journeys pass4/4 on fixed source, with browser/shared keyboard returns, four widths, invalid/duplicate/disabled view fallbacks, zero inspection business requests and channel/audit conservation. Eight captures are hashed;390px reviewed. S13 full transition scope remains partial. Application8b moves Services return-to-editor focus from a queued frame into the existing layout effect. Both full four-width service-return journeys pass with focused-field stability across subsequent frames, restored name/disabled unchanged Save, pagination/resize/privacy assertions. Published Linux failure is not yet proved cured. Mapping lookup now stores only validated purpose/category/date in the current URL, carries it into management and restores selection/date/focus through browser Back and contextual returns. Generic entry remains; lookup date does not become approval effective date. Chromium full journeys pass in the frozen2/4 scope; both complete original WebKit cases pass targeted2/2 after test-only control-readiness correction. Four-width return inspections issue zero business requests and preserve mapping/audit facts, invalid-query and private-clearing checks. Thirty-four prior-scope and18 fresh WebKit artifacts retained; all source/owned cleanup passes. Initial0/4 breadcrumb/layout regressions were fixed in application, and earlier1/4 hydration/sign-in failures remain, without weakening originals or quotas. Initial lookup-copy-only4baa improves selected guidance.",
-      "remainingWork": "Finish remaining alternate/outdated task-context review and real unexpected-error transitions; verify service return on a fresh exact-source release and complete matching delivered/installed/owner/device behavior. Retained address/sign-in failures remain unresolved.",
+      "implementedOrPresent": "Six core directory families now capture accepted entry controls and exact in-memory positions, retaining safe drafts/filters/pages and clearing metadata on accepted replacement/private clearing. Contextual saved-job and server-return anchors preserve approved date/view/job/vehicle context; quote, supplier, Calendar and other task notes retain their source-specific return evidence. Missing/revoked CRM explanations receive focus and private rows clear. Deeper-directory cases cover explicit resume/discard, cancelled search/pagination, resize and bfcache clearing; genuine200% CRM returns preserve exact position/source. Retained WebKit read and genuine sign-in failures remain unresolved, with later passes labeled non-reproduction. Alternate/outdated task links and final release/installed/owner/device transitions still require review. New-trip close/cross-task discard now requires an explicit decision; declined actions preserve all entered fields and submit nothing, accepted close restores its opener, and drafts participate in the unload warning. Both complete travel engines pass on unchanged7a app code after the test-only keyboard correction. Empty work-time navigation follows the actual selected job. Repeated b6 failure now includes a screenshot and request shape. c7 adds explicit restored-field/disabled-Save observation before an accepted service page change, plus accurate nested-label/editor diagnostics. Both full four-width service cases pass2/2 with eight captures/two reports; no deadline/transport/original assertion is weakened and no release cure is claimed. Local b9c18c7 preserves the Accounting section through a single known capability-checked URL view and shares four Back to finance setup links. Four complete channel/base paid-expense-report journeys pass4/4 on fixed source, with browser/shared keyboard returns, four widths, invalid/duplicate/disabled view fallbacks, zero inspection business requests and channel/audit conservation. Eight captures are hashed;390px reviewed. S13 full transition scope remains partial. Application8b moves Services return-to-editor focus from a queued frame into the existing layout effect. Both full four-width service-return journeys pass with focused-field stability across subsequent frames, restored name/disabled unchanged Save, pagination/resize/privacy assertions. Published Linux failure is not yet proved cured. Mapping lookup now stores only validated purpose/category/date in the current URL, carries it into management and restores selection/date/focus through browser Back and contextual returns. Generic entry remains; lookup date does not become approval effective date. Chromium full journeys pass in the frozen2/4 scope; both complete original WebKit cases pass targeted2/2 after test-only control-readiness correction. Four-width return inspections issue zero business requests and preserve mapping/audit facts, invalid-query and private-clearing checks. Thirty-four prior-scope and18 fresh WebKit artifacts retained; all source/owned cleanup passes. Initial0/4 breadcrumb/layout regressions were fixed in application, and earlier1/4 hydration/sign-in failures remain, without weakening originals or quotas. Initial lookup-copy-only4baa improves selected guidance. Genuine Next route/root failures now have16 native observations and four fresh GET recoveries on11b11ad, with unchanged source and cleaned owned servers. Native screenshot CSP injection is diagnosed separately without weakening security. Localcf2a preserves validated sign-in returns across31 generic links/30 screens and clears denied saved confirmations.43c9 clears denied loaded mappings/directory/false-empty state. Sixteen focused units, build/types/lint pass. Both complete fixed journeys pass in retained2/4 (category startup overlapped a build); both complete category journeys then pass targeted2/2 after build completion. Separate18-artifact scopes retain real MFA returns, source/audit conservation and cleanup; no combined4/4 or full state/device acceptance follows. Expense accounting denial now removes the entire Expenses workspace through an explicit callback to its existing access state. Original posting references remain untouched. Service Back moves above both columns, keeping desktop profile/list tops aligned; Return remains available at desktop and phone sizes. Original production-route expense/service journeys pass16/16 on frozen dbde358 in Chromium/WebKit with no skips/cancellations, unchanged source and owned cleanup. Build/types/lint pass. Published726 remains21/22 main jobs: all workflow prerequisites succeed, Foundation fails its separate original service layout check and stops later container/worker acceptance; commercial/expense pass. New local proof does not establish Linux release acceptance.",
+      "remainingWork": "Finish remaining alternate/outdated task-context review and verify the local service layout/navigation fix on fresh Linux source; require matching delivered/installed/owner/device acceptance.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -2145,7 +2225,7 @@
         },
         {
           "path": "src/app/schedule/screen.tsx",
-          "sha256": "b34996593ca27f629116ba78ba4efe698766e473f568edba17eb080046bbd790"
+          "sha256": "934836b26de0b96fd10ba4a38b10768cbd53b8387c1ddd90d08e9807859295b3"
         },
         {
           "path": "src/app/schedule/page.tsx",
@@ -2161,7 +2241,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "14027cddf205d04c992ad5b7116cb092426c601f541ae187b76832767c10c946"
+          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -2201,7 +2281,7 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "53f7919a7703a1bbb2bffd838f4902036b7c57731097f019c6b19e1809a92c47"
+          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
         },
         {
           "path": "src/app/schedule/back-to-saved-job.tsx",
@@ -2269,15 +2349,15 @@
         },
         {
           "path": "src/app/addresses/addresses.tsx",
-          "sha256": "fb10fabdfdfaa20d03f3bb97599a30fb4fc4635f7949d69048a416824a1cf37f"
+          "sha256": "34bf7cd0619c3cfa2c0559d09176a081dbb21b4f6e4dc3bee72b1d9828579ef3"
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "c2fcbd32705ac3bd3b40890c0af1a6a160ea8b068d98b04cafa7994082b1fb83"
+          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
-          "sha256": "e3b46729545331a0cdac3119ae1ae667fef5bf92a5533ee1b13cc0ca1b78e78d"
+          "sha256": "9cf8edf3a7cadf21aa523937198b48804edfe42fe71403caf899bea1cb9d62bb"
         },
         {
           "path": "src/app/leads/leads.tsx",
@@ -2305,7 +2385,47 @@
         },
         {
           "path": "planning/MAPPING_RETURN_AND_SCREEN_RECOVERY.md",
-          "sha256": "30c8d2db24448332e203d065e9808e717cecaadd6030745b307c1645f58c6fcc"
+          "sha256": "d0e9159730e61b197d80aa3abc8185282698ea48883c597af2dad90df2d86c6b"
+        },
+        {
+          "path": "src/app/sign-in-link.tsx",
+          "sha256": "546eab45c9db04610c3057f2800ab0e31ae24226c218fe4a32e034e8730771c2"
+        },
+        {
+          "path": "src/client/sign-in-navigation.ts",
+          "sha256": "e3db92360d876a25cca8b6ddadf7e3233af065a86e16116a789b3fa43dbc5fcd"
+        },
+        {
+          "path": "tests/unit/sign-in-navigation.test.ts",
+          "sha256": "bf69ed4712424e5d046fc168d009194929412ceb7ae2982a6f834faab0415de2"
+        },
+        {
+          "path": "tests/unit/workspace-recovery.test.ts",
+          "sha256": "2660d7fddc15fe1bb36ac2c28f823006c5d47e5d4bb81e23b788a8e1ec292cfa"
+        },
+        {
+          "path": "tests/support/mapping-navigation-review.mjs",
+          "sha256": "df05cb4809dff326b7d90e29e7099d5e47fa92906490f694599b67c9f55e717f"
+        },
+        {
+          "path": "planning/EXPENSE_SESSION_AND_SERVICE_RETURN_REVIEW.md",
+          "sha256": "ca66ab2bdd35e00c3b5b3cfc74eee6728e9b6014e295ebed86a74997f718df4a"
+        },
+        {
+          "path": "src/app/expenses/same-day-expense.tsx",
+          "sha256": "ec320cc23f64bc23712567ee8dae5cfff52ea05e3984d40f3e01ac81923aa2e7"
+        },
+        {
+          "path": "src/app/expenses/expenses.tsx",
+          "sha256": "e39b7ae7ac39420a521a68935fc2658b8ee0645cd112b81cd126d11c01234f02"
+        },
+        {
+          "path": "tests/integration/finance-expense-posting-browser.test.mjs",
+          "sha256": "8ac8feaf75dc402b9e73b58b1d1375adc9ebaaead46d8322152b8c9f61775a9c"
+        },
+        {
+          "path": "tests/integration/service-editor-browser.test.mjs",
+          "sha256": "abc0454067c6c3a138336f0c7cbe6a7852d4b81efa4365839f150b2c615209a2"
         }
       ],
       "verification": {
@@ -2329,7 +2449,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "778a0e5f11e1d15c40c581cfd1746eefdd2192bff4aeacd130f8fb5e044ba9e1"
+          "sha256": "ad8e21b3efc8b19a903e19242ab1faa4fe92e0a384e460c6c0bf28cf9db98516"
         }
       ],
       "verification": {
@@ -2357,7 +2477,7 @@
         },
         {
           "path": "src/app/sign-in/page.tsx",
-          "sha256": "fbb3c22c7c6e12ed6d954901b032876726cc73584af3502873dd86f82d2b1468"
+          "sha256": "f17c0218bf5fe3838b88de0465b405213dc6689956f4553a5e90e4d19331279f"
         },
         {
           "path": "src/app/workspace-design.css",
@@ -2469,7 +2589,7 @@
       "evidence": [
         {
           "path": "src/app/appointment-holds/screen.tsx",
-          "sha256": "d49d9509dace99c8758dc12170d6980904b92a082912fd13c7f8bafc0928d1a3"
+          "sha256": "d01fa25a39196c5baab2853e9a21f006b88b3612e0ef6b1374244e12cbe4299e"
         },
         {
           "path": "planning/PROPOSAL_DIRECTORY_DESIGN.md",
@@ -2529,7 +2649,7 @@
       "evidence": [
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "53f7919a7703a1bbb2bffd838f4902036b7c57731097f019c6b19e1809a92c47"
+          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
@@ -2537,7 +2657,7 @@
         },
         {
           "path": "src/app/globals.css",
-          "sha256": "674d60b6c63e6b26726268f0478224a0cb9f24a0a1633a7d5c6d2c4cd91776d3"
+          "sha256": "d39acdc9c970d77a9459b47639632332a231bcbf971844717fb2ebeb892c1f9e"
         },
         {
           "path": "tests/integration/review-browser.test.mjs",
@@ -2617,7 +2737,7 @@
         },
         {
           "path": "src/app/expenses/expense-editor.tsx",
-          "sha256": "6627191dc0785ba7e90ac470100bcf8010416a03a20e9ce92ec3b50e011d89c8"
+          "sha256": "bac99781d43881e18639b3ca4d0dff3fbf4cd1a38d5602f66d2cc04263bee131"
         },
         {
           "path": "src/app/expenses/receipt-document-viewer.tsx",
@@ -2641,7 +2761,7 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "86cc526e346dda01731360487caeaf6bc1fc95f45791cf26acb8187a550e7f1d"
+          "sha256": "8ac8feaf75dc402b9e73b58b1d1375adc9ebaaead46d8322152b8c9f61775a9c"
         },
         {
           "path": "tests/integration/owner-expenses-layout.test.mjs",
@@ -2717,7 +2837,7 @@
       "evidence": [
         {
           "path": "src/app/lead-sources/sources.tsx",
-          "sha256": "e3b46729545331a0cdac3119ae1ae667fef5bf92a5533ee1b13cc0ca1b78e78d"
+          "sha256": "9cf8edf3a7cadf21aa523937198b48804edfe42fe71403caf899bea1cb9d62bb"
         },
         {
           "path": "planning/LEAD_SOURCE_HISTORY_DESIGN.md",
@@ -2893,7 +3013,7 @@
         },
         {
           "path": "src/app/schedule/screen.tsx",
-          "sha256": "b34996593ca27f629116ba78ba4efe698766e473f568edba17eb080046bbd790"
+          "sha256": "934836b26de0b96fd10ba4a38b10768cbd53b8387c1ddd90d08e9807859295b3"
         },
         {
           "path": "tests/support/saved-job-layout.mjs",
@@ -2925,7 +3045,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/change/change.tsx",
-          "sha256": "f95134610ed6f62c734867b8260b0686505c26b646e3af93658dd163232b9af3"
+          "sha256": "e88f1c0d59fc2c7976ada7937307af0d6cabc32c95f215230f35c8b1f4d63dcd"
         },
         {
           "path": "planning/APPOINTMENT_COMPARISON_DESIGN.md",
@@ -2961,7 +3081,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/mileage/screen.tsx",
-          "sha256": "24df0e059b7e197dd4e6969ad18e794a7264c87b82f461595142ee9d2fbb3151"
+          "sha256": "e51ec9e19e1beb83794118d8e6483b0649e859aaf27512984ef09adcb1a081b5"
         },
         {
           "path": "planning/MILEAGE_JOB_CONTEXT_DESIGN.md",
@@ -3001,7 +3121,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/modes/screen.tsx",
-          "sha256": "d137d147aa458bcaa58017c96b439ad7cdc53a5e5739bf8927d62b7cdeb227a8"
+          "sha256": "d9b7d8cf1816fa363bca33937d741a089822fc6d018c3a9dbe2041175b0a8232"
         },
         {
           "path": "planning/ARRANGEMENT_COMPARISON_DESIGN.md",
@@ -3025,7 +3145,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/new/booking.tsx",
-          "sha256": "109446633710493e9cfc0b91154426241ca7d3f34894aa78abeaf11f2afe9bc4"
+          "sha256": "179f593ba160b1e5f3faaff4690bbbc650b08fc47f1261848de40dc6c7a5e25b"
         },
         {
           "path": "planning/BOOKING_STEP_CONTEXT_DESIGN.md",
@@ -3085,7 +3205,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/travel/screen.tsx",
-          "sha256": "91e305b8182ab8b449aef2a2463391d7139dc300a41fe01e22b5991105a8d0f8"
+          "sha256": "898b101b639f83121a445af2769d3600bba16f0bdec6c96c9bd50871ae3e5c5a"
         },
         {
           "path": "planning/TRAVEL_HISTORY_DESIGN.md",
@@ -3113,7 +3233,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/work/work.tsx",
-          "sha256": "e7cb11fe024673af22680f77a6d49270d2a994aee21f72bc4d690dedbc3845f2"
+          "sha256": "bf880c5cce5303cd3e7fe5faeaacf30497a1f1da41bd188b6d91108c7a686b58"
         },
         {
           "path": "planning/ACTIVE_WORK_STRIP_DESIGN.md",
@@ -3173,7 +3293,7 @@
         },
         {
           "path": "src/app/schedule/work/work.tsx",
-          "sha256": "e7cb11fe024673af22680f77a6d49270d2a994aee21f72bc4d690dedbc3845f2"
+          "sha256": "bf880c5cce5303cd3e7fe5faeaacf30497a1f1da41bd188b6d91108c7a686b58"
         },
         {
           "path": "src/app/schedule/work/visit-header.tsx",
@@ -3281,7 +3401,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/work/time/screen.tsx",
-          "sha256": "76ce0d34cc4d0fcb9bf7aa4f099903e5663e0ab1d52a14befe914cd4776c19dd"
+          "sha256": "0711ebdb709919206b9872e23447b22bf94ab5026032c5872e9de9368d3963ff"
         },
         {
           "path": "planning/WORK_TIME_HISTORY_DESIGN.md",
@@ -3309,7 +3429,7 @@
       "evidence": [
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "c2fcbd32705ac3bd3b40890c0af1a6a160ea8b068d98b04cafa7994082b1fb83"
+          "sha256": "cc40326d6f2b431eae9a31fbdde17d858f423884d599f9cdea07a2609bdc5ad7"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
@@ -3389,15 +3509,15 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "93a0cf8d939898fafd58d4524c75b3af1e26189f37996dd4772ba0ffb0d3fc29"
+          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
-          "sha256": "21987583d72dd90dcf6594a7f41f8f8db7f4a810a2e586231dc44b27c7956259"
+          "sha256": "df49e4b1455cfc26eccdcd3057b15e34ab27090b0d9f98d28f9471b6f44ba944"
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "2282547120dbb785104a794ae15f5ac617a3aba426a9f94f9b98610f0677cc81"
+          "sha256": "4b53598aa792013958f340140bcf4a34a6673fff7be16d53a62158ea6a130bae"
         },
         {
           "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
@@ -3421,7 +3541,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
-          "sha256": "21987583d72dd90dcf6594a7f41f8f8db7f4a810a2e586231dc44b27c7956259"
+          "sha256": "df49e4b1455cfc26eccdcd3057b15e34ab27090b0d9f98d28f9471b6f44ba944"
         },
         {
           "path": "planning/MONEY_CHANNEL_DIRECTORY_DESIGN.md",
@@ -3437,15 +3557,15 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "93a0cf8d939898fafd58d4524c75b3af1e26189f37996dd4772ba0ffb0d3fc29"
+          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
-          "sha256": "21987583d72dd90dcf6594a7f41f8f8db7f4a810a2e586231dc44b27c7956259"
+          "sha256": "df49e4b1455cfc26eccdcd3057b15e34ab27090b0d9f98d28f9471b6f44ba944"
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "2282547120dbb785104a794ae15f5ac617a3aba426a9f94f9b98610f0677cc81"
+          "sha256": "4b53598aa792013958f340140bcf4a34a6673fff7be16d53a62158ea6a130bae"
         },
         {
           "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
@@ -3469,7 +3589,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/screen.tsx",
-          "sha256": "aaf871bf459aa091df1de8ccd82d355564f773f9f74933bec3d20afcb9c824a8"
+          "sha256": "def1da8627762d1f1b00141684a7d303ede1818988d4b03c598b8059352f769d"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
@@ -3493,7 +3613,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/screen.tsx",
-          "sha256": "aaf871bf459aa091df1de8ccd82d355564f773f9f74933bec3d20afcb9c824a8"
+          "sha256": "def1da8627762d1f1b00141684a7d303ede1818988d4b03c598b8059352f769d"
         },
         {
           "path": "planning/CATEGORY_MAPPING_SELECTION_DESIGN.md",
@@ -3517,7 +3637,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "2282547120dbb785104a794ae15f5ac617a3aba426a9f94f9b98610f0677cc81"
+          "sha256": "4b53598aa792013958f340140bcf4a34a6673fff7be16d53a62158ea6a130bae"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
@@ -3537,7 +3657,7 @@
         },
         {
           "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
-          "sha256": "39559371b0faa4fc488d5b7fb6beaffe0aba2d01d9908a806340b77a0be0a507"
+          "sha256": "f168280a2b6f81ce24f24f748eb276b167603d3c29f4f04c7e461f0f6d9e55b2"
         },
         {
           "path": "tests/support/mapping-workbench.mjs",
@@ -3557,15 +3677,15 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "93a0cf8d939898fafd58d4524c75b3af1e26189f37996dd4772ba0ffb0d3fc29"
+          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
-          "sha256": "21987583d72dd90dcf6594a7f41f8f8db7f4a810a2e586231dc44b27c7956259"
+          "sha256": "df49e4b1455cfc26eccdcd3057b15e34ab27090b0d9f98d28f9471b6f44ba944"
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "2282547120dbb785104a794ae15f5ac617a3aba426a9f94f9b98610f0677cc81"
+          "sha256": "4b53598aa792013958f340140bcf4a34a6673fff7be16d53a62158ea6a130bae"
         }
       ],
       "verification": {
@@ -3585,7 +3705,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "2282547120dbb785104a794ae15f5ac617a3aba426a9f94f9b98610f0677cc81"
+          "sha256": "4b53598aa792013958f340140bcf4a34a6673fff7be16d53a62158ea6a130bae"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
@@ -3601,15 +3721,15 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "93a0cf8d939898fafd58d4524c75b3af1e26189f37996dd4772ba0ffb0d3fc29"
+          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
-          "sha256": "21987583d72dd90dcf6594a7f41f8f8db7f4a810a2e586231dc44b27c7956259"
+          "sha256": "df49e4b1455cfc26eccdcd3057b15e34ab27090b0d9f98d28f9471b6f44ba944"
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
-          "sha256": "2282547120dbb785104a794ae15f5ac617a3aba426a9f94f9b98610f0677cc81"
+          "sha256": "4b53598aa792013958f340140bcf4a34a6673fff7be16d53a62158ea6a130bae"
         }
       ],
       "verification": {
@@ -3629,7 +3749,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/tax/screen.tsx",
-          "sha256": "cb937fa3bd91ce1dace3c128670452c329de495ee20eb5685ba2ab1c087439a5"
+          "sha256": "c7841d17287e77661b35a7c0f280ea3b983ffaa1d3fdd179f3a910f9ca9450ad"
         },
         {
           "path": "planning/TAX_PROFILE_WORKBENCH_DESIGN.md",
@@ -3681,7 +3801,7 @@
       "evidence": [
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "14027cddf205d04c992ad5b7116cb092426c601f541ae187b76832767c10c946"
+          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
@@ -3725,7 +3845,7 @@
       "evidence": [
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "53f7919a7703a1bbb2bffd838f4902036b7c57731097f019c6b19e1809a92c47"
+          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
         },
         {
           "path": "planning/CUSTOMER_PROFILE_IDENTITY_REFINEMENT.md",
@@ -3757,7 +3877,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/screen.tsx",
-          "sha256": "b34996593ca27f629116ba78ba4efe698766e473f568edba17eb080046bbd790"
+          "sha256": "934836b26de0b96fd10ba4a38b10768cbd53b8387c1ddd90d08e9807859295b3"
         },
         {
           "path": "planning/PLANNER_POPULATED_REVIEW.md",
@@ -3941,7 +4061,7 @@
       "evidence": [
         {
           "path": "src/app/schedule/work/time/screen.tsx",
-          "sha256": "76ce0d34cc4d0fcb9bf7aa4f099903e5663e0ab1d52a14befe914cd4776c19dd"
+          "sha256": "0711ebdb709919206b9872e23447b22bf94ab5026032c5872e9de9368d3963ff"
         },
         {
           "path": "planning/WORK_TIME_HISTORY_DESIGN.md",
@@ -4097,7 +4217,7 @@
         },
         {
           "path": "src/app/schedule/work/invoice-outstanding.tsx",
-          "sha256": "5350af3dfe15cfbbae7d9816c56eae13fffc622735d3ce00cf52d1d108fa1485"
+          "sha256": "566257ecfc860263905977c173d43363f25f00ca2a02e90368a0f40d87771ab0"
         },
         {
           "path": "src/app/schedule/work/invoice-drafts.tsx",
@@ -4105,7 +4225,7 @@
         },
         {
           "path": "src/app/globals.css",
-          "sha256": "674d60b6c63e6b26726268f0478224a0cb9f24a0a1633a7d5c6d2c4cd91776d3"
+          "sha256": "d39acdc9c970d77a9459b47639632332a231bcbf971844717fb2ebeb892c1f9e"
         },
         {
           "path": "supabase/migrations/20270115180000_invoice_outstanding.sql",

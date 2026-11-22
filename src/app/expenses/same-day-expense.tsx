@@ -1,6 +1,8 @@
 'use client';
 
-import {useEffect,useId,useRef,useState} from 'react';
+import {useCallback,useEffect,useId,useRef,useState} from 'react';
+import {AuthenticationError} from '../../client/authentication';
+import {SignInLink} from '../sign-in-link';
 import {expenseDollars} from '../../bookkeeping/expenses/expense-contract';
 import {parseSameDayExpenseInput} from '../../bookkeeping/expenses/same-day-expense-contract';
 import {quoteDollarsInput} from '../../commercial/quote-pricing';
@@ -24,7 +26,7 @@ const refusal:Readonly<Record<string,string>>={
   ACCOUNTING_OPEN_PERIOD_REQUIRED:'The payment date needs an open accounting period.',
 };
 
-export function SameDayExpense({businessId,expenseId,onPosted}:{businessId:string;expenseId:string;onPosted:(id:string)=>void}){
+export function SameDayExpense({businessId,expenseId,onPosted,onAccessDenied}:{businessId:string;expenseId:string;onPosted:(id:string)=>void;onAccessDenied?:()=>void}){
   const heading=useId();
   const [options,setOptions]=useState<Options|null>(null);
   const [draft,setDraft]=useState(empty);
@@ -35,14 +37,18 @@ export function SameDayExpense({businessId,expenseId,onPosted}:{businessId:strin
   const [canWrite,setCanWrite]=useState(false);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [signedOut,setSignedOut]=useState(false);
   const active=useRef<AbortController|null>(null);
   const status=useRef<HTMLParagraphElement|null>(null);
 
+  const clearPrivate=useCallback(()=>{
+    setOptions(null);setDraft(empty);setReceipt(null);setPending(false);setRetirable(false);
+    setRetireReason('');setCanWrite(false);setBusy(false);setMessage('');setSignedOut(false);
+  },[]);
   useEffect(()=>{
     const clear=()=>{
       active.current?.abort();active.current=null;
-      setOptions(null);setDraft(empty);setReceipt(null);setPending(false);setRetirable(false);
-      setRetireReason('');setCanWrite(false);setBusy(false);setMessage('');
+      clearPrivate();
     };
     const hidden=()=>{if(document.visibilityState==='hidden')clear();};
     window.addEventListener('pagehide',clear);
@@ -52,7 +58,7 @@ export function SameDayExpense({businessId,expenseId,onPosted}:{businessId:strin
       window.removeEventListener('pagehide',clear);
       document.removeEventListener('visibilitychange',hidden);
     };
-  },[]);
+  },[clearPrivate]);
 
   const patch=(change:Partial<typeof empty>)=>setDraft(value=>({...value,...change}));
   function showReceipt(saved:Receipt){
@@ -67,11 +73,18 @@ export function SameDayExpense({businessId,expenseId,onPosted}:{businessId:strin
       const context=await financeAccounts.context(controller.signal);
       if(controller.signal.aborted)return;
       if(!context.sameDayExpenses||context.businessId!==businessId){
+        clearPrivate();
         setMessage('Expense posting is unavailable in this workspace.');return;
       }
+      setSignedOut(false);
       setCanWrite(context.writeState==='ready');
       await action(context,controller.signal);
-    }catch{if(!controller.signal.aborted)setMessage(failure);}
+    }catch(error){if(!controller.signal.aborted){
+      if(error instanceof AuthenticationError&&error.kind==='denied'){
+        clearPrivate();setSignedOut(true);setMessage('Sign in again to review this expense accounting entry.');
+        onAccessDenied?.();
+      }else setMessage(failure);
+    }}
     finally{if(active.current===controller){active.current=null;setBusy(false);status.current?.focus();}}
   }
   function load(reason?:string){
@@ -161,6 +174,7 @@ export function SameDayExpense({businessId,expenseId,onPosted}:{businessId:strin
       {receipt&&<span className="expense-posting-state">Posted</span>}
     </div>
     <p className="expense-posting-status" ref={status} tabIndex={-1} role="status">{message}</p>
+    {signedOut&&<SignInLink className="record-return-link" returnTo="expenses">Sign in again</SignInLink>}
     {!receipt&&<button type="button" className={pending?undefined:'secondary'} disabled={busy} onClick={()=>load()}>
       {pending?'Check original posting':options?'Reload review':'Load accounting review'}</button>}
     {pending&&retirable&&<form onSubmit={event=>{event.preventDefault();load(retireReason.trim());}}>

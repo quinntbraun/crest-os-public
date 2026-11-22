@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../sign-in-link";
+
 import {useFinancialNotice} from './use-financial-notice';
 import {FinanceHistoryComparison,previousLoadedFinanceVersion} from './history-comparison';
 import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from './history-recording';
@@ -277,7 +279,7 @@ export function FinanceAccountsScreen(){
   {loading&&!workspace&&!editor&&!signedOut&&<div className={styles.accountLoading} aria-hidden="true">
    <span className="workspace-skeleton"/><span className="workspace-skeleton"/><span className="workspace-skeleton"/>
   </div>}
-  {signedOut&&<a href="/sign-in">Sign in again</a>}
+  {signedOut&&<SignInLink returnTo="accounting">Sign in again</SignInLink>}
   {workspace&&!editor&&(context?.trialBalance||hasSetup)&&<nav className={styles.sectionLinks} aria-label="Accounting sections">
    {context?.trialBalance&&<button type="button" className="secondary" aria-current={activeArea==='reports'?'true':undefined} onClick={()=>selectArea('reports')}>Reports</button>}
    <button type="button" className="secondary" aria-current={activeArea==='accounts'?'true':undefined} onClick={()=>selectArea('accounts')}>Accounts</button>

@@ -3,6 +3,8 @@
 import {useEffect,useRef} from 'react';
 import Image from 'next/image';
 
+export type WorkspaceRecoveryBoundaryProps={error:Error&{digest?:string};reset:()=>void};
+
 export function WorkspaceRecovery({reset}:{reset:()=>void}){
  const heading=useRef<HTMLHeadingElement>(null);
  useEffect(()=>{heading.current?.focus();},[]);

@@ -285,7 +285,7 @@ for(const engine of [chromium,webkit]){
    assert.deepEqual(await mappingBusinessSource(fixture),beforePaging,'paging and CSV do not change approved history or post the proposal');
    await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
    await expect(embedded).toHaveCount(0);await expect(selectPurpose).toHaveValue('');
-   await reviewMappingNavigation(page,fixture,engine.name(),false);
+   await reviewMappingNavigation(page,fixture,engine.name(),false,reference);
   }finally{
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{

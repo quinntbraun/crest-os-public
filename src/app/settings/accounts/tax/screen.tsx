@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../../sign-in-link";
+
 import {FinanceHistoryComparison,previousLoadedFinanceVersion} from '../history-comparison';
 import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from '../history-recording';
 
@@ -157,7 +159,7 @@ export function FinanceTaxProfilesScreen(){
  const applicabilityLabel=applicability==='tip'?'Tip':servicePage?.services.find(({service})=>service.id===serviceId)?.content.name??'Service';
  return <section className={`${styles.workspace} ${styles.taxWorkspace}`} aria-label="Tax profile review" aria-busy={busy}>
   <p role="status" ref={status} tabIndex={-1}>{message}</p>
-  {signedOut&&<a href="/sign-in">Sign in again</a>}
+  {signedOut&&<SignInLink returnTo="tax-profiles">Sign in again</SignInLink>}
   <div className={styles.taxWorkbench}>
   <div className={styles.taxMain}>
   <section className={styles.taxSelection} aria-labelledby="tax-selection-heading">

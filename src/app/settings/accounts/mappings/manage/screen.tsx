@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../../../sign-in-link";
+
 import {useFinancialNotice} from '../../use-financial-notice';
 import {useCallback,useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import type {FormEvent} from 'react';
@@ -81,7 +83,7 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
   catch(error){
    if(signal.aborted)return;
    const denied=error instanceof AuthenticationError&&error.kind==='denied';
-   if(denied){setSignedOut(true);setWorkspace(null);setDraft(null);original.current=null;}
+   if(denied){setSignedOut(true);setWorkspace(null);setDraft(null);setResult(null);original.current=null;}
    setMessage(denied?'Sign in again to review mapping approvals.':failure);
   }finally{
    if(active.current===controller){active.current=null;setBusy(false);status.current?.focus();}
@@ -262,7 +264,7 @@ export function FinanceMappingEditor({categories=false,initialPurpose=''}:{categ
 
  return <section className={styles.workspace+' mapping-approval-workspace'} aria-label="Mapping approvals" aria-busy={busy}>
   <p ref={status} tabIndex={-1} role="status" className={styles.notice} data-confirmed={saveConfirmed&&!busy}>{message}</p>
-  {signedOut&&<a href="/sign-in">Sign in again</a>}
+  {signedOut&&<SignInLink returnTo={categories?'category-approvals':'mapping-approvals'}>Sign in again</SignInLink>}
   {result&&<section className="mapping-summary-card" aria-label="Saved mapping change">
    <h2>{result.closed?'Mapping closure recorded':'Mapping approval recorded'}</h2>
    <p>{financeMappingLabels[result.purpose]} · Version {result.version} · Effective {dateLabel(result.effectiveFrom)}</p>

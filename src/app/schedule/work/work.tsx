@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../sign-in-link";
+
 import {ScheduleLink} from '../navigation';
 
 import {TaskPrerequisite} from '../../task-prerequisite';
@@ -98,7 +100,7 @@ export function FieldSessionScreen({jobId,mode='work'}:{jobId:string;mode?:Field
  const quietLoaded=mode==='work'&&view.phase==='ready'&&view.message==='Saved job loaded. Record what is happening now.';
  return <section aria-label={completing?'Job completion':interrupting?'Mobile trip interruption':cancelling?pickup?'Pickup job cancellation':dropoff?'Drop-Off job cancellation':'Mobile job cancellation':pickup?'Pickup work status':dropoff?'Drop-Off work status':'Mobile work status'} aria-busy={view.busy}><p className={view.selectionNeeded?'visually-hidden':'job-change-status'+(quietLoaded?' visually-hidden':'')} ref={status} role="status" tabIndex={-1}>{view.message}</p>
   {view.phase==='loading'&&<div className="workspace-skeleton appointment-change-loading" aria-hidden="true"/>}
-  {view.phase==='signed-out'&&<ScheduleLink className="primary-action" href="/sign-in">{completing?'Sign in to review completion':'Sign in to review work status'}</ScheduleLink>}
+  {view.phase==='signed-out'&&<SignInLink className="primary-action" returnTo="schedule">{completing?'Sign in to review completion':'Sign in to review work status'}</SignInLink>}
   {mode==='work'&&view.phase==='ready'&&view.resources&&view.context&&workAction&&<WorkForm initialAction={workAction} key={view.resources.head.job.id+':'+view.resources.head.job.version} view={view} more={()=>action('moreVehicles')} save={async body=>{const controller=current.current;if(!controller)return;await controller.save(body);if(current.current===controller)status.current?.focus();}}/>}
   {interrupting&&view.phase==='ready'&&view.resources&&view.context&&view.openTrip&&
    <TripInterruptionForm key={view.openTrip.legVersionId} view={view} save={async draft=>{

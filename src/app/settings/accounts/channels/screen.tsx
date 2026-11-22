@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../../../sign-in-link";
+
 import {useFinancialNotice} from '../use-financial-notice';
 import {FinanceHistoryComparison,previousLoadedFinanceVersion} from '../history-comparison';
 import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from '../history-recording';
@@ -302,7 +304,7 @@ export function MoneyChannelsScreen(){
   </section>;
  return <section className={styles.workspace} aria-label="Money channel reviews" aria-busy={busy}>
   <p role="status" className={styles.notice} data-confirmed={saveConfirmed&&!busy} tabIndex={-1} ref={status}>{message}</p>
-  {signedOut&&<a href="/sign-in">Sign in again</a>}
+  {signedOut&&<SignInLink returnTo="money-channels">Sign in again</SignInLink>}
   {!editor&&!pending&&<>
    <div className={styles.actions}>
     <button type="button" className={workspace?'secondary':undefined} disabled={disabled} onClick={()=>load()}>{workspace?'Reload channels':'Load channels'}</button>

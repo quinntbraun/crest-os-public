@@ -1,4 +1,6 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
 import {DirectoryLoading} from '../directory-loading';
 import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
 import type {DirectoryOrigin} from '../../client/directory-origin';
@@ -129,7 +131,7 @@ export function ServiceScreen(){
  return <section aria-label="Service directory" aria-busy={view.busy}>
   <p role="status" aria-label="Service status" className="customer-directory-status">{view.message}</p>
   {view.phase==='loading'&&<DirectoryLoading/>}
-  {view.phase==='unavailable'&&<p><a href="/sign-in">Sign in to view services</a></p>}
+  {view.phase==='unavailable'&&<p><SignInLink returnTo="services">Sign in to view services</SignInLink></p>}
   {view.phase!=='ready'&&view.phase!=='loading'&&<div className="actions">
    {view.phase==='pending'?<>
     <button type="button" disabled={view.busy} onClick={()=>void current.current?.check()}>Check original save</button>
@@ -138,6 +140,7 @@ export function ServiceScreen(){
     {view.reference&&<p className="field-help">Original operation <span className="record-reference">{view.reference}</span></p>}
    </>:<button type="button" disabled={view.busy} onClick={reload}>Load current services</button>}
   </div>}
+  {view.phase==='ready'&&draft&&showRecord&&<button type="button" className="secondary service-mobile-control service-catalog-back" onClick={backToCatalog}>Back to services</button>}
   {view.phase==='ready'&&<div className="service-layout" data-mobile-record={showRecord&&draft!==null}>
    <section className="service-directory-panel home-panel" aria-labelledby="service-directory-heading">
     <h2 id="service-directory-heading">Saved services</h2>
@@ -168,7 +171,6 @@ export function ServiceScreen(){
    </section>
    {!draft&&!view.busy&&<div className="service-record directory-introduction-slot"><DirectoryIntroduction kind="service" onSearch={()=>searchInput.current?.focus()}/></div>}
    {draft&&<div className="service-record">
-    <button type="button" className="secondary service-mobile-control" onClick={backToCatalog}>Back to services</button>
     {selected&&<header className="customer-record-header service-profile">
      <div className="service-profile-title">
       <div>
