@@ -312,6 +312,11 @@ jobs:
             .local/review/task-entry-*.png
             .local/review/task-entry-observations-*.json
             .local/review/finance-*.png
+            .local/review/deeper-return-*.png
+            .local/review/deeper-return-*.json
+            .local/review/task-priority-*.png
+            .local/review/task-priority-*.json
+            .local/review/work-time-*.png
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error

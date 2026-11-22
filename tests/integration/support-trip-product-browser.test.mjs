@@ -5,6 +5,7 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {strFromU8,unzipSync} from 'fflate';
 import {gateEditorFocusFrames,releaseEditorFocusFrames} from '../support/editor-focus-frame.mjs';
+import {reviewTaskActionPriority} from '../support/task-action-priority.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
 for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' standalone travel and recovered save',{timeout:240000},async()=>{
@@ -70,6 +71,23 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   const notes='  Synthetic trip note  ';
   await start.getByLabel('Notes (optional)',{exact:true}).fill(notes);
   const startButton=start.getByRole('button',{name:'Start a trip',exact:true});
+  const closeStart=active.getByRole('button',{name:'Close trip form',exact:true}),beforeClose=fixture.requests.length;
+  await closeStart.focus();page.once('dialog',dialog=>dialog.dismiss());await closeStart.press('Enter');
+  await expect(closeStart).toBeFocused();await expect(start).toBeVisible();
+  await expect(start.getByLabel('Purpose',{exact:true})).toHaveValue('supply');
+  await expect(start.getByLabel('Vehicle you are driving',{exact:true})).toHaveValue(fixture.fieldVehicleId);
+  await expect(start.getByLabel('Leaving from',{exact:true})).toHaveValue('Synthetic equipment base');
+  await expect(start.getByLabel('Going to',{exact:true})).toHaveValue('Synthetic supply shop');
+  await expect(start.getByLabel('Notes (optional)',{exact:true})).toHaveValue(notes);
+  page.once('dialog',dialog=>dialog.accept());await closeStart.press('Enter');
+  await expect(start).toHaveCount(0);await expect(startAction).toBeFocused();
+  await startAction.press('Enter');
+  await expect(start.getByLabel('Going to',{exact:true})).toHaveValue('');
+  await expect(start.getByLabel('Notes (optional)',{exact:true})).toHaveValue('');
+  assert.equal(fixture.requests.length,beforeClose,'Declined and accepted draft closure never submit a trip');
+  await route(start,'supply','Synthetic equipment base','Synthetic supply shop');
+  await start.getByLabel('Notes (optional)',{exact:true}).fill(notes);
+  await reviewTaskActionPriority(page,fixture,name,'travel-start','details',startButton,'.travel-active');
   await startButton.focus();
   await page.keyboard.press('Enter');
   await expect(status).toHaveText('Trip saved.');
@@ -126,6 +144,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await correction.getByLabel('Reason for correction',{exact:true}).fill('Synthetic destination correction');
   const review=history.getByRole('region',{name:'Trip change review',exact:true});
   const reviewButton=correction.getByRole('button',{name:'Review trip',exact:true});
+  await reviewTaskActionPriority(page,fixture,name,'travel','details',reviewButton);
   await gateEditorFocusFrames(page,'Review trip');
   await reviewButton.click();
   await expect(review.getByRole('heading',{name:'Review trip',exact:true})).toBeFocused();
@@ -142,7 +161,16 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await expect(reviewButton).toBeFocused();
   await expect(correction.getByLabel('Going to',{exact:true})).toHaveValue('Synthetic corrected supply shop');
   await reviewButton.press('Enter');
+  await reviewTaskActionPriority(page,fixture,name,'travel','review',review.getByRole('button',{name:'Correct saved trip',exact:true}));
   await review.screenshot({path:'.local/review/travel-review-'+name+'.png',animations:'disabled'});
+  const beforeOtherTask=fixture.requests.length;
+  await startAction.click();await start.getByLabel('Notes (optional)',{exact:true}).fill('Synthetic unfinished next trip');
+  page.once('dialog',dialog=>dialog.dismiss());
+  await review.getByRole('button',{name:'Correct saved trip',exact:true}).click();
+  await expect(start.getByLabel('Notes (optional)',{exact:true})).toHaveValue('Synthetic unfinished next trip');
+  await expect(review).toContainText('Synthetic corrected supply shop');
+  assert.equal(fixture.requests.length,beforeOtherTask,'Declining another trip action preserves the new-trip draft without submitting');
+  page.once('dialog',dialog=>dialog.accept());
   await review.getByRole('button',{name:'Correct saved trip',exact:true}).click();
   await expect(status).toHaveText('Trip saved.');
   await expect(history.getByRole('heading',{name:'Saved trip history'})).toBeFocused();

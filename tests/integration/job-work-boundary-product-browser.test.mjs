@@ -5,6 +5,7 @@ import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {workTimeReplyDiagnostic,workTimeFailureDiagnostic} from '../support/work-time-diagnostic.mjs';
 import {gateEditorFocusFrames,releaseEditorFocusFrames} from '../support/editor-focus-frame.mjs';
+import {reviewTaskActionPriority} from '../support/task-action-priority.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
 const correctionRoute='**/api/business/scheduling/work-boundary-save';
@@ -89,6 +90,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(view.getByLabel('Corrected local time')).toHaveValue(localTime(corrected));
   assert.equal(fixture.requests.length,declineRequests,'Declining reload/export preserves the correction without a request');
   assert.deepEqual(await workFacts(fixture),beforeDecline);
+  await reviewTaskActionPriority(page,fixture,name,'work-time','details',interval.getByRole('button',{name:'Review correction',exact:true}));
   await gateEditorFocusFrames(page,'Review correction');
   await interval.getByRole('button',{name:'Review correction',exact:true}).click();
   await expect(review.getByRole('heading')).toBeFocused();
@@ -103,6 +105,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(interval.getByRole('button',{name:'Review correction',exact:true})).toBeFocused();
   await expect(interval.getByLabel('Correction reason')).toHaveValue(reason);
   await interval.getByRole('button',{name:'Review correction',exact:true}).press('Enter');
+  await reviewTaskActionPriority(page,fixture,name,'work-time','review',review.getByRole('button',{name:'Save work-time correction',exact:true}));
   await mkdir('.local/review',{recursive:true});
   for(const width of [360,390,768,1100,1440]){
    await page.setViewportSize({width,height:900});

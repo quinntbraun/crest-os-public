@@ -231,6 +231,7 @@ export function SupportTripScreen({initialTrip}:{initialTrip:{legId:string;depar
  const historyHeading=useRef<HTMLHeadingElement>(null),activeHeading=useRef<HTMLHeadingElement>(null);
  const recentHeading=useRef<HTMLHeadingElement>(null),tripOrigin=useRef<HTMLButtonElement|null>(null);
  const [dismissedVersion,setDismissedVersion]=useState<string|null>(null),[correctionDirty,setCorrectionDirty]=useState(false),[correctionRevision,setCorrectionRevision]=useState(0);
+ const [startDirty,setStartDirty]=useState(false);
  const tripFocus=useRef<{target:'history';legId:string}|{target:'recent'}|null>(null);
  const showingRecord=view.selected!==null&&dismissedVersion!==view.selected.legVersionId;
  useLayoutEffect(()=>{
@@ -243,10 +244,10 @@ export function SupportTripScreen({initialTrip}:{initialTrip:{legId:string;depar
   tripFocus.current=null;
  },[view.phase,view.busy,view.selected,showingRecord]);
  useEffect(()=>{
-  if(!correctionDirty)return;
+  if(!correctionDirty&&!startDirty)return;
   const warn=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};
   window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);
- },[correctionDirty]);
+ },[correctionDirty,startDirty]);
  const startHeading=useRef<HTMLHeadingElement>(null),startButton=useRef<HTMLButtonElement>(null);
  const [startRevision,setStartRevision]=useState<number|null>(null);
  const canStart=view.phase==='ready'&&view.canSave&&view.activeTrip===null;
@@ -268,7 +269,7 @@ export function SupportTripScreen({initialTrip}:{initialTrip:{legId:string;depar
    change:setView});
   controller.current=current;void current.load();
   const clearDownload=()=>{if(downloadUrl.current)URL.revokeObjectURL(downloadUrl.current);downloadUrl.current=null;};
-  const leave=()=>{current.suspend();clearDownload();setDownloadMessage(null);setStartRevision(null);setDismissedVersion(null);setCorrectionDirty(false);tripFocus.current=null;tripOrigin.current=null;};
+  const leave=()=>{current.suspend();clearDownload();setDownloadMessage(null);setStartRevision(null);setStartDirty(false);setDismissedVersion(null);setCorrectionDirty(false);tripFocus.current=null;tripOrigin.current=null;};
   const hidden=()=>{if(document.visibilityState==='hidden')leave();};
   const restored=(event:PageTransitionEvent)=>{if(event.persisted)leave();};
   window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
@@ -281,12 +282,21 @@ export function SupportTripScreen({initialTrip}:{initialTrip:{legId:string;depar
   if(!window.confirm('Discard the unsaved trip correction before continuing?'))return false;
   setCorrectionDirty(false);setCorrectionRevision(value=>value+1);return true;
  }
+ function discardStartTrip(){
+  if(!startDirty)return true;
+  if(!window.confirm('Discard the unsaved new trip before continuing?'))return false;
+  setStartDirty(false);setStartRevision(null);return true;
+ }
  function openHistory(legId:string,button:HTMLButtonElement){
   if(!discardCorrection())return;
   tripOrigin.current=button;tripFocus.current={target:'history',legId};setDismissedVersion(null);void controller.current?.history(legId);
  }
  function backToTrips(){if(!view.selected)return;tripFocus.current={target:'recent'};setDismissedVersion(view.selected.legVersionId);}
- const save=(body:SupportTripBody,legId?:string)=>{if(body.action!=='correct'&&!discardCorrection())return;void controller.current?.save(body,legId);};
+ const save=(body:SupportTripBody,legId?:string)=>{
+  if(body.action!=='correct'&&!discardCorrection())return;
+  if(body.action!=='depart'&&!discardStartTrip())return;
+  void controller.current?.save(body,legId);
+ };
  const moreVehicles=()=>void controller.current?.moreVehicles();
  const trip=view.activeTrip,selected=view.selected;
  async function downloadHistory(){
@@ -343,14 +353,15 @@ export function SupportTripScreen({initialTrip}:{initialTrip:{legId:string;depar
     </>:<>
      <div className="travel-start-heading">
       <h2>No standalone trip is in progress.</h2>
-      {canStart&&<button ref={startButton} type="button" aria-expanded={showStart} disabled={view.busy} onClick={()=>{
+      {canStart&&<button ref={startButton} type="button" className={showStart?'secondary':undefined} aria-expanded={showStart} disabled={view.busy} onClick={()=>{
+       if(showStart&&!discardStartTrip())return;
        setStartRevision(showStart?null:view.saveCount);
        if(showStart)startButton.current?.focus();
       }}>{showStart?'Close trip form':'Start a trip'}</button>}
      </div>
      {showStart&&<div className="travel-start-form">
       <h3 ref={startHeading} tabIndex={-1}>Trip details</h3>
-      <TripForm mode="depart" view={view} save={save} moreVehicles={moreVehicles}/>
+      <TripForm mode="depart" view={view} save={save} moreVehicles={moreVehicles} onDirtyChange={setStartDirty}/>
      </div>}
     </>}
    </section>

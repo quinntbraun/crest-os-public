@@ -36,7 +36,20 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   },fixture.bookingRequest),200);
   await page.goto(time);
   await expect(view.getByText('No work intervals have been recorded for this job.')).toBeVisible();
-  await page.goto(work);
+  const openWork=view.getByRole('link',{name:'Open work status',exact:true}),beforeEmpty=fixture.requests.length;
+  await expect(openWork).toHaveAttribute('href','/schedule/work?job='+job);
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [360,390,430,1440]){
+   await page.setViewportSize({width,height:900});await openWork.focus();
+   assert(await openWork.evaluate(node=>{const box=node.getBoundingClientRect(),x=box.x+box.width/2,y=box.y+box.height/2;return box.height>=44&&y>=0&&y<innerHeight&&node.contains(document.elementFromPoint(x,y));}));
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(row=>row.id),[]);
+   await page.screenshot({path:'.local/review/work-time-empty-'+name+'-'+width+'.png',fullPage:true});
+  }
+  assert.equal(fixture.requests.length,beforeEmpty,'Inspecting the empty work-time next step makes no request');
+  await page.setViewportSize({width:390,height:844});await openWork.click();
+  await expect(page.getByRole('heading',{name:'Work status',exact:true})).toBeVisible();
+  await expect(page).toHaveURL(work);
   await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?').fill('Synthetic arrival without trip');
   await page.getByRole('button',{name:'Start work without recorded travel'}).click();

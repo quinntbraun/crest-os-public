@@ -4,6 +4,7 @@ import {mkdir,readFile} from 'node:fs/promises';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {observeWorkReads} from '../support/work-read-diagnostic.mjs';
+import {reviewTaskActionPriority} from '../support/task-action-priority.mjs';
 import {strFromU8,unzipSync} from 'fflate';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
@@ -94,6 +95,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
    assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
    await page.screenshot({path:'.local/review/field-cancellation-'+name+'-'+width+'.png',fullPage:true});
   }
+  await reviewTaskActionPriority(page,f,name,'cancellation','details',reviewButton);
   const beforeReview=f.requests.length;await reviewButton.click();
   const review=page.getByRole('region',{name:'Review job cancellation',exact:true});
   await expect(review.getByRole('heading',{name:'Review cancellation',exact:true})).toBeFocused();
@@ -104,6 +106,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await expect(page.getByLabel('Cancellation reason',{exact:true})).toHaveValue(reason);
   await expect(page.getByLabel('Communication note (optional)',{exact:true})).toHaveValue(note);
   await reviewButton.click();assert.equal(submits,0);assert.equal(f.requests.length,beforeReview);
+  await reviewTaskActionPriority(page,f,name,'cancellation','review',save);
   for(const width of [320,360,390,768,1440,1920]){
    await page.setViewportSize({width,height:900});await page.evaluate(()=>window.scrollTo(0,0));
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));

@@ -221,7 +221,10 @@ export function WorkTimeScreen({jobId}:{jobId:string}){
       </div>
       <button type="button" className="secondary work-time-refresh" onClick={()=>reload()}>Refresh totals</button>
      </div>
-     {intervals.length===0?<p>No work intervals have been recorded for this job.</p>:
+     {intervals.length===0?<div className="work-time-empty"><p>No work intervals have been recorded for this job.</p>
+      <ScheduleLink className="primary-action" href={'/schedule/work?job='+encodeURIComponent(jobId)}>Open work status</ScheduleLink>
+      <p className="field-help">Review this job’s saved status and available actions.</p>
+     </div>:
       <dl className="schedule-work-totals">
        <div><dt>Active work</dt><dd>{duration(summary.observedActiveMicroseconds)}</dd></div>
        <div><dt>Paused</dt><dd>{duration(summary.observedPauseMicroseconds)}</dd></div>
