@@ -81,8 +81,9 @@ function receiptTipReference({template,purpose,paymentId,tipRealizationId}:{
     ?{paymentId,tipRealizationId,includedTax:purpose==='tip_tax'}:null;
 }
 
-export function TrialBalance({businessId}:{businessId:string}){
-  const [through,setThrough]=useState('');
+export function TrialBalance({businessId,initialThrough='',onThroughChange,onAccessDenied}:{businessId:string;
+  initialThrough?:string;onThroughChange?:(value:string)=>void;onAccessDenied?:()=>void}){
+  const [through,setThrough]=useState(initialThrough);
   const [balance,setBalance]=useState<Balance|null>(null);
   const [journal,setJournal]=useState<Journal|null>(null);
   const [account,setAccount]=useState('');
@@ -103,7 +104,7 @@ export function TrialBalance({businessId}:{businessId:string}){
   }
   function clear(){
     active.current?.abort();active.current=null;
-    setThrough('');setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setBusy(false);setMessage('');setSignedOut(false);
+    setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setBusy(false);setMessage('');setSignedOut(false);
   }
   useEffect(()=>{
     const hidden=()=>{if(document.visibilityState==='hidden')clear();};
@@ -130,6 +131,7 @@ export function TrialBalance({businessId}:{businessId:string}){
       setMessage(result.postedEventCount==='0'?'No supported entries have been posted through this date.':'Posted balances loaded.');
     }catch(error){if(!signal.aborted){
       const denied=error instanceof AuthenticationError&&error.kind==='denied';setSignedOut(denied);
+      if(denied)onAccessDenied?.();
       setMessage(denied?'Sign in again to review accounting balances.':'Crest could not load a verified trial balance. Check the date and connection, then try again.');
     }}
     finally{if(active.current===controller){active.current=null;setBusy(false);}}
@@ -160,6 +162,7 @@ export function TrialBalance({businessId}:{businessId:string}){
       setJournalMessage(result.rows.length?'Journal page loaded.':'No posted lines for this account and date.');
     }catch(error){if(!signal.aborted){
       if(error instanceof AuthenticationError&&error.kind==='denied'){
+        onAccessDenied?.();
         setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setSignedOut(true);setMessage('Sign in again to review accounting balances.');
       }else setJournalMessage('Crest could not load the journal page. Check your connection and load it again.');
     }}
@@ -260,7 +263,7 @@ export function TrialBalance({businessId}:{businessId:string}){
   return <details className="review-card" open onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
     <summary>Fictional trial balance</summary>
     <section className="trial-balance" aria-label="Fictional trial balance">
-      <p>Review posted balances by account. Opening balances and bank reconciliation are still pending.</p>
+      {!balance&&<p>Review posted balances by account. Opening balances and bank reconciliation are still pending.</p>}
       <ReportReadingSummary snapshot={balance}>{balance&&<FinancialReportHeader period={<>Trial balance · Through <time dateTime={balance.throughOn}>{balance.throughOn}</time></>}
           timeZone={balance.timeZone} observedAt={balance.observedAt} scopeLabel="Coverage incomplete"
           coverage="Recorded posted balances only. Opening balances and bank reconciliation are still pending."
@@ -268,7 +271,7 @@ export function TrialBalance({businessId}:{businessId:string}){
           action={<button type="button" className="secondary" onClick={download}>Download trial balance CSV</button>}/>}</ReportReadingSummary>
       <form onSubmit={event=>{event.preventDefault();void load();}}>
         <label>Through date (optional)<input type="date" value={through} disabled={busy}
-          onChange={event=>{setThrough(event.target.value);setBalance(null);setJournal(null);setJournalMessage('');setMessage('');}}/></label>
+          onChange={event=>{setThrough(event.target.value);onThroughChange?.(event.target.value);setBalance(null);setJournal(null);setJournalMessage('');setMessage('');}}/></label>
         <p className="field-help">Leave blank for today in the workspace time zone.</p>
         <button type="submit" className="secondary" disabled={busy}>Load trial balance</button>
       </form>

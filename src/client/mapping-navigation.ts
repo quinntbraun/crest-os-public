@@ -8,12 +8,16 @@ export function readMappingNavigation(input:Readonly<Record<string,unknown>>,cat
  const accepts=categories?expenseCategoryMappingPurpose:fixedFinanceMappingPurpose;
  return {purpose:accepts(input.purpose)?input.purpose:'',date:customerDate(input.lookupOn)?input.lookupOn:''};
 }
+export function readMappingAttention(input:Readonly<Record<string,unknown>>,categories:boolean):boolean{
+ return categories&&(input.attention==='only'||input.attention===true);
+}
 
 export function mappingNavigationHref(categories:boolean,manage:boolean,input:Readonly<Record<string,unknown>>):string{
  const {purpose,date}=readMappingNavigation(input,categories);
  const params=new URLSearchParams();
  if(purpose)params.set('purpose',purpose);
  if(date)params.set('lookupOn',date);
+ if(readMappingAttention(input,categories))params.set('attention','only');
  const path='/settings/accounts/mappings'+(categories?'/categories':'')+(manage?'/manage':'');
  return path+(params.size?'?'+params.toString():'');
 }

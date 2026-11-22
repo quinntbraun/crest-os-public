@@ -41,10 +41,11 @@ export function createVehicleEditorController(deps:Dependencies){
     if(!alive||active)return;saveConfirmed=false;const controller=new AbortController();active=controller;emit();
     try{await work(controller.signal);}catch(error){if(alive&&active===controller&&!controller.signal.aborted)failure(error);}finally{if(active===controller){active=null;emit();}}
   }
-  const load=()=>run(async signal=>{
+  const load=(includeAll=false)=>run(async signal=>{
+    if(typeof includeAll!=='boolean')throw new Error();
     clearPrivate();phase='loading';message='Checking vehicle access…';emit();pending=deps.store.read();await fresh(signal);
     if(pending){if(pending.businessId!==snapshot!.context.businessId){phase='blocked';message='A pending save belongs to a different business. Its reference has been kept for review.';return;}retain('A pending vehicle save was found. Check its status before another edit.');return;}
-    const result=await api.list(snapshot!.context.businessId,{search:'',afterId:null,includeArchived:false,pageSize:25},proof!,signal);live(signal);rows=result.vehicles;hasMore=result.hasMore;phase='ready';message=snapshot!.context.writeState==='ready'?'Choose a vehicle or add a new vehicle.':'Vehicle changes are paused. Current records remain available for review.';
+    const result=await api.list(snapshot!.context.businessId,{search:'',afterId:null,includeArchived:includeAll,pageSize:25},proof!,signal);live(signal);rows=result.vehicles;hasMore=result.hasMore;includeArchived=includeAll;phase='ready';message=snapshot!.context.writeState==='ready'?'Choose a vehicle or add a new vehicle.':'Vehicle changes are paused. Current records remain available for review.';
   },error=>{clearPrivate();phase=error instanceof PendingVehicleError?'blocked':'unavailable';message=error instanceof PendingVehicleError?'The pending-save reference cannot be read. Editing is blocked to protect it.':'Vehicle access could not be verified. Sign in or check again; any pending reference has been kept.';});
   const query=(text:string,archived:boolean,more=false)=>{
     if(phase!=='ready'||!snapshot||!proof||typeof text!=='string'||[...text].length>200||typeof archived!=='boolean'||more&&(!hasMore||text!==search||archived!==includeArchived))return Promise.resolve();

@@ -3,6 +3,7 @@ import {BackToSavedJob} from '../schedule/back-to-saved-job';
 import {customerUuid} from '../../customer/customer-contract';
 import {ScheduleNavigationProvider} from '../schedule/navigation';
 import {readScheduleNavigation} from '../../client/schedule-navigation';
+import {readDirectoryInclude} from '../../client/directory-navigation';
 export const dynamic='force-dynamic';
 export const runtime='nodejs';
 export default async function VehiclesPage({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}){
@@ -13,6 +14,7 @@ export default async function VehiclesPage({searchParams}:{searchParams:Promise<
   return <ScheduleNavigationProvider context={navigation}><main className="customers vehicle-page">
     {customerId&&<a className="record-return-link" href={'/customers?customer='+encodeURIComponent(customerId)+'&view=vehicles'+(vehicleId?'&focusVehicle='+encodeURIComponent(vehicleId):'')}>Back to customer vehicles</a>}
     {vehicleId&&<BackToSavedJob job={job} jobVehicle={jobVehicle} navigation={navigation}/>}
-    <h1>Vehicles</h1><VehicleScreen initialVehicleId={vehicleId} initialVisits={view==='visits'} linkCustomerId={customerUuid(linkCustomer)?linkCustomer:null}/>
+    <h1>Vehicles</h1><VehicleScreen initialVehicleId={vehicleId} initialVisits={view==='visits'} linkCustomerId={customerUuid(linkCustomer)?linkCustomer:null}
+     initialIncludeAll={readDirectoryInclude('vehicles',params)}/>
   </main></ScheduleNavigationProvider>;
 }

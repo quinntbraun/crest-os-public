@@ -1,5 +1,7 @@
 'use client';
 import {SignInLink} from "../sign-in-link";
+import {DirectoryRecall} from '../directory-recall';
+import {useDirectoryReturn} from '../../client/use-directory-return';
 
 import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
 import type {DirectoryOrigin} from '../../client/directory-origin';
@@ -50,7 +52,8 @@ function VehicleDetails({vehicle}:{vehicle:Vehicle}){
   const unknown=(value:string|number|null)=>value===null?'Not recorded':value===''?'Recorded as empty':String(value);
   return <dl className="customer-values"><dt>Label</dt><dd>{vehicle.label}</dd><dt>Year</dt><dd>{unknown(vehicle.year)}</dd><dt>Make</dt><dd>{unknown(vehicle.make)}</dd><dt>Model</dt><dd>{unknown(vehicle.model)}</dd><dt>Color</dt><dd>{unknown(vehicle.color)}</dd><dt>VIN</dt><dd>{unknown(vehicle.vin_raw)}</dd><dt>Plate</dt><dd>{unknown(vehicle.plate)}</dd><dt>Kind</dt><dd>{vehicle.kind==='customer_vehicle'?'Customer vehicle':vehicle.kind==='business_rig'?'Business rig':'Other'}</dd><dt>Notes</dt><dd>{unknown(vehicle.notes)}</dd><dt>Status</dt><dd>{vehicle.archived_at===null?'Active':'Archived: '+vehicle.archived_reason}</dd></dl>;
 }
-export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCustomerId=null}:{initialVehicleId?:string|null;initialVisits?:boolean;linkCustomerId?:string|null}={}){
+export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCustomerId=null,initialIncludeAll=false}:{initialVehicleId?:string|null;initialVisits?:boolean;linkCustomerId?:string|null;initialIncludeAll?:boolean}={}){
+  const {selection,includeAll,remember,rememberFilter}=useDirectoryReturn('vehicles',initialVehicleId,initialIncludeAll);
   const [view,setView]=useState(initialVehicleEditorView),current=useRef<ReturnType<typeof createVehicleEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),heading=useRef<HTMLHeadingElement>(null);
   const [editing,setEditing]=useState(false),[showRecord,setShowRecord]=useState(initialVehicleId!==null);
   const profileHeading=useRef<HTMLHeadingElement>(null),searchInput=useRef<HTMLInputElement>(null),directoryTrigger=useRef<HTMLButtonElement>(null);
@@ -73,7 +76,7 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
   useEffect(()=>{
     const controller=createVehicleEditorController({store:createPendingVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:next=>{if(next.phase!=='ready')clearDirectoryOrigin();setView(next);}});current.current=controller;
     void (async()=>{
-      await controller.load();
+      await controller.load(includeAll.current);
       if(!customerUuid(initialVehicleId)||current.current!==controller||controller.view().phase!=='ready')return;
       if(!initialVisits||!controller.view().recordJobHistoryAvailable)focusRequest.current={controller,id:initialVehicleId};
       await controller.open(initialVehicleId);
@@ -81,7 +84,7 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
     const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
     document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
     return ()=>{controller.dispose();clearDirectoryOrigin();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
-  },[initialVehicleId,initialVisits,clearDirectoryOrigin]);
+  },[initialVehicleId,initialVisits,clearDirectoryOrigin,includeAll]);
   useEffect(()=>{if(!dirty&&view.phase!=='pending')return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase]);
   function discardAllowed(){
     if(linkEdit.current==='pending'){window.alert('Check the pending customer-link save before changing vehicles. Its original save reference must be kept.');return false;}
@@ -91,6 +94,7 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
     const controller=current.current;
     if(!controller||controller.view().busy)return;
     if(id===selectedId){
+      remember(id);
       directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
       focusRequest.current={controller,id};
       setShowRecord(true);
@@ -106,13 +110,15 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
     setEditing(false);
     focusRequest.current={controller,id};
     await controller.open(id);
+    if(current.current===controller&&controller.view().selected?.id===id)remember(id);
   }
-  function create(trigger:HTMLButtonElement){const controller=current.current;if(!controller||controller.view().busy||!discardAllowed())return;directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);setShowRecord(true);setEditing(true);focusRequest.current={controller,id:null};controller.create();}
-  function query(search:string,archived:boolean,more=false){const controller=current.current;if(!controller||controller.view().busy||!discardAllowed())return;clearDirectoryOrigin();setEditing(false);void controller.query(search,archived,more);}
-  async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
+  function create(trigger:HTMLButtonElement){const controller=current.current;if(!controller||controller.view().busy||!discardAllowed())return;remember(null);directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);setShowRecord(true);setEditing(true);focusRequest.current={controller,id:null};controller.create();}
+  function query(search:string,archived:boolean,more=false){const controller=current.current;if(!controller||controller.view().busy||!discardAllowed())return;clearDirectoryOrigin();remember(null);rememberFilter(archived);setEditing(false);void controller.query(search,archived,more);}
+  async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const controller=current.current;if(!controller)return;if(kind==='load')await controller.load(includeAll.current);else await controller[kind]();if(current.current===controller)status.current?.focus();}
   function edit<K extends keyof VehicleDraft>(key:K,value:VehicleDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
   function focusOnCommit(target:'record'|'directory'='record'){const controller=current.current;if(controller)focusRequest.current={controller,id:selectedId,target};}
   function backToDirectory(){
+    remember(null);
     if(!showRecord){focusRequest.current=null;restoreDirectoryOrigin(directoryOrigin.current,directoryTrigger.current?.isConnected?directoryTrigger.current:searchInput.current);return;}
     focusOnCommit('directory');
     setShowRecord(false);
@@ -131,6 +137,8 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
   function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);query(String(data.get('search')??''),data.get('archived')==='on');}
   const recordLoading=showRecord&&view.phase==='ready'&&view.busy&&!view.selected&&!view.draft;
   return <section className="vehicle-workspace" aria-label="Vehicle directory" aria-busy={view.busy}>
+    {view.phase==='ready'&&!view.selected&&!view.draft&&selection&&<DirectoryRecall label="vehicle" disabled={view.busy}
+     onReopen={button=>void open(selection,button)}/>}
     <p ref={status} tabIndex={-1} role="status" className="customer-directory-status" data-confirmed={view.saveConfirmed===true} aria-label="Vehicle editor status" aria-live="polite" aria-atomic="true">{recordLoading?'Loading vehicle record…':view.message}</p>
     {(view.phase==='loading'||recordLoading)&&<DirectoryLoading record={recordLoading||showRecord&&Boolean(initialVehicleId)}/>}
     {view.phase==='ready'&&<>

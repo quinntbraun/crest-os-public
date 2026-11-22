@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-22T10:37:14.016Z",
+  "assessedAt": "2026-11-22T12:49:42.098Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "a3ea51e086f9a713dc5308eebad44376e1d171b6",
-    "publishedCommit": "28eca50b6cbabdf2eb4716d8cf58bccc00eb5e72",
-    "publishedTree": "1551bb73f6abd857125005c66732e2612d71afa5",
-    "localTree": "e8f3635143ee36130eb37ec5183324b602b8155c"
+    "localCommit": "26bf3c3f4b3ca3a99100ebf7971d59add6e79eac",
+    "publishedCommit": "9723a8362485ba93844a7b4c1500e79fb9839ed4",
+    "publishedTree": "444649bd89c2b0949bd662465ea0193e2bc701d4",
+    "localTree": "307571c29c641452586ba41616904c69802f0324"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 66,
-      "partial": 2,
+      "locally_addressed": 67,
+      "partial": 1,
       "open": 2,
       "review_needed": 0
     },
-    "mainLocalChangesAddressedPercent": 94.3,
+    "mainLocalChangesAddressedPercent": 95.7,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -44,8 +44,8 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "Public28eca50/tree1551bb7 exactly matches local1dda853 and now passes all22 main jobs plus both ancillary workflows, including portable-container, isolated supplier/receipt workers and independent restores. Newer local supplier draft/posting/payment recovery and selected-date context have separate fixed-source evidence; they are not included in that public acceptance.",
-      "remainingWork": "Publish the next coherent, strictly scanned exact-tree batch and require its own fresh full release/worker/upgrade/recovery checks. Matching installed build, owner finance/off-laptop restore and physical iPhone acceptance remain open.",
+      "implementedOrPresent": "Public9723a836/tree444649b exactly matches localf4f937f and now passes all22 main jobs plus both ancillary workflows, including portable container, Linux isolated document/receipt workers, same-session/new-sign-in supplier original re-entry and independent schema120 recovery. Newer Accounting/mapping/CRM safe-context implementation has its own local evidence, not transferred public acceptance.",
+      "remainingWork": "Publish the next coherent exact-tree strictly scanned UI batch and require its own complete fresh release checks. Matching installed build, owner finance/off-laptop restore and physical iPhone acceptance remain open.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "ef66bfb9992481686a80d959c84de1c255a0d40547ffe7c3e7d50348abd57ef9"
+          "sha256": "aa45e343219fa5a20ab5fa6bcb86f754cc3730a0e9b797b89a9a100ca5447bb9"
         },
         {
           "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
@@ -173,19 +173,19 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
         },
         {
           "path": "src/client/customer-editor-controller.ts",
-          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+          "sha256": "f4dafd69e535f8135c5799e6607030b25a0e8d3912a3ea88e2a326593d3b68f9"
         },
         {
           "path": "src/client/vehicle-editor-controller.ts",
-          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+          "sha256": "7b7c4d6776640cae33c0a5895f202c53d4843b5d7529faa4a1dec2d4b13434c0"
         },
         {
           "path": "tests/support/crm-save-feedback.mjs",
@@ -193,7 +193,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
+          "sha256": "ede8d65a54db8bd52a70be479e26b923cfb3862cb0c9a5af11db44ff9e5e03b6"
         },
         {
           "path": "tests/integration/vehicle-http-browser.test.mjs",
@@ -217,7 +217,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
@@ -225,7 +225,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "d093c40688559c0dbfbbb251ab8bf9817548b9b47d3fa184564371c83595b9c3"
+          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
@@ -249,7 +249,7 @@
         },
         {
           "path": "planning/MAPPING_RETURN_AND_SCREEN_RECOVERY.md",
-          "sha256": "d0e9159730e61b197d80aa3abc8185282698ea48883c597af2dad90df2d86c6b"
+          "sha256": "a23449ecc645cf68575c7af305ce0b726f636916d8c5fb3899e28a720ffb6e66"
         },
         {
           "path": "planning/EXPENSE_SESSION_AND_SERVICE_RETURN_REVIEW.md",
@@ -265,11 +265,11 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
+          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
-          "sha256": "abc0454067c6c3a138336f0c7cbe6a7852d4b81efa4365839f150b2c615209a2"
+          "sha256": "f29258476c6473bef71774b05267e4f224ca97981d1606a698cea876a4a0d6e2"
         },
         {
           "path": "planning/PAYMENT_ACCESS_AND_NAVIGATION_REVIEW.md",
@@ -277,7 +277,7 @@
         },
         {
           "path": "src/client/sign-in-navigation.ts",
-          "sha256": "cc9ad6841595922752dfa0b8cd7cb4b7682eb54fdbf704816079a10249a02480"
+          "sha256": "98fa22f1456d46ee64417c6220328ba62508ecf8a8498a5b9b0d6a948ec57c15"
         },
         {
           "path": "tests/unit/sign-in-origin-roundtrip.test.ts",
@@ -489,15 +489,15 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
         },
         {
           "path": "src/app/directory-introduction.tsx",
@@ -689,7 +689,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -721,15 +721,15 @@
         },
         {
           "path": "src/app/customers/page.tsx",
-          "sha256": "423bac809150531db36c484f018d0a8fb19cac36e1a968be28e4c22f5d9d9bc0"
+          "sha256": "bea2cfc48a43888c058d7e0cdb8dc870c4fc3e5f91c795e071a68c1908203616"
         },
         {
           "path": "src/app/vehicles/page.tsx",
-          "sha256": "a75b9feea308594aaf4a7b7a180df3f6bc271d9831392a8be0939e9218a4c801"
+          "sha256": "4c7df4715e838c9ff7ca6a8c04215855ea5a60a2bb7aa61ec75de420a5591833"
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
         },
         {
           "path": "src/app/schedule/back-to-saved-job.tsx",
@@ -745,11 +745,11 @@
         },
         {
           "path": "src/client/customer-editor-controller.ts",
-          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+          "sha256": "f4dafd69e535f8135c5799e6607030b25a0e8d3912a3ea88e2a326593d3b68f9"
         },
         {
           "path": "src/client/vehicle-editor-controller.ts",
-          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+          "sha256": "7b7c4d6776640cae33c0a5895f202c53d4843b5d7529faa4a1dec2d4b13434c0"
         },
         {
           "path": "tests/support/crm-save-feedback.mjs",
@@ -757,7 +757,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
+          "sha256": "ede8d65a54db8bd52a70be479e26b923cfb3862cb0c9a5af11db44ff9e5e03b6"
         },
         {
           "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
@@ -801,7 +801,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
@@ -809,7 +809,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "d093c40688559c0dbfbbb251ab8bf9817548b9b47d3fa184564371c83595b9c3"
+          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
@@ -833,11 +833,11 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
+          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
-          "sha256": "abc0454067c6c3a138336f0c7cbe6a7852d4b81efa4365839f150b2c615209a2"
+          "sha256": "f29258476c6473bef71774b05267e4f224ca97981d1606a698cea876a4a0d6e2"
         },
         {
           "path": "planning/SUPPLIER_POSTING_RECOVERY_REVIEW.md",
@@ -913,7 +913,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
         },
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
@@ -925,7 +925,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
         },
         {
           "path": "src/app/quotes/quotes.tsx",
@@ -1041,19 +1041,19 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
         },
         {
           "path": "src/client/customer-editor-controller.ts",
-          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+          "sha256": "f4dafd69e535f8135c5799e6607030b25a0e8d3912a3ea88e2a326593d3b68f9"
         },
         {
           "path": "src/client/vehicle-editor-controller.ts",
-          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+          "sha256": "7b7c4d6776640cae33c0a5895f202c53d4843b5d7529faa4a1dec2d4b13434c0"
         },
         {
           "path": "tests/support/crm-save-feedback.mjs",
@@ -1061,7 +1061,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
+          "sha256": "ede8d65a54db8bd52a70be479e26b923cfb3862cb0c9a5af11db44ff9e5e03b6"
         },
         {
           "path": "tests/integration/vehicle-http-browser.test.mjs",
@@ -1249,15 +1249,15 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
+          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
         },
         {
           "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
-          "sha256": "f168280a2b6f81ce24f24f748eb276b167603d3c29f4f04c7e461f0f6d9e55b2"
+          "sha256": "9643afef67123446f429210efd145bee8284695428cc037956f8ea2e5dfb0efb"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
-          "sha256": "653bc33ef535640dee58c72052fb07c96bd5db8b90bdb2192b66d8e9cded6831"
+          "sha256": "014657ea2bfcde38721a2a3fd3a18c7826af579c034df9a524a4f0cd127d28e5"
         },
         {
           "path": "planning/SUPPLIER_POSTING_RECOVERY_REVIEW.md",
@@ -1316,7 +1316,7 @@
       "title": "P1 · Treat every state as a designed screen",
       "requirements": "Some baseline captures are loading or unavailable. A clean screenshot with no overflow does not establish a completed workflow.\n\nFinish standard: Every important workflow needs loaded, empty, loading, validation, denied, stale, uncertain-save and successful variants with clear next steps.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "The19-family eight-state inventory is present and remains a source/evidence index, not exhaustive visual acceptance. Supplier originals now survive private clearing/reload without stored private payloads. Full financial cases pass on6c15479; same-session and new-sign-in focused original re-entry pass2/2 per browser on35003e4 with exact one15025 P14 and current-authorization receipt checks. Both selected-date financial cases pass separately on2cbb8c0, retaining actual request scope and all P14/P15/export/restore checks.49 reference tests and62 navigation/server-page checks pass; final build/types/full lint pass. Prior0/2,2/4 and1/2 invocations remain retained and scoped.",
+      "implementedOrPresent": "The19-family eight-state inventory is present and remains a source/evidence index, not exhaustive visual acceptance. Supplier originals now survive private clearing/reload without stored private payloads. Full financial cases pass on6c15479; same-session and new-sign-in focused original re-entry pass2/2 per browser on35003e4 with exact one15025 P14 and current-authorization receipt checks. Both selected-date financial cases pass separately on2cbb8c0, retaining actual request scope and all P14/P15/export/restore checks.49 reference tests and62 navigation/server-page checks pass; final build/types/full lint pass. Prior0/2,2/4 and1/2 invocations remain retained and scoped. Accounting report follow-up on 89e924da: separate validated Ledger/Income/Customer Funds/Receivables dates and report/section survive switching, privacy clearing, explicit access recheck, reload and genuine denied-child sign-in return. Every report denial clears the complete parent private workspace and focuses the notice. Complete original expense/income journeys pass2/2, including all8 denied-report cases and unchanged finance/journal/audit facts; 70 hashed rendered images retained. Build/types/full lint and52 focused navigation checks pass. Default Ledger URL assertion failure0/2 and initial runner-prerequisite failure0/2 remain retained; no fabricated authentication or assertion/deadline weakening. Repeated loaded-report coverage paragraphs are removed while scoped headers remain. This is local source-specific evidence, not physical/device/installed or fresh public acceptance. Further safe returns: complete original account-settings2/2 on4c9b90b verify opaque selected-history/archived-filter privacy/reload/sign-in return, explicit reopen, actual loading/error/retry, close/origin focus and no account-version/audit changes (34 hashed artifacts,16 new return views). Complete fixed-mapping2/2 and category-approval2/2 separately on a3f3c64 verify preserved public lookup purpose/date through pagehide/persisted restore, category attention private-clear/reload/explicit directory recheck, absent private results/query, actual sign-in/immutable approval/recovery/CSV behavior and conserved financial source (158 hashed artifacts,16 new private-return views). Each invocation kept its source fixed and cleaned its owned database. Final build/types/full lint and62 focused navigation/server-page/sign-in checks pass. Original lookup-empty UI expectations are deliberately replaced by safe retained-filter plus private-result absence checks; approval-editor private clearing and all financial assertions remain. These scoped viewport passes do not establish every state, current public/installed or physical-device acceptance. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off.",
       "remainingWork": "Finish remaining important-workflow stale/alternate/private/pending/setup variants and any uncovered eight-state behavior. Keep original requirement scope and source-specific passes/failures separate. Require fresh matching release, installed and physical-device review; an inventory is not proof of every variant.",
       "evidence": [
         {
@@ -1325,7 +1325,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "226c3281b6c136f42eea68d4f834d15b0a3823aab101ef7c0e2b53868db3d4e0"
+          "sha256": "a6ffffd779fdf01f6be0cd232f99a7f7eac9b3f22fad1382a5eb565213e43cc0"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -1369,7 +1369,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -1433,7 +1433,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -1473,15 +1473,15 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
         },
         {
           "path": "src/client/customer-editor-controller.ts",
-          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+          "sha256": "f4dafd69e535f8135c5799e6607030b25a0e8d3912a3ea88e2a326593d3b68f9"
         },
         {
           "path": "src/client/vehicle-editor-controller.ts",
-          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+          "sha256": "7b7c4d6776640cae33c0a5895f202c53d4843b5d7529faa4a1dec2d4b13434c0"
         },
         {
           "path": "tests/support/crm-save-feedback.mjs",
@@ -1489,7 +1489,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
+          "sha256": "ede8d65a54db8bd52a70be479e26b923cfb3862cb0c9a5af11db44ff9e5e03b6"
         },
         {
           "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
@@ -1501,7 +1501,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "d093c40688559c0dbfbbb251ab8bf9817548b9b47d3fa184564371c83595b9c3"
+          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
         },
         {
           "path": "src/app/addresses/addresses.tsx",
@@ -1509,7 +1509,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
         },
         {
           "path": "tests/support/directory-loading-journey.mjs",
@@ -1557,7 +1557,7 @@
         },
         {
           "path": "planning/MAPPING_RETURN_AND_SCREEN_RECOVERY.md",
-          "sha256": "d0e9159730e61b197d80aa3abc8185282698ea48883c597af2dad90df2d86c6b"
+          "sha256": "a23449ecc645cf68575c7af305ce0b726f636916d8c5fb3899e28a720ffb6e66"
         },
         {
           "path": "src/app/sign-in-link.tsx",
@@ -1565,7 +1565,7 @@
         },
         {
           "path": "src/client/sign-in-navigation.ts",
-          "sha256": "cc9ad6841595922752dfa0b8cd7cb4b7682eb54fdbf704816079a10249a02480"
+          "sha256": "98fa22f1456d46ee64417c6220328ba62508ecf8a8498a5b9b0d6a948ec57c15"
         },
         {
           "path": "tests/unit/sign-in-navigation.test.ts",
@@ -1577,7 +1577,7 @@
         },
         {
           "path": "tests/support/mapping-navigation-review.mjs",
-          "sha256": "df05cb4809dff326b7d90e29e7099d5e47fa92906490f694599b67c9f55e717f"
+          "sha256": "8c93399e13cb2c499cbeccbd65f83816d826fd51d77cca72d440a4158ec3d9c2"
         },
         {
           "path": "planning/EXPENSE_SESSION_AND_SERVICE_RETURN_REVIEW.md",
@@ -1593,11 +1593,11 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
+          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
-          "sha256": "abc0454067c6c3a138336f0c7cbe6a7852d4b81efa4365839f150b2c615209a2"
+          "sha256": "f29258476c6473bef71774b05267e4f224ca97981d1606a698cea876a4a0d6e2"
         },
         {
           "path": "planning/PAYMENT_ACCESS_AND_NAVIGATION_REVIEW.md",
@@ -1718,6 +1718,126 @@
         {
           "path": "tests/unit/expense-navigation.test.ts",
           "sha256": "e92f4f53ec2f1eec2c0782f5b21d2ad03613bc4d36d0798359d3fd202d92fb31"
+        },
+        {
+          "path": "planning/ACCOUNTING_REPORT_RETURN_REVIEW.md",
+          "sha256": "b6d22bc5c029a02f0d34c371f84fae649fd91409688bf9fc0b361beddb54d5e5"
+        },
+        {
+          "path": "src/client/accounting-navigation.ts",
+          "sha256": "a9904d7153cc55ba5266dd381db810ef9a3ec4de4e29790a47d643bc7b458a37"
+        },
+        {
+          "path": "tests/unit/accounting-navigation.test.ts",
+          "sha256": "88d6ef1c4d2a864cac0b6858bf0693426bfc9c45a5b096628d15dc1ca8b22103"
+        },
+        {
+          "path": "src/app/settings/accounts/accounting-reports.tsx",
+          "sha256": "5b9c2475a98870d0001b447abfb8e2feed0fcc40c9d2c8461ef54541cac75e73"
+        },
+        {
+          "path": "src/app/settings/accounts/trial-balance.tsx",
+          "sha256": "386a87634f1cfc7c2ee032ea2b043d0fcc43e1a157a79f2aa3cfa67109b7fdff"
+        },
+        {
+          "path": "src/app/settings/accounts/recorded-income-statement.tsx",
+          "sha256": "470d4ab9712716c99c460dadd634a05bc5d6aa1f6322a0d29fc011c986fbd840"
+        },
+        {
+          "path": "src/app/settings/accounts/customer-funds-report.tsx",
+          "sha256": "b328b3d2c6731e6e98f31c7f41835ec93975003aa6b941a052eafd6d50d5b19c"
+        },
+        {
+          "path": "src/app/settings/accounts/receivable-aging.tsx",
+          "sha256": "f44c68101be0b5a36bddd1e8097e2f09faa82a1c4e0a47fc3c1dd4fac44e2828"
+        },
+        {
+          "path": "planning/ACCOUNT_HISTORY_RETURN_REVIEW.md",
+          "sha256": "c679243396e506363a9395c4d50c737cb63b1fd716ba7d2c4bb1bacecfa9107f"
+        },
+        {
+          "path": "planning/MAPPING_LOOKUP_PRIVATE_RETURN.md",
+          "sha256": "cd75fbe80f3ba03394f504a4a2fd4af112b63510907f7df893d8cf8896bc9b50"
+        },
+        {
+          "path": "tests/integration/finance-account-settings-browser.test.mjs",
+          "sha256": "cddcd39d0cd23e1d2d0f85bb1da83162375c35ad3f61bbdc45b88e356f3fd568"
+        },
+        {
+          "path": "tests/support/account-history-return.mjs",
+          "sha256": "76eebcd18b1b5df0894eab35b03b93586dfc4fcf3f0dbae12b7e0fa8548505e5"
+        },
+        {
+          "path": "src/client/mapping-navigation.ts",
+          "sha256": "34be13276a2a82b9bba4d7dcb3745ee98bf624fed8a5eca4f5ab953fa3fe6039"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/screen.tsx",
+          "sha256": "bff6e562ff6638fd4838f58bc4feaa21a586e5d46aa69cdfea4899e9e6b05096"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/categories/page.tsx",
+          "sha256": "7f1110f7bbe31af8cee6d8d2767adeeaa3f70acd83c0f8156062e80562188d42"
+        },
+        {
+          "path": "tests/unit/mapping-navigation.test.ts",
+          "sha256": "21710cb2d97c409b6e97b98661ebf73eca8214d99b8abfea90fbd64eb09f7b87"
+        },
+        {
+          "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
+          "sha256": "9643afef67123446f429210efd145bee8284695428cc037956f8ea2e5dfb0efb"
+        },
+        {
+          "path": "tests/integration/finance-expense-category-browser.test.mjs",
+          "sha256": "014657ea2bfcde38721a2a3fd3a18c7826af579c034df9a524a4f0cd127d28e5"
+        },
+        {
+          "path": "planning/DIRECTORY_PRIVATE_RETURN_REVIEW.md",
+          "sha256": "817147f04e35e98230b728723fe5ea2dbd1806ddf1c19bcad0eaaff062233c73"
+        },
+        {
+          "path": "src/client/directory-navigation.ts",
+          "sha256": "5cff0f18ce7160cc1c3159ded984763b86e9d323125e710f0030368cd7d745fe"
+        },
+        {
+          "path": "src/client/use-directory-return.ts",
+          "sha256": "f0446651afd75239aa28202427c425cb9719c5df9e501aad5cc7edde28b6cfaa"
+        },
+        {
+          "path": "src/app/directory-recall.tsx",
+          "sha256": "8e0d1029a625bad3d525bc9347b53e403a6bc1acb8d10e67fd5bf2e7f9bae057"
+        },
+        {
+          "path": "tests/unit/directory-navigation.test.ts",
+          "sha256": "670506fbc6d7671e526cd36ef7fc055b06b4d8e10fe3c820ea488575ef4b6188"
+        },
+        {
+          "path": "src/app/customers/page.tsx",
+          "sha256": "bea2cfc48a43888c058d7e0cdb8dc870c4fc3e5f91c795e071a68c1908203616"
+        },
+        {
+          "path": "src/app/vehicles/page.tsx",
+          "sha256": "4c7df4715e838c9ff7ca6a8c04215855ea5a60a2bb7aa61ec75de420a5591833"
+        },
+        {
+          "path": "src/app/leads/page.tsx",
+          "sha256": "b19a5bf6bfa79114ec65e0f19315f4e8e09e7ebe12c1fc2ad7d5ea90a11e0f14"
+        },
+        {
+          "path": "src/app/services/page.tsx",
+          "sha256": "18c58159422d0463bc031d71a8160f0429a216f1cd037ef210dd93f67e2a1aee"
+        },
+        {
+          "path": "src/client/lead-editor-controller.ts",
+          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+        },
+        {
+          "path": "src/client/service-editor-controller.ts",
+          "sha256": "87ce85f1fcb0c7d3af5fd796148171ef49e5152302e7681f344489b9f6a7ff19"
+        },
+        {
+          "path": "tests/support/directory-private-return.mjs",
+          "sha256": "117a32dc185797ea03e8c76e1d039b48054b46c5d82e248149b952cc359872b3"
         }
       ],
       "verification": {
@@ -1825,7 +1945,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "226c3281b6c136f42eea68d4f834d15b0a3823aab101ef7c0e2b53868db3d4e0"
+          "sha256": "a6ffffd779fdf01f6be0cd232f99a7f7eac9b3f22fad1382a5eb565213e43cc0"
         }
       ],
       "verification": {
@@ -1873,7 +1993,7 @@
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
-          "sha256": "653bc33ef535640dee58c72052fb07c96bd5db8b90bdb2192b66d8e9cded6831"
+          "sha256": "014657ea2bfcde38721a2a3fd3a18c7826af579c034df9a524a4f0cd127d28e5"
         },
         {
           "path": "planning/CREST_DESIGN_SYSTEM.md",
@@ -1965,7 +2085,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -2009,7 +2129,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -2053,7 +2173,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
@@ -2061,7 +2181,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "d093c40688559c0dbfbbb251ab8bf9817548b9b47d3fa184564371c83595b9c3"
+          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
@@ -2181,7 +2301,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
         },
         {
           "path": "src/app/settings/accounts/screen.module.css",
@@ -2205,7 +2325,7 @@
         },
         {
           "path": "tests/integration/finance-account-settings-browser.test.mjs",
-          "sha256": "77a6c0bc083d2c6ed876e4e1955cb9b3d8b0f2450b0fd1923a15208b8e847ec8"
+          "sha256": "cddcd39d0cd23e1d2d0f85bb1da83162375c35ad3f61bbdc45b88e356f3fd568"
         },
         {
           "path": "tests/integration/finance-money-channel-browser.test.mjs",
@@ -2217,11 +2337,11 @@
         },
         {
           "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
-          "sha256": "f168280a2b6f81ce24f24f748eb276b167603d3c29f4f04c7e461f0f6d9e55b2"
+          "sha256": "9643afef67123446f429210efd145bee8284695428cc037956f8ea2e5dfb0efb"
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
-          "sha256": "653bc33ef535640dee58c72052fb07c96bd5db8b90bdb2192b66d8e9cded6831"
+          "sha256": "014657ea2bfcde38721a2a3fd3a18c7826af579c034df9a524a4f0cd127d28e5"
         },
         {
           "path": "planning/SCHEDULE_NAVIGATION_CONTEXT.md",
@@ -2253,7 +2373,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -2293,15 +2413,15 @@
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
         },
         {
           "path": "src/client/customer-editor-controller.ts",
-          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+          "sha256": "f4dafd69e535f8135c5799e6607030b25a0e8d3912a3ea88e2a326593d3b68f9"
         },
         {
           "path": "src/client/vehicle-editor-controller.ts",
-          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+          "sha256": "7b7c4d6776640cae33c0a5895f202c53d4843b5d7529faa4a1dec2d4b13434c0"
         },
         {
           "path": "tests/support/crm-save-feedback.mjs",
@@ -2309,7 +2429,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
+          "sha256": "ede8d65a54db8bd52a70be479e26b923cfb3862cb0c9a5af11db44ff9e5e03b6"
         },
         {
           "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
@@ -2557,7 +2677,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
         },
         {
           "path": "src/app/settings/accounts/tax/screen.tsx",
@@ -2577,7 +2697,7 @@
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
-          "sha256": "653bc33ef535640dee58c72052fb07c96bd5db8b90bdb2192b66d8e9cded6831"
+          "sha256": "014657ea2bfcde38721a2a3fd3a18c7826af579c034df9a524a4f0cd127d28e5"
         },
         {
           "path": "planning/REAL_BROWSER_ZOOM_REVIEW.md",
@@ -2595,9 +2715,9 @@
       "section": "Shared findings",
       "title": "P2 · Protect context through every transition",
       "requirements": "Back links now exist on many deeper routes. Their wording and destinations still vary, and an opened task can lose the visible customer/job context.\n\nFinish standard: Use a common breadcrumb or contextual return row, preserve selected record/date/filter where safe, restore focus and avoid retaining private detail after sign-out.",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "Source-specific record/planner/Calendar returns and private clearing remain. Supplier posting/payment recovery now uses actual current authorization after new sign-in, retains only original identities, preserves original re-entry targets and never silently releases a conflicting original. Selected supplier register dates survive sign-in/private clearing/actual reload in both full financial cases. Safe inactive Purchases/Exports context is projected through the actual return/server pages and62 unit checks; new pane-switch browser assertions are registered for release.",
-      "remainingWork": "Review remaining account/report date/selection returns and any unverified stale/alternate/focus/private variants. Require fresh matching release/installed/owner/device acceptance. Do not promote the last inactive-view projection into a fresh full local browser or physical-device claim.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "Source-specific record/planner/Calendar returns and private clearing remain. Supplier posting/payment recovery now uses actual current authorization after new sign-in, retains only original identities, preserves original re-entry targets and never silently releases a conflicting original. Selected supplier register dates survive sign-in/private clearing/actual reload in both full financial cases. Safe inactive Purchases/Exports context is projected through the actual return/server pages and62 unit checks; new pane-switch browser assertions are registered for release. Accounting report follow-up on 89e924da: separate validated Ledger/Income/Customer Funds/Receivables dates and report/section survive switching, privacy clearing, explicit access recheck, reload and genuine denied-child sign-in return. Every report denial clears the complete parent private workspace and focuses the notice. Complete original expense/income journeys pass2/2, including all8 denied-report cases and unchanged finance/journal/audit facts; 70 hashed rendered images retained. Build/types/full lint and52 focused navigation checks pass. Default Ledger URL assertion failure0/2 and initial runner-prerequisite failure0/2 remain retained; no fabricated authentication or assertion/deadline weakening. Repeated loaded-report coverage paragraphs are removed while scoped headers remain. This is local source-specific evidence, not physical/device/installed or fresh public acceptance. Further safe returns: complete original account-settings2/2 on4c9b90b verify opaque selected-history/archived-filter privacy/reload/sign-in return, explicit reopen, actual loading/error/retry, close/origin focus and no account-version/audit changes (34 hashed artifacts,16 new return views). Complete fixed-mapping2/2 and category-approval2/2 separately on a3f3c64 verify preserved public lookup purpose/date through pagehide/persisted restore, category attention private-clear/reload/explicit directory recheck, absent private results/query, actual sign-in/immutable approval/recovery/CSV behavior and conserved financial source (158 hashed artifacts,16 new private-return views). Each invocation kept its source fixed and cleaned its owned database. Final build/types/full lint and62 focused navigation/server-page/sign-in checks pass. Original lookup-empty UI expectations are deliberately replaced by safe retained-filter plus private-result absence checks; approval-editor private clearing and all financial assertions remain. These scoped viewport passes do not establish every state, current public/installed or physical-device acceptance. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off.",
+      "remainingWork": "Main contextual return implementation is locally addressed, with genuine directory, report/account and mapping consumers and fresh-reader/private-clear/focus proof. Complete broader alternate-origin, long/filter/paging, stale/private and task-specific state review plus matching current release, installed/owner and physical-device acceptance. Unsafe drafts, search text and stale private cursors are deliberately not retained. Every original requirement and final-sign-off gate remains.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -2701,7 +2821,7 @@
         },
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
         },
         {
           "path": "src/app/schedule/work/page.tsx",
@@ -2733,15 +2853,15 @@
         },
         {
           "path": "src/app/customers/page.tsx",
-          "sha256": "423bac809150531db36c484f018d0a8fb19cac36e1a968be28e4c22f5d9d9bc0"
+          "sha256": "bea2cfc48a43888c058d7e0cdb8dc870c4fc3e5f91c795e071a68c1908203616"
         },
         {
           "path": "src/app/vehicles/page.tsx",
-          "sha256": "a75b9feea308594aaf4a7b7a180df3f6bc271d9831392a8be0939e9218a4c801"
+          "sha256": "4c7df4715e838c9ff7ca6a8c04215855ea5a60a2bb7aa61ec75de420a5591833"
         },
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
         },
         {
           "path": "src/app/schedule/back-to-saved-job.tsx",
@@ -2757,11 +2877,11 @@
         },
         {
           "path": "src/client/customer-editor-controller.ts",
-          "sha256": "c65d0a86f8189990e020ffd0e1ed437437547d5d3501e78045314ba553ab0c19"
+          "sha256": "f4dafd69e535f8135c5799e6607030b25a0e8d3912a3ea88e2a326593d3b68f9"
         },
         {
           "path": "src/client/vehicle-editor-controller.ts",
-          "sha256": "d69df619be6a7717292e48affc01c7c1119dcbeff330307c757993c5259f5e6f"
+          "sha256": "7b7c4d6776640cae33c0a5895f202c53d4843b5d7529faa4a1dec2d4b13434c0"
         },
         {
           "path": "tests/support/crm-save-feedback.mjs",
@@ -2769,7 +2889,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
+          "sha256": "ede8d65a54db8bd52a70be479e26b923cfb3862cb0c9a5af11db44ff9e5e03b6"
         },
         {
           "path": "tests/integration/pickup-worksite-product-browser.test.mjs",
@@ -2813,7 +2933,7 @@
         },
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
         },
         {
           "path": "src/app/lead-sources/sources.tsx",
@@ -2821,7 +2941,7 @@
         },
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "d093c40688559c0dbfbbb251ab8bf9817548b9b47d3fa184564371c83595b9c3"
+          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
@@ -2845,7 +2965,7 @@
         },
         {
           "path": "planning/MAPPING_RETURN_AND_SCREEN_RECOVERY.md",
-          "sha256": "d0e9159730e61b197d80aa3abc8185282698ea48883c597af2dad90df2d86c6b"
+          "sha256": "a23449ecc645cf68575c7af305ce0b726f636916d8c5fb3899e28a720ffb6e66"
         },
         {
           "path": "src/app/sign-in-link.tsx",
@@ -2853,7 +2973,7 @@
         },
         {
           "path": "src/client/sign-in-navigation.ts",
-          "sha256": "cc9ad6841595922752dfa0b8cd7cb4b7682eb54fdbf704816079a10249a02480"
+          "sha256": "98fa22f1456d46ee64417c6220328ba62508ecf8a8498a5b9b0d6a948ec57c15"
         },
         {
           "path": "tests/unit/sign-in-navigation.test.ts",
@@ -2865,7 +2985,7 @@
         },
         {
           "path": "tests/support/mapping-navigation-review.mjs",
-          "sha256": "df05cb4809dff326b7d90e29e7099d5e47fa92906490f694599b67c9f55e717f"
+          "sha256": "8c93399e13cb2c499cbeccbd65f83816d826fd51d77cca72d440a4158ec3d9c2"
         },
         {
           "path": "planning/EXPENSE_SESSION_AND_SERVICE_RETURN_REVIEW.md",
@@ -2881,11 +3001,11 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
+          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
         },
         {
           "path": "tests/integration/service-editor-browser.test.mjs",
-          "sha256": "abc0454067c6c3a138336f0c7cbe6a7852d4b81efa4365839f150b2c615209a2"
+          "sha256": "f29258476c6473bef71774b05267e4f224ca97981d1606a698cea876a4a0d6e2"
         },
         {
           "path": "planning/PAYMENT_ACCESS_AND_NAVIGATION_REVIEW.md",
@@ -3010,11 +3130,127 @@
         {
           "path": "tests/unit/expense-navigation.test.ts",
           "sha256": "e92f4f53ec2f1eec2c0782f5b21d2ad03613bc4d36d0798359d3fd202d92fb31"
+        },
+        {
+          "path": "planning/ACCOUNTING_REPORT_RETURN_REVIEW.md",
+          "sha256": "b6d22bc5c029a02f0d34c371f84fae649fd91409688bf9fc0b361beddb54d5e5"
+        },
+        {
+          "path": "src/client/accounting-navigation.ts",
+          "sha256": "a9904d7153cc55ba5266dd381db810ef9a3ec4de4e29790a47d643bc7b458a37"
+        },
+        {
+          "path": "tests/unit/accounting-navigation.test.ts",
+          "sha256": "88d6ef1c4d2a864cac0b6858bf0693426bfc9c45a5b096628d15dc1ca8b22103"
+        },
+        {
+          "path": "src/app/settings/accounts/screen.tsx",
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+        },
+        {
+          "path": "src/app/settings/accounts/accounting-reports.tsx",
+          "sha256": "5b9c2475a98870d0001b447abfb8e2feed0fcc40c9d2c8461ef54541cac75e73"
+        },
+        {
+          "path": "src/app/settings/accounts/trial-balance.tsx",
+          "sha256": "386a87634f1cfc7c2ee032ea2b043d0fcc43e1a157a79f2aa3cfa67109b7fdff"
+        },
+        {
+          "path": "src/app/settings/accounts/recorded-income-statement.tsx",
+          "sha256": "470d4ab9712716c99c460dadd634a05bc5d6aa1f6322a0d29fc011c986fbd840"
+        },
+        {
+          "path": "src/app/settings/accounts/customer-funds-report.tsx",
+          "sha256": "b328b3d2c6731e6e98f31c7f41835ec93975003aa6b941a052eafd6d50d5b19c"
+        },
+        {
+          "path": "src/app/settings/accounts/receivable-aging.tsx",
+          "sha256": "f44c68101be0b5a36bddd1e8097e2f09faa82a1c4e0a47fc3c1dd4fac44e2828"
+        },
+        {
+          "path": "planning/ACCOUNT_HISTORY_RETURN_REVIEW.md",
+          "sha256": "c679243396e506363a9395c4d50c737cb63b1fd716ba7d2c4bb1bacecfa9107f"
+        },
+        {
+          "path": "planning/MAPPING_LOOKUP_PRIVATE_RETURN.md",
+          "sha256": "cd75fbe80f3ba03394f504a4a2fd4af112b63510907f7df893d8cf8896bc9b50"
+        },
+        {
+          "path": "tests/integration/finance-account-settings-browser.test.mjs",
+          "sha256": "cddcd39d0cd23e1d2d0f85bb1da83162375c35ad3f61bbdc45b88e356f3fd568"
+        },
+        {
+          "path": "tests/support/account-history-return.mjs",
+          "sha256": "76eebcd18b1b5df0894eab35b03b93586dfc4fcf3f0dbae12b7e0fa8548505e5"
+        },
+        {
+          "path": "src/client/mapping-navigation.ts",
+          "sha256": "34be13276a2a82b9bba4d7dcb3745ee98bf624fed8a5eca4f5ab953fa3fe6039"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/screen.tsx",
+          "sha256": "bff6e562ff6638fd4838f58bc4feaa21a586e5d46aa69cdfea4899e9e6b05096"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/categories/page.tsx",
+          "sha256": "7f1110f7bbe31af8cee6d8d2767adeeaa3f70acd83c0f8156062e80562188d42"
+        },
+        {
+          "path": "tests/unit/mapping-navigation.test.ts",
+          "sha256": "21710cb2d97c409b6e97b98661ebf73eca8214d99b8abfea90fbd64eb09f7b87"
+        },
+        {
+          "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
+          "sha256": "9643afef67123446f429210efd145bee8284695428cc037956f8ea2e5dfb0efb"
+        },
+        {
+          "path": "tests/integration/finance-expense-category-browser.test.mjs",
+          "sha256": "014657ea2bfcde38721a2a3fd3a18c7826af579c034df9a524a4f0cd127d28e5"
+        },
+        {
+          "path": "planning/DIRECTORY_PRIVATE_RETURN_REVIEW.md",
+          "sha256": "817147f04e35e98230b728723fe5ea2dbd1806ddf1c19bcad0eaaff062233c73"
+        },
+        {
+          "path": "src/client/directory-navigation.ts",
+          "sha256": "5cff0f18ce7160cc1c3159ded984763b86e9d323125e710f0030368cd7d745fe"
+        },
+        {
+          "path": "src/client/use-directory-return.ts",
+          "sha256": "f0446651afd75239aa28202427c425cb9719c5df9e501aad5cc7edde28b6cfaa"
+        },
+        {
+          "path": "src/app/directory-recall.tsx",
+          "sha256": "8e0d1029a625bad3d525bc9347b53e403a6bc1acb8d10e67fd5bf2e7f9bae057"
+        },
+        {
+          "path": "tests/unit/directory-navigation.test.ts",
+          "sha256": "670506fbc6d7671e526cd36ef7fc055b06b4d8e10fe3c820ea488575ef4b6188"
+        },
+        {
+          "path": "src/app/leads/page.tsx",
+          "sha256": "b19a5bf6bfa79114ec65e0f19315f4e8e09e7ebe12c1fc2ad7d5ea90a11e0f14"
+        },
+        {
+          "path": "src/app/services/page.tsx",
+          "sha256": "18c58159422d0463bc031d71a8160f0429a216f1cd037ef210dd93f67e2a1aee"
+        },
+        {
+          "path": "src/client/lead-editor-controller.ts",
+          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+        },
+        {
+          "path": "src/client/service-editor-controller.ts",
+          "sha256": "87ce85f1fcb0c7d3af5fd796148171ef49e5152302e7681f344489b9f6a7ff19"
+        },
+        {
+          "path": "tests/support/directory-private-return.mjs",
+          "sha256": "117a32dc185797ea03e8c76e1d039b48054b46c5d82e248149b952cc359872b3"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -3033,7 +3269,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "ef66bfb9992481686a80d959c84de1c255a0d40547ffe7c3e7d50348abd57ef9"
+          "sha256": "aa45e343219fa5a20ab5fa6bcb86f754cc3730a0e9b797b89a9a100ca5447bb9"
         }
       ],
       "verification": {
@@ -3121,7 +3357,7 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
+          "sha256": "ede8d65a54db8bd52a70be479e26b923cfb3862cb0c9a5af11db44ff9e5e03b6"
         },
         {
           "path": "tests/integration/field-work-product-browser.test.mjs",
@@ -3228,12 +3464,12 @@
       "title": "P1 · Customer directory (/customers)",
       "requirements": "Observed: The unselected directory occupies a narrow panel and leaves most of the desktop blank. Search, creation and archived filtering compete in the same box.\n\nDirection: Separate a compact directory toolbar from the results. Give the empty inspector a purposeful introduction and safe existing actions. Standardize the selected customer profile across overview, vehicles, visits, payments and history.\n\nDesktop: Use a stable list/inspector split; keep the selected row and search position when closing a record.\n\nPhone: The current source already switches to a focused phone profile with Back to customers. Preserve that behavior and verify search, selection and focus restoration.\n\nAcceptance: Search, archive visibility, selection and Back survive navigation without exposing records after sign-out.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/customers-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "The directory, focused record, Back navigation and available-width tablet layout are implemented. Actual five-width long-content history stress passes2/2 and complete genuine customer/vehicle/dashboard roots pass4/4 in Chromium/WebKit, with204 fresh captures, unchanged-source comparison and owned cleanup.",
+      "implementedOrPresent": "The directory, focused record, Back navigation and available-width tablet layout are implemented. Actual five-width long-content history stress passes2/2 and complete genuine customer/vehicle/dashboard roots pass4/4 in Chromium/WebKit, with204 fresh captures, unchanged-source comparison and owned cleanup. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off.",
       "remainingWork": "Revalidate remaining profile sections, state/zoom/sign-out/navigation variants and matching hosted, installed and physical-device acceptance on the final release.",
       "evidence": [
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
@@ -3249,7 +3485,87 @@
         },
         {
           "path": "tests/integration/workspace-journey-browser.test.mjs",
-          "sha256": "987ff92f67f2725b311148d2509b7ac7962d73c85ee67865f345d78d0d63c949"
+          "sha256": "ede8d65a54db8bd52a70be479e26b923cfb3862cb0c9a5af11db44ff9e5e03b6"
+        },
+        {
+          "path": "planning/DIRECTORY_PRIVATE_RETURN_REVIEW.md",
+          "sha256": "817147f04e35e98230b728723fe5ea2dbd1806ddf1c19bcad0eaaff062233c73"
+        },
+        {
+          "path": "src/client/directory-navigation.ts",
+          "sha256": "5cff0f18ce7160cc1c3159ded984763b86e9d323125e710f0030368cd7d745fe"
+        },
+        {
+          "path": "src/client/use-directory-return.ts",
+          "sha256": "f0446651afd75239aa28202427c425cb9719c5df9e501aad5cc7edde28b6cfaa"
+        },
+        {
+          "path": "src/app/directory-recall.tsx",
+          "sha256": "8e0d1029a625bad3d525bc9347b53e403a6bc1acb8d10e67fd5bf2e7f9bae057"
+        },
+        {
+          "path": "src/client/sign-in-navigation.ts",
+          "sha256": "98fa22f1456d46ee64417c6220328ba62508ecf8a8498a5b9b0d6a948ec57c15"
+        },
+        {
+          "path": "tests/unit/directory-navigation.test.ts",
+          "sha256": "670506fbc6d7671e526cd36ef7fc055b06b4d8e10fe3c820ea488575ef4b6188"
+        },
+        {
+          "path": "src/app/customers/customers.tsx",
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
+        },
+        {
+          "path": "src/app/customers/page.tsx",
+          "sha256": "bea2cfc48a43888c058d7e0cdb8dc870c4fc3e5f91c795e071a68c1908203616"
+        },
+        {
+          "path": "src/app/vehicles/vehicles.tsx",
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
+        },
+        {
+          "path": "src/app/vehicles/page.tsx",
+          "sha256": "4c7df4715e838c9ff7ca6a8c04215855ea5a60a2bb7aa61ec75de420a5591833"
+        },
+        {
+          "path": "src/app/leads/leads.tsx",
+          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+        },
+        {
+          "path": "src/app/leads/page.tsx",
+          "sha256": "b19a5bf6bfa79114ec65e0f19315f4e8e09e7ebe12c1fc2ad7d5ea90a11e0f14"
+        },
+        {
+          "path": "src/app/services/services.tsx",
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
+        },
+        {
+          "path": "src/app/services/page.tsx",
+          "sha256": "18c58159422d0463bc031d71a8160f0429a216f1cd037ef210dd93f67e2a1aee"
+        },
+        {
+          "path": "src/client/customer-editor-controller.ts",
+          "sha256": "f4dafd69e535f8135c5799e6607030b25a0e8d3912a3ea88e2a326593d3b68f9"
+        },
+        {
+          "path": "src/client/vehicle-editor-controller.ts",
+          "sha256": "7b7c4d6776640cae33c0a5895f202c53d4843b5d7529faa4a1dec2d4b13434c0"
+        },
+        {
+          "path": "src/client/lead-editor-controller.ts",
+          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+        },
+        {
+          "path": "src/client/service-editor-controller.ts",
+          "sha256": "87ce85f1fcb0c7d3af5fd796148171ef49e5152302e7681f344489b9f6a7ff19"
+        },
+        {
+          "path": "tests/support/directory-private-return.mjs",
+          "sha256": "117a32dc185797ea03e8c76e1d039b48054b46c5d82e248149b952cc359872b3"
+        },
+        {
+          "path": "tests/integration/service-editor-browser.test.mjs",
+          "sha256": "f29258476c6473bef71774b05267e4f224ca97981d1606a698cea876a4a0d6e2"
         }
       ],
       "verification": {
@@ -3345,7 +3661,7 @@
         },
         {
           "path": "tests/integration/finance-expense-posting-browser.test.mjs",
-          "sha256": "620271319ce56cc072bc6f23f68f840dc4d8e1488dd2513712b1bbdb7dd77ac3"
+          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
         },
         {
           "path": "tests/integration/owner-expenses-layout.test.mjs",
@@ -3452,16 +3768,100 @@
       "title": "P1 · Leads and follow-ups (/leads)",
       "requirements": "Observed: Follow-up rows are compact and useful, but the captured queue mixes an overdue lost lead with future reminders. Fixture dates are extreme and should not be treated as business defects.\n\nDirection: Make urgency, lead state and next action separate visual facts. Add clearly labeled due and upcoming views only over the existing authorized data. Keep follow-up eligibility governed by documented rules.\n\nDesktop: Use aligned due time, lead and status columns with an inspector.\n\nPhone: Show name, next due time and action before secondary source details.\n\nAcceptance: Review the treatment of lost or closed leads with due reminders; do not silently change their eligibility rule during visual work.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/leads-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Loaded-page due/upcoming views, independent urgency/state, focused phone records and next actions are implemented.",
+      "implementedOrPresent": "Loaded-page due/upcoming views, independent urgency/state, focused phone records and next actions are implemented. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off.",
       "remainingWork": "Complete remaining state variants and final release; do not alter follow-up eligibility.",
       "evidence": [
         {
           "path": "src/app/leads/leads.tsx",
-          "sha256": "d093c40688559c0dbfbbb251ab8bf9817548b9b47d3fa184564371c83595b9c3"
+          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
         },
         {
           "path": "planning/LEAD_REMINDER_WORKBENCH_DESIGN.md",
           "sha256": "794886f9d73f330fdc1bee5830ae0aa92b6bad3678cafcb9b33aad503ba04b5b"
+        },
+        {
+          "path": "planning/DIRECTORY_PRIVATE_RETURN_REVIEW.md",
+          "sha256": "817147f04e35e98230b728723fe5ea2dbd1806ddf1c19bcad0eaaff062233c73"
+        },
+        {
+          "path": "src/client/directory-navigation.ts",
+          "sha256": "5cff0f18ce7160cc1c3159ded984763b86e9d323125e710f0030368cd7d745fe"
+        },
+        {
+          "path": "src/client/use-directory-return.ts",
+          "sha256": "f0446651afd75239aa28202427c425cb9719c5df9e501aad5cc7edde28b6cfaa"
+        },
+        {
+          "path": "src/app/directory-recall.tsx",
+          "sha256": "8e0d1029a625bad3d525bc9347b53e403a6bc1acb8d10e67fd5bf2e7f9bae057"
+        },
+        {
+          "path": "src/client/sign-in-navigation.ts",
+          "sha256": "98fa22f1456d46ee64417c6220328ba62508ecf8a8498a5b9b0d6a948ec57c15"
+        },
+        {
+          "path": "tests/unit/directory-navigation.test.ts",
+          "sha256": "670506fbc6d7671e526cd36ef7fc055b06b4d8e10fe3c820ea488575ef4b6188"
+        },
+        {
+          "path": "src/app/customers/customers.tsx",
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
+        },
+        {
+          "path": "src/app/customers/page.tsx",
+          "sha256": "bea2cfc48a43888c058d7e0cdb8dc870c4fc3e5f91c795e071a68c1908203616"
+        },
+        {
+          "path": "src/app/vehicles/vehicles.tsx",
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
+        },
+        {
+          "path": "src/app/vehicles/page.tsx",
+          "sha256": "4c7df4715e838c9ff7ca6a8c04215855ea5a60a2bb7aa61ec75de420a5591833"
+        },
+        {
+          "path": "src/app/leads/leads.tsx",
+          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+        },
+        {
+          "path": "src/app/leads/page.tsx",
+          "sha256": "b19a5bf6bfa79114ec65e0f19315f4e8e09e7ebe12c1fc2ad7d5ea90a11e0f14"
+        },
+        {
+          "path": "src/app/services/services.tsx",
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
+        },
+        {
+          "path": "src/app/services/page.tsx",
+          "sha256": "18c58159422d0463bc031d71a8160f0429a216f1cd037ef210dd93f67e2a1aee"
+        },
+        {
+          "path": "src/client/customer-editor-controller.ts",
+          "sha256": "f4dafd69e535f8135c5799e6607030b25a0e8d3912a3ea88e2a326593d3b68f9"
+        },
+        {
+          "path": "src/client/vehicle-editor-controller.ts",
+          "sha256": "7b7c4d6776640cae33c0a5895f202c53d4843b5d7529faa4a1dec2d4b13434c0"
+        },
+        {
+          "path": "src/client/lead-editor-controller.ts",
+          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+        },
+        {
+          "path": "src/client/service-editor-controller.ts",
+          "sha256": "87ce85f1fcb0c7d3af5fd796148171ef49e5152302e7681f344489b9f6a7ff19"
+        },
+        {
+          "path": "tests/support/directory-private-return.mjs",
+          "sha256": "117a32dc185797ea03e8c76e1d039b48054b46c5d82e248149b952cc359872b3"
+        },
+        {
+          "path": "tests/integration/workspace-journey-browser.test.mjs",
+          "sha256": "ede8d65a54db8bd52a70be479e26b923cfb3862cb0c9a5af11db44ff9e5e03b6"
+        },
+        {
+          "path": "tests/integration/service-editor-browser.test.mjs",
+          "sha256": "f29258476c6473bef71774b05267e4f224ca97981d1606a698cea876a4a0d6e2"
         }
       ],
       "verification": {
@@ -4020,16 +4420,100 @@
       "title": "P2 · Services (/services)",
       "requirements": "Observed: The compact directory leaves a large unused desktop area. “No price guidance” and availability appear as small metadata.\n\nDirection: Use a reusable catalog list with scope, availability and price-guidance state. Give the selected service a structured inspector and a readable scope preview.\n\nDesktop: Use list/detail width deliberately; separate creation from reload and search.\n\nPhone: Preserve the existing focused service-detail mode and verify the result list and focus on Back.\n\nAcceptance: Catalog changes must not visually imply repricing an accepted quote or historical job.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/services-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Catalog list/inspector, explicit price-guidance/availability and focused phone Back are present.",
+      "implementedOrPresent": "Catalog list/inspector, explicit price-guidance/availability and focused phone Back are present. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off.",
       "remainingWork": "Final stress/denied/history/device verification remains; accepted quote/job prices must not change.",
       "evidence": [
         {
           "path": "src/app/services/services.tsx",
-          "sha256": "ee5f9538c6aa60b0c0067637a4e86803ae2f2527e5069567486ef052191475f9"
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
           "sha256": "77ea9cd1fb215797e89166bea87d6a02b085c3dd9575c7371ad4b44f3ec46863"
+        },
+        {
+          "path": "planning/DIRECTORY_PRIVATE_RETURN_REVIEW.md",
+          "sha256": "817147f04e35e98230b728723fe5ea2dbd1806ddf1c19bcad0eaaff062233c73"
+        },
+        {
+          "path": "src/client/directory-navigation.ts",
+          "sha256": "5cff0f18ce7160cc1c3159ded984763b86e9d323125e710f0030368cd7d745fe"
+        },
+        {
+          "path": "src/client/use-directory-return.ts",
+          "sha256": "f0446651afd75239aa28202427c425cb9719c5df9e501aad5cc7edde28b6cfaa"
+        },
+        {
+          "path": "src/app/directory-recall.tsx",
+          "sha256": "8e0d1029a625bad3d525bc9347b53e403a6bc1acb8d10e67fd5bf2e7f9bae057"
+        },
+        {
+          "path": "src/client/sign-in-navigation.ts",
+          "sha256": "98fa22f1456d46ee64417c6220328ba62508ecf8a8498a5b9b0d6a948ec57c15"
+        },
+        {
+          "path": "tests/unit/directory-navigation.test.ts",
+          "sha256": "670506fbc6d7671e526cd36ef7fc055b06b4d8e10fe3c820ea488575ef4b6188"
+        },
+        {
+          "path": "src/app/customers/customers.tsx",
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
+        },
+        {
+          "path": "src/app/customers/page.tsx",
+          "sha256": "bea2cfc48a43888c058d7e0cdb8dc870c4fc3e5f91c795e071a68c1908203616"
+        },
+        {
+          "path": "src/app/vehicles/vehicles.tsx",
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
+        },
+        {
+          "path": "src/app/vehicles/page.tsx",
+          "sha256": "4c7df4715e838c9ff7ca6a8c04215855ea5a60a2bb7aa61ec75de420a5591833"
+        },
+        {
+          "path": "src/app/leads/leads.tsx",
+          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+        },
+        {
+          "path": "src/app/leads/page.tsx",
+          "sha256": "b19a5bf6bfa79114ec65e0f19315f4e8e09e7ebe12c1fc2ad7d5ea90a11e0f14"
+        },
+        {
+          "path": "src/app/services/services.tsx",
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
+        },
+        {
+          "path": "src/app/services/page.tsx",
+          "sha256": "18c58159422d0463bc031d71a8160f0429a216f1cd037ef210dd93f67e2a1aee"
+        },
+        {
+          "path": "src/client/customer-editor-controller.ts",
+          "sha256": "f4dafd69e535f8135c5799e6607030b25a0e8d3912a3ea88e2a326593d3b68f9"
+        },
+        {
+          "path": "src/client/vehicle-editor-controller.ts",
+          "sha256": "7b7c4d6776640cae33c0a5895f202c53d4843b5d7529faa4a1dec2d4b13434c0"
+        },
+        {
+          "path": "src/client/lead-editor-controller.ts",
+          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+        },
+        {
+          "path": "src/client/service-editor-controller.ts",
+          "sha256": "87ce85f1fcb0c7d3af5fd796148171ef49e5152302e7681f344489b9f6a7ff19"
+        },
+        {
+          "path": "tests/support/directory-private-return.mjs",
+          "sha256": "117a32dc185797ea03e8c76e1d039b48054b46c5d82e248149b952cc359872b3"
+        },
+        {
+          "path": "tests/integration/workspace-journey-browser.test.mjs",
+          "sha256": "ede8d65a54db8bd52a70be479e26b923cfb3862cb0c9a5af11db44ff9e5e03b6"
+        },
+        {
+          "path": "tests/integration/service-editor-browser.test.mjs",
+          "sha256": "f29258476c6473bef71774b05267e4f224ca97981d1606a698cea876a4a0d6e2"
         }
       ],
       "verification": {
@@ -4068,12 +4552,12 @@
       "title": "P1 · Accounting home (/settings/accounts)",
       "requirements": "Observed: Reports, Accounts and Setup are a good separation, but the baseline opens a trial-balance form rather than a strong financial overview.\n\nDirection: Create a report workspace with a persistent report picker, date scope, coverage notice, loaded-as-of timestamp and export action. Make posted figures, incomplete coverage and setup status distinct.\n\nDesktop: Use available width for aligned figures and drill-in details.\n\nPhone: Put scope and key verified total before long filters or nested tables.\n\nAcceptance: Do not label incomplete recorded profit as business profit; no attractive summary may hide missing opening balances or costs.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Persistent desktop report library, compact phone choices and verified summaries before still-mounted date controls are implemented. Complete income/ledger and funds/receivables journeys pass both engines, including actual scoped CSV and retained original financial/recovery/export checks. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows. FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md adds scoped max-length names/evidence, actual100/200% Chromium zoom, retained predecessor/audit facts and actual served-font checks; the saved-channel container now wraps valid long labels.",
+      "implementedOrPresent": "Persistent desktop report library, compact phone choices and verified summaries before still-mounted date controls are implemented. Complete income/ledger and funds/receivables journeys pass both engines, including actual scoped CSV and retained original financial/recovery/export checks. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows. FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md adds scoped max-length names/evidence, actual100/200% Chromium zoom, retained predecessor/audit facts and actual served-font checks; the saved-channel container now wraps valid long labels. Accounting report follow-up on 89e924da: separate validated Ledger/Income/Customer Funds/Receivables dates and report/section survive switching, privacy clearing, explicit access recheck, reload and genuine denied-child sign-in return. Every report denial clears the complete parent private workspace and focuses the notice. Complete original expense/income journeys pass2/2, including all8 denied-report cases and unchanged finance/journal/audit facts; 70 hashed rendered images retained. Build/types/full lint and52 focused navigation checks pass. Default Ledger URL assertion failure0/2 and initial runner-prerequisite failure0/2 remain retained; no fabricated authentication or assertion/deadline weakening. Repeated loaded-report coverage paragraphs are removed while scoped headers remain. This is local source-specific evidence, not physical/device/installed or fresh public acceptance. Further safe returns: complete original account-settings2/2 on4c9b90b verify opaque selected-history/archived-filter privacy/reload/sign-in return, explicit reopen, actual loading/error/retry, close/origin focus and no account-version/audit changes (34 hashed artifacts,16 new return views). Complete fixed-mapping2/2 and category-approval2/2 separately on a3f3c64 verify preserved public lookup purpose/date through pagehide/persisted restore, category attention private-clear/reload/explicit directory recheck, absent private results/query, actual sign-in/immutable approval/recovery/CSV behavior and conserved financial source (158 hashed artifacts,16 new private-return views). Each invocation kept its source fixed and cleaned its owned database. Final build/types/full lint and62 focused navigation/server-page/sign-in checks pass. Original lookup-empty UI expectations are deliberately replaced by safe retained-filter plus private-result absence checks; approval-editor private clearing and all financial assertions remain. These scoped viewport passes do not establish every state, current public/installed or physical-device acceptance.",
       "remainingWork": "Complete remaining state/zoom/private-clearing variants; investigate retained tax/session failures and preserve exact-source release/installed/physical-device requirements.",
       "evidence": [
         {
           "path": "src/app/settings/accounts/accounting-reports.tsx",
-          "sha256": "e2efc973d5a32d34b0f26de98574d7a400888189ac46b5be2606aed67b865532"
+          "sha256": "5b9c2475a98870d0001b447abfb8e2feed0fcc40c9d2c8461ef54541cac75e73"
         },
         {
           "path": "planning/ACCOUNTING_REPORT_WORKSPACE_DESIGN.md",
@@ -4105,7 +4589,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -4118,6 +4602,94 @@
         {
           "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
           "sha256": "4ae55e32953a6df02aa3d0437f469b14184d63ddb889ace04731f4f4fdc74ec4"
+        },
+        {
+          "path": "planning/ACCOUNTING_REPORT_RETURN_REVIEW.md",
+          "sha256": "b6d22bc5c029a02f0d34c371f84fae649fd91409688bf9fc0b361beddb54d5e5"
+        },
+        {
+          "path": "src/client/accounting-navigation.ts",
+          "sha256": "a9904d7153cc55ba5266dd381db810ef9a3ec4de4e29790a47d643bc7b458a37"
+        },
+        {
+          "path": "tests/unit/accounting-navigation.test.ts",
+          "sha256": "88d6ef1c4d2a864cac0b6858bf0693426bfc9c45a5b096628d15dc1ca8b22103"
+        },
+        {
+          "path": "src/app/settings/accounts/accounting-reports.tsx",
+          "sha256": "5b9c2475a98870d0001b447abfb8e2feed0fcc40c9d2c8461ef54541cac75e73"
+        },
+        {
+          "path": "src/app/settings/accounts/trial-balance.tsx",
+          "sha256": "386a87634f1cfc7c2ee032ea2b043d0fcc43e1a157a79f2aa3cfa67109b7fdff"
+        },
+        {
+          "path": "src/app/settings/accounts/recorded-income-statement.tsx",
+          "sha256": "470d4ab9712716c99c460dadd634a05bc5d6aa1f6322a0d29fc011c986fbd840"
+        },
+        {
+          "path": "src/app/settings/accounts/customer-funds-report.tsx",
+          "sha256": "b328b3d2c6731e6e98f31c7f41835ec93975003aa6b941a052eafd6d50d5b19c"
+        },
+        {
+          "path": "src/app/settings/accounts/receivable-aging.tsx",
+          "sha256": "f44c68101be0b5a36bddd1e8097e2f09faa82a1c4e0a47fc3c1dd4fac44e2828"
+        },
+        {
+          "path": "tests/integration/finance-expense-posting-browser.test.mjs",
+          "sha256": "a34d7f78fde1443454308ee899a53ea703b952d22e62f500f329dac3c2e90386"
+        },
+        {
+          "path": "src/client/sign-in-navigation.ts",
+          "sha256": "98fa22f1456d46ee64417c6220328ba62508ecf8a8498a5b9b0d6a948ec57c15"
+        },
+        {
+          "path": "planning/ACCOUNT_HISTORY_RETURN_REVIEW.md",
+          "sha256": "c679243396e506363a9395c4d50c737cb63b1fd716ba7d2c4bb1bacecfa9107f"
+        },
+        {
+          "path": "planning/MAPPING_LOOKUP_PRIVATE_RETURN.md",
+          "sha256": "cd75fbe80f3ba03394f504a4a2fd4af112b63510907f7df893d8cf8896bc9b50"
+        },
+        {
+          "path": "planning/MAPPING_RETURN_AND_SCREEN_RECOVERY.md",
+          "sha256": "a23449ecc645cf68575c7af305ce0b726f636916d8c5fb3899e28a720ffb6e66"
+        },
+        {
+          "path": "tests/integration/finance-account-settings-browser.test.mjs",
+          "sha256": "cddcd39d0cd23e1d2d0f85bb1da83162375c35ad3f61bbdc45b88e356f3fd568"
+        },
+        {
+          "path": "tests/support/account-history-return.mjs",
+          "sha256": "76eebcd18b1b5df0894eab35b03b93586dfc4fcf3f0dbae12b7e0fa8548505e5"
+        },
+        {
+          "path": "src/client/mapping-navigation.ts",
+          "sha256": "34be13276a2a82b9bba4d7dcb3745ee98bf624fed8a5eca4f5ab953fa3fe6039"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/screen.tsx",
+          "sha256": "bff6e562ff6638fd4838f58bc4feaa21a586e5d46aa69cdfea4899e9e6b05096"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/categories/page.tsx",
+          "sha256": "7f1110f7bbe31af8cee6d8d2767adeeaa3f70acd83c0f8156062e80562188d42"
+        },
+        {
+          "path": "tests/unit/mapping-navigation.test.ts",
+          "sha256": "21710cb2d97c409b6e97b98661ebf73eca8214d99b8abfea90fbd64eb09f7b87"
+        },
+        {
+          "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
+          "sha256": "9643afef67123446f429210efd145bee8284695428cc037956f8ea2e5dfb0efb"
+        },
+        {
+          "path": "tests/integration/finance-expense-category-browser.test.mjs",
+          "sha256": "014657ea2bfcde38721a2a3fd3a18c7826af579c034df9a524a4f0cd127d28e5"
+        },
+        {
+          "path": "tests/support/mapping-navigation-review.mjs",
+          "sha256": "8c93399e13cb2c499cbeccbd65f83816d826fd51d77cca72d440a4158ec3d9c2"
         }
       ],
       "verification": {
@@ -4153,7 +4725,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -4180,16 +4752,76 @@
       "title": "P2 · Dated account mappings (/settings/accounts/mappings)",
       "requirements": "Observed: The purpose/date lookup is clear, but a large lookup card and separate approval history require repeated scanning.\n\nDirection: Use a compact date lookup followed by an effective-period timeline and clear current match or gap. Keep lookup and approval editing separate.\n\nDesktop: Show purpose, effective interval, account and approval state in aligned rows.\n\nPhone: Stack period and account, with detailed evidence disclosed.\n\nAcceptance: A date without approved coverage must remain visibly unresolved; never fall back silently.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-mappings-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Compact purpose/date lookup, explicit match/gap and dated retained approval rows are implemented.",
+      "implementedOrPresent": "Compact purpose/date lookup, explicit match/gap and dated retained approval rows are implemented. Further safe returns: complete original account-settings2/2 on4c9b90b verify opaque selected-history/archived-filter privacy/reload/sign-in return, explicit reopen, actual loading/error/retry, close/origin focus and no account-version/audit changes (34 hashed artifacts,16 new return views). Complete fixed-mapping2/2 and category-approval2/2 separately on a3f3c64 verify preserved public lookup purpose/date through pagehide/persisted restore, category attention private-clear/reload/explicit directory recheck, absent private results/query, actual sign-in/immutable approval/recovery/CSV behavior and conserved financial source (158 hashed artifacts,16 new private-return views). Each invocation kept its source fixed and cleaned its owned database. Final build/types/full lint and62 focused navigation/server-page/sign-in checks pass. Original lookup-empty UI expectations are deliberately replaced by safe retained-filter plus private-result absence checks; approval-editor private clearing and all financial assertions remain. These scoped viewport passes do not establish every state, current public/installed or physical-device acceptance.",
       "remainingWork": "Remaining state and final release/device verification remain; never silently fall back across gaps.",
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/screen.tsx",
-          "sha256": "def1da8627762d1f1b00141684a7d303ede1818988d4b03c598b8059352f769d"
+          "sha256": "bff6e562ff6638fd4838f58bc4feaa21a586e5d46aa69cdfea4899e9e6b05096"
         },
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
           "sha256": "9666f714251cefa61e507a45553eedf7c033fd8c56ca6aabfe7f0e7619857752"
+        },
+        {
+          "path": "planning/ACCOUNT_HISTORY_RETURN_REVIEW.md",
+          "sha256": "c679243396e506363a9395c4d50c737cb63b1fd716ba7d2c4bb1bacecfa9107f"
+        },
+        {
+          "path": "planning/MAPPING_LOOKUP_PRIVATE_RETURN.md",
+          "sha256": "cd75fbe80f3ba03394f504a4a2fd4af112b63510907f7df893d8cf8896bc9b50"
+        },
+        {
+          "path": "planning/MAPPING_RETURN_AND_SCREEN_RECOVERY.md",
+          "sha256": "a23449ecc645cf68575c7af305ce0b726f636916d8c5fb3899e28a720ffb6e66"
+        },
+        {
+          "path": "src/app/settings/accounts/screen.tsx",
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+        },
+        {
+          "path": "src/client/accounting-navigation.ts",
+          "sha256": "a9904d7153cc55ba5266dd381db810ef9a3ec4de4e29790a47d643bc7b458a37"
+        },
+        {
+          "path": "tests/unit/accounting-navigation.test.ts",
+          "sha256": "88d6ef1c4d2a864cac0b6858bf0693426bfc9c45a5b096628d15dc1ca8b22103"
+        },
+        {
+          "path": "tests/integration/finance-account-settings-browser.test.mjs",
+          "sha256": "cddcd39d0cd23e1d2d0f85bb1da83162375c35ad3f61bbdc45b88e356f3fd568"
+        },
+        {
+          "path": "tests/support/account-history-return.mjs",
+          "sha256": "76eebcd18b1b5df0894eab35b03b93586dfc4fcf3f0dbae12b7e0fa8548505e5"
+        },
+        {
+          "path": "src/client/mapping-navigation.ts",
+          "sha256": "34be13276a2a82b9bba4d7dcb3745ee98bf624fed8a5eca4f5ab953fa3fe6039"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/screen.tsx",
+          "sha256": "bff6e562ff6638fd4838f58bc4feaa21a586e5d46aa69cdfea4899e9e6b05096"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/categories/page.tsx",
+          "sha256": "7f1110f7bbe31af8cee6d8d2767adeeaa3f70acd83c0f8156062e80562188d42"
+        },
+        {
+          "path": "tests/unit/mapping-navigation.test.ts",
+          "sha256": "21710cb2d97c409b6e97b98661ebf73eca8214d99b8abfea90fbd64eb09f7b87"
+        },
+        {
+          "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
+          "sha256": "9643afef67123446f429210efd145bee8284695428cc037956f8ea2e5dfb0efb"
+        },
+        {
+          "path": "tests/integration/finance-expense-category-browser.test.mjs",
+          "sha256": "014657ea2bfcde38721a2a3fd3a18c7826af579c034df9a524a4f0cd127d28e5"
+        },
+        {
+          "path": "tests/support/mapping-navigation-review.mjs",
+          "sha256": "8c93399e13cb2c499cbeccbd65f83816d826fd51d77cca72d440a4158ec3d9c2"
         }
       ],
       "verification": {
@@ -4204,16 +4836,76 @@
       "title": "P2 · Expense category mappings (/settings/accounts/mappings/categories)",
       "requirements": "Observed: The page combines category lookup, date controls and a directory, creating two paths into similar information.\n\nDirection: Unify selection into one directory with an effective-date toolbar and selected-category detail. Distinguish category availability from approved posting treatment.\n\nDesktop: Use a searchable category list plus mapping detail.\n\nPhone: Show the selected category above the lookup results and preserve search when returning.\n\nAcceptance: No category should appear posting-ready merely because it exists in the directory.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-mappings-categories-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "One searchable category directory and effective-date toolbar lead to selected detail; phone return preserves search/date, and actual approved mapping treatment remains distinct from category availability.",
+      "implementedOrPresent": "One searchable category directory and effective-date toolbar lead to selected detail; phone return preserves search/date, and actual approved mapping treatment remains distinct from category availability. Further safe returns: complete original account-settings2/2 on4c9b90b verify opaque selected-history/archived-filter privacy/reload/sign-in return, explicit reopen, actual loading/error/retry, close/origin focus and no account-version/audit changes (34 hashed artifacts,16 new return views). Complete fixed-mapping2/2 and category-approval2/2 separately on a3f3c64 verify preserved public lookup purpose/date through pagehide/persisted restore, category attention private-clear/reload/explicit directory recheck, absent private results/query, actual sign-in/immutable approval/recovery/CSV behavior and conserved financial source (158 hashed artifacts,16 new private-return views). Each invocation kept its source fixed and cleaned its owned database. Final build/types/full lint and62 focused navigation/server-page/sign-in checks pass. Original lookup-empty UI expectations are deliberately replaced by safe retained-filter plus private-result absence checks; approval-editor private clearing and all financial assertions remain. These scoped viewport passes do not establish every state, current public/installed or physical-device acceptance.",
       "remainingWork": "Complete remaining loading/error/denied/stale/long-value variants and fresh exact-head release/installed/physical-device acceptance.",
       "evidence": [
         {
           "path": "src/app/settings/accounts/mappings/screen.tsx",
-          "sha256": "def1da8627762d1f1b00141684a7d303ede1818988d4b03c598b8059352f769d"
+          "sha256": "bff6e562ff6638fd4838f58bc4feaa21a586e5d46aa69cdfea4899e9e6b05096"
         },
         {
           "path": "planning/CATEGORY_MAPPING_SELECTION_DESIGN.md",
           "sha256": "75f43d36bf0ed81520c50061af4986258013d63db95812a21efa082f06b84d21"
+        },
+        {
+          "path": "planning/ACCOUNT_HISTORY_RETURN_REVIEW.md",
+          "sha256": "c679243396e506363a9395c4d50c737cb63b1fd716ba7d2c4bb1bacecfa9107f"
+        },
+        {
+          "path": "planning/MAPPING_LOOKUP_PRIVATE_RETURN.md",
+          "sha256": "cd75fbe80f3ba03394f504a4a2fd4af112b63510907f7df893d8cf8896bc9b50"
+        },
+        {
+          "path": "planning/MAPPING_RETURN_AND_SCREEN_RECOVERY.md",
+          "sha256": "a23449ecc645cf68575c7af305ce0b726f636916d8c5fb3899e28a720ffb6e66"
+        },
+        {
+          "path": "src/app/settings/accounts/screen.tsx",
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
+        },
+        {
+          "path": "src/client/accounting-navigation.ts",
+          "sha256": "a9904d7153cc55ba5266dd381db810ef9a3ec4de4e29790a47d643bc7b458a37"
+        },
+        {
+          "path": "tests/unit/accounting-navigation.test.ts",
+          "sha256": "88d6ef1c4d2a864cac0b6858bf0693426bfc9c45a5b096628d15dc1ca8b22103"
+        },
+        {
+          "path": "tests/integration/finance-account-settings-browser.test.mjs",
+          "sha256": "cddcd39d0cd23e1d2d0f85bb1da83162375c35ad3f61bbdc45b88e356f3fd568"
+        },
+        {
+          "path": "tests/support/account-history-return.mjs",
+          "sha256": "76eebcd18b1b5df0894eab35b03b93586dfc4fcf3f0dbae12b7e0fa8548505e5"
+        },
+        {
+          "path": "src/client/mapping-navigation.ts",
+          "sha256": "34be13276a2a82b9bba4d7dcb3745ee98bf624fed8a5eca4f5ab953fa3fe6039"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/screen.tsx",
+          "sha256": "bff6e562ff6638fd4838f58bc4feaa21a586e5d46aa69cdfea4899e9e6b05096"
+        },
+        {
+          "path": "src/app/settings/accounts/mappings/categories/page.tsx",
+          "sha256": "7f1110f7bbe31af8cee6d8d2767adeeaa3f70acd83c0f8156062e80562188d42"
+        },
+        {
+          "path": "tests/unit/mapping-navigation.test.ts",
+          "sha256": "21710cb2d97c409b6e97b98661ebf73eca8214d99b8abfea90fbd64eb09f7b87"
+        },
+        {
+          "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
+          "sha256": "9643afef67123446f429210efd145bee8284695428cc037956f8ea2e5dfb0efb"
+        },
+        {
+          "path": "tests/integration/finance-expense-category-browser.test.mjs",
+          "sha256": "014657ea2bfcde38721a2a3fd3a18c7826af579c034df9a524a4f0cd127d28e5"
+        },
+        {
+          "path": "tests/support/mapping-navigation-review.mjs",
+          "sha256": "8c93399e13cb2c499cbeccbd65f83816d826fd51d77cca72d440a4158ec3d9c2"
         }
       ],
       "verification": {
@@ -4249,11 +4941,11 @@
         },
         {
           "path": "tests/integration/finance-expense-category-browser.test.mjs",
-          "sha256": "653bc33ef535640dee58c72052fb07c96bd5db8b90bdb2192b66d8e9cded6831"
+          "sha256": "014657ea2bfcde38721a2a3fd3a18c7826af579c034df9a524a4f0cd127d28e5"
         },
         {
           "path": "tests/integration/finance-mapping-settings-browser.test.mjs",
-          "sha256": "f168280a2b6f81ce24f24f748eb276b167603d3c29f4f04c7e461f0f6d9e55b2"
+          "sha256": "9643afef67123446f429210efd145bee8284695428cc037956f8ea2e5dfb0efb"
         },
         {
           "path": "tests/support/mapping-workbench.mjs",
@@ -4273,7 +4965,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -4317,7 +5009,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.tsx",
-          "sha256": "13fc769da87966a8a9818bd71d9edf5ed73c64d64d874fe00f1c37e28f2ddba7"
+          "sha256": "fcadc992267d3c0a442519c9607d3ee8e6e71d06d386c16c1ff9f769541fa704"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -4392,16 +5084,100 @@
       "title": "P2 · Vehicle directory (/vehicles)",
       "requirements": "Observed: The list is compact and functional, but selected vehicle context is absent until opened. The generic empty desktop region repeats the customer directory problem.\n\nDirection: Use a consistent vehicle inspector: identity, linked customers, visits and retained relationship history. Show a real authorized vehicle photo only when available.\n\nDesktop: Use list/detail with recognizable make/model/year and a quiet plate reference.\n\nPhone: Preserve the existing focused vehicle-detail mode; keep linked customers and next visit easy to reach.\n\nAcceptance: A stock image must never appear to be evidence of a customer’s vehicle condition.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/vehicles-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Vehicle identity/list/inspector, linked customers and existing focused phone record remain with purposeful desktop context.",
+      "implementedOrPresent": "Vehicle identity/list/inspector, linked customers and existing focused phone record remain with purposeful desktop context. Common typed/contextual returns remain in place. Main safe-context gaps are now implemented across report dates, selected account history/archived inclusion, mapping lookup purpose/date/category attention and ordinary Customers/Vehicles/Leads/Services record opens. Only opaque validated IDs and finite choices survive private clearing; fresh authorized readers restore saved records, never private drafts or automatic saves. Lead directory/follow-up mode and All/Due/Upcoming persist through actual page/sign-in return. Current source-specific evidence:191 focused checks, build/types/full lint; strengthened consumer2/2 and original workspace/dashboard4/4 on d758d2f; full service14/14 on212ad26 with identical application files; earlier unchanged long/deeper4/4 each on eb2992b; account2/2, mapping2/2 each and report2/2 remain separately scoped in their notes. Every native run held its source fixed and cleaned its owned database. Old0/2 link/row assumptions, real1/2 WebKit503 and old service12/14 navigation expectation failure are retained separately, not relabeled or diagnosed by subsequent passes. No server/SQL/financial rule or permission was weakened. Main implementation addressed does not mean all alternate/state/delivered/device requirements are signed off.",
       "remainingWork": "Final profile/history/photo, sign-out and device/state verification remain; no stock evidence image.",
       "evidence": [
         {
           "path": "src/app/vehicles/vehicles.tsx",
-          "sha256": "6d3769cf16c6629e9c0abbe14a009d38fc90b6b548f0858897b6f208555f4745"
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
         },
         {
           "path": "planning/DIRECTORY_INTRODUCTION_DESIGN.md",
           "sha256": "77ea9cd1fb215797e89166bea87d6a02b085c3dd9575c7371ad4b44f3ec46863"
+        },
+        {
+          "path": "planning/DIRECTORY_PRIVATE_RETURN_REVIEW.md",
+          "sha256": "817147f04e35e98230b728723fe5ea2dbd1806ddf1c19bcad0eaaff062233c73"
+        },
+        {
+          "path": "src/client/directory-navigation.ts",
+          "sha256": "5cff0f18ce7160cc1c3159ded984763b86e9d323125e710f0030368cd7d745fe"
+        },
+        {
+          "path": "src/client/use-directory-return.ts",
+          "sha256": "f0446651afd75239aa28202427c425cb9719c5df9e501aad5cc7edde28b6cfaa"
+        },
+        {
+          "path": "src/app/directory-recall.tsx",
+          "sha256": "8e0d1029a625bad3d525bc9347b53e403a6bc1acb8d10e67fd5bf2e7f9bae057"
+        },
+        {
+          "path": "src/client/sign-in-navigation.ts",
+          "sha256": "98fa22f1456d46ee64417c6220328ba62508ecf8a8498a5b9b0d6a948ec57c15"
+        },
+        {
+          "path": "tests/unit/directory-navigation.test.ts",
+          "sha256": "670506fbc6d7671e526cd36ef7fc055b06b4d8e10fe3c820ea488575ef4b6188"
+        },
+        {
+          "path": "src/app/customers/customers.tsx",
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
+        },
+        {
+          "path": "src/app/customers/page.tsx",
+          "sha256": "bea2cfc48a43888c058d7e0cdb8dc870c4fc3e5f91c795e071a68c1908203616"
+        },
+        {
+          "path": "src/app/vehicles/vehicles.tsx",
+          "sha256": "fd04874942240a237fe2b2b5ef1c8da69505f271e0a2ce1fe50793c5854c6a43"
+        },
+        {
+          "path": "src/app/vehicles/page.tsx",
+          "sha256": "4c7df4715e838c9ff7ca6a8c04215855ea5a60a2bb7aa61ec75de420a5591833"
+        },
+        {
+          "path": "src/app/leads/leads.tsx",
+          "sha256": "041445b1e193902bff5403a44c9a391ce6a5b9b7d262aaf642353a934b5ba80d"
+        },
+        {
+          "path": "src/app/leads/page.tsx",
+          "sha256": "b19a5bf6bfa79114ec65e0f19315f4e8e09e7ebe12c1fc2ad7d5ea90a11e0f14"
+        },
+        {
+          "path": "src/app/services/services.tsx",
+          "sha256": "2a7b49f887e7b9eaceb0c8a7154d93f1016ff85444fe1c11af044b961b3b81e7"
+        },
+        {
+          "path": "src/app/services/page.tsx",
+          "sha256": "18c58159422d0463bc031d71a8160f0429a216f1cd037ef210dd93f67e2a1aee"
+        },
+        {
+          "path": "src/client/customer-editor-controller.ts",
+          "sha256": "f4dafd69e535f8135c5799e6607030b25a0e8d3912a3ea88e2a326593d3b68f9"
+        },
+        {
+          "path": "src/client/vehicle-editor-controller.ts",
+          "sha256": "7b7c4d6776640cae33c0a5895f202c53d4843b5d7529faa4a1dec2d4b13434c0"
+        },
+        {
+          "path": "src/client/lead-editor-controller.ts",
+          "sha256": "5f28dc96e7871c2448c4c6e722e452ff235302573251bb365fa089dd184e6777"
+        },
+        {
+          "path": "src/client/service-editor-controller.ts",
+          "sha256": "87ce85f1fcb0c7d3af5fd796148171ef49e5152302e7681f344489b9f6a7ff19"
+        },
+        {
+          "path": "tests/support/directory-private-return.mjs",
+          "sha256": "117a32dc185797ea03e8c76e1d039b48054b46c5d82e248149b952cc359872b3"
+        },
+        {
+          "path": "tests/integration/workspace-journey-browser.test.mjs",
+          "sha256": "ede8d65a54db8bd52a70be479e26b923cfb3862cb0c9a5af11db44ff9e5e03b6"
+        },
+        {
+          "path": "tests/integration/service-editor-browser.test.mjs",
+          "sha256": "f29258476c6473bef71774b05267e4f224ca97981d1606a698cea876a4a0d6e2"
         }
       ],
       "verification": {
@@ -4441,7 +5217,7 @@
       "evidence": [
         {
           "path": "src/app/customers/customers.tsx",
-          "sha256": "114c3e0ac2f10e772866caa705c1a0f38d3e679ffc70a71d1b59858e4efc2821"
+          "sha256": "f1b4595bd49a484b9230b1e889da33170f73bc8eba93d6ca54c69a4bfa8c9bb6"
         },
         {
           "path": "planning/CUSTOMER_PROFILE_IDENTITY_REFINEMENT.md",
@@ -4685,7 +5461,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/trial-balance.tsx",
-          "sha256": "bb3b60c15f96b850f6846775b93b4864655219cc3e08f046a3bacff35f5aec73"
+          "sha256": "386a87634f1cfc7c2ee032ea2b043d0fcc43e1a157a79f2aa3cfa67109b7fdff"
         },
         {
           "path": "planning/REPORT_SCOPE_DESIGN.md",
@@ -4709,7 +5485,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/recorded-income-statement.tsx",
-          "sha256": "40dcae66e2502741c0234369d1b9814bd758edce52d01947e0bb380143e36d75"
+          "sha256": "470d4ab9712716c99c460dadd634a05bc5d6aa1f6322a0d29fc011c986fbd840"
         },
         {
           "path": "planning/REPORT_SCOPE_DESIGN.md",
@@ -4733,7 +5509,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/receivable-aging.tsx",
-          "sha256": "eb21610853ba941270ea862f7d5598c4499676442f6b844c06048efd65672e4a"
+          "sha256": "f44c68101be0b5a36bddd1e8097e2f09faa82a1c4e0a47fc3c1dd4fac44e2828"
         },
         {
           "path": "planning/RECEIVABLE_AGING_DENSITY_DESIGN.md",
@@ -4757,7 +5533,7 @@
       "evidence": [
         {
           "path": "src/app/settings/accounts/customer-funds-report.tsx",
-          "sha256": "bdff5c0ff41f5b36c79a74da57df5a3324ce274bc4624f54edfa7b47deae817c"
+          "sha256": "b328b3d2c6731e6e98f31c7f41835ec93975003aa6b941a052eafd6d50d5b19c"
         },
         {
           "path": "planning/REPORT_SCOPE_DESIGN.md",

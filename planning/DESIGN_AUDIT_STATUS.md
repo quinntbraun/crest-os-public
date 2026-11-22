@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 66 |
-| Partial implementation or required review | 2 |
+| Main change locally addressed | 67 |
+| Partial implementation or required review | 1 |
 | Open audit work | 2 |
 | Review required before choosing changes | 0 |
 | Total | 70 |
 
-66/70, or 94.3%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 94.3% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 2 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+67/70, or 95.7%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 95.7% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 1 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. The active objective is to complete all 70 original audit groups. Approved V1 business-use, recovery, upgrade, release and owner/device gates remain separate requirements and are not waived by this inventory.
 
@@ -26,7 +26,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 | ID | Audit group | Local state | Remaining work |
 |---|---|---|
-| S01 | One visual system, delivered consistently | Open | Publish the next coherent, strictly scanned exact-tree batch and require its own fresh full release/worker/upgrade/recovery checks. Matching installed build, owner finance/off-laptop restore and physical iPhone acceptance remain open. |
+| S01 | One visual system, delivered consistently | Open | Publish the next coherent exact-tree strictly scanned UI batch and require its own complete fresh release checks. Matching installed build, owner finance/off-laptop restore and physical iPhone acceptance remain open. |
 | S02 | Desktop layouts need purpose, not more cards | Main change addressed | Complete broader configured states/long-content/actual zoom and matching hosted/installed/physical-device acceptance. The separate paid-profile rerun remains0/2 at session creation and interrupted-save checks; causes unresolved and no combined6/6 or release acceptance claimed. Every final sign-off staysfalse. |
 | S03 | Phone record detail should replace the directory | Main change addressed | Verify both separate service workflows on fresh Linux source and finish alternate-origin/state and delivered/device acceptance. |
 | S04 | Make action priority predictable | Main change addressed | Preserve complete original financial and recovery behavior and verify remaining configured states and matching delivered/release/installed/physical-device acceptance. Partial-allocation/Add-another overlap and pending-known-receipt cleanup branches retain source review without a new dedicated rendered acceptance claim. |
@@ -38,7 +38,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 | S10 | Refine type, spacing and numeric rhythm | Main change addressed | Complete remaining configured financial report/document/expense/supplier and other long/state variants plus matching release, installed and physical-device acceptance. Main typography is implemented and source/render reviewed; retained failures and separate scopes remain explicit. |
 | S11 | Motion should explain changes | Main change addressed | Complete accepted-release, installed, owner and physical-device motion review, including real keyboard/device preferences. Isolated CSS rendering and the listed synthetic workflow scopes do not establish final sign-off; other missing workflow-state coverage remains in S06. |
 | S12 | Turn history into a readable evidence trail | Main change addressed | Main local presentation/comparison is implemented. Finish missing/unloaded/stale/long/private and actual-zoom history variants, diagnose retained category/tax/access/hosted-timeout failures, and require fresh exact-source hosted/installed/owner/physical-device acceptance. No final sign-off or complete recovery follows from these scoped proofs. |
-| S13 | Protect context through every transition | Partial | Review remaining account/report date/selection returns and any unverified stale/alternate/focus/private variants. Require fresh matching release/installed/owner/device acceptance. Do not promote the last inactive-view projection into a fresh full local browser or physical-device claim. |
+| S13 | Protect context through every transition | Main change addressed | Main contextual return implementation is locally addressed, with genuine directory, report/account and mapping consumers and fresh-reader/private-clear/focus proof. Complete broader alternate-origin, long/filter/paging, stale/private and task-specific state review plus matching current release, installed/owner and physical-device acceptance. Unsafe drafts, search text and stale private cursors are deliberately not retained. Every original requirement and final-sign-off gate remains. |
 | S14 | Phone finishing is physical-device work | Open | Complete the required physical iPhone, keyboard, safe-area, camera/download, zoom and reduced-motion acceptance. |
 | R01 | Sign in (/sign-in) | Main change addressed | Complete genuine timed-expiry, password-manager/zoom/physical keyboard and iPhone acceptance, broader state variants and matching delivered release; all final sign-offs remain false. |
 | R02 | Today (/) | Main change addressed | Complete broader long-list/identity/zoom and global-state review plus matching delivered/installed and physical iPhone acceptance. The two runs are scoped evidence, not one combined10/10 or full audit sign-off. |
@@ -99,7 +99,6 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 ## Next sequence
 
-1. Public28eca50 is terminal: all22 main jobs and both ancillary workflows pass. Keep that source-specific acceptance. Publish the newer coherent supplier recovery/date batch with a fresh strict scan, exact-tree/parent/test-merge proof and expected-head nonforce update; require its own release/worker/restore checks.
-2. Finish S06/S13 remaining original state/context review, including account/report date and selected-record returns. The19-family inventory, local financial/re-entry/date scopes and62 navigation checks are not exhaustive or device acceptance.
-3. Preserve all 70 original requirements/hash and false final sign-offs. Audit stays66 main/2partial/2open. Retain the corrected stale-CSRF verification failures and all earlier actual failed invocations; do not change accounting, authorization, quota or deadline requirements.
-4. Finish matching installed comparison, owner finance/off-laptop restore and physical iPhone13 review before actual Crest use. No merge/install, real-data activation, provider activation or spending.
+1. Public9723a836 is terminal: all22 main jobs and both ancillary suites pass for localf4f937f/tree444649b. Preserve its source-specific worker/restore acceptance. Strictly scan and publish the coherent newer UI batch with canonical tree/sole-parent/test-merge and expected-head nonforce proof; require its own fresh checks. Unpublished82a was superseded before any public mutation.
+2. S13 main safe-context implementation is now locally addressed; it is not a full sign-off for every transition/state. Finish S06 important-workflow eight-state variants and broader remaining long/alternate/private/stale/zoom review under the original scope. Retain unexplained genuine503 evidence; a subsequent pass alone does not establish its cause or cure.
+3. Complete matching installed/owner/off-laptop restore and actual iPhone13 acceptance without bypassing authentication, trust, protected checks or real-data activation gates. All70 original requirement bodies and every false final sign-off remain.

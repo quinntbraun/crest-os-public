@@ -38,10 +38,11 @@ export function createServiceEditorController(deps:Dependencies){
     if(!alive||active)return;const controller=new AbortController();active=controller;emit();
     try{await work(controller.signal);}catch(error){if(alive&&active===controller&&!controller.signal.aborted)failure(error);}finally{if(active===controller){active=null;emit();}}
   }
-  const load=()=>run(async signal=>{
+  const load=(includeAll=false)=>run(async signal=>{
+    if(typeof includeAll!=='boolean')throw new Error();
     clearPrivate();phase='loading';message='Checking service access…';emit();pending=deps.store.read();await fresh(signal);
     if(pending){if(pending.businessId!==snapshot!.context.businessId){phase='blocked';message='A pending save belongs to a different business. Its reference has been kept for review.';return;}retain('A pending service save was found. Check its status before another edit.');return;}
-    const result=await api.list(snapshot!.context.businessId,{search:'',afterId:null,includeInactive:false,pageSize:25},proof!,signal);live(signal);rows=result.services;hasMore=result.hasMore;phase='ready';message=snapshot!.context.writeState==='ready'?'Choose a service or add a new service.':'Service changes are paused. Current records remain available for review.';
+    const result=await api.list(snapshot!.context.businessId,{search:'',afterId:null,includeInactive:includeAll,pageSize:25},proof!,signal);live(signal);rows=result.services;hasMore=result.hasMore;includeInactive=includeAll;phase='ready';message=snapshot!.context.writeState==='ready'?'Choose a service or add a new service.':'Service changes are paused. Current records remain available for review.';
   },error=>{clearPrivate();phase=error instanceof PendingServiceError?'blocked':'unavailable';message=error instanceof PendingServiceError?'The pending-save reference cannot be read. Editing is blocked to protect it.':'Service access could not be verified. Sign in or check again; any pending reference has been kept.';});
   const query=(text:string,archived:boolean,more=false)=>{
     if(phase!=='ready'||!snapshot||!proof||typeof text!=='string'||[...text].length>200||typeof archived!=='boolean'||more&&(!hasMore||text!==search||archived!==includeInactive))return Promise.resolve();

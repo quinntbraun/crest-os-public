@@ -19,7 +19,7 @@ const subscribeToHydration=()=>()=>undefined;
 const displayDate=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
 const dateLabel=(value:string)=>displayDate.format(new Date(value+'T00:00:00Z'));
 
-export function FinanceMappingsScreen({categories=false,initialPurpose='',initialDate=''}:{categories?:boolean;initialPurpose?:FinanceMappingPurpose|'';initialDate?:string}){
+export function FinanceMappingsScreen({categories=false,initialPurpose='',initialDate='',initialAttention=false}:{categories?:boolean;initialPurpose?:FinanceMappingPurpose|'';initialDate?:string;initialAttention?:boolean}){
  const initialMessage=categories?'Review a category’s posting account for a date, or read its approval history.':'Look up a purpose’s account for a date, or read its approval history.';
  const labels=categories?expenseCategoryMappingLabels:fixedFinanceMappingLabels;
  const acceptsPurpose=categories?expenseCategoryMappingPurpose:fixedFinanceMappingPurpose;
@@ -27,7 +27,7 @@ export function FinanceMappingsScreen({categories=false,initialPurpose='',initia
  const [purpose,setPurpose]=useState<FinanceMappingPurpose|''>(initialSelection);
  const [date,setDate]=useState(customerDate(initialDate)?initialDate:''),[message,setMessage]=useState(initialMessage);
  const [mapping,setMapping]=useState<Result>(null),[history,setHistory]=useState<History|null>(null);
- const [checked,setChecked]=useState(false),[query,setQuery]=useState(''),[exceptions,setExceptions]=useState(false);
+ const [checked,setChecked]=useState(false),[query,setQuery]=useState(''),[exceptions,setExceptions]=useState(categories&&initialAttention);
  const [directory,setDirectory]=useState<{rows:Record<string,Result>;pending:FinanceMappingPurpose|null}|null>(null);
  const [busy,setBusy]=useState(false),[signedOut,setSignedOut]=useState(false);
  const mounted=useSyncExternalStore(subscribeToHydration,()=>true,()=>false);
@@ -57,7 +57,7 @@ export function FinanceMappingsScreen({categories=false,initialPurpose='',initia
  },[busy]);
  const clearPrivate=useCallback(()=>{
   active.current?.abort();active.current=null;resultFocus.current=null;categoryFocus.current=null;
-  setMapping(null);setHistory(null);setPurpose('');setDate('');setChecked(false);setDirectory(null);setQuery('');setExceptions(false);setBusy(false);setSignedOut(false);setMessage(initialMessage);
+  setMapping(null);setHistory(null);setChecked(false);setDirectory(null);setQuery('');setBusy(false);setSignedOut(false);setMessage(initialMessage);
  },[initialMessage]);
  useEffect(()=>{
   const visibility=()=>{if(document.visibilityState==='hidden')clearPrivate();};
@@ -72,10 +72,10 @@ export function FinanceMappingsScreen({categories=false,initialPurpose='',initia
  function resetResults(){
   setMapping(null);setHistory(null);setChecked(false);setMessage(initialMessage);
  }
- function rememberLookup(selected:FinanceMappingPurpose|'',lookupDate:string){
+ function rememberLookup(selected:FinanceMappingPurpose|'',lookupDate:string,attention=exceptions){
   const path='/settings/accounts/mappings'+(categories?'/categories':'');
   if(window.location.pathname===path)
-   window.history.replaceState(null,'',mappingNavigationHref(categories,false,{purpose:selected,lookupOn:lookupDate})+window.location.hash);
+   window.history.replaceState(null,'',mappingNavigationHref(categories,false,{purpose:selected,lookupOn:lookupDate,attention})+window.location.hash);
  }
  function chooseCategory(selected:ExpenseCategoryMappingPurpose){
   if(purpose===selected){categoryHeading.current?.focus();categoryHeading.current?.scrollIntoView({block:'nearest'});return;}
@@ -125,7 +125,7 @@ export function FinanceMappingsScreen({categories=false,initialPurpose='',initia
    if(signal.aborted)return;
    controller.abort();setHistory(null);
    const denied=error instanceof AuthenticationError&&error.kind==='denied';
-   if(denied){setMapping(null);setDirectory(null);setChecked(false);resultFocus.current=null;}
+   if(denied){clearPrivate();status.current?.focus();}
    setSignedOut(denied);setMessage(denied?'Sign in to check account mappings.':'The mapping could not be verified. Try again.');
   }finally{
    if(active.current===controller){active.current=null;setBusy(false);if(!resultFocus.current)status.current?.focus();}
@@ -162,7 +162,9 @@ export function FinanceMappingsScreen({categories=false,initialPurpose='',initia
    <p className="field-help">{directory?'Posting accounts on '+dateLabel(date):'Posting accounts have not been checked for this date.'}</p>
    <label htmlFor="category-directory-search">Find a category</label>
    <input ref={categorySearch} id="category-directory-search" type="search" value={query} disabled={controlsDisabled} onChange={event=>setQuery(event.target.value)}/>
-   {directory&&<label className="checkbox"><input type="checkbox" checked={exceptions} disabled={controlsDisabled} onChange={event=>setExceptions(event.target.checked)}/>Show categories needing attention</label>}
+   {directory&&<label className="checkbox"><input type="checkbox" checked={exceptions} disabled={controlsDisabled} onChange={event=>{
+    setExceptions(event.target.checked);rememberLookup(purpose,date,event.target.checked);
+   }}/>Show categories needing attention</label>}
    {matchingCategories.length===0&&<p>No categories match these filters.</p>}
    <ul className="mapping-category-list">
     {matchingCategories.map(([key,label])=>{
@@ -199,7 +201,7 @@ export function FinanceMappingsScreen({categories=false,initialPurpose='',initia
     <button type="submit" disabled={controlsDisabled||!purpose||!customerDate(date)}>Check account</button>
     <button type="button" className="secondary" disabled={controlsDisabled||!purpose} onClick={()=>void load('history')}>View approval history</button>
    </div>
-   {purpose&&<a className="record-return-link" href={mappingNavigationHref(categories,true,{purpose,lookupOn:date})}>Manage approvals for this {categories?'category':'purpose'}</a>}
+   {purpose&&<a className="record-return-link" href={mappingNavigationHref(categories,true,{purpose,lookupOn:date,attention:exceptions})}>Manage approvals for this {categories?'category':'purpose'}</a>}
   </form>
   {mapping&&<section className="mapping-summary-card" aria-label="Approved account">
    <h2 ref={accountHeading} className="editor-heading" tabIndex={-1}>Account on {dateLabel(date)}</h2>

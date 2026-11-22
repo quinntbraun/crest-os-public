@@ -1,6 +1,7 @@
 'use client';
 
 import {useEffect,useRef,useState} from 'react';
+import {AuthenticationError} from '../../../client/authentication';
 import {expenseDollars} from '../../../bookkeeping/expenses/expense-contract';
 import {receivableAgingBuckets} from '../../../bookkeeping/receivable-aging-contract';
 import type {parseReceivableAging} from '../../../bookkeeping/receivable-aging-contract';
@@ -15,8 +16,9 @@ const dateFormat=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'U
 const displayDate=(date:string)=>dateFormat.format(new Date(date+'T12:00:00Z'));
 const usd=(cents:string)=>'$'+expenseDollars(cents);
 
-export function ReceivableAging({businessId}:{businessId:string}){
-  const [through,setThrough]=useState('');
+export function ReceivableAging({businessId,initialThrough='',onThroughChange,onAccessDenied}:{businessId:string;
+  initialThrough?:string;onThroughChange?:(value:string)=>void;onAccessDenied?:()=>void}){
+  const [through,setThrough]=useState(initialThrough);
   const [report,setReport]=useState<ReturnType<typeof parseReceivableAging>|null>(null);
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
@@ -25,7 +27,6 @@ export function ReceivableAging({businessId}:{businessId:string}){
   function clear(){
     active.current?.abort();
     active.current=null;
-    setThrough('');
     setReport(null);
     setMessage('');
     setBusy(false);
@@ -57,8 +58,12 @@ export function ReceivableAging({businessId}:{businessId:string}){
       if(signal.aborted)return;
       setReport(result);
       setMessage(result.itemCount==='0'?'No posted invoices had an outstanding balance on that date.':'Outstanding invoices loaded.');
-    }catch{
-      if(!signal.aborted)setMessage('Crest could not verify the report. Check the date and connection, then try again.');
+    }catch(error){
+      if(!signal.aborted){
+        const denied=error instanceof AuthenticationError&&error.kind==='denied';
+        if(denied)onAccessDenied?.();
+        setMessage(denied?'Sign in again to review outstanding invoices.':'Crest could not verify the report. Check the date and connection, then try again.');
+      }
     }finally{
       if(active.current===controller){active.current=null;setBusy(false);}
     }
@@ -67,7 +72,7 @@ export function ReceivableAging({businessId}:{businessId:string}){
   return <details className="review-card" open onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
     <summary onClick={event=>{if(event.currentTarget.closest('details')?.open)clear();}}>Outstanding invoices by due date</summary>
     <section aria-label="Outstanding invoices by due date" aria-busy={busy}>
-      <p className="field-help">Fictional posted invoices. Opening receivables and legacy balances are outside this report’s coverage.</p>
+      {!report&&<p className="field-help">Fictional posted invoices. Opening receivables and legacy balances are outside this report’s coverage.</p>}
       <ReportReadingSummary snapshot={report}>{report&&<FinancialReportHeader period={<>Receivables · As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}
           timeZone={report.timeZone} observedAt={report.observedAt} scopeLabel="Posted invoices"
           coverage="Fictional posted invoices. Opening receivables and legacy balances are outside this report’s coverage."
@@ -75,7 +80,7 @@ export function ReceivableAging({businessId}:{businessId:string}){
           action={<button type="button" className="secondary" onClick={()=>downloadFinanceHistory('crest-posted-receivables-'+report.throughOn+'.csv',receivableAgingCsvRows(report))}>Download listed invoices (CSV)</button>}/>}</ReportReadingSummary>
       <form className={styles.agingDateForm} onSubmit={event=>{event.preventDefault();void load();}}>
         <label>Through date (optional)<input type="date" min="1900-01-01" value={through} disabled={busy}
-          onChange={event=>{setThrough(event.target.value);setReport(null);setMessage('');}}/></label>
+          onChange={event=>{setThrough(event.target.value);onThroughChange?.(event.target.value);setReport(null);setMessage('');}}/></label>
         <p className="field-help">Leave blank for today in the workspace time zone.</p>
         <button className="secondary" type="submit" disabled={busy}>Load outstanding invoices</button>
       </form>

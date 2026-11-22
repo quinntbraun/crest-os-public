@@ -116,7 +116,25 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.getByRole('button',{name:'Reload saved services',exact:true}).click();
    await openService();await edit();
    await page.getByLabel('Active — available for future selection',{exact:true}).uncheck();await page.getByRole('button',{name:'Save service',exact:true}).click();await expect(status()).toContainText('Service saved');await page.getByRole('button',{name:'Load current services',exact:true}).click();await expect(page.getByRole('button',{name:/Synthetic scope/})).toHaveCount(0);await page.getByLabel('Include inactive services',{exact:true}).check();await page.getByRole('button',{name:'Search',exact:true}).click();await page.getByRole('button',{name:/Synthetic scope/}).click();await expect(page.getByRole('region',{name:'Saved history',exact:true})).toContainText('Revision 4 · Made inactive');
-   await page.goto(f.origin+'/customers');await page.goBack();await expect(status()).toContainText(/Choose a service|cleared/);await expect(page.getByLabel('Service name',{exact:true})).toHaveCount(0);if(await page.getByRole('button',{name:'Load current services',exact:true}).isVisible())await page.getByRole('button',{name:'Load current services',exact:true}).click();
+   const selectedService=new URL(page.url()).searchParams.get('service');assert(selectedService);
+   const returnedReads=[],observeReturn=response=>{if(new URL(response.url()).pathname==='/api/business/services/history')returnedReads.push(response.status());};
+   await page.goto(f.origin+'/customers');page.on('response',observeReturn);
+   try{
+    await page.goBack();assert.equal(new URL(page.url()).searchParams.get('service'),selectedService);
+    await expect(status()).toContainText(/cleared|Review service details and retained history before saving/);
+    await expect(page.getByLabel('Service name',{exact:true})).toHaveCount(0);
+    if((await status().textContent()).includes('Review service details')){
+     assert.deepEqual(returnedReads,[200],'A freshly restored profile requires one genuine checked history read');
+     await expect(page.locator('.service-profile')).toContainText('Revision 4');
+     await expect(page.locator('.service-profile .service-availability')).toHaveText('Inactive');
+     await expect(page.getByRole('button',{name:'Edit service',exact:true})).toBeEnabled();
+    }else{
+     await expect(page.locator('.service-profile')).toHaveCount(0);
+     await page.getByRole('button',{name:'Load current services',exact:true}).click();
+     await expect(page.getByRole('button',{name:'Reopen selected service',exact:true})).toBeVisible();
+     await expect(page.getByLabel('Include inactive services',{exact:true})).toBeChecked();
+    }
+   }finally{page.off('response',observeReturn);}
   });
  }finally{await browser?.close();await f.close();}
 });

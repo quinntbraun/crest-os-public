@@ -81,9 +81,18 @@ export async function reviewMappingNavigation(originalPage,fixture,engine,catego
   await expect(page.getByLabel('Effective date',{exact:true})).toBeEnabled();
   await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
   await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
-  await expect(page.getByLabel('Effective date',{exact:true})).toHaveValue('');
-  await expect(page.getByRole('link',{name:manageLabel,exact:true})).toHaveCount(0);
-  if(!categories)await expect(page.getByLabel('Purpose',{exact:true})).toHaveValue('');
+  await expect(page.getByLabel('Effective date',{exact:true})).toHaveValue(date);
+  await expect(page.getByRole('link',{name:manageLabel,exact:true})).toHaveAttribute('href',expectedManage);
+  if(!categories)await expect(page.getByLabel('Purpose',{exact:true})).toHaveValue(purpose);
+  else await expect(page.locator('.category-mapping-selected h2')).toHaveText('Fuel');
+  await expect(page.getByRole('region',{name:'Approved account',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('region',{name:'Saved mapping history',exact:true})).toHaveCount(0);
+  for(const width of [360,390,430,1440]){
+   await page.setViewportSize({width,height:900});
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(v=>v.id),[]);
+   await page.screenshot({path:'.local/review/mapping-private-return-'+kind+'-'+engine+'-'+width+'.png',fullPage:true});
+  }
   assert.deepEqual(requests,[],'Navigating safe context does not load or write financial records');
   assert.deepEqual(await mappingBusinessSource(fixture),before,'Navigation and the explicit approval review preserve mapping and audit facts');
   page.off('request',observe);
@@ -143,7 +152,7 @@ export async function reviewMappingNavigation(originalPage,fixture,engine,catego
    await expect(page.getByRole('link',{name:'Sign in again',exact:true})).toHaveAttribute('href','/sign-in?returnTo=category-mappings&purpose='+purpose+'&lookupOn=2026-02-15');
   }
   assert.deepEqual(await mappingBusinessSource(fixture),before,'Session recovery and receipt lookup do not change mappings or their audit trail');
-  await writeFile('.local/review/mapping-return-'+kind+'-'+engine+'.json',JSON.stringify({observations,businessRequests:requests,sourceFactsPreserved:true,lookupDateNotApprovalDate:true,invalidQueryRejected:true,privateClearingPreserved:true,signInReturnVerified:true,privateReceiptClearedOnDenial:!!receiptReference,privateLookupClearedOnDenial:categories},null,2)+'\n');
+  await writeFile('.local/review/mapping-return-'+kind+'-'+engine+'.json',JSON.stringify({observations,businessRequests:requests,sourceFactsPreserved:true,lookupDateNotApprovalDate:true,invalidQueryRejected:true,privateClearingPreserved:true,privateLookupNavigationPreserved:true,signInReturnVerified:true,privateReceiptClearedOnDenial:!!receiptReference,privateLookupClearedOnDenial:categories},null,2)+'\n');
  }finally{page.off('request',observe);await page.setViewportSize(viewport);}
  }catch(error){
   try{

@@ -1,4 +1,5 @@
 import {captureDuringAction} from '../support/quote-browser-response.mjs';
+import {reviewDirectoryPrivateReturn} from '../support/directory-private-return.mjs';
 import {directoryReturnSignIn,reviewRecordDirectoryReturn} from '../support/record-directory-return.mjs';
 import {reviewDirectoryLoadingJourney} from '../support/directory-loading-journey.mjs';
 import {reviewUnavailableRecordNavigation} from '../support/record-unavailable-navigation.mjs';
@@ -20,6 +21,13 @@ import {sourceExportBrowserFixture} from '../support/source-export-browser-fixtu
 import {gateEditorFocusFrames,releaseEditorFocusFrames} from '../support/editor-focus-frame.mjs';
 import {reviewDirectoryIntroduction} from '../support/directory-introduction.mjs';
 import {reviewAddressCustomerChooser} from '../support/address-customer-chooser.mjs';
+
+for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' restores safe selected records and directory inclusion filters',{timeout:360000},async()=>{
+ const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,leadFollowUps:true});let browser;
+ try{browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:900}}),page=await context.newPage();
+  page.setDefaultTimeout(20000);await directoryReturnSignIn(page,fixture);await reviewDirectoryPrivateReturn(page,fixture,name);
+ }finally{await browser?.close();await fixture.close();}
+});
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' complete signed-in customer / vehicle workspace journey',async()=>{
  const f=await sourceExportBrowserFixture({product:true,workspace:true});let browser;

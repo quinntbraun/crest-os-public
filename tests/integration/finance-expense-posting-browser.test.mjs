@@ -433,6 +433,9 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await expect(statement).toHaveCount(0);
    await incomeView.press('Enter');
    await expect(statement.getByRole('table')).toHaveCount(0);
+   await expect(statement.getByLabel('From date',{exact:true})).toHaveValue(date);
+   await expect(statement.getByLabel('Through date',{exact:true})).toHaveValue(date);
+   assert.equal(new URL(page.url()).searchParams.get('report'),'income');
    await ledgerView.press('Enter');
   }
   await expect(setupView).toBeVisible();
@@ -513,6 +516,79 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await report.getByRole('button',{name:'Load trial balance',exact:true}).click();
   await expect(report.getByRole('status')).toContainText('Crest could not load a verified trial balance');
   await expect(report.getByRole('button',{name:'Download trial balance CSV',exact:true})).toHaveCount(0);
+  if(income){
+   const requested=[],observe=request=>{
+    if(/\/(trial-balance|recorded-income-statement|customer-funds-report|receivable-aging)$/.test(new URL(request.url()).pathname))requested.push(request.url());
+   };
+   page.on('request',observe);
+   try{
+    await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide')));
+    await expect(page.getByRole('table')).toHaveCount(0);
+    await page.getByRole('button',{name:'Check accounting access',exact:true}).click();
+    await expect(report.getByLabel('Through date (optional)',{exact:true})).toHaveValue(priorDate);
+    await expect(report.getByRole('table')).toHaveCount(0);
+    await page.reload();
+    await expect(report.getByLabel('Through date (optional)',{exact:true})).toHaveValue(priorDate);
+    const picker=page.getByRole('group',{name:'Choose a report',exact:true});
+    await picker.getByRole('button',{name:'Income',exact:true}).click();
+    const statement=page.getByRole('region',{name:'Recorded income statement',exact:true});
+    await expect(statement.getByLabel('From date',{exact:true})).toHaveValue(date);
+    await expect(statement.getByLabel('Through date',{exact:true})).toHaveValue(date);
+    await expect(statement.getByRole('table')).toHaveCount(0);
+    for(const width of [360,390,1440]){
+     await page.setViewportSize({width,height:900});
+     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+     await page.screenshot({path:'.local/review/accounting-filter-return-'+name+'-'+width+'.png',fullPage:true});
+    }
+    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+    assert.deepEqual(requested,[],'Restoring report choices never automatically loads private financial reports');
+    await waitForSessionAdmissionCapacity(f,{reserve:90});
+    const cookies=await context.cookies(); // Genuine session, held only in this fixture's memory.
+    const facts=async()=>{
+     const rows={};
+     for(const table of ['crest.financial_events','crest.journal_entries','crest_private.audit_events'])
+      rows[table]=(await f.client.query('SELECT to_jsonb(r)::text AS value FROM '+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[f.business])).rows;
+     return rows;
+    };
+    const before=await facts();
+    for(const [choice,label,load,key,value]of [
+     ['ledger','Fictional trial balance','Load trial balance','ledgerThrough',priorDate],
+     ['income','Recorded income statement','Load income statement','incomeThrough',date],
+     ['funds','Customer funds held','Load customer funds','fundsThrough',date],
+     ['receivables','Outstanding invoices by due date','Load outstanding invoices','receivablesThrough',date],
+    ]){
+     await context.addCookies(cookies);
+     const destination=new URL(page.url());destination.searchParams.set('report',choice);
+     await page.goto(destination.href);
+     const task=page.getByRole('region',{name:label,exact:true});
+     const through=task.getByLabel(choice==='income'?'Through date':'Through date (optional)',{exact:true});
+     await through.fill(value);
+     await page.reload();
+     await expect(through).toHaveValue(value);
+     await expect(task.getByRole('table')).toHaveCount(0);
+     const expected=Object.fromEntries(new URL(page.url()).searchParams);
+     if(choice==='ledger')delete expected.report; // The default report has a canonical URL without a report parameter.
+     await context.clearCookies();
+     await task.getByRole('button',{name:load,exact:true}).click();
+     const signIn=page.getByRole('link',{name:'Sign in again',exact:true});
+     await expect(signIn).toBeVisible();
+     const params=new URL(await signIn.getAttribute('href'),f.origin).searchParams;
+     assert.deepEqual(Object.fromEntries(params),{returnTo:'accounting',...expected});
+     assert.equal(params.get(key),value);
+     await expect(page.getByRole('table')).toHaveCount(0);
+     await expect(page.getByRole('navigation',{name:'Accounting sections',exact:true})).toHaveCount(0);
+     await expect(page.getByRole('region',{name:label,exact:true})).toHaveCount(0);
+     for(const width of [390,1440]){
+      await page.setViewportSize({width,height:900});
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+      await page.screenshot({path:'.local/review/accounting-report-denied-'+choice+'-'+name+'-'+width+'.png',fullPage:true});
+     }
+     await expect(page.getByRole('status')).toBeFocused();
+     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+    }
+    assert.deepEqual(await facts(),before,'Report return and denied reads cannot change posted finance or its audit');
+   }finally{page.off('request',observe);}
+  }
   if(supplierBills){
    await page.goto(f.origin+'/export-files');
    await page.getByRole('button',{name:'Prepare posted finance CSV',exact:true}).click();

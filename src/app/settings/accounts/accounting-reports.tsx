@@ -1,17 +1,16 @@
 'use client';
 
-import {useState} from 'react';
 import type {FinanceAccountContext} from '../../../client/finance-accounts';
+import type {AccountingNavigation} from '../../../client/accounting-navigation';
 import {CustomerFundsReport} from './customer-funds-report';
 import {ReceivableAging} from './receivable-aging';
 import {RecordedIncomeStatement} from './recorded-income-statement';
 import {TrialBalance} from './trial-balance';
 import styles from './screen.module.css';
 
-type Report = 'ledger' | 'income' | 'funds' | 'receivables';
-
-export function AccountingReports({context}:{context:FinanceAccountContext}){
- const [selected,setSelected]=useState<Report>('ledger');
+export function AccountingReports({context,navigation,onNavigate,onAccessDenied}:{context:FinanceAccountContext;
+ navigation:AccountingNavigation;onNavigate:(change:Partial<AccountingNavigation>)=>void;onAccessDenied:()=>void}){
+ const selected=navigation.report;
  const {businessId,recordedIncomeStatement,customerFundsReport,receivableAging}=context;
  const options=[
   {id:'ledger',label:'Ledger',description:'Posted balances and journal entries',available:true},
@@ -28,18 +27,23 @@ export function AccountingReports({context}:{context:FinanceAccountContext}){
    <div className={styles.reportChoices} role="group" aria-label="Choose a report">
    {available.map(({id,label,description})=><div key={id} className={styles.reportChoice}>
     <button type="button" className="secondary" aria-describedby={'accounting-report-description-'+id}
-     aria-pressed={current.id===id} aria-controls="accounting-report-view" onClick={()=>setSelected(id)}>{label}</button>
+     aria-pressed={current.id===id} aria-controls="accounting-report-view" onClick={()=>onNavigate({report:id})}>{label}</button>
     <small id={'accounting-report-description-'+id}>{description}</small>
    </div>)}
    </div>
    <p className={styles.reportPickerHelp}>Load a report's dates to see checked figures and its recorded coverage.</p>
   </nav>}
   <div className={styles.reports} id="accounting-report-view">
-   {current.id==='ledger'&&<TrialBalance businessId={businessId}/>}
-   {current.id==='income'&&<RecordedIncomeStatement businessId={businessId}/>}
-   {current.id==='funds'&&<CustomerFundsReport businessId={businessId} includesExcess={context.excessReceipts===true}
-    includesRefundTransfers={context.refundTransfers===true}/>}
-   {current.id==='receivables'&&<ReceivableAging businessId={businessId}/>}
+   {current.id==='ledger'&&<TrialBalance businessId={businessId} onAccessDenied={onAccessDenied} initialThrough={navigation.ledgerThrough}
+    onThroughChange={ledgerThrough=>onNavigate({ledgerThrough})}/>}
+   {current.id==='income'&&<RecordedIncomeStatement businessId={businessId} onAccessDenied={onAccessDenied} initialFrom={navigation.incomeFrom}
+    initialThrough={navigation.incomeThrough} onFromChange={incomeFrom=>onNavigate({incomeFrom})}
+    onThroughChange={incomeThrough=>onNavigate({incomeThrough})}/>}
+   {current.id==='funds'&&<CustomerFundsReport businessId={businessId} onAccessDenied={onAccessDenied} includesExcess={context.excessReceipts===true}
+    includesRefundTransfers={context.refundTransfers===true} initialThrough={navigation.fundsThrough}
+    onThroughChange={fundsThrough=>onNavigate({fundsThrough})}/>}
+   {current.id==='receivables'&&<ReceivableAging businessId={businessId} onAccessDenied={onAccessDenied} initialThrough={navigation.receivablesThrough}
+    onThroughChange={receivablesThrough=>onNavigate({receivablesThrough})}/>}
   </div>
  </div>;
 }

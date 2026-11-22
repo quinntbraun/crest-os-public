@@ -1,5 +1,7 @@
 'use client';
 import {SignInLink} from "../sign-in-link";
+import {DirectoryRecall} from '../directory-recall';
+import {useDirectoryReturn} from '../../client/use-directory-return';
 
 import {DirectoryLoading} from '../directory-loading';
 import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
@@ -42,10 +44,11 @@ function ServiceQuotePreview({name,inclusions,exclusions,saved,heading}:{
  </section>;
 }
 
-export function ServiceScreen(){
+export function ServiceScreen({initialServiceId=null,initialIncludeAll=false}:{initialServiceId?:string|null;initialIncludeAll?:boolean}={}){
+ const {selection,includeAll,remember,rememberFilter}=useDirectoryReturn('services',initialServiceId,initialIncludeAll);
  const [saving,setSaving]=useState(false);
  const [view,setView]=useState(initialServiceEditorView),current=useRef<ReturnType<typeof createServiceEditorController>|null>(null);
- const [editing,setEditing]=useState(false),[showRecord,setShowRecord]=useState(false),[preview,setPreview]=useState(false);
+ const [editing,setEditing]=useState(false),[showRecord,setShowRecord]=useState(Boolean(initialServiceId)),[preview,setPreview]=useState(false);
  const formHeading=useRef<HTMLHeadingElement>(null),profileHeading=useRef<HTMLHeadingElement>(null),previewHeading=useRef<HTMLHeadingElement>(null);
  const focus=useRef<string|null|undefined>(undefined),directoryTrigger=useRef<HTMLButtonElement>(null),searchInput=useRef<HTMLInputElement>(null);
  const directoryOrigin=useRef<DirectoryOrigin|null>(null);
@@ -65,7 +68,11 @@ export function ServiceScreen(){
    store:createPendingServiceStore({getItem:k=>sessionStorage.getItem(k),setItem:(k,v)=>sessionStorage.setItem(k,v),removeItem:k=>sessionStorage.removeItem(k)}),
    change:next=>{if(next.phase!=='ready')clearDirectoryOrigin();setView(next);}
   });
-  current.current=c;void c.load();
+  current.current=c;void(async()=>{
+   await c.load(includeAll.current);
+   if(!initialServiceId||current.current!==c||c.view().phase!=='ready')return;
+   focus.current=initialServiceId;setShowRecord(true);await c.open(initialServiceId);
+  })();
   const leave=()=>{setEditing(false);setPreview(false);setShowRecord(false);c.suspend();};
   const hidden=()=>{if(document.visibilityState==='hidden')leave();},restore=(e:PageTransitionEvent)=>{if(e.persisted)leave();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restore);
@@ -73,7 +80,7 @@ export function ServiceScreen(){
    current.current=null;c.dispose();clearDirectoryOrigin();document.removeEventListener('visibilitychange',hidden);
    window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restore);
   };
- },[clearDirectoryOrigin]);
+ },[clearDirectoryOrigin,initialServiceId,includeAll]);
  useEffect(()=>{
   if(!dirty&&view.phase!=='pending'&&!saving)return;
   const leave=(e:BeforeUnloadEvent)=>e.preventDefault();window.addEventListener('beforeunload',leave);
@@ -87,13 +94,14 @@ export function ServiceScreen(){
  }
  function create(trigger:HTMLButtonElement){
   if(!current.current||current.current.view().busy||!discard())return;
-  directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);setPreview(false);setEditing(true);setShowRecord(true);
+  remember(null);directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);setPreview(false);setEditing(true);setShowRecord(true);
   focus.current=null;current.current?.create();
  }
  async function open(id:string,trigger:HTMLButtonElement){
   if(!current.current||current.current.view().busy||!discard())return;
   directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);setPreview(false);setEditing(false);setShowRecord(true);
-  focus.current=id;await current.current?.open(id);
+  const controller=current.current;focus.current=id;await controller.open(id);
+  if(current.current===controller&&controller.view().selected?.service.id===id)remember(id);
  }
  function closeEditor(){
   if(!selected||!discard())return;
@@ -104,11 +112,12 @@ export function ServiceScreen(){
   if(!current.current||current.current.view().busy||!discard())return;
   clearDirectoryOrigin();
   setEditing(false);setPreview(false);setShowRecord(false);
-  void current.current?.load();
+  void current.current?.load(includeAll.current);
  }
  function query(search:string,inactive:boolean,more=false){
   if(!current.current||current.current.view().busy||!discard())return;
   clearDirectoryOrigin();
+  remember(null);rememberFilter(inactive);
   setEditing(false);setPreview(false);setShowRecord(false);
   void current.current?.query(search,inactive,more);
  }
@@ -117,6 +126,7 @@ export function ServiceScreen(){
   focus.current=selected?.service.id??null;setPreview(next);
  }
  function backToCatalog(){
+  remember(null);
   setShowRecord(false);
   requestAnimationFrame(()=>{
    const trigger=directoryTrigger.current;
@@ -141,6 +151,8 @@ export function ServiceScreen(){
    </>:<button type="button" disabled={view.busy} onClick={reload}>Load current services</button>}
   </div>}
   {view.phase==='ready'&&draft&&showRecord&&<button type="button" className="secondary service-mobile-control service-catalog-back" onClick={backToCatalog}>Back to services</button>}
+  {view.phase==='ready'&&!selected&&!draft&&selection&&<DirectoryRecall label="service" disabled={view.busy}
+   onReopen={button=>void open(selection,button)}/>}
   {view.phase==='ready'&&<div className="service-layout" data-mobile-record={showRecord&&draft!==null}>
    <section className="service-directory-panel home-panel" aria-labelledby="service-directory-heading">
     <h2 id="service-directory-heading">Saved services</h2>

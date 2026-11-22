@@ -1,6 +1,7 @@
 'use client';
 
 import {useEffect,useRef,useState} from 'react';
+import {AuthenticationError} from '../../../client/authentication';
 import type {parseCustomerFundsReport} from '../../../bookkeeping/customer-funds-report-contract';
 import {expenseDollars} from '../../../bookkeeping/expenses/expense-contract';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
@@ -12,8 +13,9 @@ const dateFormat=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'U
 const displayDate=(date:string)=>dateFormat.format(new Date(date+'T12:00:00Z'));
 const usd=(cents:string)=>'$'+expenseDollars(cents);
 
-export function CustomerFundsReport({businessId,includesExcess=false,includesRefundTransfers=false}:{businessId:string;includesExcess?:boolean;includesRefundTransfers?:boolean}){
-  const [through,setThrough]=useState('');
+export function CustomerFundsReport({businessId,includesExcess=false,includesRefundTransfers=false,initialThrough='',onThroughChange,onAccessDenied}:{businessId:string;includesExcess?:boolean;includesRefundTransfers?:boolean;
+  initialThrough?:string;onThroughChange?:(value:string)=>void;onAccessDenied?:()=>void}){
+  const [through,setThrough]=useState(initialThrough);
   const [report,setReport]=useState<ReturnType<typeof parseCustomerFundsReport>|null>(null);
   const [status,setStatus]=useState('');
   const [busy,setBusy]=useState(false);
@@ -22,7 +24,6 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
   function clear(){
     active.current?.abort();
     active.current=null;
-    setThrough('');
     setReport(null);
     setStatus('');
     setBusy(false);
@@ -54,8 +55,12 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
       if(signal.aborted)return;
       setReport(result);
       setStatus(result.lotCount==='0'?'No posted customer funds were held on this date.':'Customer funds matched the ledger.');
-    }catch{
-      if(!signal.aborted)setStatus('Crest could not verify customer funds. Check the date and connection, then try again.');
+    }catch(error){
+      if(!signal.aborted){
+        const denied=error instanceof AuthenticationError&&error.kind==='denied';
+        if(denied)onAccessDenied?.();
+        setStatus(denied?'Sign in again to review customer funds.':'Crest could not verify customer funds. Check the date and connection, then try again.');
+      }
     }finally{
       if(active.current===controller){active.current=null;setBusy(false);}
     }
@@ -83,7 +88,7 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
           action={report.rows.length>0&&<button className="secondary" type="button" onClick={download}>Download listed funds (CSV)</button>}/>}</ReportReadingSummary>
       <form onSubmit={event=>{event.preventDefault();void load();}}>
         <label>Through date (optional)<input type="date" min="1900-01-01" value={through} disabled={busy}
-          onChange={event=>{setThrough(event.target.value);setReport(null);setStatus('');}}/></label>
+          onChange={event=>{setThrough(event.target.value);onThroughChange?.(event.target.value);setReport(null);setStatus('');}}/></label>
         <p className="field-help">Leave blank for today in the workspace time zone.</p>
         <button className="secondary" type="submit" disabled={busy}>Load customer funds</button>
       </form>

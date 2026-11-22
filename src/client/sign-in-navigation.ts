@@ -2,6 +2,9 @@ import {customerDate,customerInstant,customerUuid} from '../customer/customer-co
 import {mappingNavigationHref} from './mapping-navigation';
 import {readScheduleNavigation,scheduleNavigationHref} from './schedule-navigation';
 import {readExpenseNavigation} from './expense-navigation';
+import {accountingNavigationHref} from './accounting-navigation';
+import {directoryDestinations,readDirectoryInclude,readLeadNavigation} from './directory-navigation';
+import type {DirectoryDestination} from './directory-navigation';
 
 const destinations=[
  ['home','/','Return to Today'],
@@ -39,13 +42,23 @@ export function readSignInReturn(input:Readonly<Record<string,unknown>>):{href:s
  const destination=destinations.find(([key])=>key===input.returnTo);
  if(!destination)return null;
  const [key,path,label]=destination;
+ if(key==='accounting')return {href:accountingNavigationHref(input),label};
  if(['account-mappings','category-mappings','mapping-approvals','category-approvals'].includes(key))
   return {href:mappingNavigationHref(key==='category-mappings'||key==='category-approvals',
    key==='mapping-approvals'||key==='category-approvals',input),label};
  const url=new URL(path,'https://crest.invalid'),params=url.searchParams;
  const uuid=(name:string)=>{if(customerUuid(input[name]))params.set(name,input[name]);};
+ if(Object.hasOwn(directoryDestinations,key)){
+  const directory=key as DirectoryDestination;
+  if(readDirectoryInclude(directory,input))params.set('include',directoryDestinations[directory].include);
+ }
+ if(key==='services')uuid('service');
  if(key==='schedule'||key==='work-time'||key==='calendar')uuid('job');
- if(key==='leads')uuid('lead');
+ if(key==='leads'){
+  uuid('lead');const lead=readLeadNavigation(input);
+  if(lead.directory)params.set('view','directory');
+  if(lead.reminders!=='all')params.set('reminders',lead.reminders);
+ }
  if(key==='calendar'&&customerDate(input.activityFrom)&&customerDate(input.activityThrough)
   &&input.activityThrough>=input.activityFrom
   &&(Date.parse(input.activityThrough+'T12:00:00Z')-Date.parse(input.activityFrom+'T12:00:00Z'))/86400000<=92){
@@ -87,7 +100,6 @@ export function readSignInReturn(input:Readonly<Record<string,unknown>>):{href:s
   if(expense.view!=='purchases')params.set('view',expense.view);
   if(expense.payablesThrough)params.set('payablesThrough',expense.payablesThrough);
  }
- if(key==='accounting'&&typeof input.view==='string'&&['reports','accounts','setup'].includes(input.view))params.set('view',input.view);
  const href=scheduleNavigationHref(url.pathname+url.search,readScheduleNavigation(input));
  return {href,label:key==='schedule'&&params.has('job')?'Return to saved job':label};
 }

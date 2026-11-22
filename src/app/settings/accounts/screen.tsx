@@ -4,8 +4,10 @@ import {SignInLink} from "../../sign-in-link";
 import {useFinancialNotice} from './use-financial-notice';
 import {FinanceHistoryComparison,previousLoadedFinanceVersion} from './history-comparison';
 import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from './history-recording';
-import {useCallback,useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {useSearchParams} from 'next/navigation';
+import {accountingNavigationHref,readAccountingNavigation} from '../../../client/accounting-navigation';
+import type {AccountingNavigation} from '../../../client/accounting-navigation';
 import type {FormEvent} from 'react';
 import {InvoiceSetup} from './invoice-setup';
 import {StatementStaging} from './statement-staging';
@@ -26,7 +28,7 @@ import type {
 
 type Workspace={context:FinanceAccountContext;rows:FinanceAccount[];hasMore:boolean;includeArchived:boolean};
 type AccountHistoryRow=Awaited<ReturnType<typeof financeAccounts.history>>['rows'][number];
-type AccountHistory={account:FinanceAccount;rows:AccountHistoryRow[];hasMore:boolean};
+type AccountHistory={accountId:string;currentName:string|null;rows:AccountHistoryRow[];hasMore:boolean};
 type Pending=NonNullable<ReturnType<typeof readPendingFinanceAccount>>;
 type Editor={account:FinanceAccount|null;name:string;code:string;accountType:FinanceAccountType|'';
  reportRole:string;controlKind:string;active:boolean;reason:string};
@@ -55,8 +57,21 @@ const initialMessage='Checking accounting access…';
 type Area='reports'|'setup'|'accounts';
 
 export function FinanceAccountsScreen(){
- const navigation=useSearchParams(),requested=navigation?.getAll('view')??[];
- const entryArea:Area|null=requested.length===1&&(requested[0]==='reports'||requested[0]==='setup'||requested[0]==='accounts')?requested[0]:null;
+ const navigation=useSearchParams();
+ const [reportNavigation,setReportNavigation]=useState(()=>{
+  const input:Record<string,unknown>={};
+  for(const key of new Set(navigation?.keys()??[])){
+   const values=navigation!.getAll(key);input[key]=values.length===1?values[0]:values;
+  }
+  return readAccountingNavigation(input);
+ });
+ const entryArea=reportNavigation.view;
+ const initialArchived=useRef(reportNavigation.accountsArchived);
+ function updateReportNavigation(change:Partial<AccountingNavigation>){
+  const next=readAccountingNavigation({...reportNavigation,...change});
+  setReportNavigation(next);
+  if(window.location.pathname==='/settings/accounts')window.history.replaceState(null,'',accountingNavigationHref(next)+window.location.hash);
+ }
  const {message,setMessage,confirmed:saveConfirmed,resetConfirmation}=useFinancialNotice(initialMessage);
  const [workspace,setWorkspace]=useState<Workspace|null>(null),[editor,setEditor]=useState<Editor|null>(null);
  const [history,setHistory]=useState<AccountHistory|null>(null),[pending,setPending]=useState<Pending|null>(null);
@@ -67,16 +82,28 @@ export function FinanceAccountsScreen(){
  const request=useRef<AbortController|null>(null),original=useRef<FinanceAccountDraft|null>(null);
  const status=useRef<HTMLParagraphElement>(null);
  const historyHeading=useRef<HTMLHeadingElement>(null);
+ const historyReturn=useRef<string|null>(null);
  const focusArea=useRef<Area|null>(null);
- const historyAccount=history?.account.id;
- useEffect(()=>{if(historyAccount)historyHeading.current?.focus();},[historyAccount]);
+ const historyAccount=history?.accountId;
+ useLayoutEffect(()=>{
+  if(historyAccount)historyHeading.current?.focus();
+  else if(historyReturn.current){
+   const id=historyReturn.current;historyReturn.current=null;
+   (document.querySelector<HTMLElement>('[data-account-history="'+id+'"]')??document.getElementById('finance-accounts-heading'))?.focus();
+  }
+ },[historyAccount]);
  const clearPrivate=useCallback(()=>{
   request.current?.abort();request.current=null;original.current=null;
   setWorkspace(null);setEditor(null);setHistory(null);setPending(null);setCanRetry(false);setStale(false);
   setCanRetire(false);setReviewReason('');
-  setArea(null);focusArea.current=null;setInitialRead(false);
+  historyReturn.current=null;
+  focusArea.current=null;setInitialRead(false);
   setBusy(false);setSignedOut(false);setMessage('Check access to reload private accounting records.');
  },[setMessage]);
+ function reportAccessDenied(){
+  clearPrivate();setSignedOut(true);setMessage('Sign in again to review accounting records.');
+  status.current?.focus();
+ }
  useEffect(()=>{
   const visibility=()=>{if(document.visibilityState==='hidden')clearPrivate();};
   const restored=(event:PageTransitionEvent)=>{if(event.persisted)clearPrivate();};
@@ -94,10 +121,10 @@ export function FinanceAccountsScreen(){
   try{await work(active.signal);}
   catch(error){if(!active.signal.aborted){
    const denied=error instanceof AuthenticationError&&error.kind==='denied';
-   if(denied){setSignedOut(true);setWorkspace(null);setHistory(null);setEditor(null);}
+   if(denied){clearPrivate();setSignedOut(true);status.current?.focus();}
    setMessage(denied?'Sign in to review your accounts.':failure);
   }}finally{if(request.current===active){request.current=null;setBusy(false);if(focus)status.current?.focus();}}
- },[setMessage,resetConfirmation]);
+ },[clearPrivate,setMessage,resetConfirmation]);
  const showAccounts=useCallback(async(context:FinanceAccountContext,includeArchived:boolean,signal:AbortSignal)=>{
   const page=await financeAccounts.list(context,null,includeArchived,signal);
   check(!signal.aborted);setWorkspace({context,...page,includeArchived});
@@ -123,7 +150,7 @@ export function FinanceAccountsScreen(){
   queueMicrotask(()=>{
    if(!mounted)return;
    if(document.visibilityState==='hidden'){clearPrivate();return;}
-   void load(false,false).then(()=>{if(mounted)setInitialRead(false);});
+   void load(initialArchived.current,false).then(()=>{if(mounted)setInitialRead(false);});
   });
   return()=>{mounted=false;};
  },[clearPrivate,load]);
@@ -135,13 +162,20 @@ export function FinanceAccountsScreen(){
    setWorkspace({...current,rows,hasMore:page.hasMore});setMessage('More saved accounts loaded.');
   },'More accounts could not be loaded. Try again.');
  }
- async function openHistory(current:Workspace,account:FinanceAccount,more=false){
+ async function openHistory(current:Workspace,accountId:string,more=false){
   await run(async signal=>{
-   const existing=more&&history?.account.id===account.id?history.rows:[];
-   const page=await financeAccounts.history(current.context,account.id,existing.at(-1)?.version??'0',signal);
-   check(!signal.aborted);setHistory({account,rows:[...existing,...page.rows],hasMore:page.hasMore});
+   setMessage('Loading account history…');
+   if(!more)setHistory(null);
+   const existing=more&&history?.accountId===accountId?history.rows:[];
+   const page=await financeAccounts.history(current.context,accountId,existing.at(-1)?.version??'0',signal);
+   check(!signal.aborted);setHistory({accountId,currentName:current.rows.find(account=>account.id===accountId)?.name??null,
+    rows:[...existing,...page.rows],hasMore:page.hasMore});
+   if(!more)updateReportNavigation({view:'accounts',accountHistory:accountId});
    setMessage('Saved account history loaded.');
   },'Account history could not be verified.');
+ }
+ function closeHistory(){
+  historyReturn.current=history?.accountId??null;setHistory(null);updateReportNavigation({accountHistory:''});
  }
  async function refreshAfterSave(current:Workspace,signal:AbortSignal){
   setEditor(null);setHistory(null);setStale(false);
@@ -258,10 +292,7 @@ export function FinanceAccountsScreen(){
  const activeArea=currentArea==='setup'&&hasSetup?'setup':currentArea==='accounts'||!context?.trialBalance?'accounts':'reports';
  function selectArea(next:Area){
   setArea(next);
-  if(window.location.pathname==='/settings/accounts'){
-   const url=new URL(window.location.href);url.searchParams.set('view',next);
-   window.history.replaceState(null,'',url.pathname+url.search+url.hash);
-  }
+  updateReportNavigation({view:next});
   if(next===activeArea)document.getElementById('finance-'+next+'-heading')?.focus();
   else focusArea.current=next;
  }
@@ -275,11 +306,11 @@ export function FinanceAccountsScreen(){
  return <section className={styles.workspace} aria-label="Account settings" aria-busy={loading}>
   <p role="status" className={styles.notice} data-confirmed={saveConfirmed&&!busy} tabIndex={-1} ref={status}>{message}</p>
   {!editor&&!signedOut&&!workspace&&!loading&&<button type="button" className={styles.openAccounting}
-   onClick={()=>void load()}>Check accounting access</button>}
+   onClick={()=>void load(reportNavigation.accountsArchived)}>Check accounting access</button>}
   {loading&&!workspace&&!editor&&!signedOut&&<div className={styles.accountLoading} aria-hidden="true">
    <span className="workspace-skeleton"/><span className="workspace-skeleton"/><span className="workspace-skeleton"/>
   </div>}
-  {signedOut&&<SignInLink returnTo="accounting">Sign in again</SignInLink>}
+  {signedOut&&<SignInLink returnTo="accounting" context={reportNavigation}>Sign in again</SignInLink>}
   {workspace&&!editor&&(context?.trialBalance||hasSetup)&&<nav className={styles.sectionLinks} aria-label="Accounting sections">
    {context?.trialBalance&&<button type="button" className="secondary" aria-current={activeArea==='reports'?'true':undefined} onClick={()=>selectArea('reports')}>Reports</button>}
    <button type="button" className="secondary" aria-current={activeArea==='accounts'?'true':undefined} onClick={()=>selectArea('accounts')}>Accounts</button>
@@ -287,7 +318,8 @@ export function FinanceAccountsScreen(){
   </nav>}
   {context?.trialBalance&&!editor&&<section className={styles.reportSection} aria-labelledby="finance-reports-heading" hidden={activeArea!=='reports'}>
    <h2 id="finance-reports-heading" tabIndex={-1}>Reports</h2>
-   <AccountingReports key={context.businessId} context={context}/>
+   <AccountingReports key={context.businessId} context={context} navigation={reportNavigation} onNavigate={updateReportNavigation}
+    onAccessDenied={reportAccessDenied}/>
   </section>}
   {context&&hasSetup&&!editor&&<section className={styles.section} aria-labelledby="finance-setup-heading" hidden={activeArea!=='setup'}>
    <h2 id="finance-setup-heading" tabIndex={-1}>Finance setup</h2>
@@ -323,14 +355,24 @@ export function FinanceAccountsScreen(){
    </div>
    {workspace.context.writeState==='paused'&&<p className="notice">Account changes are paused for recovery review.</p>}
    <label className="trust"><input type="checkbox" checked={workspace.includeArchived} disabled={busy}
-    onChange={event=>void load(event.target.checked)}/>Show archived accounts</label>
+    onChange={event=>{updateReportNavigation({accountsArchived:event.target.checked});void load(event.target.checked);}}/>Show archived accounts</label>
+   {!history&&reportNavigation.accountHistory&&<div className="notice">
+    <p>Your selected account history is ready to reopen.</p>
+    <div className={styles.actions}>
+     <button type="button" className="secondary" disabled={busy}
+      onClick={()=>void openHistory(workspace,reportNavigation.accountHistory)}>Reopen selected account history</button>
+     <button type="button" className="secondary" disabled={busy} onClick={()=>{
+      updateReportNavigation({accountHistory:''});document.getElementById('finance-accounts-heading')?.focus();
+     }}>Clear history selection</button>
+    </div>
+   </div>}
    <ul className={styles.accountList}>{workspace.rows.map(account=><li key={account.id}>
     <div className={styles.accountIdentity}>
      <strong><span className={styles.accountCode}>{account.code}</span> · {account.name}</strong>
      <p className="field-help">{typeLabels[account.accountType]} · {account.active?'Active':'Archived'}</p>
     </div>
     <div className={styles.actions}><button className="secondary" type="button" disabled={busy} aria-label={'View history for '+account.name}
-     onClick={()=>void openHistory(workspace,account)}>View history</button>
+     data-account-history={account.id} onClick={()=>void openHistory(workspace,account.id)}>View history</button>
     {writable&&<button className="secondary" type="button" disabled={busy} aria-label={'Edit account '+account.name}
      onClick={()=>edit(account)}>Edit account</button>}</div>
    </li>)}</ul>
@@ -377,7 +419,7 @@ export function FinanceAccountsScreen(){
    </button>
   </form>}
   {history&&workspace&&!editor&&<section className={styles.section} aria-label="Saved account history" hidden={activeArea!=='accounts'}>
-   <h2 ref={historyHeading} tabIndex={-1}>{history.account.name} history</h2>
+   <h2 ref={historyHeading} tabIndex={-1}>{history.currentName?history.currentName+' history':'Selected account history'}</h2>
    <ol className="activity-timeline">{history.rows.map(row=>{const previous=previousLoadedFinanceVersion(history.rows,row);return <li className="activity-entry" key={row.auditEventId}>
     <div className="activity-heading">
      <strong>{row.name}</strong>
@@ -394,10 +436,10 @@ export function FinanceAccountsScreen(){
     <details><summary>Version evidence</summary><FinanceHistoryRecordingFacts recording={row.recording} auditEventId={row.auditEventId}/></details>
    </li>;})}</ol>
    <div className={styles.actions}>{history.hasMore&&<button type="button" className="secondary" disabled={busy}
-    onClick={()=>void openHistory(workspace,history.account,true)}>Load more history</button>}
+    onClick={()=>void openHistory(workspace,history.accountId,true)}>Load more history</button>}
    {history.rows.length>0&&<button type="button" className="secondary" disabled={busy}
     onClick={()=>downloadHistory(history.rows)}>Download loaded history (CSV)</button>}
-   <button type="button" className="secondary" onClick={()=>setHistory(null)}>Close history</button></div>
+   <button type="button" className="secondary" onClick={closeHistory}>Close history</button></div>
   </section>}
  </section>;
 }

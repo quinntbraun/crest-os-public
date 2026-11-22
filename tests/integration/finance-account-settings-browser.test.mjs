@@ -1,4 +1,6 @@
 import {reviewFinancialSaveNotice} from '../support/financial-save-notice.mjs';
+import {reviewAccountHistoryReturn} from '../support/account-history-return.mjs';
+import {waitForSessionAdmissionCapacity} from '../support/session-admission-capacity.mjs';
 import {reviewFinancialHistoryRecording,reviewFinancialHistoryRecordingCsv} from '../support/financial-history-recording-layout.mjs';
 import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -115,6 +117,8 @@ for(const engine of [chromium,webkit]){
    assert.deepEqual(stored,[{version:'1',active:true},{version:'2',active:false}]);
    await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
    await expect(history).toHaveCount(0);
+   await reviewAccountHistoryReturn(page,fixture,engine.name());
+   await waitForSessionAdmissionCapacity(fixture,{reserve:90});
 
    await page.setViewportSize({width:390,height:900});
    await settings.getByRole('button',{name:'Check accounting access',exact:true}).click();

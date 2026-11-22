@@ -95,7 +95,9 @@ for(const engine of [chromium,webkit]){
    assert.deepEqual(await mappingBusinessSource(fixture),sourceBeforeLookup,'lookup/history/CSV must not change retained financial source');
    await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
    await expect(history).toHaveCount(0);
-   await expect(purpose).toHaveValue('');
+   await expect(purpose).toHaveValue('service_revenue');
+   await expect(date).toHaveValue('2026-10-01');
+   await expect(view.getByRole('region',{name:'Approved account',exact:true})).toHaveCount(0);
    await page.reload();
    await purpose.selectOption('tips_revenue');
    await approvals.click();

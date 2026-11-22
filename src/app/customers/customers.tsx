@@ -1,5 +1,7 @@
 'use client';
 import {SignInLink} from "../sign-in-link";
+import {DirectoryRecall} from '../directory-recall';
+import {useDirectoryReturn} from '../../client/use-directory-return';
 
 import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
 import type {DirectoryOrigin} from '../../client/directory-origin';
@@ -34,12 +36,14 @@ function VisitLink({visit}:{visit:{jobId:string;at:string;timezone:string}}){
   return <ScheduleLink href={'/schedule?'+new URLSearchParams({job:visit.jobId,from:'customer'})}><time dateTime={visit.at}>{formatted}</time></ScheduleLink>;
 }
 
-export function CustomerScreen({related:Related,initialCustomerId=null,initialSection='overview',initialVehicleFocus=null}:{
+export function CustomerScreen({related:Related,initialCustomerId=null,initialSection='overview',initialVehicleFocus=null,initialIncludeAll=false}:{
   related?:ComponentType<{customerId:string}>;
   initialCustomerId?:string|null;
   initialSection?:CustomerSection;
   initialVehicleFocus?:string|null;
+  initialIncludeAll?:boolean;
 }={}){
+  const {selection,includeAll,remember,rememberFilter}=useDirectoryReturn('customers',initialCustomerId,initialIncludeAll);
   const [section,setSection]=useState<CustomerSection>(initialSection);
   const [showRecord,setShowRecord]=useState(Boolean(initialCustomerId));
   const directoryTrigger=useRef<HTMLElement|null>(null);
@@ -85,7 +89,7 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
   useEffect(()=>{
     const controller=createCustomerEditorController({store:createPendingCustomerStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:next=>{if(next.phase!=='ready')clearDirectoryOrigin();setView(next);}});current.current=controller;
     void (async()=>{
-      await controller.load();
+      await controller.load(includeAll.current);
       if(!initialCustomerId||current.current!==controller||controller.view().phase!=='ready')return;
       focusRequest.current={controller,id:initialCustomerId};
       await controller.open(initialCustomerId);
@@ -93,45 +97,50 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
     const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
     document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
     return ()=>{controller.dispose();clearDirectoryOrigin();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
-  },[initialCustomerId,clearDirectoryOrigin]);
+  },[initialCustomerId,clearDirectoryOrigin,includeAll]);
   useEffect(()=>{if(!dirty&&view.phase!=='pending')return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase]);
   function discardAllowed(){const state=current.current?.view();return !state||!draftChanged(state.draft,state.selected?draftFromCustomer(state.selected):emptyCustomerDraft)||window.confirm('Discard your unsaved customer changes? Choose Cancel to keep editing.');}
-  async function open(id:string,trigger:HTMLElement){
+  async function open(id:string,trigger:HTMLElement,restoring=false){
     const controller=current.current;
     if(!controller||controller.view().busy)return;
     if(!showRecord&&selectedId===id&&editorVisible){
       directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
       setShowRecord(true);
       focusRequest.current={controller,id};
+      remember(id,activeSection);
       return;
     }
     if(!discardAllowed())return;
     directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
-    setSection('overview');
+    if(!restoring)setSection('overview');
     setShowRecord(true);
     focusRequest.current={controller,id};
     await controller.open(id);
+    if(current.current===controller&&controller.view().selected?.id===id)remember(id,restoring?section:'overview');
   }
   function create(trigger:HTMLElement){
     const controller=current.current;
     if(!controller||controller.view().busy||!discardAllowed())return;
-    directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
+    remember(null);directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
     setSection('overview');
     setShowRecord(true);
     focusRequest.current={controller,id:null};
     controller.create();
   }
   function backToDirectory(){
+    remember(null);
     focusRequest.current=null;returnFocus.current=true;
     setShowRecord(false);
   }
-  function query(search:string,archived:boolean,more=false){const controller=current.current;if(!controller||controller.view().busy||!discardAllowed())return;clearDirectoryOrigin();void controller.query(search,archived,more);}
-  async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory') {const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
+  function query(search:string,archived:boolean,more=false){const controller=current.current;if(!controller||controller.view().busy||!discardAllowed())return;clearDirectoryOrigin();remember(null);rememberFilter(archived);void controller.query(search,archived,more);}
+  async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory') {const controller=current.current;if(!controller)return;if(kind==='load')await controller.load(includeAll.current);else await controller[kind]();if(current.current===controller)status.current?.focus();}
   function edit<K extends keyof CustomerDraft>(key:K,value:CustomerDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
   function submit(event:FormEvent){event.preventDefault();void action('save');}
   function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);query(String(data.get('search')??''),data.get('archived')==='on');}
   const recordLoading=showRecord&&view.phase==='ready'&&view.busy&&!view.selected&&!view.draft;
   return <section className="customer-directory" aria-label="Customer directory" aria-busy={view.busy}>
+    {view.phase==='ready'&&!view.selected&&!view.draft&&selection&&<DirectoryRecall label="customer" disabled={view.busy}
+     onReopen={button=>void open(selection,button,true)}/>}
     <p className="customer-directory-status" data-confirmed={view.saveConfirmed===true} ref={status} tabIndex={-1} role="status" aria-live="polite" aria-atomic="true">{recordLoading?'Loading customer record…':view.message}</p>
     {(view.phase==='loading'||recordLoading)&&<DirectoryLoading record={recordLoading||showRecord&&Boolean(initialCustomerId)}/>}
     {view.phase==='ready'&&<>
@@ -184,7 +193,7 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
       </header>}
       {view.selected&&<nav className="customer-record-sections" aria-label="Customer record sections">
         {sections.map(value=><button key={value} className="secondary" type="button" aria-current={activeSection===value?'true':undefined}
-          aria-controls={'customer-panel-'+value} onClick={()=>setSection(value)}>{sectionLabels[value]}</button>)}
+          aria-controls={'customer-panel-'+value} onClick={()=>{setSection(value);remember(selectedId,value);}}>{sectionLabels[value]}</button>)}
       </nav>}
       <div id="customer-panel-overview" className="customer-record-panel" hidden={activeSection!=='overview'||!editorVisible}>
       {view.draft&&<form className="customer-record-editor" onSubmit={submit} aria-label="Customer editor"><h2 ref={heading} tabIndex={-1} className="editor-heading">{view.selected?'Edit customer':'New customer'}</h2>

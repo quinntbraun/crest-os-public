@@ -50,3 +50,6 @@ it.each(['read','suspend'])('clears verified save feedback on %s without sending
  if(action==='read'){const work=c.load();expect(c.view().saveConfirmed).toBeUndefined();await work;}else c.suspend();
  expect(c.view().saveConfirmed).toBeUndefined();expect(api.save).toHaveBeenCalledTimes(1);
 });
+
+it("restores only the explicit directory inclusion scope after private clearing",async()=>{const c=controller();await c.load(true);expect(api.list.mock.calls.at(-1)![1]).toMatchObject({includeArchived:true,search:"",afterId:null});expect(c.view()).toMatchObject({phase:"ready",includeArchived:true,selected:null,draft:null});c.suspend();await c.load(true);expect(c.view()).toMatchObject({phase:"ready",includeArchived:true});expect(api.save).not.toHaveBeenCalled();});
+it("does not let a restored directory flag bypass an unresolved original save",async()=>{const c=await prepared();api.save.mockRejectedValue(Error("network"));await c.save();const retained=store.read(),reads=api.list.mock.calls.length;expect(retained).not.toBeNull();await c.load(true);expect(c.view()).toMatchObject({phase:"pending",canSave:false});expect(store.read()).toEqual(retained);expect(api.list).toHaveBeenCalledTimes(reads);expect(api.lookup).not.toHaveBeenCalled();});

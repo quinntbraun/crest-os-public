@@ -18,9 +18,13 @@ context. A contextual approval-management link carries it forward. Management
 pages preselect the purpose, keep the established breadcrumb wording and return
 the original lookup context. Returning focuses the selected category heading or
 purpose control after hydration. Generic management entry remains available.
-The lookup date never fills an approval's effective date. Existing private
-clearing still removes loaded results, history, selections and dates, including
-the persisted-page path.
+The lookup date never fills an approval's effective date. The later lookup-return
+follow-up preserves only the static purpose/category, lookup date and finite
+category attention filter through private clearing. Loaded results, history,
+account details and custom search text still clear, including the persisted-page
+path. Approval-editor drafts remain separate and are still cleared. See
+[the follow-up scope and evidence](MAPPING_LOOKUP_PRIVATE_RETURN.md); earlier
+evidence below applies to its recorded source, not automatically to that change.
 
 Application 32ac051 introduced the feature. Application abedcc9 restored
 established breadcrumb labels and moved the new link inside the lookup form,

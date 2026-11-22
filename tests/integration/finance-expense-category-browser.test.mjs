@@ -1,4 +1,5 @@
 import {reviewFinancialSaveNotice} from '../support/financial-save-notice.mjs';
+import {waitForSessionAdmissionCapacity} from '../support/session-admission-capacity.mjs';
 import assert from 'node:assert/strict';
 import {reviewMappingNavigation} from '../support/mapping-navigation-review.mjs';
 import {reviewRecoveryActionPriority} from '../support/recovery-action-priority.mjs';
@@ -142,7 +143,29 @@ for(const engine of [chromium,webkit]){
     await expect(directory.getByRole('listitem')).toContainText('Approved account 5100');
     await directory.getByLabel('Show categories needing attention',{exact:true}).check();
     await expect(directory.getByText('No categories match these filters.',{exact:true})).toBeVisible();
+    assert.equal(new URL(page.url()).searchParams.get('attention'),'only');
+    await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide')));
+    await expect(lookup.getByLabel('Effective date',{exact:true})).toHaveValue('2026-02-28');
+    await expect(directory.getByLabel('Find a category',{exact:true})).toHaveValue('');
+    await expect(directory.getByText('Approved account 5100',{exact:true})).toHaveCount(0);
+    await expect(directory.getByLabel('Show categories needing attention',{exact:true})).toHaveCount(0);
+    let automaticMappingReads=0;
+    const observeMappingReturn=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/finance-accounts/'))automaticMappingReads++;};
+    page.on('request',observeMappingReturn);
+    try{
+     await page.reload();
+     await expect(lookup.getByLabel('Effective date',{exact:true})).toHaveValue('2026-02-28');
+     assert.equal(new URL(page.url()).searchParams.get('attention'),'only');
+     await expect(directory.getByLabel('Show categories needing attention',{exact:true})).toHaveCount(0);
+     assert.equal(automaticMappingReads,0,'Returning to the category filter must not automatically load private mapping data');
+    }finally{page.off('request',observeMappingReturn);}
+    await waitForSessionAdmissionCapacity(fixture,{reserve:30});
+    await lookup.getByRole('button',{name:'Check categories for selected date',exact:true}).click();
+    await expect(lookup.getByRole('status')).toHaveText('Category mappings checked for Feb 28, 2026.',{timeout:15000});
+    await expect(directory.getByLabel('Show categories needing attention',{exact:true})).toBeChecked();
+    await expect(directory.getByRole('button',{name:'Select Fuel',exact:true})).toHaveCount(0);
     await directory.getByLabel('Show categories needing attention',{exact:true}).uncheck();
+    assert.equal(new URL(page.url()).searchParams.has('attention'),false);
     await directory.screenshot({path:'.local/review/finance-category-directory-'+engine.name()+'-390.png'});
     await directory.getByLabel('Find a category',{exact:true}).fill('insurance');
     const beforeSelection=await mappingBusinessSource(fixture);let selectionRequests=0;

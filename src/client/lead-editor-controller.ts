@@ -62,15 +62,16 @@ export function createLeadEditorController(deps:Dependencies){
     followUpQuery=page?query:firstFollowUps;
     followUps=page?{page,later:query.afterId!==null}:null;
   }
-  const load=()=>run(async signal=>{
+  const load=(includeAll=false)=>run(async signal=>{
+    if(typeof includeAll!=='boolean')throw new Error();
     clearPrivate();phase='loading';message='Checking lead access…';emit();pending=deps.store.read();await fresh(signal);
     if(pending){if(pending.businessId!==snapshot!.context.businessId){phase='blocked';message='A pending save belongs to a different business. Its reference has been kept for review.';return;}retain('A pending lead save was found. Check its status before another edit.');return;}
     const context=snapshot!,authorization=proof!;
     const [result]=await Promise.all([
-      api.list(context.context.businessId,{search:'',afterId:null,includeLost:false,pageSize:10},authorization,signal),
+      api.list(context.context.businessId,{search:'',afterId:null,includeLost:includeAll,pageSize:10},authorization,signal),
       readFollowUps(context,authorization,firstFollowUps,signal),
     ]);
-    live(signal);rows=result.leads;hasMore=result.hasMore;phase='ready';message=context.context.writeState==='ready'?'Choose a lead or add a new lead.':'Lead changes are paused. Current records remain available for review.';
+    live(signal);rows=result.leads;hasMore=result.hasMore;includeLost=includeAll;phase='ready';message=context.context.writeState==='ready'?'Choose a lead or add a new lead.':'Lead changes are paused. Current records remain available for review.';
   },error=>{clearPrivate();phase=error instanceof PendingLeadError?'blocked':'unavailable';message=error instanceof PendingLeadError?'The pending-save reference cannot be read. Editing is blocked to protect it.':'Lead access could not be verified. Sign in or check again; any pending reference has been kept.';});
   const pageFollowUps=(next=false)=>{
     if(phase!=='ready'||!snapshot||!proof||!followUps)return Promise.resolve();
