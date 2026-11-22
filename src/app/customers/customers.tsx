@@ -1,6 +1,8 @@
 'use client';
+import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
+import type {DirectoryOrigin} from '../../client/directory-origin';
 import {DirectoryLoading} from '../directory-loading';
-import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent,ComponentType} from 'react';
 import {createCustomerEditorController,initialCustomerEditorView,emptyCustomerDraft} from '../../client/customer-editor-controller';
 import {createPendingCustomerStore} from '../../client/pending-customer-edit';
@@ -40,6 +42,7 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
   const [showRecord,setShowRecord]=useState(Boolean(initialCustomerId));
   const directoryTrigger=useRef<HTMLElement|null>(null);
   const returnFocus=useRef(false);
+  const directoryOrigin=useRef<DirectoryOrigin|null>(null);
   const panelHeading=useRef<HTMLHeadingElement>(null);
   const vehicleFocus=useRef(initialVehicleFocus),relatedVehicle=useRef<HTMLAnchorElement>(null);
   const [view,setView]=useState(initialCustomerEditorView),current=useRef<ReturnType<typeof createCustomerEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),heading=useRef<HTMLHeadingElement>(null);
@@ -53,17 +56,21 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
   if(view.selected?.archived_at===null)sections.push('payments');
   sections.push('history');
   const activeSection=selectedId&&sections.includes(section)?section:'overview';
+  const clearDirectoryOrigin=useCallback(()=>{directoryOrigin.current=null;directoryTrigger.current=null;returnFocus.current=false;focusRequest.current=null;},[]);
   useLayoutEffect(()=>{
-    if(returnFocus.current&&!showRecord){
+    if((view.phase==='unavailable'||view.phase==='blocked')&&document.visibilityState==='visible'){status.current?.focus();return;}
+    if(returnFocus.current&&!showRecord&&!view.busy){
       returnFocus.current=false;
       const target=directoryTrigger.current;
-      (target?.isConnected?target:document.getElementById('customer-search'))?.focus();
+      restoreDirectoryOrigin(directoryOrigin.current,target?.isConnected?target:document.getElementById('customer-search'));
     }
     const requested=focusRequest.current;
     if(!requested||view.busy)return;
-    if(current.current===requested.controller&&view.phase==='ready'&&editorVisible&&selectedId===requested.id){
-      if(activeSection==='overview')heading.current?.focus();
-      else if(activeSection!=='visits')panelHeading.current?.focus();
+    if(current.current===requested.controller&&view.phase==='ready'){
+      if(editorVisible&&selectedId===requested.id){
+        if(activeSection==='overview')heading.current?.focus();
+        else if(activeSection!=='visits')panelHeading.current?.focus();
+      }else if(requested.id!==null&&!view.selected&&!view.draft)status.current?.focus();
     }
     focusRequest.current=null;
   },[activeSection,editorVisible,selectedId,showRecord,view]);
@@ -74,7 +81,7 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
     }
   },[activeSection,initialCustomerId,profile,selectedId,showRecord]);
   useEffect(()=>{
-    const controller=createCustomerEditorController({store:createPendingCustomerStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;
+    const controller=createCustomerEditorController({store:createPendingCustomerStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:next=>{if(next.phase!=='ready')clearDirectoryOrigin();setView(next);}});current.current=controller;
     void (async()=>{
       await controller.load();
       if(!initialCustomerId||current.current!==controller||controller.view().phase!=='ready')return;
@@ -83,20 +90,21 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
     })();
     const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
     document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
-    return ()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
-  },[initialCustomerId]);
+    return ()=>{controller.dispose();clearDirectoryOrigin();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
+  },[initialCustomerId,clearDirectoryOrigin]);
   useEffect(()=>{if(!dirty&&view.phase!=='pending')return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase]);
   function discardAllowed(){const state=current.current?.view();return !state||!draftChanged(state.draft,state.selected?draftFromCustomer(state.selected):emptyCustomerDraft)||window.confirm('Discard your unsaved customer changes? Choose Cancel to keep editing.');}
   async function open(id:string,trigger:HTMLElement){
     const controller=current.current;
-    if(!controller)return;
-    directoryTrigger.current=trigger;
+    if(!controller||controller.view().busy)return;
     if(!showRecord&&selectedId===id&&editorVisible){
+      directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
       setShowRecord(true);
       focusRequest.current={controller,id};
       return;
     }
     if(!discardAllowed())return;
+    directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
     setSection('overview');
     setShowRecord(true);
     focusRequest.current={controller,id};
@@ -104,18 +112,18 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
   }
   function create(trigger:HTMLElement){
     const controller=current.current;
-    if(!controller||!discardAllowed())return;
-    directoryTrigger.current=trigger;
+    if(!controller||controller.view().busy||!discardAllowed())return;
+    directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
     setSection('overview');
     setShowRecord(true);
     focusRequest.current={controller,id:null};
     controller.create();
   }
   function backToDirectory(){
-    returnFocus.current=true;
+    focusRequest.current=null;returnFocus.current=true;
     setShowRecord(false);
   }
-  function query(search:string,archived:boolean,more=false){if(discardAllowed())void current.current?.query(search,archived,more);}
+  function query(search:string,archived:boolean,more=false){const controller=current.current;if(!controller||controller.view().busy||!discardAllowed())return;clearDirectoryOrigin();void controller.query(search,archived,more);}
   async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory') {const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
   function edit<K extends keyof CustomerDraft>(key:K,value:CustomerDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
   function submit(event:FormEvent){event.preventDefault();void action('save');}
@@ -236,6 +244,7 @@ export function CustomerScreen({related:Related,initialCustomerId=null,initialSe
 <nav aria-label="Customer tools" className="customer-directory-tools">
  {view.phase==='ready'&&<a href="/customers/import-review">Review a contact CSV</a>}
  <a href="/addresses">Address save review</a>
+ {view.phase!=='ready'&&view.phase!=='loading'&&<a href="/sign-in">Check sign-in</a>}
  <a href="/save-review">Review interrupted save</a>
 </nav>
   </section>;

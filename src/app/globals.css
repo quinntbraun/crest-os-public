@@ -112,7 +112,8 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 .customers .customer-record-editor .customer-extra { margin:1rem 0 0; padding:.5rem .75rem; }
 .customer-record-editor .customer-extra summary { display:list-item; padding:.5rem 0; }
 .customer-record-editor > button { margin-top:.25rem; }
-.customer-record .customer-directory-back, .customer-record-panel[hidden] { display:none; }
+.customer-record-panel[hidden] { display:none; }
+.customer-record .customer-directory-back { display:inline-flex; align-items:center; justify-self:start; width:auto; min-height:44px; margin:0; }
 .customer-record-header {
   overflow-wrap:anywhere;
   border:1px solid var(--line);
@@ -550,7 +551,6 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 @media (min-width:768px) {
   .vehicle-layout { grid-template-columns:minmax(16rem,1fr) minmax(0,2fr); }
   .vehicle-results { max-height:clamp(15rem, 58vh, 38rem); overflow-y:auto; scrollbar-gutter:stable; }
-  .vehicle-record .vehicle-directory-back { display:none; }
   .vehicle-link-review-facts { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 
@@ -594,7 +594,7 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
 }
 @media (min-width:768px) {
   .address-layout { grid-template-columns:minmax(16rem,1fr) minmax(0,2fr); }
-  .address-layout .address-mobile-control { display:none; }
+  .address-lookup > .address-mobile-control { display:none; }
 }
 
 .work-time-page { max-width:60rem; }
@@ -795,7 +795,7 @@ input:not([type='checkbox']),select,textarea { font-size:1rem; border-color:#827
  .service-edit-actions button { flex:1 1 100%; }
 }
 @media (min-width:768px) {
- .service-layout .service-mobile-control { display:none; }
+ .service-directory-panel > .service-mobile-control { display:none; }
  .service-saved-facts { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:1099px) {

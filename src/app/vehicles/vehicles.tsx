@@ -1,4 +1,6 @@
 'use client';
+import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
+import type {DirectoryOrigin} from '../../client/directory-origin';
 import {DirectoryLoading} from '../directory-loading';
 import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
@@ -51,18 +53,23 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
   const [editing,setEditing]=useState(false),[showRecord,setShowRecord]=useState(initialVehicleId!==null);
   const profileHeading=useRef<HTMLHeadingElement>(null),searchInput=useRef<HTMLInputElement>(null),directoryTrigger=useRef<HTMLButtonElement>(null);
   const dirty=draftChanged(view.draft,view.selected?draftFromVehicle(view.selected):emptyVehicleDraft);
+  const directoryOrigin=useRef<DirectoryOrigin|null>(null);
   const focusRequest=useRef<{controller:NonNullable<typeof current.current>;id:string|null;target?:'record'|'directory'}|null>(null),editorVisible=view.draft!==null&&editing,selectedId=view.selected?.id??null;
+  const clearDirectoryOrigin=useCallback(()=>{directoryOrigin.current=null;directoryTrigger.current=null;focusRequest.current=null;},[]);
   useLayoutEffect(()=>{
+    if((view.phase==='unavailable'||view.phase==='blocked')&&document.visibilityState==='visible'){status.current?.focus();return;}
     const requested=focusRequest.current;if(!requested||view.busy)return;
-    if(current.current===requested.controller&&view.phase==='ready'&&selectedId===requested.id){
-      const target=requested.target==='directory'?(directoryTrigger.current?.isConnected?directoryTrigger.current:searchInput.current):(editorVisible?heading:profileHeading).current;
-      target?.focus();
+    if(current.current===requested.controller&&view.phase==='ready'){
+      if(selectedId===requested.id){
+        if(requested.target==='directory')restoreDirectoryOrigin(directoryOrigin.current,directoryTrigger.current?.isConnected?directoryTrigger.current:searchInput.current);
+        else (editorVisible?heading:profileHeading).current?.focus();
+      }else if(requested.id!==null&&!view.selected&&!view.draft)status.current?.focus();
     }
     focusRequest.current=null;
   },[view,editorVisible,selectedId,showRecord]);
   const linkEdit=useRef<'clean'|'draft'|'pending'>('clean'),reportLinkEdit=useCallback((state:'clean'|'draft'|'pending')=>{linkEdit.current=state;},[]);
   useEffect(()=>{
-    const controller=createVehicleEditorController({store:createPendingVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});current.current=controller;
+    const controller=createVehicleEditorController({store:createPendingVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:next=>{if(next.phase!=='ready')clearDirectoryOrigin();setView(next);}});current.current=controller;
     void (async()=>{
       await controller.load();
       if(!customerUuid(initialVehicleId)||current.current!==controller||controller.view().phase!=='ready')return;
@@ -71,8 +78,8 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
     })();
     const hidden=()=>{if(document.visibilityState==='hidden')controller.suspend();},leave=()=>controller.suspend(),restored=(event:PageTransitionEvent)=>{if(event.persisted)controller.suspend();};
     document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
-    return ()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
-  },[initialVehicleId,initialVisits]);
+    return ()=>{controller.dispose();clearDirectoryOrigin();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
+  },[initialVehicleId,initialVisits,clearDirectoryOrigin]);
   useEffect(()=>{if(!dirty&&view.phase!=='pending')return;const leaving=(event:BeforeUnloadEvent)=>{event.preventDefault();};window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase]);
   function discardAllowed(){
     if(linkEdit.current==='pending'){window.alert('Check the pending customer-link save before changing vehicles. Its original save reference must be kept.');return false;}
@@ -80,9 +87,9 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
   }
   async function open(id:string,trigger:HTMLButtonElement){
     const controller=current.current;
-    if(!controller)return;
+    if(!controller||controller.view().busy)return;
     if(id===selectedId){
-      directoryTrigger.current=trigger;
+      directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
       focusRequest.current={controller,id};
       setShowRecord(true);
       if(showRecord){
@@ -92,19 +99,19 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
       return;
     }
     if(!discardAllowed())return;
-    directoryTrigger.current=trigger;
+    directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
     setShowRecord(true);
     setEditing(false);
     focusRequest.current={controller,id};
     await controller.open(id);
   }
-  function create(){const controller=current.current;if(!controller||!discardAllowed())return;setShowRecord(true);setEditing(true);focusRequest.current={controller,id:null};controller.create();}
-  function query(search:string,archived:boolean,more=false){if(discardAllowed()){setEditing(false);void current.current?.query(search,archived,more);}}
+  function create(trigger:HTMLButtonElement){const controller=current.current;if(!controller||controller.view().busy||!discardAllowed())return;directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);setShowRecord(true);setEditing(true);focusRequest.current={controller,id:null};controller.create();}
+  function query(search:string,archived:boolean,more=false){const controller=current.current;if(!controller||controller.view().busy||!discardAllowed())return;clearDirectoryOrigin();setEditing(false);void controller.query(search,archived,more);}
   async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
   function edit<K extends keyof VehicleDraft>(key:K,value:VehicleDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
   function focusOnCommit(target:'record'|'directory'='record'){const controller=current.current;if(controller)focusRequest.current={controller,id:selectedId,target};}
   function backToDirectory(){
-    if(!showRecord){focusRequest.current=null;(directoryTrigger.current?.isConnected?directoryTrigger.current:searchInput.current)?.focus();return;}
+    if(!showRecord){focusRequest.current=null;restoreDirectoryOrigin(directoryOrigin.current,directoryTrigger.current?.isConnected?directoryTrigger.current:searchInput.current);return;}
     focusOnCommit('directory');
     setShowRecord(false);
   }
@@ -129,7 +136,7 @@ export function VehicleScreen({initialVehicleId=null,initialVisits=false,linkCus
       {view.writesPaused&&<p className="notice">Vehicle changes are paused. You can review current records and history.</p>}
       <div className="vehicle-layout" hidden={recordLoading} inert={recordLoading} data-mobile-record={showRecord&&view.draft!==null}>
         <section className="customer-lookup" aria-label="Find a vehicle">
-          <button type="button" className="customer-add" disabled={view.busy||view.writesPaused} onClick={create}>Add vehicle</button>
+          <button type="button" className="customer-add" disabled={view.busy||view.writesPaused} onClick={event=>create(event.currentTarget)}>Add vehicle</button>
           <form className="customer-search" onSubmit={search} aria-label="Search vehicles"><label htmlFor="vehicle-search">Vehicle search</label><div className="customer-search-row"><input ref={searchInput} id="vehicle-search" name="search" type="search" autoComplete="off" maxLength={400} defaultValue={view.search} disabled={view.busy}/><button className="secondary" type="submit" disabled={view.busy} aria-label="Search vehicles">Search</button></div><label className="trust"><input name="archived" type="checkbox" defaultChecked={view.includeArchived} disabled={view.busy}/>Include archived vehicles</label></form>
       <p className="field-help">Search by label, make, model, VIN or plate.</p>
       <ul className="customer-list customer-directory-list vehicle-results">{view.rows.map(row=>{

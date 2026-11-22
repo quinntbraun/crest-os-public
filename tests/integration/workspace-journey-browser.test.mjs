@@ -1,3 +1,7 @@
+import {directoryReturnSignIn,reviewRecordDirectoryReturn} from '../support/record-directory-return.mjs';
+import {reviewDirectoryLoadingJourney} from '../support/directory-loading-journey.mjs';
+import {reviewUnavailableRecordNavigation} from '../support/record-unavailable-navigation.mjs';
+import {reviewDeeperDirectoryReturn} from '../support/deeper-directory-return.mjs';
 import {reviewCrmSaveFeedback,reviewCrmLoading} from '../support/crm-save-feedback.mjs';
 // Actual product pages + genuine provider MFA, restricted SQL and retained
 // history. Synthetic TLS exceptions are confined to this disposable test.
@@ -399,4 +403,20 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await expect(page.getByRole('heading',{name:'Edit lead intake',exact:true})).toBeFocused();
   await expect(leadRow).toHaveAttribute('aria-current','true');
  }finally{try{await browser?.close();}finally{await f.close();}}
+});
+
+for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])for(const kind of ['customer','vehicle'])test(name+' preserves long '+kind+' directory scroll, page, draft and privacy',{timeout:180000},async()=>{
+ const fixture=await sourceExportBrowserFixture({product:true,workspace:true});let browser;try{browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:900}}),page=await context.newPage();page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(30000);await directoryReturnSignIn(page,fixture);await reviewRecordDirectoryReturn(page,fixture,name,kind);}finally{await browser?.close();await fixture.close();}
+});
+
+for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' reviews lead, service and address loading and first-save protection',{timeout:240000},async()=>{
+ const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true});let browser;try{browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:900}}),page=await context.newPage();page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(30000);await directoryReturnSignIn(page,fixture);await reviewDirectoryLoadingJourney(page,fixture,name);}finally{await browser?.close();await fixture.close();}
+});
+
+for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' keeps missing and revoked CRM navigation understandable',{timeout:180000},async()=>{
+ const fixture=await sourceExportBrowserFixture({product:true,workspace:true});let browser;try{browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:900}}),page=await context.newPage();page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(30000);await directoryReturnSignIn(page,fixture);await reviewUnavailableRecordNavigation(page,fixture,name);}finally{await browser?.close();await fixture.close();}
+});
+
+for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])for(const kind of ['address','service','source','lead'])test(name+' preserves deeper directory '+kind+' position and accepted draft decisions',{timeout:180000},async()=>{
+ const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true});let browser;try{browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:900}}),page=await context.newPage();page.setDefaultTimeout(15000);page.setDefaultNavigationTimeout(30000);await directoryReturnSignIn(page,fixture);await reviewDeeperDirectoryReturn(page,fixture,name,kind);}finally{await browser?.close();await fixture.close();}
 });

@@ -27,13 +27,15 @@ export async function reviewCrmSaveFeedback(page,fixture,engine,kind,stage){
 }
 
 export async function reviewCrmLoading(page,engine,kind,enter){
- const path='/api/business/'+kind+'s/context',pattern='**'+path,viewport=page.viewportSize(),motion=await page.evaluate(()=>matchMedia('(prefers-reduced-motion:reduce)').matches?'reduce':'no-preference');
+ const directory={customer:['customers','Customer directory'],vehicle:['vehicles','Vehicle directory'],lead:['leads','Lead directory'],address:['customers/addresses','Customer address directory'],service:['services','Service directory']}[kind];assert(directory,'Known real directory required');
+ const path='/api/business/'+directory[0]+'/context',pattern='**'+path,viewport=page.viewportSize(),motion=await page.evaluate(()=>matchMedia('(prefers-reduced-motion:reduce)').matches?'reduce':'no-preference');
  let release,finishRoute,routeFailure,routed=false;const gate=new Promise(resolve=>{release=resolve;}),finished=new Promise(resolve=>{finishRoute=resolve;}),held=page.waitForRequest(request=>new URL(request.url()).pathname===path),handler=async route=>{routed=true;try{await gate;await route.continue();}catch(error){routeFailure=error;}finally{finishRoute();}};
  void held.catch(()=>undefined);
- await page.route(pattern,handler,{times:1});let inspectionFailure;let requests=0;const observe=request=>{if(new URL(request.url()).pathname.startsWith('/api/'))requests++;};const observations=[];
+ await page.route(pattern,handler,{times:1});let inspectionFailure;let requests=0;const observe=request=>{if(new URL(request.url()).pathname.startsWith('/api/'))requests++;};const observations=[],diagnostics=[];
+ const diagnostic=response=>{const endpoint=new URL(response.url()).pathname;if(endpoint==='/api/auth/session'||/^\/api\/business\/(leads|services|customers\/addresses)\/[a-z-]+$/.test(endpoint)){diagnostics.push({endpoint,status:response.status()});if(diagnostics.length>24)diagnostics.shift();}};page.on('response',diagnostic);
  try{
   await enter();await held;const loading=page.locator('.directory-loading');await expect(loading).toBeVisible();await expect(loading).toHaveAttribute('aria-hidden','true');
-  await expect(page.getByRole('region',{name:(kind==='customer'?'Customer':'Vehicle')+' directory',exact:true})).toHaveAttribute('aria-busy','true');
+  await expect(page.getByRole('region',{name:directory[1],exact:true})).toHaveAttribute('aria-busy','true');
   assert.equal(await page.evaluate(()=>{const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;}),false,'A clean directory read must not warn of lost edits');
   page.on('request',observe);
   for(const width of [360,390,1440]){
@@ -45,6 +47,6 @@ export async function reviewCrmLoading(page,engine,kind,enter){
    await mkdir('.local/review',{recursive:true});await page.screenshot({path:'.local/review/crm-loading-'+kind+'-'+engine+'-'+width+'.png',animations:'disabled'});observations.push({width,before,after});
   }
   assert.equal(requests,0,'Loading inspection must not add or retry requests');await writeFile('.local/review/crm-loading-'+kind+'-'+engine+'.json',JSON.stringify({kind,observations,requests},null,2)+'\n');
- }catch(error){inspectionFailure=error;}finally{page.off('request',observe);release();if(routed)await finished;try{await page.unroute(pattern,handler);await page.emulateMedia({reducedMotion:motion});await page.setViewportSize(viewport);}catch(error){inspectionFailure??=error;}}
+ }catch(error){inspectionFailure=error;await mkdir('.local/review',{recursive:true});await writeFile('.local/review/crm-loading-failure-'+kind+'-'+engine+'.json',JSON.stringify({kind,path:new URL(page.url()).pathname,heading:await page.locator('h1').allTextContents(),status:await page.getByRole('status').allTextContents(),loadingCount:await page.locator('.directory-loading').count(),diagnostics},null,2)+'\n');}finally{page.off('request',observe);page.off('response',diagnostic);release();if(routed)await finished;try{await page.unroute(pattern,handler);await page.emulateMedia({reducedMotion:motion});await page.setViewportSize(viewport);}catch(error){inspectionFailure??=error;}}
  if(inspectionFailure)throw inspectionFailure;if(routeFailure)throw routeFailure;
 }

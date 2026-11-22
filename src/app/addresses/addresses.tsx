@@ -1,5 +1,8 @@
 'use client';
-import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {DirectoryLoading} from '../directory-loading';
+import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
+import type {DirectoryOrigin} from '../../client/directory-origin';
+import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent,ComponentType} from 'react';
 import {createAddressEditorController,emptyAddressDraft,initialAddressEditorView} from '../../client/address-editor-controller';
 import {createPendingAddressStore} from '../../client/pending-address-edit';
@@ -83,29 +86,32 @@ function AddressDetails({row}:{row:CustomerAddress}){
  return <dl className="customer-values">{fields.map(([name,value])=><div key={name}><dt>{name}</dt><dd>{unknown(value)}</dd></div>)}</dl>;
 }
 export function AddressScreen({customerId,assist:Assist}:{customerId:string|null;assist?:ComponentType<{draft:AddressDraft;change:(draft:AddressDraft)=>void}>}){
+ const [saving,setSaving]=useState(false);
  const [view,setView]=useState(initialAddressEditorView),current=useRef<ReturnType<typeof createAddressEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),heading=useRef<HTMLHeadingElement>(null);
  const [mode,setMode]=useState<'profile'|'edit'|'review'>('profile'),[showRecord,setShowRecord]=useState(false);
  const profileHeading=useRef<HTMLHeadingElement>(null),reviewHeading=useRef<HTMLHeadingElement>(null),reviewButton=useRef<HTMLButtonElement>(null);
  const searchInput=useRef<HTMLInputElement>(null),listTrigger=useRef<HTMLButtonElement>(null);
  const selectedId=view.selected?.id??null,dirty=draftChanged(view.draft,view.selected?draftFromAddress(view.selected):emptyAddressDraft);
  const focusRequest=useRef<{controller:NonNullable<typeof current.current>;id:string|null;target?:'record'|'directory'|'review-button'}|null>(null);
+ const directoryOrigin=useRef<DirectoryOrigin|null>(null);
+ const clearDirectoryOrigin=useCallback(()=>{directoryOrigin.current=null;listTrigger.current=null;focusRequest.current=null;},[]);
  useLayoutEffect(()=>{
   const requested=focusRequest.current;if(!requested||view.busy)return;
   if(current.current===requested.controller&&view.phase==='ready'&&view.draft&&requested.id===selectedId){
-   const target=requested.target==='directory'?(listTrigger.current?.isConnected?listTrigger.current:searchInput.current):requested.target==='review-button'?reviewButton.current:(mode==='profile'?profileHeading:mode==='review'?reviewHeading:heading).current;
-   target?.focus();
+   if(requested.target==='directory')restoreDirectoryOrigin(directoryOrigin.current,listTrigger.current?.isConnected?listTrigger.current:searchInput.current);
+   else (requested.target==='review-button'?reviewButton.current:(mode==='profile'?profileHeading:mode==='review'?reviewHeading:heading).current)?.focus();
   }
   focusRequest.current=null;
  },[view,selectedId,mode,showRecord]);
  useEffect(()=>{
-  const c=createAddressEditorController({customerId,store:createPendingAddressStore({getItem:k=>sessionStorage.getItem(k),setItem:(k,v)=>sessionStorage.setItem(k,v),removeItem:k=>sessionStorage.removeItem(k)}),change:setView});current.current=c;void c.load();
+  const c=createAddressEditorController({customerId,store:createPendingAddressStore({getItem:k=>sessionStorage.getItem(k),setItem:(k,v)=>sessionStorage.setItem(k,v),removeItem:k=>sessionStorage.removeItem(k)}),change:next=>{if(next.phase!=='ready')clearDirectoryOrigin();setView(next);}});current.current=c;void c.load();
   function suspend(){setMode('profile');setShowRecord(false);c.suspend();}
   const hidden=()=>{if(document.visibilityState==='hidden')suspend();},leave=()=>suspend(),restore=(e:PageTransitionEvent)=>{if(e.persisted)suspend();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restore);
-  return ()=>{c.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restore);};
- },[customerId]);
- useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leaving=(e:BeforeUnloadEvent)=>e.preventDefault();window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase,view.busy]);
- async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const c=current.current;if(!c)return;await c[kind]();if(current.current===c)status.current?.focus();}
+  return ()=>{c.dispose();current.current=null;clearDirectoryOrigin();document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restore);};
+ },[customerId,clearDirectoryOrigin]);
+ useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!saving)return;const leaving=(e:BeforeUnloadEvent)=>e.preventDefault();window.addEventListener('beforeunload',leaving);return ()=>window.removeEventListener('beforeunload',leaving);},[dirty,view.phase,saving]);
+ async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const c=current.current;if(!c)return;if(kind==='save')setSaving(true);try{await c[kind]();if(current.current===c)status.current?.focus();}finally{if(kind==='save')setSaving(false);}}
  function edit<K extends keyof AddressDraft>(key:K,value:AddressDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
  function focusOnCommit(target:'record'|'directory'|'review-button'='record'){const controller=current.current;if(controller)focusRequest.current={controller,id:selectedId,target};}
  function review(e:FormEvent){
@@ -128,15 +134,15 @@ export function AddressScreen({customerId,assist:Assist}:{customerId:string|null
  }
  async function open(id:string,trigger:HTMLButtonElement){
   const controller=current.current;
-  if(!controller||!discardAllowed())return;
-  listTrigger.current=trigger;
+  if(!controller||controller.view().busy||!discardAllowed())return;
+  listTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
   setMode('profile');setShowRecord(true);
   focusRequest.current={controller,id};await controller.open(id);
  }
  function create(trigger:HTMLButtonElement){
   const controller=current.current;
-  if(!controller||!discardAllowed())return;
-  listTrigger.current=trigger;
+  if(!controller||controller.view().busy||!discardAllowed())return;
+  listTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);
   setMode('edit');setShowRecord(true);
   focusRequest.current={controller,id:null};controller.create();
  }
@@ -148,7 +154,7 @@ export function AddressScreen({customerId,assist:Assist}:{customerId:string|null
   setMode('profile');
  }
  function backToList(){
-  if(!showRecord){focusRequest.current=null;(listTrigger.current?.isConnected?listTrigger.current:searchInput.current)?.focus();return;}
+  if(!showRecord){focusRequest.current=null;restoreDirectoryOrigin(directoryOrigin.current,listTrigger.current?.isConnected?listTrigger.current:searchInput.current);return;}
   focusOnCommit('directory');
   setShowRecord(false);
  }
@@ -156,10 +162,11 @@ export function AddressScreen({customerId,assist:Assist}:{customerId:string|null
   focusOnCommit();
   setShowRecord(true);
  }
- function query(text:string,archived:boolean,more=false){if(discardAllowed()){setMode('profile');setShowRecord(false);void current.current?.query(text,archived,more);}}
+ function query(text:string,archived:boolean,more=false){if(current.current&&!current.current.view().busy&&discardAllowed()){clearDirectoryOrigin();setMode('profile');setShowRecord(false);void current.current.query(text,archived,more);}}
  function search(e:FormEvent<HTMLFormElement>){e.preventDefault();const data=new FormData(e.currentTarget);query(String(data.get('search')??''),data.get('archived')==='on');}
  return <section aria-label="Customer address directory" aria-busy={view.busy}>
   <p className={view.phase==='choose-customer'&&view.message==='Choose a customer to view or manage their saved addresses.'?'visually-hidden':'customer-directory-status'} ref={status} tabIndex={-1} role="status" aria-label="Address editor status" aria-live="polite" aria-atomic="true">{view.message}</p>
+  {view.phase==='loading'&&<DirectoryLoading/>}
   {view.phase==='ready'&&<>
    {view.parent&&<header className="address-customer">
     <h2>{view.parent.display_name}</h2>

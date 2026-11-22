@@ -1,5 +1,8 @@
 'use client';
-import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {DirectoryLoading} from '../directory-loading';
+import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
+import type {DirectoryOrigin} from '../../client/directory-origin';
+import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {createServiceEditorController,initialServiceEditorView} from '../../client/service-editor-controller';
 import {createPendingServiceStore} from '../../client/pending-service-edit';
 import {draftFromService,emptyServiceDraft,serviceDraftChanged} from '../../client/service-draft';
@@ -38,10 +41,13 @@ function ServiceQuotePreview({name,inclusions,exclusions,saved,heading}:{
 }
 
 export function ServiceScreen(){
+ const [saving,setSaving]=useState(false);
  const [view,setView]=useState(initialServiceEditorView),current=useRef<ReturnType<typeof createServiceEditorController>|null>(null);
  const [editing,setEditing]=useState(false),[showRecord,setShowRecord]=useState(false),[preview,setPreview]=useState(false);
  const formHeading=useRef<HTMLHeadingElement>(null),profileHeading=useRef<HTMLHeadingElement>(null),previewHeading=useRef<HTMLHeadingElement>(null);
  const focus=useRef<string|null|undefined>(undefined),directoryTrigger=useRef<HTMLButtonElement>(null),searchInput=useRef<HTMLInputElement>(null);
+ const directoryOrigin=useRef<DirectoryOrigin|null>(null);
+ const clearDirectoryOrigin=useCallback(()=>{directoryOrigin.current=null;directoryTrigger.current=null;focus.current=undefined;},[]);
  const selected=view.selected,draft=view.draft;
  const original=selected?draftFromService(selected.service,selected.content):emptyServiceDraft;
  const dirty=serviceDraftChanged(draft,original);
@@ -55,35 +61,36 @@ export function ServiceScreen(){
  useEffect(()=>{
   const c=createServiceEditorController({
    store:createPendingServiceStore({getItem:k=>sessionStorage.getItem(k),setItem:(k,v)=>sessionStorage.setItem(k,v),removeItem:k=>sessionStorage.removeItem(k)}),
-   change:setView
+   change:next=>{if(next.phase!=='ready')clearDirectoryOrigin();setView(next);}
   });
   current.current=c;void c.load();
   const leave=()=>{setEditing(false);setPreview(false);setShowRecord(false);c.suspend();};
   const hidden=()=>{if(document.visibilityState==='hidden')leave();},restore=(e:PageTransitionEvent)=>{if(e.persisted)leave();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restore);
   return ()=>{
-   current.current=null;c.dispose();document.removeEventListener('visibilitychange',hidden);
+   current.current=null;c.dispose();clearDirectoryOrigin();document.removeEventListener('visibilitychange',hidden);
    window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restore);
   };
- },[]);
+ },[clearDirectoryOrigin]);
  useEffect(()=>{
-  if(!dirty&&view.phase!=='pending'&&!view.busy)return;
+  if(!dirty&&view.phase!=='pending'&&!saving)return;
   const leave=(e:BeforeUnloadEvent)=>e.preventDefault();window.addEventListener('beforeunload',leave);
   return ()=>window.removeEventListener('beforeunload',leave);
- },[dirty,view.phase,view.busy]);
+ },[dirty,view.phase,saving]);
+ async function save(){const controller=current.current;if(!controller)return;setSaving(true);try{await controller.save();}finally{setSaving(false);}}
  function discard(){
   const v=current.current?.view();
   return !v||!serviceDraftChanged(v.draft,v.selected?draftFromService(v.selected.service,v.selected.content):emptyServiceDraft)||
    window.confirm('Discard your unsaved service changes? Choose Cancel to keep editing.');
  }
  function create(trigger:HTMLButtonElement){
-  if(!discard())return;
-  directoryTrigger.current=trigger;setPreview(false);setEditing(true);setShowRecord(true);
+  if(!current.current||current.current.view().busy||!discard())return;
+  directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);setPreview(false);setEditing(true);setShowRecord(true);
   focus.current=null;current.current?.create();
  }
  async function open(id:string,trigger:HTMLButtonElement){
-  if(!discard())return;
-  directoryTrigger.current=trigger;setPreview(false);setEditing(false);setShowRecord(true);
+  if(!current.current||current.current.view().busy||!discard())return;
+  directoryTrigger.current=trigger;directoryOrigin.current=captureDirectoryOrigin(trigger);setPreview(false);setEditing(false);setShowRecord(true);
   focus.current=id;await current.current?.open(id);
  }
  function closeEditor(){
@@ -92,12 +99,14 @@ export function ServiceScreen(){
   requestAnimationFrame(()=>profileHeading.current?.focus());
  }
  function reload(){
-  if(!discard())return;
+  if(!current.current||current.current.view().busy||!discard())return;
+  clearDirectoryOrigin();
   setEditing(false);setPreview(false);setShowRecord(false);
   void current.current?.load();
  }
  function query(search:string,inactive:boolean,more=false){
-  if(!discard())return;
+  if(!current.current||current.current.view().busy||!discard())return;
+  clearDirectoryOrigin();
   setEditing(false);setPreview(false);setShowRecord(false);
   void current.current?.query(search,inactive,more);
  }
@@ -109,7 +118,7 @@ export function ServiceScreen(){
   setShowRecord(false);
   requestAnimationFrame(()=>{
    const trigger=directoryTrigger.current;
-   (trigger?.isConnected?trigger:searchInput.current)?.focus();
+   restoreDirectoryOrigin(directoryOrigin.current,trigger?.isConnected?trigger:searchInput.current);
   });
  }
  function returnToRecord(){
@@ -117,8 +126,9 @@ export function ServiceScreen(){
   requestAnimationFrame(()=>(editing?preview?previewHeading:formHeading:profileHeading).current?.focus());
  }
  const canEdit=editing&&draft!==null;
- return <>
+ return <section aria-label="Service directory" aria-busy={view.busy}>
   <p role="status" aria-label="Service status" className="customer-directory-status">{view.message}</p>
+  {view.phase==='loading'&&<DirectoryLoading/>}
   {view.phase==='unavailable'&&<p><a href="/sign-in">Sign in to view services</a></p>}
   {view.phase!=='ready'&&view.phase!=='loading'&&<div className="actions">
    {view.phase==='pending'?<>
@@ -178,7 +188,7 @@ export function ServiceScreen(){
       <button type="button" className="secondary" aria-pressed={preview} onClick={()=>choosePreview(true)}>Quote preview</button>
      </nav>
      <div className="service-edit-grid" data-preview={preview}>
-      <form className="customer-record-editor service-edit-form" aria-label="Service editor" onSubmit={e=>{e.preventDefault();void current.current?.save();}}>
+      <form className="customer-record-editor service-edit-form" aria-label="Service editor" onSubmit={e=>{e.preventDefault();void save();}}>
        <h2 tabIndex={-1} ref={formHeading}>{selected?'Edit service':'New service'}</h2>
        <p className="field-help">Unsaved changes clear when you leave or hide the page.</p>
        <fieldset className="service-fields" disabled={view.busy||view.writesPaused}>
@@ -242,5 +252,5 @@ export function ServiceScreen(){
     </div>}
    </div>}
   </div>}
- </>;
+ </section>;
 }

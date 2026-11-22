@@ -1,5 +1,7 @@
 'use client';
-import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
+import type {DirectoryOrigin} from '../../client/directory-origin';
 import type {FormEvent} from 'react';
 import {createLeadSourceEditorController,initialLeadSourceEditorView,emptyLeadSourceDraft} from '../../client/lead-source-editor-controller';
 import type {LeadSourceEditorView} from '../../client/lead-source-editor-controller';
@@ -77,20 +79,22 @@ export function LeadSourceScreen(){
  const status=useRef<HTMLParagraphElement>(null),heading=useRef<HTMLHeadingElement>(null);
  const returnFocus=useRef<HTMLButtonElement|null>(null),add=useRef<HTMLButtonElement>(null);
  const sourceSearch=useRef<HTMLInputElement>(null),restoreDirectoryFocus=useRef(false);
+ const directoryOrigin=useRef<DirectoryOrigin|null>(null);
+ const clearDirectoryOrigin=useCallback(()=>{directoryOrigin.current=null;returnFocus.current=null;restoreDirectoryFocus.current=false;},[]);
  const editor=view.draft?view.selected?.id??'new':null;
  const {draft,selected}=view;
  const dirty=draft!==null&&JSON.stringify(draft)!==JSON.stringify(selected?draftFromLeadSource(selected):emptyLeadSourceDraft);
  const disabled=view.busy||view.writesPaused;
 
  useEffect(()=>{
-  const controller=createLeadSourceEditorController({store:createPendingLeadSourceStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:setView});
+  const controller=createLeadSourceEditorController({store:createPendingLeadSourceStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:next=>{if(next.phase!=='ready')clearDirectoryOrigin();setView(next);}});
   current.current=controller;void controller.load();
   const leave=()=>{restoreDirectoryFocus.current=false;controller.suspend();};
   const hidden=()=>{if(document.visibilityState==='hidden')leave();};
   const restored=(event:PageTransitionEvent)=>{if(event.persisted)leave();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
-  return()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
- },[]);
+  return()=>{controller.dispose();current.current=null;clearDirectoryOrigin();document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
+ },[clearDirectoryOrigin]);
  useEffect(()=>{
   if(!dirty&&view.phase!=='pending'&&!view.busy)return;
   const leave=(event:BeforeUnloadEvent)=>event.preventDefault();
@@ -102,7 +106,7 @@ export function LeadSourceScreen(){
   if(editor||view.busy||view.phase!=='ready'||!restoreDirectoryFocus.current)return;
   restoreDirectoryFocus.current=false;
   const target=returnFocus.current;
-  if(target?.isConnected&&!target.disabled)target.focus();else add.current?.focus();
+  restoreDirectoryOrigin(directoryOrigin.current,target?.isConnected&&!target.disabled?target:add.current);
  },[editor,view.busy,view.phase]);
 
  async function action(kind:'load'|'save'|'check'|'retry'){
@@ -116,8 +120,9 @@ export function LeadSourceScreen(){
  const canLeave=()=>!dirty||window.confirm('Discard the unsaved lead source changes?');
  function search(event:FormEvent<HTMLFormElement>){
   event.preventDefault();
-  if(!canLeave())return;
+  if(!current.current||current.current.view().busy||!canLeave())return;
   const data=new FormData(event.currentTarget);
+  clearDirectoryOrigin();
   void current.current?.query(String(data.get('search')??''),data.get('inactive')==='on');
  }
  function close(){
@@ -138,8 +143,8 @@ export function LeadSourceScreen(){
      <div className="lead-source-directory-heading">
       <h2>Sources</h2>
       <button ref={add} type="button" disabled={disabled} onClick={event=>{
-       if(!canLeave())return;
-       returnFocus.current=event.currentTarget;current.current?.create();
+       if(!current.current||current.current.view().busy||!canLeave())return;
+       returnFocus.current=event.currentTarget;directoryOrigin.current=captureDirectoryOrigin(event.currentTarget);current.current.create();
       }}>Add lead source</button>
      </div>
      <form onSubmit={search} aria-label="Search lead sources" className="lead-source-search">
@@ -151,8 +156,8 @@ export function LeadSourceScreen(){
      <ul className="customer-list crest-record-list" aria-label="Saved lead sources">
       {view.rows.map(row=><li key={row.id} className="crest-lead-row crest-source-row">
        <button type="button" className="secondary crest-record-row lead-source-row" aria-describedby={'source-summary-'+row.id} aria-current={selected?.id===row.id?'true':undefined} disabled={view.busy} onClick={event=>{
-        if(!canLeave())return;
-        returnFocus.current=event.currentTarget;void current.current?.open(row.id);
+        if(!current.current||current.current.view().busy||!canLeave())return;
+        returnFocus.current=event.currentTarget;directoryOrigin.current=captureDirectoryOrigin(event.currentTarget);void current.current.open(row.id);
        }}>
         <strong>{row.label}{!row.active&&<span className="visually-hidden"> — inactive</span>}</strong>
        </button>
@@ -162,7 +167,7 @@ export function LeadSourceScreen(){
       </li>)}
      </ul>
      {view.rows.length===0&&!view.busy&&<p className="lead-source-empty">{view.search||view.includeInactive?'No sources match this search.':'No active sources yet.'}</p>}
-     {view.hasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>{if(canLeave())void current.current?.query(view.search,view.includeInactive,true);}}>Next lead source page</button>}
+     {view.hasMore&&<button type="button" className="secondary" disabled={view.busy} onClick={()=>{if(current.current&&!current.current.view().busy&&canLeave()){clearDirectoryOrigin();void current.current.query(view.search,view.includeInactive,true);}}}>Next lead source page</button>}
     </section>
     {!draft&&!view.busy&&<div className="directory-introduction-slot"><DirectoryIntroduction kind="source" onSearch={()=>sourceSearch.current?.focus()}/></div>}
     {draft&&<section className="lead-source-editor" aria-labelledby="lead-source-edit-heading" aria-busy={view.busy}>

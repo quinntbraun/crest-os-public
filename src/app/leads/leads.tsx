@@ -1,4 +1,7 @@
 'use client';
+import {DirectoryLoading} from '../directory-loading';
+import {captureDirectoryOrigin,restoreDirectoryOrigin} from '../../client/directory-origin';
+import type {DirectoryOrigin} from '../../client/directory-origin';
 import {createPendingLeadConversionStore} from '../../client/pending-lead-conversion';
 import {createPendingLeadAddressStore} from '../../client/pending-lead-address-edit';
 import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
@@ -36,12 +39,14 @@ function EstimateInput({value,change}:{value:string|null;change:(value:string|nu
  return <><label htmlFor="lead-estimate">Estimated value (USD)</label><input id="lead-estimate" name="estimate" inputMode="decimal" autoComplete="off" maxLength={24} value={text} onChange={event=>{setText(event.target.value);change(event.target.value.length?leadCents(event.target.value):null);}}/><p className="field-help">Optional. Enter dollars, such as 125.50, or leave blank. Zero is an explicit estimate. This is not a quote or invoice.</p></>;
 }
 export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:ComponentType<{draft:LeadAddressDraft;change:(draft:LeadAddressDraft)=>void}>;initialLeadId?:string|null}={}){
+ const [saving,setSaving]=useState(false);
  const [conversionLocked,setConversionLocked]=useState(false),[conversionGeneration,setConversionGeneration]=useState(0),[statusLocked,setStatusLocked]=useState(false),[vehicleLocked,setVehicleLocked]=useState(false),[addressLocked,setAddressLocked]=useState(false),[view,setView]=useState(initialLeadEditorView),current=useRef<ReturnType<typeof createLeadEditorController>|null>(null),status=useRef<HTMLParagraphElement>(null),editHeading=useRef<HTMLHeadingElement>(null);
  const [directory,setDirectory]=useState(false),queueHeading=useRef<HTMLHeadingElement>(null);
  const [followUpFilter,setFollowUpFilter]=useState<FollowUpFilter>('all'),[recordDismissed,setRecordDismissed]=useState(false);
  const [focusRequest,setFocusRequest]=useState<{target:'record';leadId:string|null}|{target:'directory'}|null>(null);
  const handledFocus=useRef<typeof focusRequest>(null),record=useRef<HTMLElement>(null),directoryHeading=useRef<HTMLHeadingElement>(null);
  const rowOrigin=useRef<HTMLButtonElement|null>(null),addLead=useRef<HTMLButtonElement>(null);
+ const directoryOrigin=useRef<DirectoryOrigin|null>(null);
  const showingRecord=view.draft!==null&&!recordDismissed;
  useLayoutEffect(()=>{
   if(!focusRequest||handledFocus.current===focusRequest||view.busy||view.phase!=='ready')return;
@@ -51,14 +56,14 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
   }else{
    if(showingRecord)return;
    const origin=rowOrigin.current;
-   if(origin?.isConnected&&!origin.disabled&&origin.getClientRects().length)origin.focus();
+   if(origin?.isConnected&&!origin.disabled&&origin.getClientRects().length)restoreDirectoryOrigin(directoryOrigin.current,origin);
    else (queueHeading.current??directoryHeading.current??addLead.current)?.focus();
   }
   handledFocus.current=focusRequest;
  },[focusRequest,showingRecord,view.busy,view.phase,view.selected]);
  useEffect(()=>{
   const storage={getItem:(key:string)=>sessionStorage.getItem(key),setItem:(key:string,value:string)=>sessionStorage.setItem(key,value),removeItem:(key:string)=>sessionStorage.removeItem(key)};
-  const controller=createLeadEditorController({conversionStore:createPendingLeadConversionStore(storage),addressStore:createPendingLeadAddressStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),store:createPendingLeadStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),statusStore:createPendingLeadStateStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),vehicleStore:createPendingLeadVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:next=>{if(next.phase!=='ready'){rowOrigin.current=null;handledFocus.current=null;}setView(next);}});current.current=controller;
+  const controller=createLeadEditorController({conversionStore:createPendingLeadConversionStore(storage),addressStore:createPendingLeadAddressStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),store:createPendingLeadStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),statusStore:createPendingLeadStateStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),vehicleStore:createPendingLeadVehicleStore({getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)}),change:next=>{if(next.phase!=='ready'){directoryOrigin.current=null;rowOrigin.current=null;handledFocus.current=null;}setView(next);}});current.current=controller;
   void (async()=>{
    await controller.load();
    if(!initialLeadId||current.current!==controller||controller.view().phase!=='ready')return;
@@ -66,18 +71,19 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
    await controller.open(initialLeadId);
    if(current.current===controller&&controller.view().selected?.id!==initialLeadId)setFocusRequest(previous=>previous===intent?null:previous);
   })();
-  const leave=()=>{rowOrigin.current=null;handledFocus.current=null;setFocusRequest(null);setRecordDismissed(false);setFollowUpFilter('all');controller.suspend();};
+  const leave=()=>{directoryOrigin.current=null;rowOrigin.current=null;handledFocus.current=null;setFocusRequest(null);setRecordDismissed(false);setFollowUpFilter('all');controller.suspend();};
   const hidden=()=>{if(document.visibilityState==='hidden')leave();},restored=(event:PageTransitionEvent)=>{if(event.persisted)leave();};
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',leave);window.addEventListener('pageshow',restored);
-  return()=>{rowOrigin.current=null;handledFocus.current=null;controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
+  return()=>{directoryOrigin.current=null;rowOrigin.current=null;handledFocus.current=null;controller.dispose();current.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',leave);window.removeEventListener('pageshow',restored);};
  },[initialLeadId]);
  const statusChanged=useCallback((leadId:string)=>{void current.current?.statusChanged(leadId);},[]);
  const conversionCommitted=useCallback((leadId:string)=>{setConversionGeneration(v=>v+1);void current.current?.conversionChanged(leadId);},[]);
  const dirty=view.draft!==null&&JSON.stringify(view.draft)!==JSON.stringify(view.selected?draftFromLead(view.selected):emptyLeadDraft);
- useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!view.busy)return;const leave=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener('beforeunload',leave);return()=>window.removeEventListener('beforeunload',leave);},[dirty,view.phase,view.busy]);
- async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const controller=current.current;if(!controller||kind==='moreHistory'&&dirty&&!window.confirm('If the saved lead has changed, loading more history clears this unsaved intake. Continue?'))return;if(kind==='load')setFocusRequest(null);await controller[kind]();if(current.current===controller)status.current?.focus();}
+ useEffect(()=>{if(!dirty&&view.phase!=='pending'&&!saving)return;const leave=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener('beforeunload',leave);return()=>window.removeEventListener('beforeunload',leave);},[dirty,view.phase,saving]);
+ async function action(kind:'load'|'save'|'check'|'retry'|'moreHistory'){const controller=current.current;if(!controller||kind==='moreHistory'&&dirty&&!window.confirm('If the saved lead has changed, loading more history clears this unsaved intake. Continue?'))return;if(kind==='load')setFocusRequest(null);if(kind==='save')setSaving(true);try{await controller[kind]();if(current.current===controller)status.current?.focus();}finally{if(kind==='save')setSaving(false);}}
  function edit<K extends keyof LeadDraft>(key:K,value:LeadDraft[K]){if(view.draft)current.current?.edit({...view.draft,[key]:value});}
- function search(event:FormEvent<HTMLFormElement>){event.preventDefault();if(!mayReplaceIntake())return;setFocusRequest(null);const data=new FormData(event.currentTarget);void current.current?.query(String(data.get('search')??''),data.get('lost')==='on');}
+ function query(text:string,lost:boolean,more=false){const controller=current.current;if(!controller||controller.view().busy||!mayReplaceIntake())return;directoryOrigin.current=null;rowOrigin.current=null;setFocusRequest(null);void controller.query(text,lost,more);}
+ function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const data=new FormData(event.currentTarget);query(String(data.get('search')??''),data.get('lost')==='on');}
 
  const key=(view.selected?.id??'new')+':'+(view.selected?.version??'0'),disabled=view.busy||view.writesPaused||statusLocked||vehicleLocked||addressLocked||conversionLocked;
  const readLocked=view.busy||statusLocked||vehicleLocked||addressLocked||conversionLocked;
@@ -102,21 +108,22 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
  }
  function submit(event:FormEvent){event.preventDefault();if(!review.active)reviewAndSave();}
  function mayReplaceIntake(){return !dirty||window.confirm('Discard the unsaved lead intake changes before replacing this record?');}
- function selectDirectory(all:boolean){setDirectory(all);setRecordDismissed(true);setFocusRequest({target:'directory'});}
- function startLead(origin:HTMLButtonElement){if(!mayReplaceIntake())return;rowOrigin.current=origin;setRecordDismissed(false);setFocusRequest({target:'record',leadId:null});current.current?.create();}
+ function selectDirectory(all:boolean){directoryOrigin.current=null;rowOrigin.current=null;setDirectory(all);setRecordDismissed(true);setFocusRequest({target:'directory'});}
+ function startLead(origin:HTMLButtonElement){if(!current.current||current.current.view().busy||!mayReplaceIntake())return;rowOrigin.current=origin;directoryOrigin.current=captureDirectoryOrigin(origin);setRecordDismissed(false);setFocusRequest({target:'record',leadId:null});current.current.create();}
  function backToDirectory(){setRecordDismissed(true);setFocusRequest({target:'directory'});}
  function resumeRecord(){setRecordDismissed(false);setFocusRequest({target:'record',leadId:view.selected?.id??null});}
  async function openLead(id:string,origin:HTMLButtonElement){
   const controller=current.current;
   if(!controller||controller.view().busy||!mayReplaceIntake())return;
-  rowOrigin.current=origin;setRecordDismissed(false);
+  rowOrigin.current=origin;directoryOrigin.current=captureDirectoryOrigin(origin);setRecordDismissed(false);
   const intent={target:'record' as const,leadId:id};setFocusRequest(intent);
   await controller.open(id);
   if(current.current===controller&&controller.view().selected?.id!==id)setFocusRequest(previous=>previous===intent?null:previous);
  }
  async function pageQueue(next=false){
   const controller=current.current;
-  if(!controller)return;
+  if(!controller||controller.view().busy)return;
+  directoryOrigin.current=null;rowOrigin.current=null;
   await controller.pageFollowUps(next);
   if(current.current===controller)queueHeading.current?.focus();
  }
@@ -126,6 +133,7 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
 
  return <section aria-label="Lead directory" aria-busy={view.busy} data-record-open={showingRecord}>
   <p ref={status} tabIndex={-1} role="status" aria-label="Lead editor status" aria-live="polite" aria-atomic="true">{view.message}</p>
+  {view.phase==='loading'&&<DirectoryLoading/>}
   {view.phase==='ready'&&<>
    {view.writesPaused&&<p className="notice">Lead changes are paused. You can review current records and retained history.</p>}
    <div className="lead-directory-toolbar">
@@ -152,7 +160,7 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
     <p className="field-help">{dirty?'Unsaved intake changes stay open. Crest will ask before replacing them.':'Earliest reminders first. Lead status and reminder urgency are shown separately.'}</p>
    </div>}
    {showQueue&&page&&reminderGroups&&<section className="lead-reminder-scope" aria-label="Loaded follow-up views">
-    <div className="lead-reminder-filters" role="group" aria-label="Filter this reminder page">{(['all','due','upcoming'] as const).map(filter=><button type="button" className="secondary" key={filter} aria-pressed={followUpFilter===filter} disabled={readLocked} onClick={()=>setFollowUpFilter(filter)}>{({all:'All',due:'Due',upcoming:'Upcoming'} as const)[filter]} ({reminderGroups[filter].length})</button>)}</div>
+    <div className="lead-reminder-filters" role="group" aria-label="Filter this reminder page">{(['all','due','upcoming'] as const).map(filter=><button type="button" className="secondary" key={filter} aria-pressed={followUpFilter===filter} disabled={readLocked} onClick={()=>{directoryOrigin.current=null;rowOrigin.current=null;setFollowUpFilter(filter);}}>{({all:'All',due:'Due',upcoming:'Upcoming'} as const)[filter]} ({reminderGroups[filter].length})</button>)}</div>
     <p className="field-help" role="status">Showing {visibleRows.length} of {reminders.length} reminders on this loaded page.</p>
     <p className="field-help">Due status at the last read: <FollowUpTime instant={page.observedAt}/>. Times use your device's time zone.</p>
     {followUpFilter!=='all'&&reminders.length>0&&visibleRows.length===0&&<p>No {followUpFilter==='due'?'due':'upcoming'} reminders on this loaded page.</p>}
@@ -174,7 +182,7 @@ export function LeadScreen({addressAssist,initialLeadId=null}:{addressAssist?:Co
     {page?.hasMore&&<button type="button" className="secondary" disabled={readLocked} onClick={()=>void pageQueue(true)}>More follow-ups</button>}
    </div>:<>
     {view.rows.length===0&&<p>No leads found on this page.</p>}
-    {view.hasMore&&<button type="button" className="secondary" disabled={readLocked} onClick={()=>void current.current?.query(view.search,view.includeLost,true)}>Next lead page</button>}
+    {view.hasMore&&<button type="button" className="secondary" disabled={readLocked} onClick={()=>query(view.search,view.includeLost,true)}>Next lead page</button>}
    </>}
    </section>
    <section ref={record} className="lead-workspace-record" aria-label="Lead record" hidden={!showingRecord}>
