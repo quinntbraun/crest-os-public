@@ -1,7 +1,6 @@
 
 import {SignInLink} from "../sign-in-link";
-import {SourceExportScreen} from './export-files';
-import {PostedFinanceExport} from './posted-finance-export';
+import {ExportCollections} from './export-collections';
 export const dynamic='force-dynamic';
 export const runtime='nodejs';
 export default function ExportFilesPage(){
@@ -13,10 +12,7 @@ export default function ExportFilesPage(){
    <div><dt>Business record packages</dt><dd>Only the records and files declared in each package’s manifest.</dd></div>
    <div><dt>Recoverable backups</dt><dd>A separate database backup and tested restore. Downloads here do not establish one.</dd></div>
   </dl>
-  <div className="export-collections">
-   <PostedFinanceExport/>
-   <SourceExportScreen/>
-  </div>
+  <ExportCollections/>
   <nav aria-label="Export navigation"><a href="/customers">Customers</a><a href="/settings">Business settings</a><SignInLink returnTo="exports">Device sign-in and sign-out</SignInLink><a href="/">Crest OS home</a></nav>
  </main>;
 }

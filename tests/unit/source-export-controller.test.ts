@@ -1,3 +1,4 @@
+import {AuthenticationError} from '../../src/client/authentication.ts';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {it,expect,vi} from 'vitest';
 import {createSourceExportController} from '../../src/client/source-export-controller.ts';
@@ -8,11 +9,20 @@ import {parseExportRequestResolution,parseExportRequestReference} from '../../sr
 import {sourceExportOwnerFixture,sourceExportContextFixture,sourceExportListFixture} from '../support/source-export-owner-fixture.ts';
 import type {createSourceExportClient,sourceExportOwnerContext} from '../../src/client/source-exports.ts';
 import type {authentication} from '../../src/client/authentication.ts';
-function fixture(){
+it('clears private retirement input on definite denial while preserving the exact original request',async()=>{
+ const f=fixture();await f.c.load();f.api.request.mockRejectedValueOnce(Error('unconfirmed transport'));await f.c.request();
+ const original=f.store.read(),stored=[...f.values];expect(original).not.toBeNull();f.c.editReason('Private retirement note');
+ f.session.mockRejectedValueOnce(new AuthenticationError('denied'));await f.c.checkOriginal();
+ expect(f.c.view()).toMatchObject({phase:'unavailable',jobs:[],selection:null,jobId:'',reason:'',canRequest:false});
+ expect(f.onAccessDenied).toHaveBeenCalledOnce();expect(f.store.read()).toEqual(original);expect([...f.values]).toEqual(stored);
+ expect(f.api.lookupRequest).not.toHaveBeenCalled();await f.c.load();expect(f.c.view().phase).toBe('pending');
+ expect(f.api.request).toHaveBeenCalledOnce();expect(f.api.lookupRequest).not.toHaveBeenCalled();
+});
+function fixture(onAccessDenied=vi.fn()){
  const raw=sourceExportOwnerFixture(),f={...raw,original:parseExportRequestReference(raw.original)},contextValue=sourceExportContextFixture(raw),values=new Map<string,string>(),storage={getItem:vi.fn((k:string)=>values.get(k)??null),setItem:vi.fn((k:string,v:string)=>{values.set(k,v);}),removeItem:vi.fn((k:string)=>{values.delete(k);})},states:SourceExportView[]=[],session=vi.fn<typeof authentication.session>().mockResolvedValue({csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000}),context=vi.fn<typeof sourceExportOwnerContext>().mockResolvedValue(contextValue),id=vi.fn<()=>string>().mockReturnValueOnce(f.original.reference.operationId).mockReturnValueOnce(f.original.reference.exportJobId);
  type Api=ReturnType<typeof createSourceExportClient>;
- const api={list:vi.fn<Api['list']>().mockResolvedValue({schemaVersion:1,jobs:[],next:null}),request:vi.fn<Api['request']>().mockResolvedValue(parseSourceExportCommitted(f.committed,f.original,f.actorId)),lookupRequest:vi.fn<Api['lookupRequest']>().mockResolvedValue({state:'absent'}),status:vi.fn<Api['status']>().mockResolvedValue({state:'found',job:parseSourceExportJob(f.job,f.businessId)}),retireRequest:vi.fn<Api['retireRequest']>().mockResolvedValue(parseExportRequestResolution(f.retired,f.original)),lookupResolution:vi.fn<Api['lookupResolution']>().mockResolvedValue({state:'absent'})},factory=vi.fn<typeof createSourceExportClient>().mockReturnValue(api),store=createPendingExportRequestStore(storage,f.businessId,f.actorId),controller=createSourceExportController({storage,session,context,api:factory,id,change:v=>states.push(v)});
- return{...f,contextValue,values,storage,states,session,context,id,api,factory,store,c:controller};
+ const api={list:vi.fn<Api['list']>().mockResolvedValue({schemaVersion:1,jobs:[],next:null}),request:vi.fn<Api['request']>().mockResolvedValue(parseSourceExportCommitted(f.committed,f.original,f.actorId)),lookupRequest:vi.fn<Api['lookupRequest']>().mockResolvedValue({state:'absent'}),status:vi.fn<Api['status']>().mockResolvedValue({state:'found',job:parseSourceExportJob(f.job,f.businessId)}),retireRequest:vi.fn<Api['retireRequest']>().mockResolvedValue(parseExportRequestResolution(f.retired,f.original)),lookupResolution:vi.fn<Api['lookupResolution']>().mockResolvedValue({state:'absent'})},factory=vi.fn<typeof createSourceExportClient>().mockReturnValue(api),store=createPendingExportRequestStore(storage,f.businessId,f.actorId),controller=createSourceExportController({onAccessDenied,storage,session,context,api:factory,id,change:v=>states.push(v)});
+ return{...f,onAccessDenied,contextValue,values,storage,states,session,context,id,api,factory,store,c:controller};
 }
 it('loads current principal before opening its namespace without automatic dispatch, lookup or credential storage',async()=>{const f=fixture();await f.c.load();expect(f.c.view()).toMatchObject({phase:'ready',canRequest:true});expect(f.factory).toHaveBeenCalledWith(f.businessId,f.actorId);expect(f.session.mock.invocationCallOrder[0]).toBeLessThan(f.context.mock.invocationCallOrder[0]!);expect(f.values.size).toBe(0);expect(f.api.request).not.toHaveBeenCalled();expect(f.api.lookupRequest).not.toHaveBeenCalled();expect(JSON.stringify(f.states)).not.toContain('csrfToken');});
 it('reacquires context and confirms the entire pending reference before one dispatch, releasing only its matching original receipt',async()=>{const f=fixture();await f.c.load();f.api.request.mockImplementationOnce(async original=>{expect(f.store.read()!.command).toEqual(original);expect(original).toEqual(f.original);return parseSourceExportCommitted(f.committed,parseExportRequestReference(original),f.actorId);});await f.c.request();expect(f.session).toHaveBeenCalledTimes(2);expect(f.context).toHaveBeenCalledTimes(2);expect(f.id).toHaveBeenCalledTimes(2);expect(f.api.request).toHaveBeenCalledTimes(1);expect(f.store.read()).toBeNull();expect(f.c.view()).toMatchObject({phase:'confirmed',canRequest:false,jobId:f.job.id,canCheckJob:true,jobState:''});});

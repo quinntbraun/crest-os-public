@@ -1,4 +1,4 @@
-import {authentication} from './authentication';
+import {authentication,AuthenticationError} from './authentication';
 import {sourceExportOwnerContext} from './source-exports';
 import {parseSourceExportOwnerContext} from '../security/source-export-owner-context';
 import type {SourceExportOwnerContext} from '../security/source-export-owner-context';
@@ -12,7 +12,8 @@ import {customerUuid as uuid} from '../customer/customer-contract';
 type Comparison=Awaited<ReturnType<ReturnType<typeof createSourceExportLocalVerifier>['verify']>>;
 export type SourceExportDownloadView=Readonly<{phase:'idle'|'ready'|'prepared'|'requested'|'review'|'unavailable';message:string;busy:boolean;loaded:number;total:number|null;packageInfo:Readonly<{completedAt:string;expiresAt:string;fileCount:number;totalBytes:number}>|null;files:readonly Readonly<{partId:string;fileName:string;bytes:number;comparison:'unchecked'|'matching'|'missing'|'invalid'}>[];extraCount:number;canLoad:boolean;canContinue:boolean;canPrepare:boolean;canCompare:boolean;canRequestSave:boolean;prepared:Readonly<{fileName:string;bytes:number;expiresAt:number;state:'prepared'|'requested'}>|null}>;
 export const initialSourceExportDownloadView:SourceExportDownloadView=Object.freeze({phase:'idle',message:'Load the file list before downloading this export.',busy:false,loaded:0,total:null,packageInfo:null,files:Object.freeze([]),extraCount:0,canLoad:true,canContinue:false,canPrepare:false,canCompare:false,canRequestSave:false,prepared:null});
-type Dependencies={jobId:string;change:(view:SourceExportDownloadView)=>void;session?:typeof authentication.session;context?:typeof sourceExportOwnerContext;api?:typeof createSourceExportDownloadClient;save?:typeof createSourceExportBrowserSave;local?:typeof createSourceExportLocalVerifier};
+type Dependencies={jobId:string;change:(view:SourceExportDownloadView)=>void;onAccessDenied?:()=>void;session?:typeof authentication.session;context?:typeof sourceExportOwnerContext;api?:typeof createSourceExportDownloadClient;save?:typeof createSourceExportBrowserSave;local?:typeof createSourceExportLocalVerifier};
+class PrincipalChanged extends Error{}
 export function createSourceExportDownloadController(deps:Dependencies){
  if(!uuid(deps.jobId))throw Error('SOURCE_EXPORT_DOWNLOAD_REVIEW_REQUIRED');
  const session=deps.session??authentication.session,readContext=deps.context??sourceExportOwnerContext,apiFactory=deps.api??createSourceExportDownloadClient,saveFactory=deps.save??createSourceExportBrowserSave,localFactory=deps.local??createSourceExportLocalVerifier;
@@ -26,12 +27,13 @@ export function createSourceExportDownloadController(deps:Dependencies){
  function emit(){if(alive)deps.change(view());}
  async function fresh(signal:AbortSignal){
   const issued=await session(signal);live(signal);const proof=Object.freeze({csrfToken:issued.csrfToken,expiresAt:issued.expiresAt}),next=parseSourceExportOwnerContext(await readContext(proof,signal));live(signal);
+  if(context&&(context.businessId!==next.businessId||context.actorId!==next.actorId))throw new PrincipalChanged();
   if(!Number.isSafeInteger(proof.expiresAt)||proof.expiresAt<=Date.now()||next.writeState!=='ready'||context&&JSON.stringify(next)!==JSON.stringify(context))throw Error();
   context=next;api??=apiFactory(next.businessId);return proof;
  }
  async function run(work:(signal:AbortSignal)=>Promise<void>){
   if(!alive||active)return;const controller=new AbortController(),signal=AbortSignal.any([controller.signal,AbortSignal.timeout(90000)]);active=controller;emit();
-  try{await work(signal);}catch(error){if(alive&&active===controller){save?.clear();if(error instanceof SourceExportDownloadClientError&&error.kind==='limited'&&builder&&!inventory){phase='ready';message='The file list is temporarily limited. Continue loading later; the checked position has been kept.';}else{reset();phase='unavailable';message='The export could not be verified. Check your sign-in and load the file list again.';}}}
+  try{await work(signal);}catch(error){if(alive&&active===controller){save?.clear();if(error instanceof SourceExportDownloadClientError&&error.kind==='limited'&&builder&&!inventory){phase='ready';message='The file list is temporarily limited. Continue loading later; the checked position has been kept.';}else{reset();phase='unavailable';message='The export could not be verified. Check your sign-in and load the file list again.';}if(error instanceof PrincipalChanged||error instanceof AuthenticationError&&error.kind==='denied')deps.onAccessDenied?.();}}
   finally{if(active===controller){active=null;emit();}}
  }
  async function pages(signal:AbortSignal){

@@ -1,3 +1,4 @@
+import {AuthenticationError} from '../../src/client/authentication.ts';
 import {it,expect,vi} from 'vitest';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {createSourceExportDownloadController} from '../../src/client/source-export-download-controller.ts';
@@ -10,14 +11,28 @@ import type {sourceExportOwnerContext} from '../../src/client/source-exports.ts'
 import {parseSourceExportOwnerContext} from '../../src/security/source-export-owner-context.ts';
 import {parseSourceExportDownloadCatalogue,parseSourceExportDownloadHeader,parseSourceExportDownloadFile} from '../../src/security/source-export-download-contract.ts';
 import {sourceExportDownloadFixture} from '../support/source-export-download-fixture.ts';
-function fixture(){
+it('clears inventory and prepared bytes before notifying the workspace of ended access',async()=>{
+ const f=fixture();await f.c.load();await f.c.prepare(f.first.files[0]!.partId);
+ f.onAccessDenied.mockImplementation(()=>expect(f.c.view()).toMatchObject({files:[],packageInfo:null,prepared:null,canRequestSave:false}));
+ f.session.mockRejectedValueOnce(new AuthenticationError('denied'));await f.c.prepare(f.first.files[1]!.partId);
+ expect(f.onAccessDenied).toHaveBeenCalledOnce();expect(f.save.view()).toBeNull();expect(f.api.receive).toHaveBeenCalledOnce();
+});
+it.each(['actorId','businessId'] as const)('notifies the workspace of a changed %s before reading another part',async field=>{
+ const f=fixture();await f.c.load();f.context.mockResolvedValueOnce({...f.contextValue,[field]:randomUUID()});await f.c.prepare(f.first.files[0]!.partId);
+ expect(f.onAccessDenied).toHaveBeenCalledOnce();expect(f.api.receive).not.toHaveBeenCalled();expect(f.c.view()).toMatchObject({files:[],packageInfo:null,prepared:null});
+});
+it('does not classify a transport error as ended workspace access',async()=>{
+ const f=fixture();await f.c.load();f.session.mockRejectedValueOnce(Error('connection unavailable'));await f.c.prepare(f.first.files[0]!.partId);
+ expect(f.onAccessDenied).not.toHaveBeenCalled();expect(f.c.view()).toMatchObject({phase:'unavailable',files:[],prepared:null});
+});
+function fixture(onAccessDenied=vi.fn()){
  const f=sourceExportDownloadFixture(),bodies=f.files.map((_,i)=>new Uint8Array(32).fill(65+i));for(const [i,file]of f.files.entries())file.sha256=createHash('sha256').update(bodies[i]!).digest('hex');for(const h of [f.header,f.first,f.second])h.manifestSha256=f.files.at(-1)!.sha256;
  const contextValue=parseSourceExportOwnerContext({schemaVersion:1,businessId:f.businessId,actorId:f.actorId,appReleaseId:'a'.repeat(40),profile:'crest.business-source-journal-bundle.v1',sourceSchemaVersion:43,writeState:'ready',recoveryEpoch:f.epoch}),proof={csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000},session=vi.fn<typeof authentication.session>().mockResolvedValue(proof),context=vi.fn<typeof sourceExportOwnerContext>().mockResolvedValue(contextValue),states:SourceExportDownloadView[]=[];
  type Api=ReturnType<typeof createSourceExportDownloadClient>;type Save=ReturnType<typeof createSourceExportBrowserSave>;
  const first=parseSourceExportDownloadCatalogue(f.first,f.businessId,f.pageRequest),second=parseSourceExportDownloadCatalogue(f.second,f.businessId,{exportJobId:f.jobId,generationId:f.generationId,afterOrdinal:5});let held:ReturnType<Save['view']>=null,expired:()=>void=()=>{};
  const save={prepare:vi.fn<Save['prepare']>().mockImplementation(async value=>{held={fileName:value.file.fileName,bytes:value.file.bytes,expiresAt:Date.now()+50000,state:'prepared'};}),view:vi.fn<Save['view']>().mockImplementation(()=>held),request:vi.fn<Save['request']>().mockImplementation(()=>{if(!held)throw Error();held={...held,state:'requested'};return{state:'requested',fileName:held.fileName};}),clear:vi.fn(()=>{held=null;}),dispose:vi.fn(()=>{held=null;}),toJSON(){throw Error();}} satisfies Save,saveFactory=vi.fn<typeof createSourceExportBrowserSave>().mockImplementation(callback=>{expired=()=>{held=null;callback?.();};return save;});
- const api={catalogue:vi.fn<Api['catalogue']>().mockResolvedValueOnce(first).mockResolvedValue(second),receive:vi.fn<Api['receive']>().mockImplementation(async(inputHeader,inputFile,_proof,signal,consume)=>{const header=parseSourceExportDownloadHeader(inputHeader,f.businessId,f.jobId,f.generationId),file=parseSourceExportDownloadFile(inputFile),bytes=bodies[file.ordinal-1]!.slice();try{await consume({header,file,bytes},signal);}finally{bytes.fill(0);}}),toJSON(){throw Error();}} satisfies Api,factory=vi.fn<typeof createSourceExportDownloadClient>().mockReturnValue(api),c=createSourceExportDownloadController({jobId:f.jobId,change:v=>states.push(v),session,context,api:factory,save:saveFactory}),files=bodies.map((bytes,i)=>new File([bytes],f.files[i]!.fileName));
- return{...f,bodies,files,first,second,contextValue,proof,session,context,states,save,saveFactory,api,factory,c,expired:()=>expired()};
+ const api={catalogue:vi.fn<Api['catalogue']>().mockResolvedValueOnce(first).mockResolvedValue(second),receive:vi.fn<Api['receive']>().mockImplementation(async(inputHeader,inputFile,_proof,signal,consume)=>{const header=parseSourceExportDownloadHeader(inputHeader,f.businessId,f.jobId,f.generationId),file=parseSourceExportDownloadFile(inputFile),bytes=bodies[file.ordinal-1]!.slice();try{await consume({header,file,bytes},signal);}finally{bytes.fill(0);}}),toJSON(){throw Error();}} satisfies Api,factory=vi.fn<typeof createSourceExportDownloadClient>().mockReturnValue(api),c=createSourceExportDownloadController({onAccessDenied,jobId:f.jobId,change:v=>states.push(v),session,context,api:factory,save:saveFactory}),files=bodies.map((bytes,i)=>new File([bytes],f.files[i]!.fileName));
+ return{...f,onAccessDenied,bodies,files,first,second,contextValue,proof,session,context,states,save,saveFactory,api,factory,c,expired:()=>expired()};
 }
 it('loads and completely validates pinned pages with fresh owner context and no automatic file requests',async()=>{const f=fixture();expect(f.api.catalogue).not.toHaveBeenCalled();await f.c.load();expect(f.c.view()).toMatchObject({phase:'ready',loaded:7,total:7,canPrepare:true,canCompare:true,canContinue:false,canRequestSave:false});expect(f.c.view().files.every(v=>v.comparison==='unchecked')).toBe(true);expect(f.session).toHaveBeenCalledTimes(2);expect(f.context).toHaveBeenCalledTimes(2);expect(f.api.catalogue.mock.calls[1]?.[0]).toEqual({exportJobId:f.jobId,generationId:f.generationId,afterOrdinal:5});expect(f.api.catalogue.mock.calls[1]?.[3]).toEqual(f.header);expect(f.api.receive).not.toHaveBeenCalled();expect(f.saveFactory).not.toHaveBeenCalled();});
 it('does not prepare, save, compare or continue before a complete inventory exists',async()=>{const f=fixture();await f.c.prepare(f.files[0]!.name);f.c.requestSave();await f.c.compare(f.files);await f.c.continueLoading();expect(f.session).not.toHaveBeenCalled();expect(f.api.receive).not.toHaveBeenCalled();expect(f.saveFactory).not.toHaveBeenCalled();});

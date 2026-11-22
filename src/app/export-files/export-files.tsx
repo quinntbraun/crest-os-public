@@ -56,17 +56,17 @@ export function SourceExportControls({view,action,editReason,selectJob,statusRef
  </section>;
 }
 // Product and API access remain opt-in at the trusted server boundary.
-export function SourceExportScreen(){
+export function SourceExportScreen({onAccessDenied,focusOnLoad=false}:{onAccessDenied?:()=>void;focusOnLoad?:boolean}={}){
  const [view,setView]=useState(initialSourceExportView),current=useRef<ReturnType<typeof createSourceExportController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
-  const controller=createSourceExportController({storage:{getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)},change:setView});current.current=controller;void controller.load();
+  const controller=createSourceExportController({storage:{getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key)},change:setView,...onAccessDenied?{onAccessDenied}:{}});current.current=controller;void controller.load().then(()=>{if(focusOnLoad&&current.current===controller)status.current?.focus();});
   const review=()=>controller.reviewOnReturn(),restore=(event:PageTransitionEvent)=>{if(event.persisted)review();};window.addEventListener('pagehide',review);window.addEventListener('pageshow',restore);document.addEventListener('visibilitychange',review);
   return()=>{controller.dispose();current.current=null;window.removeEventListener('pagehide',review);window.removeEventListener('pageshow',restore);document.removeEventListener('visibilitychange',review);};
- },[]);
+ },[onAccessDenied,focusOnLoad]);
  async function action(kind:ExportAction){const controller=current.current;if(!controller)return;await controller[kind]();if(current.current===controller)status.current?.focus();}
  return <div className="export-collection">
   <SourceExportControls view={view} statusRef={status} action={kind=>{void action(kind);}} editReason={value=>current.current?.editReason(value)} selectJob={value=>current.current?.selectJob(value)}>
-  {!view.busy&&view.jobId&&view.jobState==='Ready'&&['ready','confirmed'].includes(view.phase)&&<SourceExportDownloadScreen key={view.jobId} jobId={view.jobId}/>}
+  {!view.busy&&view.jobId&&view.jobState==='Ready'&&['ready','confirmed'].includes(view.phase)&&<SourceExportDownloadScreen key={view.jobId} jobId={view.jobId} {...onAccessDenied?{onAccessDenied}:{}}/>}
   </SourceExportControls>
  </div>;
 }

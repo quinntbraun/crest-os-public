@@ -1,4 +1,4 @@
-import {authentication} from './authentication';
+import {authentication,AuthenticationError} from './authentication';
 import {createSourceExportClient,sourceExportOwnerContext} from './source-exports';
 import {createPendingExportRequestStore,PendingExportRequestError} from './pending-export-request';
 import type {PendingExportRequest} from './pending-export-request';
@@ -12,7 +12,7 @@ import type {SourceExportCursor} from '../security/source-export-owner-list';
 
 export type SourceExportView=Readonly<{phase:'loading'|'ready'|'pending'|'confirmed'|'retired'|'review'|'blocked'|'unavailable';message:string;busy:boolean;reason:string;reference:string;jobId:string;jobState:string;selection:Readonly<{createdAt:string;updatedAt:string}>|null;jobs:readonly Readonly<{id:string;state:string;createdAt:string}>[];hasOlder:boolean;canLoadOlder:boolean;canRequest:boolean;canCheckOriginal:boolean;canCheckResolution:boolean;canRetire:boolean;canCheckJob:boolean}>;
 export const initialSourceExportView:SourceExportView=Object.freeze({phase:'loading',message:'Check your sign-in before creating an export.',busy:false,reason:'',reference:'',jobId:'',jobState:'',selection:null,jobs:Object.freeze([]),hasOlder:false,canLoadOlder:false,canRequest:false,canCheckOriginal:false,canCheckResolution:false,canRetire:false,canCheckJob:false});
-type Dependencies={storage:Pick<Storage,'getItem'|'setItem'|'removeItem'>;change:(view:SourceExportView)=>void;session?:typeof authentication.session;context?:typeof sourceExportOwnerContext;api?:typeof createSourceExportClient;id?:()=>string};
+type Dependencies={storage:Pick<Storage,'getItem'|'setItem'|'removeItem'>;change:(view:SourceExportView)=>void;onAccessDenied?:()=>void;session?:typeof authentication.session;context?:typeof sourceExportOwnerContext;api?:typeof createSourceExportClient;id?:()=>string};
 class PrincipalChanged extends Error{}
 export function createSourceExportController(deps:Dependencies){
  const session=deps.session??authentication.session,readContext=deps.context??sourceExportOwnerContext,createApi=deps.api??createSourceExportClient,id=deps.id??(()=>crypto.randomUUID());
@@ -34,10 +34,12 @@ export function createSourceExportController(deps:Dependencies){
   if(!alive||active)return;const controller=new AbortController(),signal=AbortSignal.any([controller.signal,AbortSignal.timeout(90000)]);active=controller;emit();
   try{await work(signal);}catch(error){
    if(alive&&active===controller){
-    if(error instanceof PrincipalChanged){hide();phase='blocked';message='Your account or business changed. Check your sign-in again; saved requests have been kept.';}
+    if(error instanceof AuthenticationError&&error.kind==='denied'){hide();phase='unavailable';message='Sign in again to review exports. Saved request references have been kept.';}
+    else if(error instanceof PrincipalChanged){hide();phase='blocked';message='Your account or business changed. Check your sign-in again; saved requests have been kept.';}
     else if(error instanceof PendingExportRequestError){phase='blocked';message='The saved export reference needs review. It has not been replaced or cleared.';}
     else if(pending)retain('The result could not be confirmed. Keep this request and check its original status before another action.');
     else{phase='unavailable';message='Exports could not be verified. Check your sign-in and try loading again.';}
+    if(error instanceof PrincipalChanged||error instanceof AuthenticationError&&error.kind==='denied')deps.onAccessDenied?.();
    }
   }finally{if(active===controller){active=null;emit();}}
  }

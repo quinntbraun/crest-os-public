@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {authentication} from '../../client/authentication';
+import {authentication,AuthenticationError} from '../../client/authentication';
 import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceExportProfile,excessReceiptExportProfile,excessReturnExportProfile,tipReturnExportProfile,collectionFailureExportProfile,refundTransferExportProfile,directReceiptTipExportProfile,refundTransferFeeExportProfile,collectionFailureRecreditExportProfile,collectionFailureGroupedRecreditExportProfile,restoredTipExportProfile,openingWorksheetExportProfile,statementStagingExportProfile,openingReceivablesExportProfile,statementMatchDraftsExportProfile,supplierBillDraftsExportProfile,supplierPayablesExportProfile} from '../../security/posted-finance-owner-export-contract';
 
 type Phase='initial'|'ready'|'preparing'|'prepared'|'requested'|'failed';
@@ -47,7 +47,7 @@ async function verifiedArchive(response:Response,signal:AbortSignal){
  }
 }
 
-export function PostedFinanceExport(){
+export function PostedFinanceExport({onAccessDenied}:{onAccessDenied?:()=>void}={}){
  const [profile,setProfile]=useState<string|null>(null),[phase,setPhase]=useState<Phase>('initial');
  const operation=useRef<AbortController|null>(null),prepared=useRef<{url:string;timer:ReturnType<typeof setTimeout>}|null>(null);
  function discard(){
@@ -72,7 +72,12 @@ export function PostedFinanceExport(){
      setProfile(result.profile);
      setPhase('ready');
     }
-   }catch{/* The optional download stays hidden when its private route is unavailable. */}
+   }catch(error){
+    // An unavailable optional route stays hidden; ended access clears siblings.
+    if(mounted&&!current.signal.aborted&&error instanceof AuthenticationError&&error.kind==='denied'){
+     discard();setProfile(null);setPhase('initial');onAccessDenied?.();
+    }
+   }
    finally{if(operation.current===current)operation.current=null;}
   }
   function leave(){
@@ -96,7 +101,7 @@ export function PostedFinanceExport(){
    window.removeEventListener('pagehide',leave);
    window.removeEventListener('pageshow',restore);
   };
- },[]);
+ },[onAccessDenied]);
  async function prepare(){
   if(operation.current)return;
   discard();
@@ -111,7 +116,10 @@ export function PostedFinanceExport(){
    const timer=setTimeout(()=>{discard();setPhase('ready');},60000);
    prepared.current={url,timer};
    setPhase('prepared');
-  }catch{if(!current.signal.aborted)setPhase('failed');}
+  }catch(error){if(!current.signal.aborted){
+   if(error instanceof AuthenticationError&&error.kind==='denied'){discard();setProfile(null);setPhase('initial');onAccessDenied?.();}
+   else setPhase('failed');
+  }}
   finally{if(operation.current===current)operation.current=null;}
  }
  function save(){

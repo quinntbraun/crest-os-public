@@ -43,14 +43,14 @@ export function SourceExportDownloadControls({view,actions,statusRef}:{view:Sour
  </section>;
 }
 // The trusted product/API capability remains independently gated.
-function ExportDownloadSession({jobId}:{jobId:string}){
+function ExportDownloadSession({jobId,onAccessDenied}:{jobId:string;onAccessDenied?:()=>void}){
  const [view,setView]=useState(initialSourceExportDownloadView),current=useRef<ReturnType<typeof createSourceExportDownloadController>|null>(null),status=useRef<HTMLParagraphElement>(null);
  useEffect(()=>{
-  const controller=createSourceExportDownloadController({jobId,change:setView});current.current=controller;
+  const controller=createSourceExportDownloadController({jobId,change:setView,...onAccessDenied?{onAccessDenied}:{}});current.current=controller;
   const review=()=>controller.reviewOnReturn(),restore=(event:PageTransitionEvent)=>{if(event.persisted)review();};document.addEventListener('visibilitychange',review);window.addEventListener('pagehide',review);window.addEventListener('pageshow',restore);
   return()=>{controller.dispose();current.current=null;document.removeEventListener('visibilitychange',review);window.removeEventListener('pagehide',review);window.removeEventListener('pageshow',restore);};
- },[jobId]);
+ },[jobId,onAccessDenied]);
  async function action(kind:'load'|'continueLoading'|'prepare'|'compare',value?:string|readonly File[]){const controller=current.current;if(!controller)return;if(kind==='prepare')await controller.prepare(value as string);else if(kind==='compare')await controller.compare(value as readonly File[]);else await controller[kind]();if(current.current===controller)status.current?.focus();}
  return <SourceExportDownloadControls view={view} statusRef={status} actions={{load:()=>{void action('load');},continueLoading:()=>{void action('continueLoading');},prepare:id=>{void action('prepare',id);},compare:files=>{void action('compare',files);},requestSave:()=>{current.current?.requestSave();status.current?.focus();}}}/>;
 }
-export function SourceExportDownloadScreen({jobId}:{jobId:string}){return <ExportDownloadSession key={jobId} jobId={jobId}/>;}
+export function SourceExportDownloadScreen({jobId,onAccessDenied}:{jobId:string;onAccessDenied?:()=>void}){return <ExportDownloadSession key={jobId} jobId={jobId} {...onAccessDenied?{onAccessDenied}:{}}/>;}

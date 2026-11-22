@@ -26,7 +26,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 | ID | Audit group | Local state | Remaining work |
 |---|---|---|
-| S01 | One visual system, delivered consistently | Open | Strictly scan and publish the coherent recovery/loading follow-up, then require its own complete matching release gates. Keep the unexplained custody verification and real503 failures explicit. Matching installed, owner finance/off-laptop restore and physical iPhone acceptance remain open. |
+| S01 | One visual system, delivered consistently | Open | Strictly scan/publish the coherent follow-up and require all fresh matching release gates, including full original financial journeys, Linux isolated workers and independent recovery. Matching installed, owner finance/off-laptop restore and physical iPhone acceptance remain open. Preserve all historical failures and exact-source boundaries. |
 | S02 | Desktop layouts need purpose, not more cards | Main change addressed | Complete broader configured states/long-content/actual zoom and matching hosted/installed/physical-device acceptance. The separate paid-profile rerun remains0/2 at session creation and interrupted-save checks; causes unresolved and no combined6/6 or release acceptance claimed. Every final sign-off staysfalse. |
 | S03 | Phone record detail should replace the directory | Main change addressed | Verify both separate service workflows on fresh Linux source and finish alternate-origin/state and delivered/device acceptance. |
 | S04 | Make action priority predictable | Main change addressed | Preserve complete original financial and recovery behavior and verify remaining configured states and matching delivered/release/installed/physical-device acceptance. Partial-allocation/Add-another overlap and pending-known-receipt cleanup branches retain source review without a new dedicated rendered acceptance claim. |
@@ -99,6 +99,6 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 ## Next sequence
 
-1. Preserve84a terminal17/22 main and both ancillary successes as source-specific, unaccepted evidence. Strictly scan/publish the coherent recovery/loading follow-up with exact tree, sole parent, test merge and expected-head nonforce proof, then require fresh full gates. Do not relabel retained native or hosted failures.
-2. Continue S06 important-workflow states and broader alternate/private/pending/stale review under every original requirement. Gated lead25/28 is not a full pass; real503 and custody verification causes remain unproven. No guard, original assertion or deadline is waived.
+1. Preserve85a terminal20/22 main and both ancillary successes, including both complete hosted conversion parents, as source-specific unaccepted evidence. Publish the strictly scanned coherent export/private-state and nested-lead return follow-up with exact-tree/sole-parent/test-merge and expected-head nonforce proof; require its own fresh full gates.
+2. Continue S06 important-workflow state/alternate/private/pending/stale review under every original requirement. New source-specific export16/16 and lead32/32 do not replace earlier failures or complete the global/device matrix. Preserve unknown503/custody causes without guard/assertion/deadline waivers.
 3. Complete matching installed/owner/off-laptop restore and physical iPhone13 acceptance. All70 original bodies/hash and every false final sign-off remain. No merge/install, real-data or financial/provider activation, or spending.
