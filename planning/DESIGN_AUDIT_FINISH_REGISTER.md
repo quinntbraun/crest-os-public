@@ -1,8 +1,16 @@
 # Design-audit completion register
 
+Current local follow-up: invoice access2/2 complete original journeys, owner-expense4/4, amendment acceptance2/2, corrected service directory2/2 at360/390/430/1440, and dashboard follow-ups2/2 all pass on their documented fixed sources with owned cleanup. Service fast-field-focus regression first failed0/2 on unchanged908913f, then passed2/2 after the product focus correction;68 service units and build/types/lint pass. Six actual-response protocol cases pass. See INVOICE_ACCESS_STATE_REVIEW.md, AMENDMENT_HISTORY_RESPONSE_REVIEW.md, SERVICE_EDITOR_FOCUS_REVIEW.md and DASHBOARD_FOLLOW_UP_RESPONSE_REVIEW.md. These scopes are not a passing full release. Audit counts remain66 main/2partial/2open and all70 original requirements/final sign-offs stay unchanged.
+
+Public df164 remains the open unmerged draft: all three checks terminal, main19/22 failed, commercial success, owner-expense failure. Prepare the next exact-tree scanned candidate from the newer local fixes; require fresh release/worker checks. Actual Crest use NOT READY; physical iPhone and installed/owner/recovery gates remain. V1 coding roughly80%, low confidence; context sufficient; $0 newly spent. No merge/install, real-data or financial/provider activation.
+
+Earlier retained checkpoint (its own source/time):
+
 Current local checkpoint: complete pickup/photo4/4 and complete expense/supplier/receipt4/4 pass on fixed5470556, with owned cleanup and58/74 fresh hashed artifacts.43 focused units, final build/types/full lint pass. Financial scopes stay separate: original group1/2 on b334 and complete Safari follow-up1/1 on bfb (13 denied-task reports/26 views,139 artifacts). Earlier field6/9, policy-session failure and service/provider non-reproductions remain retained. See RETURN_CREDIT_ACCESS_REVIEW.md, FIELD_HANDOFF_STATE_REVIEW.md and SUPPLIER_ACCESS_AND_VIEW_RETURN.md.
 
-Public77a is terminal20/22 main jobs; both separate commercial/expense workflows pass. Its browser failure is Safari service return55/56; Foundation stops at prerequisites. Next publish one strictly scanned coherent source and require fresh exact-head release/upgrade/recovery/worker checks. Audit66 main changes/2partial/2open; original70 requirements/hash and false final sign-offs preserved. Actual Crest use NOT READY; context sufficient; $0 newly spent. No merge, install, real data or financial/provider activation.
+Published draftdf16486f808729f144b1040a8255d2a13e4c50e3/tree4eae650174e3a977d3b6491f173715d06a79b7f8 exactly matches local336c9abd8c480b3373e832688785830deb93c6b3.38 UTF8 entries reconstruct2684 files; full strict default scan has zero findings. Canonical sole parent, exact test-merge tree/ordered parents, metadata-before-ref expected-head nonforce publication and all three workflows are verified. Observe main44999637223, commercial44999637235 and expense44999637247 without changing public head/title/body while any is live. Prior77a remains terminal20/22 main and both ancillary suites pass; its service failure/Foundation stop remain retained.
+
+Audit66 main changes/2partial/2open; all70 original requirements/hash and false final sign-offs remain. Actual Crest use NOT READY; context sufficient; $0 newly spent. No merge, install, real data or financial/provider activation.
 
 Earlier retained checkpoint (its own source/time):
 

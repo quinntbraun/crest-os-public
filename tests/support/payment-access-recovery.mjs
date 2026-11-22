@@ -3,8 +3,8 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-const keys=['direct-receipt','payment-correction','fund-application','held-tip','invoice-credit','paid-invoice-credit','excess-return','tip-return','collection-failure','refund-transfer','service-refund','collection-failure-recredit','grouped-payment-recredit'].map(kind=>'crest.'+kind+'.pending-reference.v1');
-export async function reviewPaymentAccessRecovery({page,region,engine,task,loadLabel,privateLabel,privateTarget,message,ready,jobId,facts,allowRead,reload,expectedSignIn,auditSelector='.direct-receipt'}){
+const keys=['invoice-draft','invoice-issue','direct-receipt','payment-correction','fund-application','held-tip','invoice-credit','paid-invoice-credit','excess-return','tip-return','collection-failure','refund-transfer','service-refund','collection-failure-recredit','grouped-payment-recredit'].map(kind=>'crest.'+kind+'.pending-reference.v1');
+export async function reviewPaymentAccessRecovery({page,region,engine,task,loadLabel,privateLabel,privateTarget,message,ready,jobId,facts,allowRead,reload,expectedSignIn,auditSelector='.direct-receipt',saveReview=true}){
  const target=privateTarget??region.getByLabel(privateLabel),notice=region.locator(':scope > [role="status"]');
  await expect(target).toBeVisible();
  await allowRead();
@@ -18,7 +18,7 @@ export async function reviewPaymentAccessRecovery({page,region,engine,task,loadL
   await expect(notice).toHaveText(message);
   await expect(notice).toBeFocused();
   await expect(target).toHaveCount(0);
-  await expect(region.getByRole('link',{name:'Review interrupted saves',exact:true})).toHaveAttribute('href','/save-review');
+  if(saveReview)await expect(region.getByRole('link',{name:'Review interrupted saves',exact:true})).toHaveAttribute('href','/save-review');
   const signIn=region.getByRole('link',{name:'Sign in again',exact:true});
   await expect(signIn).toHaveAttribute('href',expectedSignIn??'/sign-in?returnTo=schedule&job='+jobId);
   await mkdir('.local/review',{recursive:true});

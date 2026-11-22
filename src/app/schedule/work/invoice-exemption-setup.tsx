@@ -1,5 +1,7 @@
 'use client';
+import {SignInLink} from '../../sign-in-link';
 
+import { AuthenticationError } from '../../../client/authentication';
 import { useEffect, useRef, useState } from 'react';
 import { financeAccounts } from '../../../client/finance-accounts';
 import type { FinanceAccountContext } from '../../../client/finance-accounts';
@@ -19,13 +21,16 @@ export function InvoiceExemptionSetup({ businessId, target, issueDate, onSaved }
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
   const active=useRef<AbortController|null>(null);
+  const [signedOut,setSignedOut]=useState(false),[pendingApproval,setPendingApproval]=useState(false);
+  const status=useRef<HTMLParagraphElement>(null);
+  useEffect(()=>{if(signedOut)status.current?.focus();},[signedOut]);
   const attempted=useRef<string|null>(null);
   useEffect(()=>()=>active.current?.abort(),[]);
 
   function close() {
     active.current?.abort();
     active.current=null;
-    setBusy(false); setLoaded(false); setEvidence(null); setMessage('');
+    setBusy(false); setLoaded(false); setEvidence(null); setMessage('');setSignedOut(false);setPendingApproval(false);
     setReference(''); setReason(''); setValidFrom(issueDate); setValidThrough(issueDate);
   }
 
@@ -40,11 +45,13 @@ export function InvoiceExemptionSetup({ businessId, target, issueDate, onSaved }
       if(context.businessId!==businessId||!context.invoiceIssue){
         setMessage('Exemption review is unavailable.');return;
       }
-      await action(context,controller.signal);
-    } catch {
+      setSignedOut(false);await action(context,controller.signal);
+    } catch (error) {
       if(!controller.signal.aborted){
         setLoaded(false); setEvidence(null);
-        setMessage(attempted.current?'Crest could not verify the approval. Reload saved evidence.':'Crest could not load saved evidence.');
+        if(error instanceof AuthenticationError&&error.kind==='denied'){
+          setReference('');setReason('');setValidFrom(issueDate);setValidThrough(issueDate);setSignedOut(true);setPendingApproval(attempted.current!==null);setMessage('Sign in again to review exemption evidence.');
+        }else setMessage(attempted.current?'Crest could not verify the approval. Reload saved evidence.':'Crest could not load saved evidence.');
       }
     } finally {
       if(active.current===controller){active.current=null;setBusy(false);}
@@ -86,7 +93,8 @@ export function InvoiceExemptionSetup({ businessId, target, issueDate, onSaved }
     <section aria-label="Exemption evidence" aria-busy={busy}>
       <p className="field-help">Approve evidence for this customer, portion and jurisdiction. Enter a reference to the source document.</p>
       <button type="button" className="secondary" disabled={busy} onClick={()=>void load()}>Load saved evidence</button>
-      <p role="status">{message}</p>
+      <p ref={status} tabIndex={-1} role="status">{message}</p>
+      {signedOut&&<p><SignInLink className="primary-action" returnTo="schedule" target={pendingApproval?'_blank':undefined} rel={pendingApproval?'noopener noreferrer':undefined}>{pendingApproval?'Sign in in a new tab':'Sign in again'}</SignInLink>{pendingApproval&&<span className="field-help"> Keep this tab open, then return to check the original approval.</span>}</p>}
       {evidence && <p>Version {evidence.version} · {evidence.validFrom} to {evidence.validThrough}</p>}
       {loaded && <>
         <label>Valid from<input type="date" value={validFrom} disabled={busy} onChange={event=>setValidFrom(event.target.value)}/></label>

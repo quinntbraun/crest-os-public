@@ -18,6 +18,7 @@ import {reviewPaymentAccessRecovery} from '../support/payment-access-recovery.mj
 const directReceipts=true;
 const invoiceOutstanding=true;
 const paymentCorrections=process.env.CREST_TEST_PAYMENT_CORRECTIONS==='1';
+const inspectInvoiceAccess=process.env.CREST_TEST_INVOICE_ACCESS_RECOVERY==='1'||!paymentCorrections;
 const fundApplications=process.env.CREST_TEST_FUND_APPLICATIONS==='1';
 const heldTips=process.env.CREST_TEST_HELD_TIPS==='1';
 const invoiceCredits=process.env.CREST_TEST_INVOICE_CREDITS==='1';
@@ -111,6 +112,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByLabel('Walkthrough outcome',{exact:true}).selectOption('done');
   await page.getByRole('button',{name:'End job',exact:true}).click();
   await expect(status).toHaveText('Job completion saved.');
+  const invoiceAccessFacts=async()=>{const rows={};for(const table of ['crest.invoices','crest.journal_entries','crest_private.audit_events'])rows[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM '+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;return JSON.stringify(rows);};
+  const invoiceAccess=options=>reviewPaymentAccessRecovery({page,engine:name,jobId:booking.jobId,facts:invoiceAccessFacts,allowRead:allowInvoiceReadWindow,auditSelector:'html',saveReview:false,...options});
+  if(inspectInvoiceAccess){
+   const preparation=page.getByRole('region',{name:'Invoice preparation',exact:true});
+   await preparation.getByRole('button',{name:'Load completed work',exact:true}).click();
+   await expect(preparation.getByRole('status')).toHaveText('Completed work loaded.');
+   await invoiceAccess({region:preparation,task:'invoice-preparation',loadLabel:'Reload completed work',privateTarget:preparation.getByRole('list',{name:'Completed portions',exact:true}),message:'Sign in again to review completed work.',ready:'Completed work loaded.',reload:()=>preparation.getByRole('button',{name:'Load completed work',exact:true}).click()});
+  }
     await page.goto(fixture.origin+'/settings/accounts');
     await page.getByRole('button',{name:'Setup',exact:true}).click();
     await page.getByText('Invoice numbering and periods',{exact:true}).click();
@@ -138,6 +147,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await drafts.getByRole('button',{name:'Save invoice draft',exact:true}).click();
   await expect(draftStatus).toHaveText('Invoice draft saved.');
   const saved=drafts.getByRole('region',{name:'Saved draft',exact:true});
+  if(inspectInvoiceAccess)await invoiceAccess({region:drafts,task:'invoice-drafts',loadLabel:'Load saved drafts',privateTarget:saved,message:'Sign in again to review invoice drafts.',ready:'Saved invoice draft loaded.',reload:async()=>{await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');await openOriginalDraft.click();}});
   await mkdir('.local/review',{recursive:true});
     const expand=saved.getByText('Review invoice tax',{exact:true});
     await expand.click();
@@ -167,6 +177,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     const jurisdiction=tax.getByLabel('Jurisdiction for portion 1',{exact:true});
     await expect(tax.locator('datalist option')).toHaveCount(4);
     await expect(tax.locator('datalist option').first()).toHaveAttribute('value','Fictional district');
+    if(inspectInvoiceAccess)await invoiceAccess({region:tax,task:'invoice-tax',loadLabel:'Check invoice tax',privateTarget:jurisdiction,message:'Sign in again to review invoice tax.',ready:'Some completed portions need tax information.'});
     await jurisdiction.fill('Fictional district');
     await tax.getByLabel('Jurisdiction for portion 2',{exact:true}).fill('Fictional exempt district');
     await page.route('**/api/business/finance-accounts/'+'invoice-issue-prepare',route=>route.abort(),{times:1});
@@ -183,6 +194,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await evidence.getByRole('button',{name:'Load saved evidence',exact:true}).click();
      assert.equal((await evidenceRead).status(),200,JSON.stringify(financeResponses.slice(-12)));
      await expect(evidence.getByRole('status')).toHaveText('No evidence saved for this portion.');
+     if(inspectInvoiceAccess){
+      await evidence.getByLabel('Evidence reference',{exact:true}).fill('Unsaved fictional evidence');
+      await evidence.getByLabel('Reason for approval',{exact:true}).fill('Unsaved fictional review');
+      await invoiceAccess({region:evidence,task:'invoice-exemption',loadLabel:'Load saved evidence',privateTarget:evidence.getByLabel('Evidence reference',{exact:true}),message:'Sign in again to review exemption evidence.',ready:'No evidence saved for this portion.'});
+      await expect(evidence.getByLabel('Evidence reference',{exact:true})).toHaveValue('');
+      await expect(evidence.getByLabel('Reason for approval',{exact:true})).toHaveValue('');
+     }
      await evidence.getByLabel('Evidence reference',{exact:true}).fill('Fictional exemption record 1');
      await evidence.getByLabel('Reason for approval',{exact:true}).fill('Reviewed the fictional customer and transaction');
      const evidenceApproval=page.waitForResponse(response=>response.url().endsWith('/invoice-issue-exemption-approve'));
@@ -200,6 +218,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      const mapping=tax.getByRole('region',{name:'Tax payable mapping for Fictional district',exact:true});
      await mapping.getByRole('button',{name:'Load saved mapping',exact:true}).click();
      await expect(mapping).toContainText('2100 · Fictional sales tax payable');
+     if(inspectInvoiceAccess){
+      await mapping.getByLabel('Reason for approval',{exact:true}).fill('Unsaved fictional mapping review');
+      await invoiceAccess({region:mapping,task:'invoice-mapping',loadLabel:'Load saved mapping',privateTarget:mapping.getByLabel('Effective date',{exact:true}),message:'Sign in again to review tax payable settings.',ready:'Saved mapping loaded.'});
+      await expect(mapping.getByLabel('Reason for approval',{exact:true})).toHaveValue('');
+     }
      await mapping.getByLabel('Reason for approval',{exact:true}).fill('Fictional jurisdiction reviewed');
      await mapping.getByRole('button',{name:'Approve mapping',exact:true}).click();
      await expect(mapping.getByRole('status')).toHaveText('Mapping approved. Check invoice tax again.');
@@ -218,6 +241,24 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await tax.getByRole('button',{name:'Issue invoice',exact:true}).press('Enter');
      await expect(tax.getByRole('status')).toHaveText('The issue outcome is uncertain. Check the original before attempting another issue.');
      assert.deepEqual(issueResponse,{status:200,state:'committed'},'Only a committed issue response should be discarded.');
+     if(inspectInvoiceAccess){
+      const original=await page.evaluate(()=>sessionStorage.getItem('crest.invoice-issue.pending-reference.v1'));assert(original);
+      const cookies=await context.cookies(),before=await invoiceAccessFacts(),observations=[];
+      try{
+       await context.clearCookies();const denied=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/auth/session'&&r.status()===400);
+       await tax.getByRole('button',{name:'Check original issue',exact:true}).click();await denied;
+       await expect(tax.getByRole('status')).toHaveText('Sign in again to review invoice tax.');await expect(tax.getByRole('status')).toBeFocused();
+       await expect(tax.getByLabel('Jurisdiction for portion 1',{exact:true})).toHaveCount(0);
+       assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.invoice-issue.pending-reference.v1'))===original,true,'Keep the exact original issued-invoice reference');
+       const signIn=tax.getByRole('link',{name:'Sign in again',exact:true});await expect(signIn).toHaveAttribute('href','/sign-in?returnTo=schedule&job='+booking.jobId);
+       for(const width of [390,1440]){await page.setViewportSize({width,height:900});await signIn.scrollIntoViewIfNeeded();await signIn.focus();
+        assert(await signIn.evaluate(node=>{const r=node.getBoundingClientRect();return r.height>=44&&document.activeElement===node&&node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}));
+        assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
+        const capture='.local/review/finance-payment-denied-invoice-pending-'+name+'-'+width+'.png';await page.screenshot({path:capture,animations:'disabled'});observations.push({width,capture});}
+       assert.equal(await invoiceAccessFacts()===before,true,'Checking the original while denied changes no financial or audit facts');assert.equal(submitCount,1);
+      }finally{await context.addCookies(cookies);await page.setViewportSize({width:390,height:844});}
+      await writeFile('.local/review/finance-payment-denied-invoice-pending-'+name+'.json',JSON.stringify({observations,actualSessionDenial:true,nonemptyOriginalReferencePreserved:true,noSecondIssueSubmitted:true,reloadVerified:false,originalJourneyVerifiesReceiptAfterThisStage:true},null,2)+'\n');
+     }
      // This test combines two interrupted issue journeys. Keep the same sign-in
      // for the saved operation reference and respect the ordinary request window.
      await allowInvoiceReadWindow();

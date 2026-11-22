@@ -97,8 +97,8 @@ export function ServiceScreen(){
  }
  function closeEditor(){
   if(!selected||!discard())return;
+  focus.current=selected.service.id;
   current.current?.edit(draftFromService(selected.service,selected.content));setEditing(false);setPreview(false);
-  requestAnimationFrame(()=>profileHeading.current?.focus());
  }
  function reload(){
   if(!current.current||current.current.view().busy||!discard())return;
@@ -113,8 +113,8 @@ export function ServiceScreen(){
   void current.current?.query(search,inactive,more);
  }
  function choosePreview(next:boolean){
-  setPreview(next);
-  requestAnimationFrame(()=>(next?previewHeading:formHeading).current?.focus());
+  if(next===preview){(next?previewHeading:formHeading).current?.focus();return;}
+  focus.current=selected?.service.id??null;setPreview(next);
  }
  function backToCatalog(){
   setShowRecord(false);
@@ -179,7 +179,7 @@ export function ServiceScreen(){
        <p className="service-profile-price">{guidance(selected.content)}{selected.content.range_low_cents!==null&&<span>Price guidance</span>}</p>
       </div>
       {!canEdit&&!view.writesPaused&&<button className="secondary" type="button" disabled={view.busy} onClick={()=>{
-       setEditing(true);requestAnimationFrame(()=>formHeading.current?.focus());
+       focus.current=selected?.service.id??null;setEditing(true);
       }}>Edit service</button>}
      </div>
      <p className="service-revision"><time dateTime={selected.service.updated_at}>{revisionDate.format(new Date(selected.service.updated_at))}</time> UTC · Revision {selected.service.version}</p>

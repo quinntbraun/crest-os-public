@@ -1,9 +1,11 @@
 'use client';
+import {SignInLink} from '../../sign-in-link';
 import {ScheduleLink} from '../navigation';
 
 
 import {DocumentBrand} from '../../document-brand';
-import { useEffect, useId, useRef, useState } from 'react';
+import { AuthenticationError } from '../../../client/authentication';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { clearPendingInvoiceIssue, downloadFinanceHistory, financeAccounts, readPendingInvoiceIssue,
   retainPendingInvoiceIssue } from '../../../client/finance-accounts';
 import type { FinanceAccountContext } from '../../../client/finance-accounts';
@@ -158,12 +160,11 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
   const [closeReason, setCloseReason] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [signedOut,setSignedOut]=useState(false),[accessLost,setAccessLost]=useState(false);
   const active = useRef<AbortController | null>(null);
   const status = useRef<HTMLParagraphElement>(null);
 
-  function clear() {
-    active.current?.abort();
-    active.current = null;
+  const clearPrivate = useCallback(() => {
     setJurisdictions({});
     setChoices({});
     setResult(null);
@@ -175,8 +176,15 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
     setAbsentIssue(false);
     setCloseReason('');
     setMessage('');
+    setSignedOut(false);setAccessLost(false);
+  }, []);
+
+  const clear = useCallback(() => {
+    active.current?.abort();
+    active.current = null;
+    clearPrivate();
     setBusy(false);
-  }
+  }, [clearPrivate]);
 
   useEffect(() => {
     const hidden = () => { if (document.visibilityState === 'hidden') clear(); };
@@ -187,7 +195,7 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
       document.removeEventListener('visibilitychange', hidden);
       window.removeEventListener('pagehide', clear);
     };
-  }, []);
+  }, [clear]);
 
   async function run(action: (context: FinanceAccountContext, signal: AbortSignal) => Promise<void>,
     workingMessage: string, failureMessage: string) {
@@ -201,12 +209,15 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
       const context = await financeAccounts.context(signal);
       if (signal.aborted) return;
       if (context.businessId !== businessId || !context.invoiceIssueTaxReview) {
-        setMessage('Invoice tax review is unavailable for this workspace.');
+        clearPrivate();setAccessLost(true);setMessage('Invoice tax review is unavailable for this workspace.');
         return;
       }
-      await action(context, signal);
-    } catch {
-      if (!signal.aborted) setMessage(failureMessage);
+      setSignedOut(false);setAccessLost(false);await action(context, signal);
+    } catch (error) {
+      if (!signal.aborted) {
+        if(error instanceof AuthenticationError&&error.kind==='denied'){clearPrivate();setAccessLost(true);setSignedOut(true);setMessage('Sign in again to review invoice tax.');}
+        else setMessage(failureMessage);
+      }
     } finally {
       if (active.current === controller) {
         active.current = null;
@@ -343,7 +354,7 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
     </section> : <form aria-label="Invoice tax review" aria-busy={busy} onSubmit={event => { event.preventDefault(); void review(); }}>
       <p className="field-help">Check for saved jurisdiction suggestions. Then choose the approved jurisdiction for each completed portion.</p>
-      {lines.map((line, index) => <fieldset key={line.outcomeId}>
+      {!accessLost&&lines.map((line, index) => <fieldset key={line.outcomeId}>
         <legend>{line.description} · {quoteMoney(line.inclusiveCents)}</legend>
         {line.serviceId !== null && <>
           <label>Jurisdiction for portion {index + 1}
@@ -369,6 +380,7 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
       </fieldset>)}
       <button type="submit" className="secondary" disabled={busy}>{pendingIssue?'Check original issue':'Check invoice tax'}</button>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<p><SignInLink className="primary-action" returnTo="schedule">Sign in again</SignInLink></p>}
       {absentIssue && <details>
         <summary>Close the original attempt</summary>
         <label>Reason for closing<input maxLength={1000} value={closeReason} disabled={busy}

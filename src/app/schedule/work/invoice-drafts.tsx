@@ -1,6 +1,7 @@
 'use client';
+import {SignInLink} from '../../sign-in-link';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AuthenticationError } from '../../../client/authentication';
 import {
   clearPendingInvoiceDraft, downloadFinanceHistory, financeAccounts, readPendingInvoiceDraft, readPendingInvoiceIssue, retainPendingInvoiceDraft,
@@ -47,15 +48,14 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
   const [reviewable, setReviewable] = useState(false);
   const [retirementReason, setRetirementReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [signedOut,setSignedOut]=useState(false);
   const [message, setMessage] = useState('');
   const request = useRef<AbortController | null>(null);
   const status = useRef<HTMLParagraphElement>(null);
 
-  function suspend() {
-    request.current?.abort();
-    request.current = null;
+  const clearPrivate = useCallback(() => {
     setPage(null); setDraft(null); setScope(null); setDue(''); setOutcomes([]); setCancelReason('');
-    setEditing(false); setCurrent(false); setCanChange(false); setIssueTaxAvailable(false); setBusy(false); setMessage('');
+    setEditing(false); setCurrent(false); setCanChange(false); setIssueTaxAvailable(false);  setMessage('');
     setIssuedDraft(null);
     setOpenedInvoice(null);
     setDirectReceipts(false);
@@ -64,9 +64,17 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
     setHeldTips(false);
     setInvoiceCredits(false);
     setPaidInvoiceCredits(false);
-    setServiceRefunds(false);
+    setServiceRefunds(false);setExcessReturns(false);setTipReturns(false);setCollectionFailures(false);setRefundTransfers(false);
     setReviewable(false); setRetirementReason('');
-  }
+    setSignedOut(false);
+  }, []);
+
+  const suspend = useCallback(() => {
+    request.current?.abort();
+    request.current = null;
+    clearPrivate();
+    setBusy(false);
+  }, [clearPrivate]);
 
   useEffect(() => {
     function hidden() { if (document.visibilityState === 'hidden') suspend(); }
@@ -77,7 +85,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
       window.removeEventListener('pagehide', suspend);
       document.removeEventListener('visibilitychange', hidden);
     };
-  }, [jobId, businessId]);
+  }, [jobId, businessId, suspend]);
 
   async function run(action: (context:FinanceAccountContext, signal:AbortSignal) => Promise<void>, closeReason?:string) {
     if (request.current) return;
@@ -90,10 +98,10 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
       const context = await financeAccounts.context(signal);
       if (signal.aborted) return;
       if (context.businessId !== businessId || !context.invoiceDrafts) {
-        setMessage('Invoice drafts are unavailable for this workspace.');
+        clearPrivate();setMessage('Invoice drafts are unavailable for this workspace.');
         return;
       }
-      setCanChange(context.writeState === 'ready');
+      setSignedOut(false);setCanChange(context.writeState === 'ready');
       setIssueTaxAvailable(context.invoiceIssueTaxReview);
       setDirectReceipts(context.directReceipts===true);
       setPaymentCorrections(context.paymentCorrections===true);
@@ -142,10 +150,9 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
       await action(context, signal);
     } catch (error) {
       if (signal.aborted) return;
-      setCanChange(false); setIssueTaxAvailable(false);
-      setPage(null); setDraft(null); setScope(null); setDue(''); setOutcomes([]); setCancelReason('');
-      setEditing(false); setCurrent(false);
+      clearPrivate();
       try { setPending(readPendingInvoiceDraft() !== null); } catch { setPending(true); }
+      setSignedOut(error instanceof AuthenticationError&&error.kind==='denied');
       setMessage(error instanceof AuthenticationError && error.kind === 'denied'
         ? 'Sign in again to review invoice drafts.'
         : 'Crest could not verify this request. Check saved drafts before trying again.');
@@ -274,6 +281,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
         {pending ? 'Check interrupted draft save' : 'Load saved drafts'}
       </button>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<p><SignInLink className="primary-action" returnTo="schedule">Sign in again</SignInLink></p>}
       {pending && reviewable && <form onSubmit={event=>{event.preventDefault();closeInterruptedDraft();}}>
         <label>Reason for closing the interrupted attempt
           <input required maxLength={1000} value={retirementReason} onChange={event=>setRetirementReason(event.target.value)} disabled={busy}/>

@@ -30,7 +30,17 @@ export async function reviewDeeperDirectoryReturn(page,fixture,engine,kind){
   attemptedWidth=width;
   await page.setViewportSize({width,height:kind==='lead'?640:900});await page.goto(fixture.origin+config.path);const region=page.locator(config.region),search=page.getByLabel(config.search,{exact:true}),back=page.getByRole('button',{name:config.back,exact:true}),field=page.getByLabel(config.field,{exact:true});await expect(region).toHaveAttribute('aria-busy','false');
   await search.fill(prefix);await region.getByRole('button',{name:config.searchAction,exact:true}).click();await expect(region).toHaveAttribute('aria-busy','false');await page.evaluate(()=>document.fonts.ready);
-  const target=row(region,firstIndex);await target.evaluate(node=>node.scrollIntoView({block:'center',behavior:'instant'}));await target.focus();const origin=await page.evaluate(()=>scrollY);assert(origin>200);assert(await visibleCenter(target));await target.press('Enter');await expect(region).toHaveAttribute('aria-busy','false');if(config.edit)await page.getByRole('button',{name:config.edit,exact:true}).click();await expect(field).toHaveValue(label(firstIndex));const draft='Unsaved '+label(firstIndex);await field.fill(draft);
+  const target=row(region,firstIndex);await target.evaluate(node=>node.scrollIntoView({block:'center',behavior:'instant'}));await target.focus();const origin=await page.evaluate(()=>scrollY);assert(origin>200);assert(await visibleCenter(target));await target.press('Enter');await expect(region).toHaveAttribute('aria-busy','false');if(config.edit){
+   // Focus the real inserted field before the next animation frame, as a fast
+   // keyboard/pointer user can. A later heading focus must not steal it.
+   const earlyFocus=kind==='service'?await page.evaluateHandle(()=>{
+    const observer=new MutationObserver(()=>{const input=document.querySelector('form[aria-label="Service editor"] input[maxlength="200"]');if(input){input.focus();observer.disconnect();}});
+    observer.observe(document.body,{childList:true,subtree:true});return observer;
+   }):null;
+   try{await page.getByRole('button',{name:config.edit,exact:true}).click();
+    if(kind==='service'){await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await expect(field).toBeFocused();}
+   }finally{if(earlyFocus){await earlyFocus.evaluate(observer=>observer.disconnect());await earlyFocus.dispose();}}
+  }await expect(field).toHaveValue(label(firstIndex));const draft='Unsaved '+label(firstIndex);await field.fill(draft);
   if(kind==='source'){page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.dismiss();});await back.click();await expect(field).toHaveValue(draft);}
   const reads=[],observe=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))reads.push(new URL(request.url()).pathname);};page.on('request',observe);try{if(kind==='source')page.once('dialog',dialog=>{assert.equal(dialog.type(),'confirm');void dialog.accept();});await back.click();await expect(target).toBeFocused();await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(origin);assert(await visibleCenter(target));assert.deepEqual(reads,[]);}finally{page.off('request',observe);}
   await expect(search).toHaveValue(prefix);

@@ -1,0 +1,7 @@
+# Dashboard follow-up response observation
+
+Published df164 Chromium failed while reading the first real follow-up response: Network.getResponseBody reported no data after navigation. The original test already began response.json immediately, but the browser response handle could still be retired. This is a test-observation failure; it does not prove an application reader or data defect.
+
+The existing bounded actual-response observer now explicitly allows only the additional leads/follow-ups reader and optionally returns actual response headers. Existing callers retain their exact default envelope. The dashboard test installs the observer before Open workspace, checks200 and the original no-store header, and runs all original follow-up count, pagination, links, scheduling, privacy and page assertions against the actual buffered server JSON. The observer forwards one real POST and unchanged server bytes; it creates no Auth/data result, extra request or automatic retry. Parent deadlines and production behavior are unchanged.
+
+The real HTTP/browser protocol suite passes6/6 in Chrome and Safari, including two new exact follow-up byte/header/single-request cases and all four original command/read/refusal/deadline/cancellation cases. Focused lint passes. Both complete original dashboard follow-up journeys pass2/2 on fixedb2f9ed3, with source unchanged during execution and owned database cleanup verified. Results and logs: .local/design-dashboard-follow-up-response/. This is not current release acceptance.

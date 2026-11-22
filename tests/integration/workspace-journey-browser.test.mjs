@@ -1,3 +1,4 @@
+import {captureDuringAction} from '../support/quote-browser-response.mjs';
 import {directoryReturnSignIn,reviewRecordDirectoryReturn} from '../support/record-directory-return.mjs';
 import {reviewDirectoryLoadingJourney} from '../support/directory-loading-journey.mjs';
 import {reviewUnavailableRecordNavigation} from '../support/record-unavailable-navigation.mjs';
@@ -214,13 +215,12 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByLabel('Authenticator code',{exact:true}).fill(f.credentials().code);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
-  // Start reading the matching response immediately; waiting for the navigation
-  // action first can leave Chromium without that response's body handle.
-  const firstPage=page.waitForResponse(response=>response.url().endsWith('/api/business/leads/follow-ups')&&response.status()===200)
-   .then(async response=>({headers:response.headers(),data:await response.json()}));
-  const [observed]=await Promise.all([firstPage,page.getByRole('link',{name:'Open workspace',exact:true}).click()]);
+  // Buffer this actual reader's bytes before navigation retires its handle.
+  const observed=await captureDuringAction(page,'/api/business/leads/follow-ups',
+   ()=>page.getByRole('link',{name:'Open workspace',exact:true}).click(),{includeHeaders:true});
+  assert.equal(observed.status,200);
   assert.match(observed.headers['cache-control'],/no-store/i);
-  const data=observed.data;
+  const data=observed.body;
   assert.equal(data.followUps.length,8);
   assert.equal(data.hasMore,true);
   assert.deepEqual(Object.keys(data.followUps[0]).sort(),['followUpAt','id','label','state']);

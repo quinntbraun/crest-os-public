@@ -1,9 +1,10 @@
+import {captureDuringAction} from './quote-browser-response.mjs';
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-export async function reviewAcceptedAmendmentHistory(page,f,record,{stage,engine,state,label}){
+export async function reviewAcceptedAmendmentHistory(page,f,record,{stage,engine,state,label,beforeForward}){
  const milestone=name=>console.log('SYNTHETIC_AMENDMENT_HISTORY_PHASE '+engine+' '+stage+' '+name);
  const events=record.history;
  assert(Array.isArray(events)&&events.length>0&&events.length<=1000);
@@ -12,8 +13,8 @@ export async function reviewAcceptedAmendmentHistory(page,f,record,{stage,engine
  if(!await history.evaluate(element=>element.open))await history.locator(':scope > summary').click();
  const firstButton=page.getByRole('button',{name:'First amendment history page',exact:true});
   milestone("first_read_started");
- const [firstRead]=await Promise.all([page.waitForResponse(response=>new URL(response.url()).pathname==='/api/business/quotes/amendments/read'&&response.request().method()==='POST'&&response.request().postDataJSON().afterVersion==='0'),firstButton.click()]);
- assert.equal(firstRead.status(),200);await firstRead.finished();
+ const firstRead=await captureDuringAction(page,'/api/business/quotes/amendments/read',()=>firstButton.click(),{beforeForward,matchesRequest:request=>request.postDataJSON()?.afterVersion==='0'});
+ assert.equal(firstRead.status,200);assert(firstRead.body&&typeof firstRead.body==='object');assert.equal(firstRead.requestBody.afterVersion,'0');
   milestone("first_read_finished");
  await expect(page.getByRole('status')).toHaveText('Showing the first retained amendment history page.');await expect(firstButton).toBeEnabled();
  const rows=panel.locator('.amendment-timeline > li');

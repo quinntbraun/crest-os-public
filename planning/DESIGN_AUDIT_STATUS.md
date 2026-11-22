@@ -26,7 +26,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 | ID | Audit group | Local state | Remaining work |
 |---|---|---|
-| S01 | One visual system, delivered consistently | Open | Publish the coherent local source with strict full-source scanning and canonical tree/parent verification; require its exact-head main/commercial/expense results. Finish global state/context, installed, owner and physical iPhone gates. |
+| S01 | One visual system, delivered consistently | Open | Observe exactdf164 main44999637223, commercial44999637235 and expense44999637247 without changing public head/title/body while any is live. Retain actual results and finish remaining global state/context and release/installed/owner/physical iPhone gates. |
 | S02 | Desktop layouts need purpose, not more cards | Main change addressed | Complete broader configured states/long-content/actual zoom and matching hosted/installed/physical-device acceptance. The separate paid-profile rerun remains0/2 at session creation and interrupted-save checks; causes unresolved and no combined6/6 or release acceptance claimed. Every final sign-off staysfalse. |
 | S03 | Phone record detail should replace the directory | Main change addressed | Verify both separate service workflows on fresh Linux source and finish alternate-origin/state and delivered/device acceptance. |
 | S04 | Make action priority predictable | Main change addressed | Preserve complete original financial and recovery behavior and verify remaining configured states and matching delivered/release/installed/physical-device acceptance. Partial-allocation/Add-another overlap and pending-known-receipt cleanup branches retain source review without a new dedicated rendered acceptance claim. |

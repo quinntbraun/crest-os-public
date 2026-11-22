@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-22T07:41:51.333Z",
+  "assessedAt": "2026-11-22T07:46:57.946Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "366fa8b972ec828613c660e9009d63a86e61e550",
-    "publishedCommit": "7b0918978d2aab2bdb0a399486309d6f233f876b",
-    "publishedTree": "5a88503c937b44a3c36bf8c54a1545d829ba132c",
-    "localTree": "c102f212e42d067393479031cb22d1da96ece623"
+    "localCommit": "336c9abd8c480b3373e832688785830deb93c6b3",
+    "publishedCommit": "df16486f808729f144b1040a8255d2a13e4c50e3",
+    "publishedTree": "4eae650174e3a977d3b6491f173715d06a79b7f8",
+    "localTree": "4eae650174e3a977d3b6491f173715d06a79b7f8"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -44,8 +44,8 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "Published77a7b091/tree5a885 matches localab8. Its main run is terminal20/22; commercial and expense pass. Workspace-records55/56 fails Safari360 service declined-next-page; Foundation stops at prerequisites, so no new container/worker acceptance follows. Local code adds denied-session recovery for returns/credits/journal, field handoffs/photos and supplier drafts, plus safe selected expense-view returns.43 focused units, build/types/full lint pass. Exact native scopes are retained in the three current review notes; they do not establish installed/device acceptance.",
-      "remainingWork": "Publish the coherent local source with strict full-source scanning and canonical tree/parent verification; require its exact-head main/commercial/expense results. Finish global state/context, installed, owner and physical-iPhone gates.",
+      "implementedOrPresent": "Published draftdf16486f808729f144b1040a8255d2a13e4c50e3/tree4eae650174e3a977d3b6491f173715d06a79b7f8 exactly matches reviewed local336c9abd8c480b3373e832688785830deb93c6b3.38 UTF8 entries reconstruct2684 tracked files/39905330 bytes; strict default scanning reports zero findings (scanner38591819), empty ignore and inline allowances disabled. Canonical sole parent7b091, metadata-before-ref expected-head nonforce update and exact test merge32528771 with ordered base/head parents are verified. Main44999637223, commercial44999637235 and expense44999637247 were discovered queued/live; no acceptance is claimed. Prior77a remains terminal20/22 main with Safari service55/56 and Foundation prerequisite failure; ancillary suites pass. Local43 units/build/types/lint and separate complete Safari1/1, pickup/photo4/4 and expense/supplier/receipt4/4 remain scoped as recorded in current review notes.",
+      "remainingWork": "Observe exactdf164 main44999637223, commercial44999637235 and expense44999637247 without changing public head/title/body while any is live. Retain actual results and finish remaining global state/context and release/installed/owner/physical-iPhone gates.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "b85d291c439d6fa6570c0c814d38e5f8e7911e64940dadaa8ea80ad65005fcd6"
+          "sha256": "6d610a9f23a32473ff3bbae424ea0a07a6ccffdc20de4adce2a8fd9d85471399"
         },
         {
           "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
@@ -1077,7 +1077,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "ee0322306c3580a5066abfb657002c54236f658a93bb99edf48800ec7d062cee"
+          "sha256": "800c8fa2176a90558da736660f7d6c7615b54b2ca00918e90af7eafee8b0ee9f"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -1501,7 +1501,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "ee0322306c3580a5066abfb657002c54236f658a93bb99edf48800ec7d062cee"
+          "sha256": "800c8fa2176a90558da736660f7d6c7615b54b2ca00918e90af7eafee8b0ee9f"
         }
       ],
       "verification": {
@@ -2585,7 +2585,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "b85d291c439d6fa6570c0c814d38e5f8e7911e64940dadaa8ea80ad65005fcd6"
+          "sha256": "6d610a9f23a32473ff3bbae424ea0a07a6ccffdc20de4adce2a8fd9d85471399"
         }
       ],
       "verification": {

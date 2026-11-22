@@ -13,7 +13,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
  const selected=process.argv[2],files=browserGroupFiles(command,selected),args=['--test','--test-reporter=tap','--test-concurrency=1',...files];
  const scenario=browserScenario(selected),finance=recordBrowserGroupNames.includes(selected)||scenario!==undefined;
  console.log('REQUIRED_BROWSER_GROUP '+JSON.stringify({group:selected,files}));
- const env={...process.env,CREST_TEST_STATEMENT_MATCH_REVIEW:'0',CREST_TEST_STATEMENT_MATCH_DRAFTS:'0',CREST_TEST_SUPPLIER_BILL_DRAFTS:'0',CREST_TEST_RESTORED_TIP_EXPORT:'0',CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT:'0',CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT:'0',CREST_TEST_REFUND_TRANSFER_FEE_EXPORT:'0',CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT:'0',CREST_TEST_REFUND_TRANSFER_EXPORT:'0',CREST_TEST_COLLECTION_FAILURE_EXPORT:'0',CREST_TEST_PAYMENT_CORRECTIONS:finance?'1':'0',
+ const env={...process.env,CREST_TEST_INVOICE_ACCESS_RECOVERY:selected==='records'?'1':'0',CREST_TEST_STATEMENT_MATCH_REVIEW:'0',CREST_TEST_STATEMENT_MATCH_DRAFTS:'0',CREST_TEST_SUPPLIER_BILL_DRAFTS:'0',CREST_TEST_RESTORED_TIP_EXPORT:'0',CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT:'0',CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT:'0',CREST_TEST_REFUND_TRANSFER_FEE_EXPORT:'0',CREST_TEST_DIRECT_RECEIPT_TIP_EXPORT:'0',CREST_TEST_REFUND_TRANSFER_EXPORT:'0',CREST_TEST_COLLECTION_FAILURE_EXPORT:'0',CREST_TEST_PAYMENT_CORRECTIONS:finance?'1':'0',
    CREST_TEST_FUND_APPLICATIONS:finance?'1':'0',CREST_TEST_HELD_TIPS:finance?'1':'0',CREST_TEST_INVOICE_CREDITS:finance?'1':'0',CREST_TEST_PAID_INVOICE_CREDITS:finance?'1':'0',CREST_TEST_SERVICE_REFUNDS:finance?'1':'0',CREST_TEST_RECEIVABLE_AGING:finance?'1':'0',CREST_TEST_CUSTOMER_FUNDS_REPORT:finance?'1':'0',CREST_TEST_EXCESS_RECEIPTS:'0',CREST_TEST_RECEIPT_FUNDS_APPLICATION:'0',CREST_TEST_EXCESS_RETURN_EXPORT:'0',CREST_TEST_TIP_RETURN_EXPORT:'0',CREST_TEST_POSTED_FINANCE_EXPORT:finance?'1':'0',...scenario};
  const run=(testArgs,testEnv)=>{
   const child=spawn(process.execPath,testArgs,{stdio:'inherit',windowsHide:true,env:testEnv});
@@ -64,6 +64,7 @@ if(process.argv.length===3&&process.argv[2]==='--list'){
    }catch{entryReports.push({engine,valid:false});}
   }
  }
+ if(selected==='records')for(const task of ['invoice-preparation','invoice-drafts','invoice-tax','invoice-exemption','invoice-mapping','invoice-pending'])for(const engine of ['chromium','webkit'])for(const width of [390,1440])requiredScreenshots.push('finance-payment-denied-'+task+'-'+engine+'-'+width+'.png');
  const missingScreenshots=requiredScreenshots.filter(name=>!screenshots.includes(name));
  const passed=result.code===0&&result.signal===null&&(!needsScreenshots||screenshots.length>0)&&missingScreenshots.length===0&&entryReports.every(report=>report.valid);
  await mkdir('.local/ci-browser',{recursive:true});await writeFile('.local/ci-browser/'+selected+'.json',JSON.stringify({schemaVersion:1,sourceCommit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),group:selected,files,args,...(scenario?{scenario}:{}),childExitCode:result.code,childSignal:result.signal,screenshots,screenshotsRequired:needsScreenshots,passed},null,2)+'\n',{flag:'wx'});

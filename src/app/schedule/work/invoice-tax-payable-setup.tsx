@@ -1,5 +1,7 @@
 'use client';
+import {SignInLink} from '../../sign-in-link';
 
+import { AuthenticationError } from '../../../client/authentication';
 import { useEffect, useRef, useState } from 'react';
 import { financeAccounts } from '../../../client/finance-accounts';
 import type { FinanceAccountContext } from '../../../client/finance-accounts';
@@ -19,6 +21,9 @@ export function InvoiceTaxPayableSetup({ businessId, jurisdiction, issueDate, on
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const active = useRef<AbortController | null>(null);
+  const [signedOut,setSignedOut]=useState(false),[pendingApproval,setPendingApproval]=useState(false);
+  const status=useRef<HTMLParagraphElement>(null);
+  useEffect(()=>{if(signedOut)status.current?.focus();},[signedOut]);
   const attempted = useRef<MappingReference | null>(null);
 
   useEffect(() => () => active.current?.abort(), []);
@@ -27,7 +32,7 @@ export function InvoiceTaxPayableSetup({ businessId, jurisdiction, issueDate, on
     active.current?.abort();
     active.current=null;
     setBusy(false);
-    setEditor(null);
+    setEditor(null);setSignedOut(false);setPendingApproval(false);
     setMessage('');
     setReason('');
   }
@@ -46,11 +51,13 @@ export function InvoiceTaxPayableSetup({ businessId, jurisdiction, issueDate, on
         setMessage('Tax payable settings are unavailable for this workspace.');
         return;
       }
-      await action(context,signal);
-    } catch {
+      setSignedOut(false);await action(context,signal);
+    } catch (error) {
       if (!signal.aborted) {
         setEditor(null);
-        setMessage(attempted.current
+        if(error instanceof AuthenticationError&&error.kind==='denied'){
+          setReason('');setDate(issueDate);setSignedOut(true);setPendingApproval(attempted.current!==null);setMessage('Sign in again to review tax payable settings.');
+        }else setMessage(attempted.current
           ? 'Crest could not confirm approval. Reload the saved mapping before making another change.'
           : 'Crest could not load the saved mapping. Try loading it again.');
       }
@@ -116,7 +123,8 @@ export function InvoiceTaxPayableSetup({ businessId, jurisdiction, issueDate, on
     <summary>Tax payable for {jurisdiction}</summary>
     <section aria-label={'Tax payable mapping for '+jurisdiction} aria-busy={busy}>
       <button type="button" className="secondary" disabled={busy} onClick={()=>void load()}>Load saved mapping</button>
-      <p role="status">{message}</p>
+      <p ref={status} tabIndex={-1} role="status">{message}</p>
+      {signedOut&&<p><SignInLink className="primary-action" returnTo="schedule" target={pendingApproval?'_blank':undefined} rel={pendingApproval?'noopener noreferrer':undefined}>{pendingApproval?'Sign in in a new tab':'Sign in again'}</SignInLink>{pendingApproval&&<span className="field-help"> Keep this tab open, then return to check the original approval.</span>}</p>}
       {editor?.latest && <p>Version {editor.latest.version} · {editor.latest.accountId?'Approved':'Closed'} · Effective {editor.latest.effectiveFrom}</p>}
       {editor?.account && <>
         <p>{editor.account.code} · {editor.account.name}</p>
