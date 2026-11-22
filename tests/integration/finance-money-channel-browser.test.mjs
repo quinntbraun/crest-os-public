@@ -212,7 +212,8 @@ for(const engine of [chromium,webkit]){
    await account.selectOption({label:'1000 · Fictional dedicated bank'});
    await panel.getByLabel('Provider code',{exact:true}).fill('fictional-reserve');
    await panel.getByLabel('Last four characters',{exact:true}).fill('1234');
-   await panel.getByLabel('Channel name',{exact:true}).fill('Fictional reserve');
+   const reserveName=('Fictional reserve '+ 'UnbrokenChannelName'.repeat(12)).slice(0,200);
+   await panel.getByLabel('Channel name',{exact:true}).fill(reserveName);
    await date.fill('2026-01-01');
    await reason.fill('Fictional second channel');
    await save.click();
@@ -228,7 +229,7 @@ for(const engine of [chromium,webkit]){
    await filter.fill('reserve');
    await expect(panel.locator('.channel-directory > li')).toHaveCount(1);
    await panel.getByRole('button',{name:/^Fictional reserve/}).click();
-   const reserve=panel.getByRole('region',{name:'Fictional reserve',exact:true});
+   const reserve=panel.getByRole('region',{name:reserveName,exact:true});
    await expect(reserve).toContainText('Account 1000');
    await expect(reserve.getByRole('region',{name:'Saved opening evidence',exact:true})).toContainText('Opening unknown');
    await expect(reserve.getByText('This is saved opening evidence, not a current balance or confirmation from a bank.',{exact:true})).toBeVisible();

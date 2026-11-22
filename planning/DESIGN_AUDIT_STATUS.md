@@ -6,13 +6,13 @@ This inventory reconciles all 70 original groups: 14 shared findings, 36 destina
 
 | Local implementation review | Groups |
 |---|---:|
-| Main change locally addressed | 64 |
-| Partial implementation or required review | 4 |
+| Main change locally addressed | 65 |
+| Partial implementation or required review | 3 |
 | Open audit work | 2 |
 | Review required before choosing changes | 0 |
 | Total | 70 |
 
-64/70, or 91.4%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 91.4% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 4 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
+65/70, or 92.9%, is the share whose main local change is addressed by this conservative group-count method. It is **not** a claim that 92.9% of all work hours are spent, that the other groups are untouched, or that any particular release is accepted. 3 groups have partial work; 2 groups remain open or require dedicated baseline review. Do not publish a blended percentage by assigning invented half-credit to partial groups.
 
 The audit is **not finished**. Each row has remaining implementation or verification. Full current-source/state, delivered-build and physical iPhone acceptance is not established. The earlier roughly 80% figure is a low-confidence V1 coding estimate and is not the audit percentage. The active objective is to complete all 70 original audit groups. Approved V1 business-use, recovery, upgrade, release and owner/device gates remain separate requirements and are not waived by this inventory.
 
@@ -26,16 +26,16 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 | ID | Audit group | Local state | Remaining work |
 |---|---|---|
-| S01 | One visual system, delivered consistently | Open | Diagnose the retained WebKit service pagination failure; prepare and strictly scan the coherent local follow-up for fresh full CI, then complete delivered/installed/owner/device acceptance. |
+| S01 | One visual system, delivered consistently | Open | Prepare the strictly scanned coherent local follow-up, diagnose the repeated service next-page release failure through the fresh checks, then finish full release/upgrade/recovery/worker and delivered/installed/owner/device acceptance. |
 | S02 | Desktop layouts need purpose, not more cards | Main change addressed | Complete broader configured states/long-content/actual zoom and matching hosted/installed/physical-device acceptance. The separate paid-profile rerun remains0/2 at session creation and interrupted-save checks; causes unresolved and no combined6/6 or release acceptance claimed. Every final sign-off staysfalse. |
 | S03 | Phone record detail should replace the directory | Main change addressed | Resolve the new WebKit service pagination release failure and retained address/sign-in failures; complete alternate-origin, exact-head delivered/installed/owner/physical-device acceptance. |
 | S04 | Make action priority predictable | Partial | Review commit/refresh/recovery priority in every configured task; one narrow success is not global coverage. |
 | S05 | Reduce visual nesting | Main change addressed | Complete broader configured/long-value/zoom/private-state variants and matching delivered/installed/physical-device acceptance. Preserve current WebKit paid-expense provider/session failure, older CLI/trial-balance failures and unresolved initial quote replacement sign-in; no failed run is relabeled passing. |
-| S06 | Treat every state as a designed screen | Partial | Complete remaining commercial, scheduling, custody, finance, Calendar, export/settings/sign-in eight-state reconciliation and missing exact-source visuals. CRM and three field workflows have scoped reviews, not global acceptance. |
+| S06 | Treat every state as a designed screen | Partial | Complete remaining commercial, scheduling/custody, financial reports/expense/supplier/receipt, Calendar, export/settings/sign-in state reconciliation and missing current-source visuals. CRM, three field tasks and account/channel/tax source states are reconciled without global acceptance. |
 | S07 | Keep financial scope attached to the number | Main change addressed | Fresh full-head and delivered acceptance remain separate gates. |
 | S08 | Make Crest recognizable through restraint | Main change addressed | Obtain owner confirmation of the established wordmark treatment and complete exact delivered/installed/physical-device brand acceptance; retain the unexplained renewed-access failure and all full release gates. |
 | S09 | Replace Unicode navigation symbols | Main change addressed | Physical-device and installed verification remain separate. |
-| S10 | Refine type, spacing and numeric rhythm | Partial | Complete remaining configured financial/history/input/long-content actual-zoom cases and final matching hosted/installed/physical-device acceptance. Earlier finance/calendar matrices and the new48-observation CRM case remain separate scopes; retained sign-in failure is unresolved. |
+| S10 | Refine type, spacing and numeric rhythm | Main change addressed | Complete remaining configured financial report/document/expense/supplier and other long/state variants plus matching release, installed and physical-device acceptance. Main typography is implemented and source/render reviewed; retained failures and separate scopes remain explicit. |
 | S11 | Motion should explain changes | Main change addressed | Complete accepted-release, installed, owner and physical-device motion review, including real keyboard/device preferences. Isolated CSS rendering and the listed synthetic workflow scopes do not establish final sign-off; other missing workflow-state coverage remains in S06. |
 | S12 | Turn history into a readable evidence trail | Main change addressed | Main local presentation/comparison is implemented. Finish missing/unloaded/stale/long/private and actual-zoom history variants, diagnose retained category/tax/access/hosted-timeout failures, and require fresh exact-source hosted/installed/owner/physical-device acceptance. No final sign-off or complete recovery follows from these scoped proofs. |
 | S13 | Protect context through every transition | Partial | Resolve service next-page release failure and review remaining alternate/outdated task transitions; complete matching delivered/installed/owner/device behavior. Retained address/sign-in failures remain unresolved. |
@@ -99,7 +99,7 @@ The JSON contains original requirements, source/notes links with SHA-256 fingerp
 
 ## Next sequence
 
-1. Published338c28d/tree5ccee0b matches local8434314 and all three runs are terminal: main44971527926 fails20/22; commercial44971527966 and expense44971527933 pass. Resolve the service-pagination failure and prepare the coherent local follow-up; no acceptance transfers. Priorc94 is terminal green22/22 plus both ancillary successes, retained as baseline only. Immutable72a proof verifies full-tree upload, strict scan, sole parent, nonforce lease, draft metadata and canonical test merge193219cf.
+1. Publishedb6a8622/tree503ef3d matches local7826f99. All three exact-head runs are terminal: main44974724773 has20/22 jobs passing and the repeated service-pagination failure; both ancillary runs pass. Prepare the coherent local follow-up with the typography fix and stronger service readiness observation; no acceptance transfers. Priorc94 is terminal green22/22 plus both ancillary successes, retained as baseline only. Immutable72a proof verifies full-tree upload, strict scan, sole parent, nonforce lease, draft metadata and canonical test merge193219cf.
 2. Use DESIGN_AUDIT_FINISH_REGISTER.md as the single remaining-work checklist. S12 main history presentation and retained comparisons are locally addressed with separate scoped proof. Retain category/tax/access/timeout failures; later2/2 is non-reproduction. Finish remaining original history/state/context/action/actual-zoom/motion requirements in coherent batches.
 3. Retain the four-record09ce80/82 and commercial/amendment3cec21/23 access failures separately; later successes are not a root-cause diagnosis. Do not weaken original assertions, deadlines, quotas, security or accounting rules.
-4. Require fresh new-head release/upgrade/recovery/isolated-worker, installed comparison, owner-finance/off-laptop restore and physical iPhone acceptance. Counts64 main/4partial/2open; all 70 original requirements/hash and false sign-offs remain.
+4. Require fresh new-head release/upgrade/recovery/isolated-worker, installed comparison, owner-finance/off-laptop restore and physical iPhone acceptance. Counts65 main/3partial/2open; all 70 original requirements/hash and false sign-offs remain.

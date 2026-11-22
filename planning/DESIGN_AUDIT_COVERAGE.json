@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "assessedAt": "2026-11-22T02:06:15.825Z",
+  "assessedAt": "2026-11-22T02:49:13.637Z",
   "auditSource": {
     "projectRelativePath": "deliverables/crest-end-to-end-audit-2026-11-17/audit.md",
     "sha256": "0764d571123622c684c660c89bde6c6c97636354e9cc24ba543c6f8170e475a2"
   },
   "assessmentSource": {
-    "localCommit": "c018bf3c239caa71d359e92a101eefa635318bda",
-    "publishedCommit": "338c28d215d05adba1bcbbf6917b7f76ed3b02fd",
-    "publishedTree": "5ccee0bb68cd184dad49a87fdef3d947ada5085f",
-    "localTree": "e93900b9fab5c5622e98e9efe57968e5a48d4e1b"
+    "localCommit": "fdb3a98fc5444841276f5f990a76fdf905918491",
+    "publishedCommit": "b6a862217c2e22d39603ce8d6e506d04929cec58",
+    "publishedTree": "503ef3ddba60733350d39a425c5a9ca80a4ad139",
+    "localTree": "5b3356562e651c0d1f8bfd445a8e758e9e0ea7d0"
   },
   "method": {
     "unit": "one original audit group, not estimated hours, screens or individual assertions",
@@ -27,12 +27,12 @@
     "destinations": 36,
     "deeperWorkflows": 20,
     "counts": {
-      "locally_addressed": 64,
-      "partial": 4,
+      "locally_addressed": 65,
+      "partial": 3,
       "open": 2,
       "review_needed": 0
     },
-    "mainLocalChangesAddressedPercent": 91.4,
+    "mainLocalChangesAddressedPercent": 92.9,
     "auditComplete": false,
     "finalSignOffClaimed": false
   },
@@ -44,8 +44,8 @@
       "title": "P1 · One visual system, delivered consistently",
       "requirements": "The installed logged-out preview still uses a large dark car hero and a different shell from the newer captured build. First align the version being evaluated and delivered. Then use shared page headers, toolbars, record summaries, inspectors, notices and confirmations throughout.\n\nFinish standard: The same destination and state should have the same hierarchy on laptop and phone; release identity must be verifiable.",
       "implementationStatus": "open",
-      "implementedOrPresent": "Published338c28d215d05adba1bcbbf6917b7f76ed3b02fd/tree5ccee0bb68cd184dad49a87fdef3d947ada5085f exactly matches local843431415ac7d015124a3a86f0fbe854a39e53ea. Sole parentc94a7aa, canonical test merge193219cf76f07aca411717f3767cf66d7ed4fcff and ordered baseea06/head338 parents with identical tree are verified. All27 UTF8 entries reconstruct the full tree. All2657 tracked files/39743308 bytes pass strict default secret detection with0 findings (scanner38429797 bytes), an explicit empty ignore file and inline allows disabled. Nonforce expected-head lease, exact PR title/body and draft/open/unmerged state pass. New main44971527926 is queued; commercial44971527966 and expense44971527933 are in progress at observation. Preserve this public source while any run is live. Priorc94 is terminal green22/22 main plus both ancillary workflows; no acceptance transfers. Immutable72a publication proof and c94 terminal proof are retained. No merge/install. Published338 main44971527926 is terminal20/22, with WebKit service pagination failing55/56 workspace-records and Foundation stopped by that browser prerequisite; both ancillary runs pass. New field changes remain local. CI evidence retention is improved without changing any gate.",
-      "remainingWork": "Diagnose the retained WebKit service pagination failure; prepare and strictly scan the coherent local follow-up for fresh full CI, then complete delivered/installed/owner/device acceptance.",
+      "implementedOrPresent": "Published draftb6a862217c2e22d39603ce8d6e506d04929cec58/tree503ef3ddba60733350d39a425c5a9ca80a4ad139 exactly matches local7826f99. All14 UTF8 entries reconstruct the complete tree. Strict full-source default scan covers2659 files/39729440 bytes with zero findings (scanner38415929 bytes), explicit empty ignore and inline allows disabled. Canonical sole parent338, nonforce expected-head lease, exact draft metadata and canonical test merge9a0d4a0 with ordered baseea06/headb6 parents and identical tree are verified. Three fresh exact-head runs are discovered. Prior338 is terminal with20/22 main jobs passing, service pagination failing and Foundation stopped by the mandatory browser prerequisite; both ancillary workflows pass. New field priority/draft/state work and improved evidence retention are documented separately. No accepted release or installation is claimed. The b6 main run is now terminal with20/22 jobs passing; its repeated WebKit service pagination failure has13 observed200 responses and no final list request. The archive now retains failure data. Source2990 adds the local financial wrapping correction; c7 strengthens explicit restored-draft observation. Both complete service engines pass2/2 locally, not a diagnosis/cure.",
+      "remainingWork": "Prepare the strictly scanned coherent local follow-up, diagnose the repeated service next-page release failure through the fresh checks, then finish full release/upgrade/recovery/worker and delivered/installed/owner/device acceptance.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -53,7 +53,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "2f81a30cf9598cbe254da0a438a631351180c2845eed87c9be914e02a8fbd421"
+          "sha256": "4d2ca6e1ae191d621785c123263bc4ab13741cca2c29eb0d9c4096fa0673f4d7"
         },
         {
           "path": "planning/QUOTE_VERSION_HISTORY_DESIGN.md",
@@ -229,7 +229,7 @@
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
-          "sha256": "f0adb437244dde6e787ba9e9994fb830f9f2ed83fa9c64c97c1348fe7c7d9cf3"
+          "sha256": "751ad21d3cd7bdb274b6a44810cdd1bbce4684d221d825a958c97983e1fe96ff"
         },
         {
           "path": ".github/workflows/ci.yml",
@@ -237,7 +237,11 @@
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
-          "sha256": "c442c6d131c1a3993a784a0fc2cfed4647bd33a995e1ec9e5edaa8be4367eeaa"
+          "sha256": "25c6b0a97d0d987a19bf60a13a5b123e999b803f474cf9fc76b0737c3e73315b"
+        },
+        {
+          "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
+          "sha256": "4ae55e32953a6df02aa3d0437f469b14184d63ddb889ace04731f4f4fdc74ec4"
         }
       ],
       "verification": {
@@ -613,11 +617,11 @@
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
-          "sha256": "f0adb437244dde6e787ba9e9994fb830f9f2ed83fa9c64c97c1348fe7c7d9cf3"
+          "sha256": "751ad21d3cd7bdb274b6a44810cdd1bbce4684d221d825a958c97983e1fe96ff"
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
-          "sha256": "c442c6d131c1a3993a784a0fc2cfed4647bd33a995e1ec9e5edaa8be4367eeaa"
+          "sha256": "25c6b0a97d0d987a19bf60a13a5b123e999b803f474cf9fc76b0737c3e73315b"
         }
       ],
       "verification": {
@@ -817,7 +821,7 @@
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
-          "sha256": "c442c6d131c1a3993a784a0fc2cfed4647bd33a995e1ec9e5edaa8be4367eeaa"
+          "sha256": "25c6b0a97d0d987a19bf60a13a5b123e999b803f474cf9fc76b0737c3e73315b"
         }
       ],
       "verification": {
@@ -960,8 +964,8 @@
       "title": "P1 · Treat every state as a designed screen",
       "requirements": "Some baseline captures are loading or unavailable. A clean screenshot with no overflow does not establish a completed workflow.\n\nFinish standard: Every important workflow needs loaded, empty, loading, validation, denied, stale, uncertain-save and successful variants with clear next steps.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Important loaded, empty, loading, validation, denied, stale, uncertain-save and successful states exist in the source and named workflow proofs. CRM_STATE_REVIEW.md reconciles the first eight-state family with explicit source/visual limitations. New initial loading and active-save protection for leads/services/addresses passes its separately scoped new2/2; missing/revoked CRM navigation passes2/2; deeper-directory draft/filter/page/privacy cases retain separate7/10 and3/3 evidence. Verified outcome markers stay neutral for stale/unknown results and require committed acknowledgment/reference cleanup. Earlier baseline and financial/history/worker evidence retain their own source scopes. The global configured eight-state inventory and missing exact-source visuals remain unfinished; no72-capture or scoped success is treated as complete coverage. FIELD_TASK_FINISH_REVIEW.md reconciles eight source states for standalone travel, recorded time/corrections and unfulfilled cancellation. Empty work time links to the selected job status; both original work-time journeys pass with eight empty-state captures. Other new field proof remains the exact11/12 and4/4 scopes.",
-      "remainingWork": "Complete remaining commercial, scheduling, custody, finance, Calendar, export/settings/sign-in eight-state reconciliation and missing exact-source visuals. CRM and three field workflows have scoped reviews, not global acceptance.",
+      "implementedOrPresent": "Important loaded, empty, loading, validation, denied, stale, uncertain-save and successful states exist in the source and named workflow proofs. CRM_STATE_REVIEW.md reconciles the first eight-state family with explicit source/visual limitations. New initial loading and active-save protection for leads/services/addresses passes its separately scoped new2/2; missing/revoked CRM navigation passes2/2; deeper-directory draft/filter/page/privacy cases retain separate7/10 and3/3 evidence. Verified outcome markers stay neutral for stale/unknown results and require committed acknowledgment/reference cleanup. Earlier baseline and financial/history/worker evidence retain their own source scopes. The global configured eight-state inventory and missing exact-source visuals remain unfinished; no72-capture or scoped success is treated as complete coverage. FIELD_TASK_FINISH_REVIEW.md reconciles eight source states for standalone travel, recorded time/corrections and unfulfilled cancellation. Empty work time links to the selected job status; both original work-time journeys pass with eight empty-state captures. Other new field proof remains the exact11/12 and4/4 scopes. Financial long-content review adds the eight-state source reconciliation for accounts, channels and tax profiles/approvals, with separately scoped full channel recovery and genuine financial zoom evidence.",
+      "remainingWork": "Complete remaining commercial, scheduling/custody, financial reports/expense/supplier/receipt, Calendar, export/settings/sign-in state reconciliation and missing current-source visuals. CRM, three field tasks and account/channel/tax source states are reconciled without global acceptance.",
       "evidence": [
         {
           "path": "src/app/workspace-frame.tsx",
@@ -969,7 +973,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "b4d8fa4d8275475c5ce32d14d0f959a04cf632286c53f1af35cf402e712b3b20"
+          "sha256": "23992b7803d4924e11ada1b0fb8bc96ac45ec68bd6f0822538b4214e9d2908b3"
         },
         {
           "path": "planning/SUPPLIER_DRAFT_COMPOSITION_REVIEW.md",
@@ -1185,11 +1189,15 @@
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
-          "sha256": "f0adb437244dde6e787ba9e9994fb830f9f2ed83fa9c64c97c1348fe7c7d9cf3"
+          "sha256": "751ad21d3cd7bdb274b6a44810cdd1bbce4684d221d825a958c97983e1fe96ff"
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
-          "sha256": "c442c6d131c1a3993a784a0fc2cfed4647bd33a995e1ec9e5edaa8be4367eeaa"
+          "sha256": "25c6b0a97d0d987a19bf60a13a5b123e999b803f474cf9fc76b0737c3e73315b"
+        },
+        {
+          "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
+          "sha256": "4ae55e32953a6df02aa3d0437f469b14184d63ddb889ace04731f4f4fdc74ec4"
         }
       ],
       "verification": {
@@ -1297,7 +1305,7 @@
         },
         {
           "path": "planning/DESIGN_AUDIT_FINISH_REGISTER.md",
-          "sha256": "b4d8fa4d8275475c5ce32d14d0f959a04cf632286c53f1af35cf402e712b3b20"
+          "sha256": "23992b7803d4924e11ada1b0fb8bc96ac45ec68bd6f0822538b4214e9d2908b3"
         }
       ],
       "verification": {
@@ -1311,9 +1319,9 @@
       "section": "Shared findings",
       "title": "P2 · Refine type, spacing and numeric rhythm",
       "requirements": "Heading scale is broadly consistent, but dense labels, helper text and record facts need stronger role separation. Some test captures and installed screens have different visual typography; verify the served font before diagnosing a font bug.\n\nFinish standard: Use one reliable font stack, 16 px editable inputs on phones, tabular money, aligned totals and a small spacing scale. Check real font loading, zoom and long names.",
-      "implementationStatus": "partial",
-      "implementedOrPresent": "The shared font stack, input sizing, tabular numeric style and spacing system are implemented. Retained720 root-text/setup observations and144 closed-state real-zoom observations are separate scopes. Configured planner/job and finance mapping/history cases are recorded in their notes. The new settled genuine CRM case passes1/1 with48 six-state observations at100/200% tab zoom, including360/390/430CSS px,200-character names, long notes/VIN/plate, actual custom font reports,16px editable inputs, overflow/Axe, preserved values/source,24 hashed native-size captures and exact zoomed returns. An existing mounted payment-access request is allowed to finish before measuring zero inspection reads; no application lifecycle or assertion is weakened. Earlier failed measurement and sign-in-timeout scopes remain retained; later login is not a cure. Other configured financial/history/input and final delivered/device variants remain.",
-      "remainingWork": "Complete remaining configured financial/history/input/long-content actual-zoom cases and final matching hosted/installed/physical-device acceptance. Earlier finance/calendar matrices and the new48-observation CRM case remain separate scopes; retained sign-in failure is unresolved.",
+      "implementationStatus": "locally_addressed",
+      "implementedOrPresent": "The main shared typography implementation/review is addressed: one bundled IBM Plex Sans stack, role-separated heading/label/helper/fact styles,16px editable inputs, tabular money, end-aligned amount columns and shared spacing. Complete source review inventories all four app stylesheets and both font assets, with no inline typography override. Source2990e88 fixes the saved-channel heading overflow reproduced at720CSS px (1735px document;1711px heading text within672px). The existing full money-channel file retains all original assertions/deadlines and passes both engines with a200-character saved label inside the separate2/3 scope. The corrected complete financial zoom case passes1/1 with72 observations/36 native images across nine account/channel/tax states; the separate served-font case also passes1/1 with72 actual custom-font reports, both faces loaded and tabular numerals. Drafts, exact audit/preceding-version values and captured source rows remain intact; no inspection business requests. All source/profile/cluster cleanup guards pass. Earlier overflow, unopened-disclosure and CSS-inspector setup failures remain separately retained. Existing CRM/planner/mapping/statement font/zoom scopes remain in their notes. No aggregate3/3 or global/installed/device acceptance is claimed.",
+      "remainingWork": "Complete remaining configured financial report/document/expense/supplier and other long/state variants plus matching release, installed and physical-device acceptance. Main typography is implemented and source/render reviewed; retained failures and separate scopes remain explicit.",
       "evidence": [
         {
           "path": "src/app/globals.css",
@@ -1537,12 +1545,24 @@
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
-          "sha256": "f0adb437244dde6e787ba9e9994fb830f9f2ed83fa9c64c97c1348fe7c7d9cf3"
+          "sha256": "751ad21d3cd7bdb274b6a44810cdd1bbce4684d221d825a958c97983e1fe96ff"
+        },
+        {
+          "path": "src/app/settings/accounts/screen.module.css",
+          "sha256": "8e117d5642f61255e59ee8221205d8ae4f577527bd29ea7271d04dadcb8cd83b"
+        },
+        {
+          "path": "tests/integration/finance-money-channel-browser.test.mjs",
+          "sha256": "2b27b2bb77b084a1495c4771977d121e2d26ee4d5bb27da9c74f970b8383a54a"
+        },
+        {
+          "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
+          "sha256": "4ae55e32953a6df02aa3d0437f469b14184d63ddb889ace04731f4f4fdc74ec4"
         }
       ],
       "verification": {
         "finalSignOff": false,
-        "scope": "incomplete scope or review",
+        "scope": "current source inspection plus retained scoped local workflow evidence",
         "note": "Earlier workflow evidence is scoped to its recorded source; it is not complete current-head, installed or physical-device acceptance."
       }
     },
@@ -1601,7 +1621,7 @@
         },
         {
           "path": "src/app/settings/accounts/screen.module.css",
-          "sha256": "75eb659769268717ebce3ce083db4eaaf20413b7c921ad6b60b3547b422c609f"
+          "sha256": "8e117d5642f61255e59ee8221205d8ae4f577527bd29ea7271d04dadcb8cd83b"
         },
         {
           "path": "src/app/settings/accounts/channels/screen.tsx",
@@ -1625,7 +1645,7 @@
         },
         {
           "path": "tests/integration/finance-money-channel-browser.test.mjs",
-          "sha256": "caa38e04104700079b2de8cc0b3fe0d58c641e95e4fbd39bc475b56f8a6045aa"
+          "sha256": "2b27b2bb77b084a1495c4771977d121e2d26ee4d5bb27da9c74f970b8383a54a"
         },
         {
           "path": "tests/integration/finance-tax-profiles-browser.test.mjs",
@@ -2012,7 +2032,7 @@
       "title": "P2 · Protect context through every transition",
       "requirements": "Back links now exist on many deeper routes. Their wording and destinations still vary, and an opened task can lose the visible customer/job context.\n\nFinish standard: Use a common breadcrumb or contextual return row, preserve selected record/date/filter where safe, restore focus and avoid retaining private detail after sign-out.",
       "implementationStatus": "partial",
-      "implementedOrPresent": "Six core directory families now capture accepted entry controls and exact in-memory positions, retaining safe drafts/filters/pages and clearing metadata on accepted replacement/private clearing. Contextual saved-job and server-return anchors preserve approved date/view/job/vehicle context; quote, supplier, Calendar and other task notes retain their source-specific return evidence. Missing/revoked CRM explanations receive focus and private rows clear. Deeper-directory cases cover explicit resume/discard, cancelled search/pagination, resize and bfcache clearing; genuine200% CRM returns preserve exact position/source. Retained WebKit read and genuine sign-in failures remain unresolved, with later passes labeled non-reproduction. Alternate/outdated task links and final release/installed/owner/device transitions still require review. New-trip close/cross-task discard now requires an explicit decision; declined actions preserve all entered fields and submit nothing, accepted close restores its opener, and drafts participate in the unload warning. Both complete travel engines pass on unchanged7a app code after the test-only keyboard correction. Empty work-time navigation follows the actual selected job.",
+      "implementedOrPresent": "Six core directory families now capture accepted entry controls and exact in-memory positions, retaining safe drafts/filters/pages and clearing metadata on accepted replacement/private clearing. Contextual saved-job and server-return anchors preserve approved date/view/job/vehicle context; quote, supplier, Calendar and other task notes retain their source-specific return evidence. Missing/revoked CRM explanations receive focus and private rows clear. Deeper-directory cases cover explicit resume/discard, cancelled search/pagination, resize and bfcache clearing; genuine200% CRM returns preserve exact position/source. Retained WebKit read and genuine sign-in failures remain unresolved, with later passes labeled non-reproduction. Alternate/outdated task links and final release/installed/owner/device transitions still require review. New-trip close/cross-task discard now requires an explicit decision; declined actions preserve all entered fields and submit nothing, accepted close restores its opener, and drafts participate in the unload warning. Both complete travel engines pass on unchanged7a app code after the test-only keyboard correction. Empty work-time navigation follows the actual selected job. Repeated b6 failure now includes a screenshot and request shape. c7 adds explicit restored-field/disabled-Save observation before an accepted service page change, plus accurate nested-label/editor diagnostics. Both full four-width service cases pass2/2 with eight captures/two reports; no deadline/transport/original assertion is weakened and no release cure is claimed.",
       "remainingWork": "Resolve service next-page release failure and review remaining alternate/outdated task transitions; complete matching delivered/installed/owner/device behavior. Retained address/sign-in failures remain unresolved.",
       "evidence": [
         {
@@ -2241,11 +2261,15 @@
         },
         {
           "path": "tests/support/deeper-directory-return.mjs",
-          "sha256": "f0adb437244dde6e787ba9e9994fb830f9f2ed83fa9c64c97c1348fe7c7d9cf3"
+          "sha256": "751ad21d3cd7bdb274b6a44810cdd1bbce4684d221d825a958c97983e1fe96ff"
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
-          "sha256": "c442c6d131c1a3993a784a0fc2cfed4647bd33a995e1ec9e5edaa8be4367eeaa"
+          "sha256": "25c6b0a97d0d987a19bf60a13a5b123e999b803f474cf9fc76b0737c3e73315b"
+        },
+        {
+          "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
+          "sha256": "4ae55e32953a6df02aa3d0437f469b14184d63ddb889ace04731f4f4fdc74ec4"
         }
       ],
       "verification": {
@@ -2269,7 +2293,7 @@
         },
         {
           "path": "planning/WORKING_STATE.md",
-          "sha256": "2f81a30cf9598cbe254da0a438a631351180c2845eed87c9be914e02a8fbd421"
+          "sha256": "4d2ca6e1ae191d621785c123263bc4ab13741cca2c29eb0d9c4096fa0673f4d7"
         }
       ],
       "verification": {
@@ -3033,7 +3057,7 @@
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
-          "sha256": "c442c6d131c1a3993a784a0fc2cfed4647bd33a995e1ec9e5edaa8be4367eeaa"
+          "sha256": "25c6b0a97d0d987a19bf60a13a5b123e999b803f474cf9fc76b0737c3e73315b"
         }
       ],
       "verification": {
@@ -3229,7 +3253,7 @@
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
-          "sha256": "c442c6d131c1a3993a784a0fc2cfed4647bd33a995e1ec9e5edaa8be4367eeaa"
+          "sha256": "25c6b0a97d0d987a19bf60a13a5b123e999b803f474cf9fc76b0737c3e73315b"
         }
       ],
       "verification": {
@@ -3292,7 +3316,7 @@
       "title": "P1 · Accounting home (/settings/accounts)",
       "requirements": "Observed: Reports, Accounts and Setup are a good separation, but the baseline opens a trial-balance form rather than a strong financial overview.\n\nDirection: Create a report workspace with a persistent report picker, date scope, coverage notice, loaded-as-of timestamp and export action. Make posted figures, incomplete coverage and setup status distinct.\n\nDesktop: Use available width for aligned figures and drill-in details.\n\nPhone: Put scope and key verified total before long filters or nested tables.\n\nAcceptance: Do not label incomplete recorded profit as business profit; no attractive summary may hide missing opening balances or costs.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Persistent desktop report library, compact phone choices and verified summaries before still-mounted date controls are implemented. Complete income/ledger and funds/receivables journeys pass both engines, including actual scoped CSV and retained original financial/recovery/export checks. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows.",
+      "implementedOrPresent": "Persistent desktop report library, compact phone choices and verified summaries before still-mounted date controls are implemented. Complete income/ledger and funds/receivables journeys pass both engines, including actual scoped CSV and retained original financial/recovery/export checks. Source14553e8 moves interrupted-statement explanation/original lookup before the long retained review and keeps its exact reference in a closed native disclosure. Build/post-build types/full lint pass. Both complete original statement engines plus separate48 genuine actual-Chromium-zoom observations pass in one frozen invocation3/3, zero fail/skip/cancel, owned cleanup and80 fresh hashed PNGs. Disclosure/zoom adds zero business requests and preserves captured statement/journal/audit rows; original recovery/export guards remain. Six inspected views are not all eight S06 categories or global financial/history/physical acceptance. Earlier capture/setup failures remain documented separately. Render-only cb35c2d adds real account-loading live text, explicit fresh-access link after read failure, and capability-gated money-channel guidance for an empty eligible list. Final test1e88e88 both complete original statement engines plus separate48 actual zoom observations pass3/3, zero failures/skips/cancellations, source stable/owned cleanup and98 hashed PNGs.18 new ordinary observations cover loading/failed/empty at360/390/1440 in both engines; a genuine dated channel closure creates emptiness after original export checks. Inspection adds no business requests or captured statement/journal/audit changes. Initialcb35 complete2/3 with one Chromium loading request count remains retained; the final boundary waits for the held original request, retaining zero-additional-request and all deadlines. Six zoom views and three ordinary states are not the whole S06 matrix. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows. FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md adds scoped max-length names/evidence, actual100/200% Chromium zoom, retained predecessor/audit facts and actual served-font checks; the saved-channel container now wraps valid long labels.",
       "remainingWork": "Complete remaining state/zoom/private-clearing variants; investigate retained tax/session failures and preserve exact-source release/installed/physical-device requirements.",
       "evidence": [
         {
@@ -3338,6 +3362,10 @@
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
           "sha256": "fa71817ba8f044820683bd94f448ce4f88241454e896bbef58bd46a5158489b6"
+        },
+        {
+          "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
+          "sha256": "4ae55e32953a6df02aa3d0437f469b14184d63ddb889ace04731f4f4fdc74ec4"
         }
       ],
       "verification": {
@@ -3352,7 +3380,7 @@
       "title": "P2 · Money channels (/settings/accounts/channels)",
       "requirements": "Observed: The empty-load state reads like a utility page, with Load channels and interrupted-review controls as the main content.\n\nDirection: Show the channel directory with held-at location, enabled state and opening-evidence status. Move recovery into contextual exceptions.\n\nDesktop: Use a compact directory and selected-channel panel.\n\nPhone: Use clear channel cards with currency and status; keep setup explanation nearby.\n\nAcceptance: Money channel state is never presented as a verified bank balance or live bank connection.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-channels-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Money-channel directory/inspector, phone record, current status and actual opening evidence are implemented. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows.",
+      "implementedOrPresent": "Money-channel directory/inspector, phone record, current status and actual opening evidence are implemented. New local0cbf356 makes original account/channel/fixed-category approval outcome checks primary and keeps retry/optional closure secondary; account references disclose after the check, and mapping references move after actions. Three controller prefixes are byte-identical to2379755. Full original four-file matrix on diagnostic-only6ada85f passes8/8,0fail/skip/cancel, stable source/owned cleanup,24 unobscured-focused recovery views,0inspection business requests and unchanged captured account/channel/mapping/audit rows.212 hashed artifacts include204 PNG/eight bounded reports. Build/types plus final full lint/9115 units pass. Initial0cbf7/8 remains retained: WebKit fixed-mapping fixture verified-journal notSubmitted before application browser, cause unknown; final8/8 is non-reproduction, not auth cure. Test-only failure logging uses existing64-event classifiers and preserves errors/healthy transport. No global S04/eight-state/zoom/device acceptance follows. FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md adds scoped max-length names/evidence, actual100/200% Chromium zoom, retained predecessor/audit facts and actual served-font checks; the saved-channel container now wraps valid long labels.",
       "remainingWork": "Remaining channel/history/pagination/setup states and delivered/device checks remain.",
       "evidence": [
         {
@@ -3382,6 +3410,10 @@
         {
           "path": "src/app/settings/accounts/mappings/manage/screen.tsx",
           "sha256": "fa71817ba8f044820683bd94f448ce4f88241454e896bbef58bd46a5158489b6"
+        },
+        {
+          "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
+          "sha256": "4ae55e32953a6df02aa3d0437f469b14184d63ddb889ace04731f4f4fdc74ec4"
         }
       ],
       "verification": {
@@ -3556,7 +3588,7 @@
       "title": "P1 · Tax profiles (/settings/accounts/tax)",
       "requirements": "Observed: Jurisdiction is a blank text field and the main workflow is spread across multiple disclosures. This needs careful hierarchy because tax treatment affects posted amounts.\n\nDirection: Put jurisdiction, applies-to scope, effective date and approved status together. Offer searchable known profiles only where an authoritative directory exists. Keep calculation preview separate from approval.\n\nDesktop: Show selected-profile details and sample calculation beside the lookup.\n\nPhone: Use a staged profile/amount/review flow with all calculation assumptions visible.\n\nAcceptance: No location-based tax inference or invented default rate; the approved rule and rounding evidence must remain accessible.\n\nEvidence: ../../Crest OS Second Design Audit/evidence/final-pages/settings-accounts-tax-{desktop,phone}.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Jurisdiction/scope/history workbench and separate exact USD calculation/approval are implemented without rate inference.",
+      "implementedOrPresent": "Jurisdiction/scope/history workbench and separate exact USD calculation/approval are implemented without rate inference. FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md adds scoped max-length names/evidence, actual100/200% Chromium zoom, retained predecessor/audit facts and actual served-font checks; the saved-channel container now wraps valid long labels.",
       "remainingWork": "Remaining long/history/state and final release/device verification stay open; no unsupported jurisdiction directory is invented.",
       "evidence": [
         {
@@ -3566,6 +3598,10 @@
         {
           "path": "planning/TAX_PROFILE_WORKBENCH_DESIGN.md",
           "sha256": "7158d03f1ce63227c5b940f833178878e59d88736fe8c4a1a1a648e1a16c9817"
+        },
+        {
+          "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
+          "sha256": "4ae55e32953a6df02aa3d0437f469b14184d63ddb889ace04731f4f4fdc74ec4"
         }
       ],
       "verification": {
@@ -3877,7 +3913,7 @@
         },
         {
           "path": "planning/FIELD_TASK_FINISH_REVIEW.md",
-          "sha256": "c442c6d131c1a3993a784a0fc2cfed4647bd33a995e1ec9e5edaa8be4367eeaa"
+          "sha256": "25c6b0a97d0d987a19bf60a13a5b123e999b803f474cf9fc76b0737c3e73315b"
         }
       ],
       "verification": {
@@ -4224,7 +4260,7 @@
       "title": "Dated approval history",
       "requirements": "Lookup, gap result and history are separated into large cards. Add an effective-period timeline or compact interval table; label gaps and superseded approvals in words. Keep original versions and original downloaded evidence intact.\n\nEvidence: ../../crest-os-public/.local/source-export-execution/.local/pux/.local/review/finance-mapping-history-chromium-1440.png",
       "implementationStatus": "locally_addressed",
-      "implementedOrPresent": "Dated fixed/category histories show effective intervals, closed revisions, honest loaded boundaries and retained reasons/exports.",
+      "implementedOrPresent": "Dated fixed/category histories show effective intervals, closed revisions, honest loaded boundaries and retained reasons/exports. FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md adds scoped max-length names/evidence, actual100/200% Chromium zoom, retained predecessor/audit facts and actual served-font checks; the saved-channel container now wraps valid long labels.",
       "remainingWork": "Remaining large/gap/state and final release/device review remain.",
       "evidence": [
         {
@@ -4234,6 +4270,10 @@
         {
           "path": "planning/MAPPING_HISTORY_DESIGN.md",
           "sha256": "9666f714251cefa61e507a45553eedf7c033fd8c56ca6aabfe7f0e7619857752"
+        },
+        {
+          "path": "planning/FINANCIAL_LONG_CONTENT_ZOOM_REVIEW.md",
+          "sha256": "4ae55e32953a6df02aa3d0437f469b14184d63ddb889ace04731f4f4fdc74ec4"
         }
       ],
       "verification": {

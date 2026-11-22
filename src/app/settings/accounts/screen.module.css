@@ -472,6 +472,7 @@
 
 .channelWorkbench { display:grid; gap:1.5rem; align-items:start; min-width:0; }
 .channelDirectory,.channelInspector,.channelRecord { min-width:0; }
+.channelRecord { overflow-wrap:anywhere; }
 .channelIntro { padding:1.25rem; border:1px solid var(--line); border-radius:var(--radius); }
 .channelIntro h2,.channelDirectory h2,.channelRecord h2 { margin-top:0; }
 .channelRecovery { margin-block:1rem; }
