@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {FinancialAccessRecovery} from '../../financial-access-recovery';
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {financeAccountReviewReason} from '../../../bookkeeping/finance-account-contract';
@@ -26,6 +28,7 @@ export function TipReturn({businessId, customerId}: {businessId: string; custome
   const [closeReason, setCloseReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [signedOut,setSignedOut]=useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const active = useRef<AbortController | null>(null);
   const status = useRef<HTMLParagraphElement>(null);
@@ -38,12 +41,12 @@ export function TipReturn({businessId, customerId}: {businessId: string; custome
     try { setPending(readPendingTipReturn() !== null); }
     catch { setPending(true); setMessage('Crest could not read the original return reference.'); }
   }, []);
-  const suspend = useCallback(() => {
-    active.current?.abort();
-    active.current = null;
+  const clearPrivate = useCallback(() => {
     setDate(''); setForm(empty); setOptions(null); setPending(false); setClosable(false);
     setCloseReason(''); setReceipt(null); setMessage(''); setBusy(false);
+  setSignedOut(false);
   }, []);
+  const suspend=useCallback(()=>{active.current?.abort();active.current=null;clearPrivate();},[clearPrivate]);
   useEffect(() => {
     const visibility = () => { if (document.visibilityState === 'hidden') suspend(); else showOriginal(); };
     const restored = (event: PageTransitionEvent) => { if (event.persisted) { suspend(); showOriginal(); } };
@@ -67,14 +70,13 @@ export function TipReturn({businessId, customerId}: {businessId: string; custome
       try {
         const context = await financeAccounts.context(signal);
         if (signal.aborted) return;
-        if (!context.tipReturns || context.businessId !== businessId) {
+        if (!context.tipReturns || context.businessId !== businessId) {clearPrivate();
           setMessage('Return recording is unavailable for this workspace.');
           return;
         }
+      setSignedOut(false);
         await action(context, signal);
-      } catch {
-        if (!signal.aborted) setMessage(failure);
-      } finally {
+      } catch(error){if(!signal.aborted){if(error instanceof AuthenticationError&&error.kind==='denied'){clearPrivate();setSignedOut(true);setMessage('Sign in again to review tip returns.');}else{setMessage(failure);}}} finally {
         if (active.current === controller) {
           active.current = null;
           setBusy(false);
@@ -174,6 +176,7 @@ export function TipReturn({businessId, customerId}: {businessId: string; custome
       </form>}
       {pending && <button type="button" disabled={busy} onClick={() => recover()}>Check original return</button>}
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<FinancialAccessRecovery returnTo="schedule" label="Tip return access recovery"/>}
       {pending && closable && <form onSubmit={event => { event.preventDefault(); if (financeAccountReviewReason(closeReason.trim())) recover(closeReason.trim()); }}>
         <label>Reason for closing this attempt<textarea required maxLength={1000} rows={2} value={closeReason} disabled={busy}
           onChange={event => setCloseReason(event.target.value)}/></label>

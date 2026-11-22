@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {FinancialAccessRecovery} from '../../financial-access-recovery';
 
 import {useEffect,useRef,useState} from 'react';
 import {expenseDollars} from '../../../bookkeeping/expenses/expense-contract';
@@ -87,6 +89,9 @@ export function TrialBalance({businessId}:{businessId:string}){
   const [journalMessage,setJournalMessage]=useState('');
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [signedOut,setSignedOut]=useState(false);
+  const feedback=useRef<HTMLParagraphElement>(null);
+  useEffect(()=>{if(signedOut)feedback.current?.focus();},[signedOut]);
   const active=useRef<AbortController|null>(null);
   const journalDetails=useRef<HTMLDetailsElement>(null);
   const journalAccount=useRef<HTMLSelectElement>(null);
@@ -98,7 +103,7 @@ export function TrialBalance({businessId}:{businessId:string}){
   }
   function clear(){
     active.current?.abort();active.current=null;
-    setThrough('');setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setBusy(false);setMessage('');
+    setThrough('');setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setBusy(false);setMessage('');setSignedOut(false);
   }
   useEffect(()=>{
     const hidden=()=>{if(document.visibilityState==='hidden')clear();};
@@ -114,7 +119,7 @@ export function TrialBalance({businessId}:{businessId:string}){
     if(active.current)return;
     const controller=new AbortController();active.current=controller;
     const {signal}=controller;
-    setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setBusy(true);setMessage('Checking the posted ledger…');
+    setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setBusy(true);setSignedOut(false);setMessage('Checking the posted ledger…');
     try{
       const context=await financeAccounts.context(signal);
       if(signal.aborted)return;
@@ -123,7 +128,10 @@ export function TrialBalance({businessId}:{businessId:string}){
       if(signal.aborted)return;
       setBalance(result);
       setMessage(result.postedEventCount==='0'?'No supported entries have been posted through this date.':'Posted balances loaded.');
-    }catch{if(!signal.aborted)setMessage('Crest could not load a verified trial balance. Check the date and connection, then try again.');}
+    }catch(error){if(!signal.aborted){
+      const denied=error instanceof AuthenticationError&&error.kind==='denied';setSignedOut(denied);
+      setMessage(denied?'Sign in again to review accounting balances.':'Crest could not load a verified trial balance. Check the date and connection, then try again.');
+    }}
     finally{if(active.current===controller){active.current=null;setBusy(false);}}
   }
   async function loadJournal(next=false){
@@ -150,7 +158,11 @@ export function TrialBalance({businessId}:{businessId:string}){
       }
       setJournal(result);
       setJournalMessage(result.rows.length?'Journal page loaded.':'No posted lines for this account and date.');
-    }catch{if(!signal.aborted)setJournalMessage('Crest could not load the journal page. Check your connection and load it again.');}
+    }catch(error){if(!signal.aborted){
+      if(error instanceof AuthenticationError&&error.kind==='denied'){
+        setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setSignedOut(true);setMessage('Sign in again to review accounting balances.');
+      }else setJournalMessage('Crest could not load the journal page. Check your connection and load it again.');
+    }}
     finally{if(active.current===controller){active.current=null;setBusy(false);}}
   }
   function download(){
@@ -260,7 +272,8 @@ export function TrialBalance({businessId}:{businessId:string}){
         <p className="field-help">Leave blank for today in the workspace time zone.</p>
         <button type="submit" className="secondary" disabled={busy}>Load trial balance</button>
       </form>
-      <p role="status">{message}</p>
+      <p ref={feedback} tabIndex={-1} role="status">{message}</p>
+      {signedOut&&<FinancialAccessRecovery returnTo="accounting" label="Accounting report access recovery"/>}
       {balance&&<>
 
         {hasPaymentCorrections(balance)&&<p className="field-help">{reportVersion(balance)===11

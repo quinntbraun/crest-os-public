@@ -169,6 +169,13 @@ export function DropoffCustodyHistory({businessId,jobId,jobVehicleId,vehicleId,t
    setEditing(null);setView({...initial,message:'Handoff saved.',record:current,photos});
   }catch(error){
    if(active.signal.aborted)return;
+   if(error instanceof AuthenticationError&&error.kind==='denied'){
+    setEditing(null);
+    setView({...initial,signedOut:true,pending:retained!==null,message:retained?
+     'The handoff could not be confirmed. Sign in again and review the original save.':confirmed?
+     'Handoff saved. Sign in again to review its history.':'Sign in again to review custody. No handoff was submitted.'});
+    return;
+   }
    if(retained&&error instanceof SchedulingClientError&&['input','not_submitted','recovery','limited'].includes(error.kind)){
     try{pendingStore.clear(retained);retained=null;}catch{/* Retain the reference for review. */}
    }
@@ -219,7 +226,7 @@ export function DropoffCustodyHistory({businessId,jobId,jobVehicleId,vehicleId,t
  return <section ref={anchor} className="custody-history-workspace" aria-label="Vehicle custody" aria-busy={view.busy}>
   <h4>Vehicle custody</h4>
   <p role="status" tabIndex={-1} ref={status}>{view.message}</p>
-  {view.signedOut&&<SignInLink returnTo="schedule">Sign in</SignInLink>}
+  {view.signedOut&&<SignInLink className="primary-action" returnTo="schedule">Sign in</SignInLink>}
   {record&&<p><strong>{labels[record.state]}</strong></p>}
   {view.pending&&<p><ScheduleLink href={'/save-review?kind='+dropoffCustodyKind}>Open Save review</ScheduleLink></p>}
   <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>

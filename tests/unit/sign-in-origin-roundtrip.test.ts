@@ -1,3 +1,5 @@
+import ExpensesPage from '../../src/app/expenses/page';
+import {ExpensesScreen} from '../../src/app/expenses/expenses';
 import {isValidElement} from 'react';
 import type {ReactNode} from 'react';
 import {expect,it} from 'vitest';
@@ -106,4 +108,18 @@ it('bounds Calendar date navigation while leaving actual business-zone validatio
   .toEqual({activityFrom:'2026-01-01',activityThrough:'2026-04-03'});
  expect(readSignInReturn({returnTo:'calendar',activityFrom:'2026-01-01',activityThrough:'2026-04-04'})?.href)
   .toBe('/settings/google-calendar');
+});
+
+
+it.each(['suppliers','exports'] as const)('restores the %s expense view through the actual sign-in and expense pages',async view=>{
+ const returned=await resume('/expenses',{view,vendor:'private',amount:'99',operationId:job});
+ expect(query(returned.href)).toEqual({view});
+ const page=await ExpensesPage({searchParams:Promise.resolve(query(returned.href))});
+ expect(propsOf(page,ExpensesScreen)?.initialPane).toBe(view);
+});
+
+it.each([{view:'unknown'},{view:'//elsewhere.invalid'},{view:['suppliers']}])('ignores an invalid expense view and starts in Purchases',async({view})=>{
+ expect(readSignInReturn({returnTo:'expenses',view})?.href).toBe('/expenses');
+ const page=await ExpensesPage({searchParams:Promise.resolve({view})});
+ expect(propsOf(page,ExpensesScreen)?.initialPane).toBe('purchases');
 });

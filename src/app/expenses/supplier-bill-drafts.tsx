@@ -2,6 +2,8 @@
 
 import {useEffect,useId,useLayoutEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
+import {AuthenticationError} from '../../client/authentication';
+import {SignInLink} from '../sign-in-link';
 import {financeAccounts} from '../../client/finance-accounts';
 import type {FinanceAccountContext} from '../../client/finance-accounts';
 import {parseSupplierBillDraftPayload,supplierBillCategories} from '../../bookkeeping/expenses/supplier-bill-draft-contract';
@@ -30,7 +32,7 @@ function cents(raw:string){
  return amount;
 }
 
-export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
+export function SupplierBillDrafts({context,onAccessDenied}:{context:FinanceAccountContext;onAccessDenied?:()=>void}){
  const id=useId(),controller=useRef<AbortController|null>(null);
  const [form,setForm]=useState<Form>(emptyForm);
  const [baseline,setBaseline]=useState(()=>formSignature(emptyForm()));
@@ -46,6 +48,8 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
  const [pending,setPending]=useState<Pending|null>(null);
  const [review,setReview]=useState<Review|null>(null);
  const [status,setStatus]=useState(''),[busy,setBusy]=useState(false),[posting,setPosting]=useState(false);
+ const [signedOut,setSignedOut]=useState(false),notice=useRef<HTMLParagraphElement>(null);
+ useEffect(()=>{if(signedOut)notice.current?.focus();},[signedOut]);
  const dirty=formSignature(form)!==baseline;
  useEffect(()=>()=>controller.current?.abort(),[]);
  useEffect(()=>{if(!dirty)return;const warn=(event:BeforeUnloadEvent)=>event.preventDefault();window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
@@ -98,14 +102,20 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
   if(dirty&&!window.confirm('Discard unsaved supplier bill edits and enter another bill?'))return;
   const next=emptyForm();focusEditor.current=true;setDirectoryOpen(false);setEditing(null);setReview(null);setForm(next);setBaseline(formSignature(next));setEditorOpen(true);setStatus('');
  }
- async function run(work:(signal:AbortSignal)=>Promise<void>,failure:string){
+ async function run(work:(signal:AbortSignal)=>Promise<void>,failure:string,onDenied?:()=>void){
   if(controller.current)return;
   const request=new AbortController(),{signal}=request;controller.current=request;setBusy(true);
-  try{await work(signal);}catch{if(!signal.aborted)setStatus(failure);}
+  try{await work(signal);}catch(error){if(!signal.aborted){
+   if(error instanceof AuthenticationError&&error.kind==='denied'){
+    const blank=emptyForm();setForm(blank);setBaseline(formSignature(blank));setRows(null);setHasMore(false);setEditing(null);setReview(null);setEditorOpen(false);setDirectoryOpen(false);
+    directoryTriggers.current.clear();listReturn.current=null;focusDirectory.current=false;focusRecord.current=false;focusEditor.current=false;
+    setSignedOut(true);setStatus('Sign in again to review supplier bills. Any original save reference stays in this tab.');onDenied?.();
+   }else setStatus(failure);
+  }}
   finally{if(controller.current===request){controller.current=null;setBusy(false);}}
  }
  function saved(row:SupplierBillDraftRevision){
-  setDirectoryOpen(false);edit(row,false);setPending(null);
+  setSignedOut(false);setDirectoryOpen(false);edit(row,false);setPending(null);
   setRows(previous=>previous?.map(draft=>draft.billId===row.billId?row:draft)??null);
   setStatus('Supplier bill draft saved.');
  }
@@ -115,10 +125,10 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
   await run(async signal=>{
    const page=await financeAccounts.listSupplierBillDrafts(context,after,signal);
    if(signal.aborted)return;
-   setRows(previous=>next?[...(previous??[]),...page.drafts]:page.drafts);setHasMore(page.hasMore);
+   setSignedOut(false);setRows(previous=>next?[...(previous??[]),...page.drafts]:page.drafts);setHasMore(page.hasMore);
    if(!editing&&!dirty)setDirectoryOpen(true);
    setStatus(page.drafts.length?'Saved supplier bills loaded.':'No supplier bill drafts found.');
-  },'Saved supplier bills could not be loaded.');
+  },'Saved supplier bills could not be loaded.',onAccessDenied);
  }
  async function send(original:Pending){
   await run(async signal=>{
@@ -153,7 +163,7 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
   await run(async signal=>{
    const result=await financeAccounts.lookupSupplierBillDraft(context,original,signal);
    if(signal.aborted)return;
-   if(result.state==='committed')saved(result.draft);
+   setSignedOut(false);if(result.state==='committed')saved(result.draft);
    else if(result.state==='absent')setStatus('The original supplier bill save was not found. You can retry the same request.');
    else {setPending(null);setStatus('This original save reference does not match. Load saved supplier bills to review it.');}
   },'The original supplier bill save could not be checked.');
@@ -177,7 +187,11 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
    <summary>Unpaid supplier bills</summary>
    <p>Save details for a bill you still owe. Payable posting requires review of the original bill and its cost treatment.</p>
    <button type="button" className="secondary supplier-bill-load" disabled={busy||posting||!!pending} onClick={()=>void load()}>Load saved supplier bills</button>
-   <p role="status">{status}</p>
+   <p ref={notice} tabIndex={-1} role="status">{status}</p>
+   {signedOut?<div className="supplier-access-recovery">
+    <SignInLink className="primary-action" returnTo="expenses" context={{view:'suppliers'}} target={pending?'_blank':undefined} rel={pending?'noopener noreferrer':undefined}>{pending?'Sign in in a new tab':'Sign in again'}</SignInLink>
+    {pending&&<><p>Keep this tab open. After signing in, return here to check the original save.</p><p className="save-reference">Original save reference <code>{pending.reference.operationId}</code></p><button type="button" className="secondary" disabled={busy} onClick={()=>void checkSave()}>Check original supplier bill save</button></>}
+   </div>:<>
    {pending&&<div aria-label="Unconfirmed supplier bill save">
     <button type="button" disabled={busy} onClick={()=>void checkSave()}>Check original supplier bill save</button>
     <button type="button" className="secondary" disabled={busy||context.writeState!=='ready'} onClick={()=>void send(pending)}>Retry same supplier bill save</button>
@@ -280,6 +294,7 @@ export function SupplierBillDrafts({context}:{context:FinanceAccountContext}){
    </div>
    </div>
    </div>
+   </> }
   </details>
  </section>;
 }

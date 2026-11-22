@@ -1,3 +1,4 @@
+import {reviewFieldSubmissionAccess} from '../support/field-submission-access.mjs';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -73,6 +74,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    await collection.getByLabel('Actual handoff location').fill('Synthetic pickup address');
    await collection.getByLabel('Condition photo (required)',{exact:true}).setInputFiles({
     name:'generated-pickup-condition.png',mimeType:'image/png',buffer:imageBytes});
+   const picker=collection.locator('.custody-photo-controls').filter({has:page.getByLabel('Condition photo (required)',{exact:true})});
+   await reviewFieldSubmissionAccess({page,fixture,region:picker,trigger:picker.getByRole('button',{name:'Upload and verify photo',exact:true}),privateTarget:picker.getByRole('button',{name:'Upload and verify photo',exact:true}),message:'Sign in again before selecting and checking a condition photo.',task:'photo-selection',engine:name,jobId:booking.jobId});
+   await expect(collection.getByLabel('Condition photo (required)',{exact:true})).toHaveValue('');
+   assert.equal(fixture.photoStorage.requests.length,0);
+   await collection.getByLabel('Condition photo (required)',{exact:true}).setInputFiles({name:'generated-pickup-condition.png',mimeType:'image/png',buffer:imageBytes});
    // Abort the first browser transfer before any bytes are sent. Let the
    // second file transfer use the browser's own binary request framing.
    await page.route('**/custody-photo/upload',route=>route.abort(),{times:1});
@@ -122,6 +128,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    await expect(preview).toBeVisible();
    assert(await preview.evaluate(async image=>{await image.decode();return image.naturalWidth>0;}));
    assert.equal((await post('custody-photo/file',{jobVehicleId:randomUUID(),photoId:slot.photo_id,variant:'preview'})).status,400);
+   const viewer=collection.locator('.custody-photo-controls').filter({has:page.getByRole('button',{name:'Prepare original download',exact:true})});
+   await reviewFieldSubmissionAccess({page,fixture,region:viewer,trigger:viewer.getByRole('button',{name:'Prepare original download',exact:true}),privateTarget:preview,message:'Sign in again to review the condition photo.',task:'photo-preview',engine:name,jobId:booking.jobId});
+   await collection.getByRole('button',{name:'View condition photo',exact:true}).click();
+   await expect(preview).toBeVisible();
    await collection.getByRole('button',{name:'Prepare original download'}).click();
    const link=collection.getByRole('link',{name:'Save original file'});
    await expect(link).toBeVisible();

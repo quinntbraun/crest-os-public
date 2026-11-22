@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {FinancialAccessRecovery} from '../../financial-access-recovery';
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {collectionFailureRefusal, parseCollectionFailureInput} from '../../../bookkeeping/collection-failure-contract';
@@ -76,6 +78,7 @@ export function CollectionFailure({businessId, customerId}: {businessId: string;
   const [closeReason, setCloseReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [signedOut,setSignedOut]=useState(false);
   const request = useRef<AbortController | null>(null);
   const status = useRef<HTMLParagraphElement>(null);
   const selected = selectedComponents(options, ranges);
@@ -88,12 +91,13 @@ export function CollectionFailure({businessId, customerId}: {businessId: string;
     try { setPending(readPendingCollectionFailure() !== null); }
     catch { setPending(true); setMessage('Crest could not read the interrupted adjustment reference.'); }
   }, []);
-  const suspend = useCallback(() => {
-    request.current?.abort(); request.current = null;
+  const clearPrivate = useCallback(() => {
     setPayments(null); setPaymentId(''); setOlderPaymentId(''); setDate(''); setMode(''); setOptions(null); setRanges({});
     setEvidence(emptyEvidence); setReceipt(null); setPending(false); setCanClose(false);
     setCloseReason(''); setBusy(false); setMessage('');
+  setSignedOut(false);
   }, []);
+  const suspend=useCallback(()=>{request.current?.abort();request.current=null;clearPrivate();},[clearPrivate]);
   useEffect(() => {
     const visibility = () => { if (document.visibilityState === 'hidden') suspend(); else readOriginal(); };
     const restored = (event: PageTransitionEvent) => { if (event.persisted) { suspend(); readOriginal(); } };
@@ -116,11 +120,10 @@ export function CollectionFailure({businessId, customerId}: {businessId: string;
     try {
       const context = await financeAccounts.context(current.signal);
       if (current.signal.aborted) return;
-      if (!context.collectionFailures || context.businessId !== businessId) { setMessage('Payment adjustments are unavailable.'); return; }
+      if (!context.collectionFailures || context.businessId !== businessId) {clearPrivate(); setMessage('Payment adjustments are unavailable.'); return; }
+      setSignedOut(false);
       await work(context, current.signal);
-    } catch {
-      if (!current.signal.aborted) setMessage(failure);
-    } finally {
+    } catch(error){if(!current.signal.aborted){if(error instanceof AuthenticationError&&error.kind==='denied'){clearPrivate();setSignedOut(true);setMessage('Sign in again to review failed payments.');}else{setMessage(failure);}}} finally {
       if (request.current === current) { request.current = null; setBusy(false); status.current?.focus(); }
     }
   }
@@ -221,6 +224,7 @@ export function CollectionFailure({businessId, customerId}: {businessId: string;
     <section aria-label={title} aria-busy={busy}>
       <p className="field-help">Correct a payment entered in error or record a bank or wallet debit for a failed incoming payment.</p>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<FinancialAccessRecovery returnTo="schedule" label="Failed payment access recovery"/>}
       <button type="button" className="secondary" disabled={busy} onClick={loadPayments}>Load customer payments</button>
       {pending && <button type="button" disabled={busy} onClick={() => recover()}>Check original adjustment</button>}
       {pending && canClose && <form onSubmit={event => { event.preventDefault(); if (financeAccountReviewReason(closeReason.trim())) recover(closeReason.trim()); }}>

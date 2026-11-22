@@ -89,6 +89,33 @@ async function exerciseSupplierBills(page,date,fixture,engine){
   await page.screenshot({path:'.local/review/finance-supplier-bill-'+engine+'-'+width+'.png'});
   await region.getByRole('region',{name:'Selected supplier bill',exact:true}).screenshot({path:'.local/review/finance-supplier-draft-selected-'+engine+'-'+width+'.png'});
  }
+ const cookies=await page.context().cookies(),viewport=page.viewportSize();
+ const facts=async()=>{const values={};for(const table of ['crest.supplier_bill_draft_revisions','crest.financial_events','crest.journal_entries','crest_private.audit_events'])values[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM '+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;return JSON.stringify(values);};
+ const beforeDenied=await facts(),observations=[];
+ try{
+  await page.context().clearCookies();
+  const denied=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/auth/session'&&r.status()===400);
+  await region.getByRole('button',{name:'Load saved supplier bills',exact:true}).click();await denied;
+  await expect(region).toHaveCount(0);await expect(page.getByText('Sign in to view expenses.',{exact:true})).toBeFocused();
+  const signIn=page.getByRole('link',{name:'Sign in to view expenses',exact:true});
+  await expect(signIn).toHaveAttribute('href','/sign-in?returnTo=expenses&view=suppliers');
+  for(const width of [390,1440]){
+   await page.setViewportSize({width,height:900});await signIn.scrollIntoViewIfNeeded();await signIn.focus();
+   assert(await signIn.evaluate(node=>{const r=node.getBoundingClientRect();return r.height>=44&&document.activeElement===node&&node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}));
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
+   const capture='.local/review/supplier-access-denied-'+engine+'-'+width+'.png';await page.screenshot({path:capture,animations:'disabled'});observations.push({width,capture});
+  }
+  assert.equal(await facts()===beforeDenied,true,'Denied supplier reads preserve drafts, financial events, journals and audit facts');
+ }finally{await page.context().addCookies(cookies);await page.setViewportSize(viewport);}
+ await page.getByRole('link',{name:'Sign in to view expenses',exact:true}).click();
+ const resume=page.getByRole('link',{name:'Return to Expenses',exact:true});await expect(resume).toHaveAttribute('href','/expenses?view=suppliers');await resume.click();
+ await expect(page.getByRole('button',{name:'Suppliers',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect(region).toBeVisible();await summary.click();
+ await region.getByRole('button',{name:'Load saved supplier bills',exact:true}).click();
+ await expect(region.getByText('Saved supplier bills loaded.',{exact:true})).toBeVisible();
+ assert.equal(await facts()===beforeDenied,true,'Returning to the selected supplier view issues no financial command');
+ await writeFile('.local/review/supplier-access-denied-'+engine+'.json',JSON.stringify({engine,observations,actualSessionDenied:true,wholeExpenseWorkspaceCleared:true,safeSupplierViewReturned:true,businessFactsPreserved:true},null,2)+'\n');
  await summary.click();
 }
 

@@ -75,6 +75,12 @@ it('renders normal accessible anchors without needing a router or browser during
  expect(markup).toBe('<a class="primary-action" href="/sign-in?returnTo=calendar">Sign in again</a>');
 });
 
+it('keeps explicit selected-record metadata out of DOM attributes and uses a safe SSR fallback',()=>{
+ const markup=renderToStaticMarkup(createElement(SignInLink,{returnTo:'customers',context:{customer,view:'payments',password:'private-context-value'}},'Sign in again'));
+ expect(markup).toBe('<a href="/sign-in?returnTo=customers">Sign in again</a>');
+ expect(markup).not.toContain('context=');expect(markup).not.toContain('private-context-value');
+});
+
 it('keeps original-operation recovery ahead of an ordinary workspace return',async()=>{
  const tree=await SignInPage({searchParams:Promise.resolve({resumeSave:'bookkeeping.expense.save',returnTo:'schedule',job})});
  function resume(node:ReactNode):unknown{

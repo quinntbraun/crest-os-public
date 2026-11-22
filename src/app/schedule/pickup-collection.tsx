@@ -237,6 +237,12 @@ export function PickupCollection({businessId,jobId,jobVehicleId,jobVersion,timez
    setView({...initial,context:saved,message:savedMessage});
   }catch(error){
    if(active.signal.aborted)return;
+   if(error instanceof AuthenticationError&&error.kind==='denied'){
+    setView({...initial,signedOut:true,pending:retained?kind:null,message:retained?
+     'The '+label+' save could not be confirmed. Sign in again and review the original save.':confirmed?
+     savedMessage+' Sign in again to review its history.':'Sign in again to review collection. No handoff was submitted.'});
+    return;
+   }
    if(retained&&error instanceof SchedulingClientError&&['input','not_submitted','recovery','limited'].includes(error.kind)){
     try{pendingStore.clear(retained);retained=null;}catch{/* Keep the original available for review. */}
    }
@@ -251,7 +257,7 @@ export function PickupCollection({businessId,jobId,jobVehicleId,jobVersion,timez
   <h4>Pickup collection</h4>
   <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>{context?'Reload pickup collection':'Load pickup collection'}</button>
   <p ref={status} role="status" tabIndex={-1}>{view.message}</p>
-  {view.signedOut&&<p><SignInLink returnTo="schedule">Sign in</SignInLink></p>}
+  {view.signedOut&&<p><SignInLink className="primary-action" returnTo="schedule">Sign in</SignInLink></p>}
   {view.pending&&<p><ScheduleLink href={'/save-review?kind='+view.pending}>Open Save review</ScheduleLink></p>}
   {(context?.state==='ready'||context?.state==='photo_required'&&photosAvailable)&&!view.pending&&canChange&&context.policy&&context.arrival&&
    <HandoffForm policy={context.policy} arrival={context.arrival} timezone={timezone} busy={view.busy} save={save}

@@ -381,7 +381,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await expect(payments.getByRole('status')).toHaveText('Sign in again to review payments.');
        await expect(payments.getByLabel('Money received in')).toHaveCount(0);
        await expect(payments.getByRole('button',{name:'Download payment (CSV)',exact:true})).toHaveCount(0);
-       assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.direct-receipt.pending-reference.v1')),pendingBytes);
+       assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.direct-receipt.pending-reference.v1'))===pendingBytes,true,'The original payment reference must be kept');
        assert.deepEqual(await financialFacts(),pendingFacts);
       }finally{await context.addCookies(pendingCookies);}
       await allowInvoiceReadWindow();
@@ -645,6 +645,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const tip=invoice.getByRole('region',{name:'Record a tip from held funds',exact:true});
         await tip.getByRole('button',{name:'Load held funds',exact:true}).press('Enter');
         await expect(tip.getByRole('status')).toContainText('Choose the jurisdiction');
+        await reviewPaymentAccessRecovery({page,region:tip,engine:name,task:'held-tip',loadLabel:'Load held funds',privateTarget:tip.getByRole('combobox',{name:'Tip jurisdiction',exact:true}),message:'Sign in again to review held tips.',ready:/Choose the jurisdiction/,jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
         await tip.getByLabel('Tip jurisdiction',{exact:true}).selectOption('Fictional tip district');
         await tip.getByRole('button',{name:'Load reviewed tax treatment',exact:true}).press('Enter');
         await expect(tip.getByRole('status')).toContainText('Enter the amount');
@@ -699,6 +700,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          await returnPanel.getByRole('button',{name:'Load eligible tips',exact:true}).press('Enter');
          assert.equal((await optionsResponse).status(),200);
          await expect(returnPanel.getByRole('status')).toHaveText('Choose the original tip and match the settled amount to your account record.');
+         await reviewPaymentAccessRecovery({page,region:returnPanel,engine:name,task:'tip-return',loadLabel:'Load eligible tips',privateTarget:returnPanel.getByRole('combobox',{name:'Original tip',exact:true}),message:'Sign in again to review tip returns.',ready:'Choose the original tip and match the settled amount to your account record.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow,reload:async()=>{await returnPanel.getByLabel('Settlement date',{exact:true}).fill(actualOn);await returnPanel.getByRole('button',{name:'Load eligible tips',exact:true}).press('Enter');}});
          const originalTip=JSON.parse(stored).reference.tipRealizationId;
          const original=returnPanel.getByRole('combobox',{name:'Original tip',exact:true});
          await expect(original.locator('option').nth(1)).toContainText('$5.50 available');
@@ -768,6 +770,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await credit.getByRole('button',{name:'Load credit options',exact:true}).press('Enter');
         await expect(credit.getByRole('status')).toContainText('Review the credit');
         await expect(credit).toContainText('Maximum credit · $160.00');
+        await reviewPaymentAccessRecovery({page,region:credit,engine:name,task:'invoice-credit',loadLabel:'Load credit options',privateLabel:'Credit amount (USD)',message:'Sign in again to review invoice credits.',ready:/Review the credit/,jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
         const amount=credit.getByLabel('Credit amount (USD)',{exact:true});
         const save=credit.getByRole('button',{name:'Save invoice credit',exact:true});
         await amount.fill('160.01');
@@ -880,6 +883,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const credit=invoice.getByRole('region',{name:'Credit a paid or partly paid invoice',exact:true});
         await credit.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
         await expect(credit.getByRole('status')).toContainText('Choose the payment');
+        await reviewPaymentAccessRecovery({page,region:credit,engine:name,task:'paid-credit',loadLabel:'Load applied payments',privateTarget:credit.getByRole('button',{name:'Review credit and payment',exact:true}),message:'Sign in again to review paid invoice credits.',ready:'Choose the payment to use for the credit.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
         const choice=credit.getByLabel('Payment',{exact:true});
         if(await choice.count())await choice.selectOption({label:(await choice.locator('option').nth(1).textContent()).trim()});
         await allowInvoiceReadWindow();
@@ -950,6 +954,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          const refund=invoice.getByRole('region',{name:'Record a settled refund',exact:true});
          await refund.getByRole('button',{name:'Load available credits',exact:true}).press('Enter');
          await expect(refund.getByRole('status')).toHaveText('Enter the date the refund settled.');
+         await reviewPaymentAccessRecovery({page,region:refund,engine:name,task:'service-refund',loadLabel:'Load available credits',privateLabel:'Settlement date',message:'Sign in again to review service refunds.',ready:'Enter the date the refund settled.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
          const date=await businessDate();
          await refund.getByLabel('Settlement date',{exact:true}).fill(date);
          await refund.getByRole('button',{name:'Review refund',exact:true}).press('Enter');
@@ -994,6 +999,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        const report=page.getByRole('region',{name:'Fictional trial balance',exact:true});
        await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
        await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
+       await report.getByText('Journal entries',{exact:true}).click();
+       await reviewPaymentAccessRecovery({page,region:report,engine:name,task:'journal',loadLabel:'Load journal entries',privateTarget:report.locator('table').first(),message:'Sign in again to review accounting balances.',ready:'Posted balances loaded.',facts:financialFacts,allowRead:allowInvoiceReadWindow,expectedSignIn:'/sign-in?returnTo=accounting&view=reports',auditSelector:'html',reload:async()=>{await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');}});
        await expect(report).toContainText(heldTips?'Customer funds and tax payable match the ledger':'Customer funds held match the ledger');
        await report.getByText('Journal entries',{exact:true}).click();
        await report.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
@@ -1209,6 +1216,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           await allowInvoiceReadWindow();
           await openReturn(committed.actualOn);
           await expect(returnPanel.getByRole('status')).toHaveText('Choose the original payment and match the settled amount to your account record.');
+          await reviewPaymentAccessRecovery({page,region:returnPanel,engine:name,task:'excess-return',loadLabel:'Load eligible payments',privateTarget:returnPanel.getByRole('combobox',{name:'Original payment',exact:true}),message:'Sign in again to review unused payment returns.',ready:'Choose the original payment and match the settled amount to your account record.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow,reload:async()=>{await returnPanel.getByLabel('Settlement date',{exact:true}).fill(committed.actualOn);await returnPanel.getByRole('button',{name:'Load eligible payments',exact:true}).press('Enter');}});
           const payment=returnPanel.getByRole('combobox',{name:'Original payment',exact:true});
           await expect(payment.locator('option')).toHaveCount(2);
           await expect(payment.locator('option').nth(1)).toContainText('$12.34 available');
@@ -1279,6 +1287,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await panel.getByRole('button',{name:'Load customer payments',exact:true}).press('Enter');
            const payment=panel.getByRole('combobox',{name:'Original payment',exact:true});
            await expect(payment).toBeVisible();
+           await reviewPaymentAccessRecovery({page,region:panel,engine:name,task:'collection-failure',loadLabel:'Load customer payments',privateTarget:payment,message:'Sign in again to review failed payments.',ready:'Choose the original payment.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
            await payment.selectOption(committed.paymentId);
            const label=await payment.evaluate(select=>select.selectedOptions[0]?.textContent);
            assert(label?.includes('$12.34')&&label.includes(committed.paymentId.slice(-8)));
@@ -1350,11 +1359,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            const title='Review a returned refund';
            const transfer=invoice.getByRole('region',{name:title,exact:true});
            await invoice.getByText(title,{exact:true}).press('Enter');
+           let transferAccessReviewed=false;
            async function prepareTransfer(kind,eventId,amount,transaction){
             await transfer.getByRole('combobox',{name:'What happened?',exact:true}).selectOption(kind);
             await transfer.getByLabel('Settlement date',{exact:true}).fill(committed.actualOn);
             await transfer.getByRole('button',{name:'Load prior transfers',exact:true}).press('Enter');
             await expect(transfer.locator(':scope > [role="status"]')).toContainText('Choose the prior transfer');
+            if(!transferAccessReviewed){
+             await reviewPaymentAccessRecovery({page,region:transfer,engine:name,task:'refund-transfer',loadLabel:'Load prior transfers',privateTarget:transfer.getByRole('combobox',{name:'Prior transfer',exact:true}),message:'Sign in again to review refund transfers.',ready:/Choose the prior transfer/,jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow,reload:async()=>{await transfer.getByRole('combobox',{name:'What happened?',exact:true}).selectOption(kind);await transfer.getByLabel('Settlement date',{exact:true}).fill(committed.actualOn);await transfer.getByRole('button',{name:'Load prior transfers',exact:true}).press('Enter');}});
+             transferAccessReviewed=true;
+            }
             await transfer.getByRole('combobox',{name:'Prior transfer',exact:true}).selectOption(eventId);
             await transfer.getByText('$1.00 available',{exact:true}).press('Enter');
             await transfer.getByLabel('Amount to record (USD)',{exact:true}).fill(amount);
@@ -1452,6 +1466,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await restore.getByRole('button',{name:'Load failed payments',exact:true}).press('Enter');
            const status=restore.locator(':scope > [role="status"]');
            await expect(status).toHaveText('Choose the failed payment that the provider credited back.');
+           await reviewPaymentAccessRecovery({page,region:restore,engine:name,task:collectionFailureGroupedRecreditExport?'grouped-recredit':'legacy-recredit',loadLabel:'Load failed payments',privateTarget:restore.getByRole('combobox',{name:'Failed payment',exact:true}),message:collectionFailureGroupedRecreditExport?'Sign in again to review grouped recovered payments.':'Sign in again to review recovered payments.',ready:'Choose the failed payment that the provider credited back.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow,expectedSignIn:'/sign-in?returnTo=customers&customer='+adjustment.customerId+'&view=payments'});
            await restore.getByRole('combobox',{name:'Failed payment',exact:true}).selectOption(adjustment.collectionFailureId);
            await restore.getByLabel('Date the deposit cleared',{exact:true}).fill(committed.actualOn);
            await allowInvoiceReadWindow();

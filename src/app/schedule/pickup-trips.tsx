@@ -227,7 +227,11 @@ export function PickupTrips({resources,canChange,workAvailable}:{resources:Saved
    active.signal.throwIfAborted();
    setChoices({...next,vehicles:[...choices.vehicles,...next.vehicles]});
    setView({...view,busy:false,message:'More driving vehicles loaded.'});
-  }catch{if(!active.signal.aborted)setView({...view,busy:false,message:'Additional vehicles could not be loaded. Try again.'});}
+  }catch(error){if(!active.signal.aborted){
+   if(error instanceof AuthenticationError&&error.kind==='denied'){
+    setChoices(noChoices);setView({...initial,signedOut:true,message:'Sign in again to review pickup travel.'});
+   }else setView({...view,busy:false,message:'Additional vehicles could not be loaded. Try again.'});
+  }}
   finally{if(running.current===active){running.current=null;status.current?.focus();}}
  }
  async function save(body:PickupTripBody){
@@ -277,6 +281,13 @@ export function PickupTrips({resources,canChange,workAvailable}:{resources:Saved
    setView({...initial,page,message:savedMessage});
   }catch(error){
    if(active.signal.aborted)return;
+   if(error instanceof AuthenticationError&&error.kind==='denied'){
+    setChoices(noChoices);
+    setView({...initial,signedOut:true,pending:retained!==null,message:retained?
+     'The pickup save could not be confirmed. Sign in again and review the original save.':confirmed?
+     savedMessage+' Sign in again to review its history.':'Sign in again to review pickup travel. No trip was submitted.'});
+    return;
+   }
    if(retained&&error instanceof SchedulingClientError&&['input','not_submitted','recovery','limited'].includes(error.kind)){
     try{pendingStore.clear(retained);retained=null;}catch{/* The stored reference remains available for review. */}
    }
@@ -290,7 +301,7 @@ export function PickupTrips({resources,canChange,workAvailable}:{resources:Saved
  return <details ref={panel} onToggle={event=>{if(!event.currentTarget.open)clear();}}>
   <summary>Pickup travel</summary>
   <p role="status" ref={status} tabIndex={-1}>{view.message}</p>
-  {view.signedOut&&<p><SignInLink returnTo="schedule">Sign in</SignInLink></p>}
+  {view.signedOut&&<p><SignInLink className="primary-action" returnTo="schedule">Sign in</SignInLink></p>}
   <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>{view.page?'Reload pickup travel':'Load pickup travel'}</button>
   {view.pending&&<p><ScheduleLink href={'/save-review?kind='+pickupTripKind}>Open Save review</ScheduleLink></p>}
   {view.page&&!view.pending&&canChange&&activeLeg&&<ArrivalForm key={activeLeg.legId} busy={view.busy}

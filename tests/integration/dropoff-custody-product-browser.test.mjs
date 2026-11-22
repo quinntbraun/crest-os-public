@@ -1,3 +1,4 @@
+import {reviewFieldSubmissionAccess} from '../support/field-submission-access.mjs';
 import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -191,6 +192,9 @@ for(const [name,engine,startWork,cancelWork] of [['chromium',chromium,false,fals
    await panel.getByLabel('Why is a condition photo missing?',{exact:true}).fill(missing);
    await panel.getByRole('checkbox',{name:'Record the required acknowledgement'}).check();
   }
+  await panel.getByRole('button',{name:'Load custody history',exact:true}).click();
+  await fillHandoff('2026-11-03T09:45:00',intakePerson);
+  await reviewFieldSubmissionAccess({page,fixture,region:panel,trigger:panel.getByRole('button',{name:'Save intake',exact:true}),privateTarget:panel.getByRole('group',{name:'Receive vehicle',exact:true}),message:'Sign in again to review custody. No handoff was submitted.',task:'dropoff-handoff',engine:name,jobId});
   await panel.getByRole('button',{name:'Load custody history',exact:true}).click();
   await fillHandoff('2026-11-03T09:45:00',intakePerson);
   await mkdir('.local/review',{recursive:true});

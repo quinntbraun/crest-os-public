@@ -1,3 +1,5 @@
+import {observeWorkReads} from '../support/work-read-diagnostic.mjs';
+import {reviewFieldSubmissionAccess} from '../support/field-submission-access.mjs';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {mkdir} from 'node:fs/promises';
@@ -13,14 +15,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
   const previous=process.env.CREST_TEST_DATABASE_URL;
   const cluster=previous?null:await recoveryCluster();
   if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
-  let fixture,browser;
+  let fixture,browser,accessDiagnostic;
   try{
    fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
     quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,
     dropoffCustody:true,dropoffPolicyRevision:true,pickupTrips:true,pickupCollection:true,pickupPolicy:true});
    browser=await engine.launch();
    const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}});
-   const page=await context.newPage();
+   const page=await context.newPage();accessDiagnostic=observeWorkReads(page,fixture,name+' pickup policy and trip');
    page.setDefaultTimeout(20000);
    await page.goto(fixture.origin+'/sign-in');
    const credentials=fixture.credentials();
@@ -140,6 +142,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    await expect(panel.getByText('Pickup stop Synthetic pickup address')).toBeVisible();
    await panel.getByLabel('Vehicle you are driving').selectOption(fixture.fieldVehicleId);
    await panel.getByLabel('Where are you leaving from?').fill('Synthetic Crest garage');
+   await reviewFieldSubmissionAccess({page,fixture,region:panel,trigger:panel.getByRole('button',{name:'Record pickup departure',exact:true}),privateTarget:panel.getByLabel('Vehicle you are driving'),message:'Sign in again to review pickup travel. No trip was submitted.',task:'pickup-departure',engine:name,jobId:booking.jobId});
+   await panel.getByRole('button',{name:'Load pickup travel',exact:true}).click();
+   await panel.getByLabel('Vehicle you are driving').selectOption(fixture.fieldVehicleId);
+   await panel.getByLabel('Where are you leaving from?').fill('Synthetic Crest garage');
    await mkdir('.local/review',{recursive:true});
    for(const width of [360,390,768,1440]){
     await page.setViewportSize({width,height:900});
@@ -181,6 +187,12 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    await collection.getByLabel('Why is a condition photo missing?').fill('Camera unavailable during synthetic handoff');
    await collection.getByRole('button',{name:'Save vehicle collection'}).click();
    await expect(collection.getByRole('status')).toHaveText('Ready to record collection.');
+   await collection.getByRole('checkbox',{name:'Record the required acknowledgement'}).check();
+   await reviewFieldSubmissionAccess({page,fixture,region:collection,trigger:collection.getByRole('button',{name:'Save vehicle collection',exact:true}),privateTarget:collection.getByLabel('Who handed over the vehicle?'),message:'Sign in again to review collection. No handoff was submitted.',task:'pickup-collection',engine:name,jobId:booking.jobId});
+   await collection.getByRole('button',{name:'Load pickup collection',exact:true}).click();
+   await collection.getByLabel('Who handed over the vehicle?').fill(handoffName);
+   await collection.getByLabel('Actual handoff location').fill('Synthetic pickup address');
+   await collection.getByLabel('Why is a condition photo missing?').fill('Camera unavailable during synthetic handoff');
    await collection.getByRole('checkbox',{name:'Record the required acknowledgement'}).check();
    for(const width of [360,390,768,1440]){
     await page.setViewportSize({width,height:900});
@@ -241,7 +253,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    assert.deepEqual(pickupCustody.rows,[{person_snapshot:{schemaVersion:1,displayName:handoffName},notes:null,acknowledgement_confirmed:true}]);
    await page.locator('summary').filter({hasText:/^Pickup travel$/}).click();
    await expect(panel.getByRole('region',{name:'Saved pickup trips'})).toHaveCount(0);
-  }finally{
+  }catch(error){await accessDiagnostic?.();throw error;}finally{
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{
      if(previous===undefined)delete process.env.CREST_TEST_DATABASE_URL;
