@@ -10,6 +10,8 @@ import type {SourceExportJob} from '../../src/security/source-export-job-contrac
 import {sourceExportDownloadFixture} from '../support/source-export-download-fixture.ts';
 import {parseSourceExportDownloadPermit,sourceExportDownloadAccessScope} from '../../src/security/source-export-download-permit.ts';
 import {sourceExportStopFixture} from '../support/source-export-stop-fixture';
+import {exportOriginalAuditScope,parseExportOriginalPermit} from '../../src/security/source-export-original-contract';
+import type {ExportOriginalKind} from '../../src/security/source-export-original-contract';
 
 const business=randomUUID(),actor=randomUUID(),epoch=randomUUID(),operation=randomUUID(),id=randomUUID(),credential=randomBytes(32).toString('base64url'),stamp='2026-10-27T04:00:00.000001Z',signal=()=>new AbortController().signal;
 const command=parseSourceExportCommand({schemaVersion:1,businessId:business,commandType:'export.request',reference:{operationId:operation,recoveryEpoch:epoch,exportJobId:id,appReleaseId:'a'.repeat(40),profile:'crest.business-source-journal-bundle.v1',sourceSchemaVersion:43}});
@@ -17,8 +19,33 @@ const job:SourceExportJob={id,business_id:business,actor_id:actor,profile:'crest
 const receipt=()=>({state:'committed',operationId:operation,recoveryEpoch:epoch,receipt:{schemaVersion:1,command,job,auditEventId:randomUUID()}});
 const factory=()=>createSourceExportOwnerAccess({connectionString:'unused-by-mock',environment:'test'},{} as Parameters<typeof createSourceExportOwnerAccess>[1],{} as Parameters<typeof createSourceExportOwnerAccess>[2],business);
 const accessFixture=()=>{const f=sourceExportDownloadFixture(business,actor,id),p=parseSourceExportDownloadPermit(f.permit,business,actor,f.partRequest);return{...f,p,receipt:{schemaVersion:1,state:'authorized_handoff',operationId:randomUUID(),auditEventId:randomUUID(),recordedAt:new Date().toISOString().replace('Z','000Z'),scope:sourceExportDownloadAccessScope(p)}};};
+function originalFixture(kind:ExportOriginalKind='expense_receipt'){
+ const f=sourceExportDownloadFixture(business,actor,id),attachmentId=randomUUID(),objectId=kind==='condition_photo'?randomUUID():attachmentId,request={exportJobId:id,generationId:f.generationId,kind,attachmentId};
+ const raw={profile:'crest.source-export-original-permit.v1',header:{...f.header,profile:'crest.current-business-source-bundle.v1',sourceSchemaVersion:136},authority:{currentActorId:actor,originalActorId:actor,recoveryEpoch:epoch,planSha256:'c'.repeat(64)},indexSha256:'d'.repeat(64),file:{kind,attachmentId,objectId,path:`attachments/${attachmentId}/${objectId}.png`,mediaType:'image/png',byteSize:20,sha256:'e'.repeat(64),recordedAt:stamp},object:{domain:kind,key:`originals/${business}/${objectId}`}};
+ const permit=parseExportOriginalPermit(raw,business,actor,request);
+ return{request,permit,receipt:{schemaVersion:1,state:'authorized_handoff',operationId:randomUUID(),auditEventId:randomUUID(),recordedAt:new Date().toISOString().replace('Z','000Z'),scope:exportOriginalAuditScope(permit)}};
+}
 beforeEach(()=>{
  vi.resetAllMocks();mock.events.length=0;mock.verify.mockImplementation(async()=>{mock.events.push('fresh-provider');return {sessionId:randomUUID(),actorId:actor,provider:{issuer:'https://auth.example.com/auth/v1',subject:randomUUID(),sessionId:randomUUID(),expiresAt:Date.now()+60000}};});mock.query.mockImplementation(async()=>receipt());mock.read.mockResolvedValue({state:'absent'});mock.transaction.mockImplementation(async(work,s)=>{mock.events.push('begin');const result=await work(mock.query,s);mock.events.push('commit');return result;});
+});
+it.each(['expense_receipt','supplier_document','condition_photo'] as const)('reads %s original permits only with fresh authority and commits their exact handoff scope',async kind=>{
+ const f=originalFixture(kind);mock.read.mockResolvedValueOnce(f.permit);
+ const value=await factory().readOriginal(credential,f.request,signal());expect(value.forServer()).toEqual({actorId:actor,record:f.permit});expect(()=>JSON.stringify(value)).toThrow('SOURCE_EXPORT_ACCESS_PRIVATE');
+ expect(mock.read.mock.calls[0]![1].slice(7)).toEqual([business,id,f.request.generationId,kind,f.request.attachmentId]);expect(mock.verify.mock.calls[0]!.slice(2)).toEqual(['background',true]);
+ mock.query.mockResolvedValueOnce(f.receipt);expect((await factory().recordOriginalAccess(credential,f.request,f.permit,signal())).forServer()).toEqual(f.receipt);
+ expect(mock.events).toEqual(['fresh-provider','fresh-provider','begin','commit']);expect(mock.query.mock.calls[0]![0]).toContain('record_source_export_original_access(');expect(JSON.parse(mock.query.mock.calls[0]![1][12])).toEqual(f.permit);expect(mock.query.mock.calls[0]![1][0]).toEqual(Buffer.alloc(32));
+});
+it('releases no original handoff acknowledgment when the commit outcome is unknown',async()=>{
+ const f=originalFixture();mock.query.mockResolvedValueOnce(f.receipt);mock.transaction.mockImplementationOnce(async(work,s)=>{await work(mock.query,s);throw Error('COMMIT ACK LOST');});await expect(factory().recordOriginalAccess(credential,f.request,f.permit,signal())).rejects.toThrow('SOURCE_EXPORT_READ_FAILED');expect(mock.transaction).toHaveBeenCalledOnce();expect(mock.query).toHaveBeenCalledOnce();
+});
+it('refuses original access for a changed provider actor or mismatched immutable index',async()=>{
+ const f=originalFixture();mock.verify.mockResolvedValueOnce({sessionId:randomUUID(),actorId:randomUUID(),provider:{issuer:'https://auth.example.com/auth/v1',subject:randomUUID(),sessionId:randomUUID(),expiresAt:Date.now()+60000}});
+ await expect(factory().recordOriginalAccess(credential,f.request,f.permit,signal())).rejects.toThrow('SOURCE_EXPORT_READ_FAILED');expect(mock.transaction).not.toHaveBeenCalled();
+ mock.query.mockResolvedValueOnce({...f.receipt,scope:{...f.receipt.scope,indexSha256:'f'.repeat(64)}});await expect(factory().recordOriginalAccess(credential,f.request,f.permit,signal())).rejects.toThrow('SOURCE_EXPORT_READ_FAILED');expect(mock.events).not.toContain('commit');
+});
+it('copies original identity before provider work and rejects invalid input before authentication',async()=>{
+ const f=originalFixture(),request={...f.request};mock.verify.mockImplementationOnce(async()=>{request.attachmentId=randomUUID();return{sessionId:randomUUID(),actorId:actor,provider:{issuer:'https://auth.example.com/auth/v1',subject:randomUUID(),sessionId:randomUUID(),expiresAt:Date.now()+60000}};});mock.read.mockResolvedValueOnce(f.permit);await factory().readOriginal(credential,request,signal());expect(mock.read.mock.calls[0]![1].at(-1)).toBe(f.request.attachmentId);
+ mock.verify.mockClear();await expect(factory().readOriginal(credential,{...f.request,kind:'arbitrary_store'},signal())).rejects.toThrow('SOURCE_EXPORT_ACCESS_INPUT_REQUIRED');expect(mock.verify).not.toHaveBeenCalled();
 });
 const contextAccess=()=>createSourceExportOwnerAccess({connectionString:'unused-by-mock',environment:'test'},{} as never,{} as never,business,'a'.repeat(40));
 const settings=()=>({schemaVersion:1,businessId:business,legalName:'Synthetic',businessVersion:'1',writeState:'ready',recoveryEpoch:epoch});

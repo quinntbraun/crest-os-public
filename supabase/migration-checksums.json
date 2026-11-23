@@ -675,6 +675,11 @@
       "version": "20270128180000",
       "file": "20270128180000_provider_source_export.sql",
       "sha256": "750e803bafcc4eba3300d16f64aba9e63b2c6f3029ca0bb0383c0ef7d2153cbb"
+    },
+    {
+      "version": "20270129180000",
+      "file": "20270129180000_source_export_original_membership.sql",
+      "sha256": "1bca73d8af8b8b842f0c92beb1a56fee5f2be366571a6798ac7c948a2c53635a"
     }
   ]
 }

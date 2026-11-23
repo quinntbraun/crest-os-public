@@ -4,6 +4,7 @@ vi.mock('server-only',()=>({}));
 import {currentAttachmentInventory,formatCurrentAttachmentInventory} from '../../src/security/current-attachment-inventory';
 import {currentBusinessSourceInventory} from '../../src/security/current-business-source-inventory';
 import {imageValidationVersion} from '../../src/files/validation-contract';
+import {createExportOriginalIndex} from '../../src/security/source-export-original-index';
 import type {CurrentBusinessRows} from '../../src/security/current-business-source';
 function fixture(){
  const businessId=randomUUID(),actor=randomUUID(),epoch=randomUUID(),stamp='2026-11-22T20:00:00.123456Z',expenseId=randomUUID(),receiptId=randomUUID(),photoId=randomUUID(),photoDispatch=randomUUID(),supplierId=randomUUID(),billId=randomUUID();
@@ -49,3 +50,7 @@ it.each(['foreign business','orphan photo','orphan supplier','receipt hash','sup
 });
 it('rejects cross-kind attachment-path collisions instead of overwriting another original',()=>{const f=fixture();f.attempt.id=f.receiptId;f.photo.photo_id=f.receiptId;expect(()=>currentAttachmentInventory(f.get())).toThrow();});
 it('represents an empty attachment snapshot without claiming bytes were delivered',()=>{const f=fixture();for(const source of f.sources)source.rows=[];const result=currentAttachmentInventory(f.get());expect(result.attachments).toEqual([]);expect(result.originalBytesIncluded).toBe(false);expect(result.completePortableExport).toBe(false);});
+it('freezes exact inventory membership and preserves a retained timestamp beyond the capture clock',()=>{
+ const f=fixture();f.receipt.recorded_at='2099-01-01T00:00:00.123456Z';const bundle=formatCurrentAttachmentInventory(f.get()),index=createExportOriginalIndex(bundle.inventory,bundle.files['attachment_inventory.json']);expect(index.files).toHaveLength(3);expect(index.files.find(file=>file.kind==='expense_receipt')!.recordedAt).toBe('2099-01-01T00:00:00.123456Z');expect(index.files.every(file=>bundle.inventory.attachments.some(item=>item.attachmentId===file.attachmentId))).toBe(true);
+ const corrupt=Buffer.from(bundle.files['attachment_inventory.json']);corrupt[0]=0;expect(()=>createExportOriginalIndex(bundle.inventory,corrupt)).toThrow();
+});

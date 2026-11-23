@@ -10,6 +10,7 @@ import {parseSourceExportStopCommand,parseSourceExportStopOutcome} from './sourc
 import {parseSourceExportCursor,parseSourceExportList} from './source-export-owner-list.ts';
 import {downloadObject,parseSourceExportDownloadPageRequest,parseSourceExportDownloadPartRequest,parseSourceExportDownloadCatalogue} from './source-export-download-contract.ts';
 import {parseSourceExportDownloadPermit,parseSourceExportDownloadHandoff,sourceExportDownloadPermitRecord,parseSourceExportDownloadAccessReceipt} from './source-export-download-permit.ts';
+import {parseExportOriginalRequest,parseExportOriginalPermit,parseExportOriginalAudit} from './source-export-original-contract.ts';
 import type {SessionDatabaseConfiguration} from './session-database.ts';
 import type {SourceExportCommand} from './source-export-job-contract.ts';
 import type {createProviderBoundary} from './provider-auth.ts';
@@ -37,6 +38,24 @@ export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguratio
   }finally{hash?.fill(0);}
  }
  return Object.freeze({
+  async readOriginal(credential:string,input:unknown,external:AbortSignal){
+   const request=(()=>{try{return parseExportOriginalRequest(input);}catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_ACCESS_INPUT_REQUIRED');}})();
+   try{return privateResult(await authorized(credential,external,async(args,actorId,signal)=>{
+    const record=await database('SELECT crest_commands.read_source_export_original($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::text,$12::uuid) AS result',[...args,request.exportJobId,request.generationId,request.kind,request.attachmentId],signal);require(!signal.aborted);
+    return Object.freeze({actorId,record:parseExportOriginalPermit(record,scope,actorId,request)});
+   }));}catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_READ_FAILED');}
+  },
+  async recordOriginalAccess(credential:string,input:unknown,expected:unknown,external:AbortSignal){
+   const request=parseExportOriginalRequest(input),candidate=downloadObject(expected,['profile','header','authority','indexSha256','file','object']),actor=downloadObject(candidate.authority,['currentActorId','originalActorId','recoveryEpoch','planSha256']).currentActorId;
+   require(typeof actor==='string');const permit=parseExportOriginalPermit(candidate,scope,actor,request);
+   try{return privateResult(await authorized(credential,external,(args,actorId,signal)=>{
+    require(actorId===permit.authority.currentActorId);
+    return database.commandTransaction(async(query,current)=>{
+     const record=await query('SELECT crest_commands.record_source_export_original_access($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::text,$12::uuid,$13::text) AS result',[...args,request.exportJobId,request.generationId,request.kind,request.attachmentId,JSON.stringify(permit)]);require(!current.aborted);
+     return parseExportOriginalAudit(record,permit);
+    },signal);
+   }));}catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_READ_FAILED');}
+  },
   async stop(credential:string,input:unknown,external:AbortSignal){
    require(currentProfile);const command=parseSourceExportStopCommand(input,scope),r=command.reference;let submitted=false;
    try{return privateResult(await authorized(credential,external,(args,actor,signal)=>database.commandTransaction(async(query,current)=>{
@@ -82,7 +101,7 @@ export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguratio
     require(release!==undefined);return privateResult(await authorized(credential,external,async(args,actor,signal)=>{
      const value=await database('SELECT crest_commands.read_business_settings_context($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid) AS result',args,signal);
      require(!signal.aborted&&exact(value,['schemaVersion','businessId','legalName','businessVersion','writeState','recoveryEpoch'])&&value.schemaVersion===1&&value.businessId===scope);
-     return parseSourceExportOwnerContext({schemaVersion:1,businessId:scope,actorId:actor,appReleaseId:release,profile:currentProfile?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1',sourceSchemaVersion:currentProfile?135:43,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
+     return parseSourceExportOwnerContext({schemaVersion:1,businessId:scope,actorId:actor,appReleaseId:release,profile:currentProfile?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1',sourceSchemaVersion:currentProfile?136:43,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
     }));
    }catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_READ_FAILED');}
   },

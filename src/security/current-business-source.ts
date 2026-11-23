@@ -5,7 +5,7 @@ import {currentBusinessSourceInventory} from './current-business-source-inventor
 
 type Row=Readonly<Record<string,string|null>>;
 type Source=Readonly<{source:string;columns:readonly string[];types:Readonly<Record<string,string>>;primaryKey:readonly string[];rows:readonly Row[]}>;
-export type CurrentBusinessSourceBinding=Readonly<{appReleaseId:string;sourceSchemaVersion:133|134|135}>;
+export type CurrentBusinessSourceBinding=Readonly<{appReleaseId:string;sourceSchemaVersion:133|134|135|136}>;
 export type CurrentBusinessRows=Readonly<{schemaVersion:1;profile:'crest.current-business-rows.v1';businessId:string;snapshotToken:string;observedAt:string;sources:readonly Source[];recordCount:number;completePortableExport:false;completeBackup:false}>;
 type Query=(sql:string,args:unknown[])=>Promise<unknown[]>;
 const statement='SELECT crest_commands.business_source_page_v1($1::uuid,$2::text,$3::text,$4::text[],$5::integer) AS page';

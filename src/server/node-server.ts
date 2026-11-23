@@ -51,6 +51,7 @@ import {createLeadSourceHttp,leadSourceFailureResponse} from '../customer/lead-s
 import {createOriginalOperationHttp,originalOperationFailureResponse} from '../security/original-operation-http.ts';
 import {createSourceExportHttp,sourceExportFailureResponse} from '../security/source-export-http.ts';
 import {createSourceExportDownloadHttp,sourceExportDownloadFailureResponse} from '../security/source-export-download-http.ts';
+import {createSourceExportOriginalHttp,sourceExportOriginalPath} from '../security/source-export-original-http.ts';
 import {createPostedFinanceOwnerExportHttp,discardPostedFinanceExport,postedFinanceExportFailure} from '../security/posted-finance-owner-export-http.ts';
 import {postedFinanceExportLimit,postedFinanceExportPath} from '../security/posted-finance-owner-export-contract.ts';
 import {isSourceExportDownloadResponse,writeSourceExportDownloadResponse,discardSourceExportDownloadResponse} from './source-export-download-response.ts';
@@ -363,7 +364,13 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
   if(production('businessExports')&&!productionExports)throw Error('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   const selectedSourceExports=productionExports?{appReleaseId:productionExports.appReleaseId,store:productionExports.forDownloads()}:sourceExports;
   const dispatchExports=selectedSourceExports&&business&&authentication?createSourceExportHttp({...authentication.configuration,origin,environment,businessId:business.businessId,...productionScope,appReleaseId:selectedSourceExports.appReleaseId},authentication.provider,authentication.tokens,true,productionExports):undefined;
-  const dispatchExportDownloads=selectedSourceExports&&business&&authentication?createSourceExportDownloadHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,selectedSourceExports.store,true):undefined;
+  const dispatchExportParts=selectedSourceExports&&business&&authentication?createSourceExportDownloadHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,selectedSourceExports.store,true):undefined;
+  const dispatchExportOriginals=selectedSourceExports&&business&&authentication&&receipts&&originals&&photos?createSourceExportOriginalHttp({...authentication.configuration,origin,environment,businessId:business.businessId},authentication.provider,authentication.tokens,{
+   expense_receipt:(input,signal)=>receipts.objects.intakeStore.readVerifiedCandidate(input,signal),
+   supplier_document:(input,signal)=>originals.objects.intakeStore.readVerifiedCandidate(input,signal),
+   condition_photo:(input,signal)=>photos.objects.readVerifiedCandidate(input,signal),
+  }):undefined;
+  const dispatchExportDownloads=dispatchExportParts?(request:Request,peer:Parameters<typeof dispatchExportParts>[1])=>new URL(request.url).pathname.startsWith(sourceExportOriginalPath)?dispatchExportOriginals?dispatchExportOriginals(request,peer):Promise.resolve(sourceExportDownloadFailureResponse(404)):dispatchExportParts(request,peer):undefined;
   let activeProtected=0,activePhotoFiles=0,activeLegacyUploads=0;
   server.on('request',(incoming,outgoing)=>{void (async()=>{
     const controller=new AbortController();
@@ -392,7 +399,7 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
       originalOperationRequest=target.business&&(decoded==='/api/business/original-operations'||decoded.startsWith('/api/business/original-operations/'));
       exportRequest=target.business&&(decoded==='/api/business/exports'||decoded.startsWith('/api/business/exports/'));
       postedFinanceExportRequest=exportRequest&&(decoded===postedFinanceExportPath||decoded.startsWith(postedFinanceExportPath+'/'));
-      exportDownloadRequest=exportRequest&&(decoded==='/api/business/exports/downloads'||decoded.startsWith('/api/business/exports/downloads/')||decoded==='/api/business/exports/file'||decoded.startsWith('/api/business/exports/file/'));
+      exportDownloadRequest=exportRequest&&(decoded==='/api/business/exports/downloads'||decoded.startsWith('/api/business/exports/downloads/')||decoded==='/api/business/exports/file'||decoded.startsWith('/api/business/exports/file/')||decoded===sourceExportOriginalPath||decoded.startsWith(sourceExportOriginalPath+'/'));
       googleCalendarRequest=target.business&&(decoded===googleCalendarRuntimePrefix.slice(0,-1)||decoded.startsWith(googleCalendarRuntimePrefix)||decoded==='/api/google-calendar'||decoded.startsWith('/api/google-calendar/'));
       if(googleCalendarRequest&&decoded===googleCalendarCallbackPath&&!productionCalendar){await writeAuthenticationResponse(outgoing,cleanGoogleCalendarOAuthResponse(),controller.signal);return;}
       const exportFileRequest=decoded==='/api/business/exports/file';
@@ -400,7 +407,7 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
       const handler=googleCalendarRequest?dispatchGoogleCalendar:supplierOriginalRequest?dispatchSupplierOriginals:photoRequest?dispatchPhotos:schedulingRequest?dispatchScheduling:financeAccountRequest?dispatchFinanceAccounts:receiptRequest?dispatchReceipts:expenseRequest?dispatchExpenses:holdRequest?dispatchHolds:quoteRequest?dispatchQuotes:serviceRequest?dispatchServices:exportRequest?(postedFinanceExportRequest?dispatchPostedFinance:exportDownloadRequest?dispatchExportDownloads:dispatchExports):originalOperationRequest?dispatchOriginalOperations:leadSourceRequest?dispatchLeadSources:leadRequest?dispatchLeads:associationRequest?dispatchAssociations:vehicleRequest?dispatchVehicles:addressRequest?dispatchAddresses:customerRequest?dispatchCustomers:target.business?dispatchBusiness:dispatch,failure=googleCalendarRequest?googleCalendarConsentFailure:supplierOriginalRequest?supplierOriginalFailure:photoRequest?dropoffPhotoFailure:schedulingRequest?schedulingFailureResponse:financeAccountRequest?financeAccountFailure:receiptRequest?receiptFailure:expenseRequest?expenseFailureResponse:holdRequest?holdFailureResponse:quoteRequest?quoteFailureResponse:serviceRequest?serviceFailureResponse:exportRequest?(postedFinanceExportRequest?postedFinanceExportFailure:exportDownloadRequest?sourceExportDownloadFailureResponse:sourceExportFailureResponse):originalOperationRequest?originalOperationFailureResponse:leadSourceRequest?leadSourceFailureResponse:leadRequest?leadFailureResponse:associationRequest?associationFailureResponse:vehicleRequest?vehicleFailureResponse:addressRequest?addressFailureResponse:customerRequest?customerFailureResponse:target.business?businessFailureResponse:browserFailureResponse;
       if(receiptRequest&&!handler){await writeAuthenticationResponse(outgoing,receiptFailure(404),controller.signal);return;}
       if(!handler||activeProtected>=32){await writeAuthenticationResponse(outgoing,failure(503),controller.signal);return;}
-      if(photoRequest&&target.url.pathname===dropoffPhotoPrefix+'file'||supplierOriginalRequest&&decoded===supplierOriginalPrefix+'preview'||
+      if(decoded===sourceExportOriginalPath||photoRequest&&target.url.pathname===dropoffPhotoPrefix+'file'||supplierOriginalRequest&&decoded===supplierOriginalPrefix+'preview'||
        receiptRequest&&(decoded===receiptPrefix+'upload-file'||decoded===receiptPrefix+'download')){
        if(activePhotoFiles>=2){await writeAuthenticationResponse(outgoing,(receiptRequest?receiptFailure:supplierOriginalRequest?supplierOriginalFailure:dropoffPhotoFailure)(429),controller.signal);return;}
        activePhotoFiles++;photoFileReserved=true;
@@ -419,7 +426,7 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
       if(dispatchGoogleCalendar&&target.url.pathname==='/api/business/settings'&&response.ok){response.headers.set('X-Crest-Calendar-Mode',productionCalendar?'production':'test');response.headers.set('X-Crest-Google-Calendar-Setup','1');}
       if(dispatchFinanceAccounts&&target.url.pathname==='/api/business/settings'&&response.ok)response.headers.set('X-Crest-Finance-Accounts','1');
       if(dispatchReceipts&&expenseRequest&&decoded==='/api/business/expenses/context'&&response.ok)response.headers.set('X-Crest-Receipt-Uploads','1');
-      if((supplierOriginalRequest||receiptRequest&&decoded===receiptPrefix+'download')&&photoFileReserved&&response.ok){
+      if((decoded===sourceExportOriginalPath||supplierOriginalRequest||receiptRequest&&decoded===receiptPrefix+'download')&&photoFileReserved&&response.ok){
        if(!isReceiptDownloadResponse(response))throw Error('SUPPLIER_ORIGINAL_DELIVERY_REQUIRED');
        await writeReceiptDownloadResponse(outgoing,response,controller.signal);
       }else if(photoRequest&&photoFileReserved&&response.ok){

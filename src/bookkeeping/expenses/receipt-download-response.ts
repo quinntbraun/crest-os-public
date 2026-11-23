@@ -4,7 +4,7 @@ import type {ServerResponse} from 'node:http';
 import {expenseCheck as check} from './expense-contract.ts';
 
 type File={name:string;type:string;byteSize:number;sha256:string};
-type State={file:Readonly<File>;headers:readonly(readonly[string,string])[];started:boolean};
+type State={file:Readonly<File>;headers:readonly(readonly[string,string])[];started:boolean;settle?:(finished:boolean)=>void};
 const states=new WeakMap<Response,State>(),known=new WeakSet<Response>();
 const maximumOriginal=25*1024*1024,maximumPreview=8*1024*1024;
 export class ReceiptDeliveryError extends Error{constructor(){super('RECEIPT_DELIVERY_UNCONFIRMED');this.name='ReceiptDeliveryError';}}
@@ -17,6 +17,15 @@ export function receiptDownloadResponse(bytes:Uint8Array,input:File,includeDiges
  check(bytes instanceof Uint8Array&&Number.isSafeInteger(file.byteSize)&&file.byteSize>0&&file.byteSize<=(match[1]?maximumPreview:maximumOriginal)&&bytes.byteLength===file.byteSize&&/^[a-f0-9]{64}$/.test(file.sha256)&&createHash('sha256').update(bytes).digest('hex')===file.sha256);
  const response=new Response(bytes as BodyInit,{status:200,headers:{'content-type':file.type,'content-length':String(file.byteSize),'content-disposition':`attachment; filename="${file.name}"`,...includeDigest?{'x-crest-sha256':file.sha256}:{},'cache-control':'private, no-store','pragma':'no-cache','referrer-policy':'no-referrer','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; sandbox"}});
  known.add(response);states.set(response,{file,headers:Object.freeze([...response.headers.entries()].map(pair=>Object.freeze(pair))),started:false});return response;
+}
+// A caller that owns and wipes the source bytes must retain them until the
+// protected Node writer confirms completion. Preserve the original Response
+// identity: wrapping it would bypass the one-use transport registry.
+export function receiptDownloadHandoff(bytes:Uint8Array,input:File){
+ const response=receiptDownloadResponse(bytes,input,true);let resolve:()=>void=()=>{},reject:(error:Error)=>void=()=>{};
+ const completion=new Promise<void>((yes,no)=>{resolve=yes;reject=no;});void completion.catch(()=>{});
+ states.get(response)!.settle=finished=>{if(finished)resolve();else reject(new ReceiptDeliveryError());};
+ return Object.freeze({response,completion});
 }
 export async function writeReceiptDownloadResponse(outgoing:ServerResponse,response:Response,external:AbortSignal):Promise<void>{
  const state=states.get(response),chunks:Uint8Array[]=[];let finished=false,body:Buffer|undefined;
@@ -36,5 +45,5 @@ export async function writeReceiptDownloadResponse(outgoing:ServerResponse,respo
    try{check(!signal.aborted&&!outgoing.destroyed);for(const [key,value]of state.headers)outgoing.setHeader(key,value);outgoing.writeHead(200);outgoing.end(body);}catch{fail();}
   });
  }catch{throw new ReceiptDeliveryError();}
- finally{for(const chunk of chunks)chunk.fill(0);body?.fill(0);states.delete(response);if(!finished)outgoing.destroy();}
+ finally{for(const chunk of chunks)chunk.fill(0);body?.fill(0);states.delete(response);state?.settle?.(finished);if(!finished)outgoing.destroy();}
 }

@@ -45,7 +45,7 @@ const secret=randomBytes(32), signal=new AbortController().signal;
 const binding=(owner,destination,generation,id,version)=>({businessId:owner.business,destinationId:destination,
   connectionGeneration:generation,recoveryEpoch:owner.epoch,clientId:client,credentialId:id,version});
 
-for(const registered of [false,125,126,127,128,130,131,132,133,134,135]) test((registered?'Registered schema '+registered+': ':'')+'Calendar credentials are sealed and refresh admits one worker per active credential version', {timeout:120000}, async()=>{
+for(const registered of [false,125,126,127,128,130,131,132,133,134,135,136]) test((registered?'Registered schema '+registered+': ':'')+'Calendar credentials are sealed and refresh admits one worker per active credential version', {timeout:120000}, async()=>{
   const credentialStore=await createGoogleCalendarCredentialStore({activeKeyId:credentialKey,calendarKeyMaterial:secret});
   const transport=createGoogleCalendarOAuthTransport({clientId:client,callbackUri:callback,clientSecret:'fixture-secret',
     admit:async()=>false,request:async()=>{throw Error('Native credential test has no provider transport');}});
@@ -64,7 +64,7 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134,135]) test((r
     await installProviderSchema(admin,database);
     await sandbox.apply(database,await sandbox.prefix(registered||76));
     if(registered>=131){
-      const coverage=JSON.parse(await readFile(new URL(registered<135?'../support/registered'+registered+'-export-coverage.json':'../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+      const coverage=JSON.parse(await readFile(new URL(registered<136?'../support/registered'+registered+'-export-coverage.json':'../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
       const observed=(await admin.query("SELECT n.nspname||'.'||c.relname AS table,a.attname AS column FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind='r' AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
       const checked=verifyExportCoverage(coverage,observed,registered);assert.equal(checked.assurance,'schema_inventory_only');assert.equal(checked.completePortableExport,false);assert.equal(checked.completeBackup,false);
     }
@@ -465,9 +465,9 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134,135]) test((r
           await restricted.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
           try{const direct=await captureCurrentBusinessRows(identityOwner.business,async(sql,args)=>(await restricted.query(sql,args)).rows,()=>{}),directIdentity=await captureCurrentIdentitySource(direct,async(sql,args)=>(await restricted.query(sql,args)).rows,()=>{});await captureCurrentSessionSource(directIdentity,direct,async(sql,args)=>(await restricted.query(sql,args)).rows,()=>{});}finally{await restricted.query('ROLLBACK');}
           const collected=await createCurrentBusinessSourceCollector(config)(signal),source=collected.forCurrentBusinessServer(),identitySource=collected.forCurrentBusinessIdentityServer(),sessionSource=collected.forCurrentBusinessSessionServer(),providerSource=collected.forCurrentBusinessProviderServer();
-          assert.equal(providerSource!==undefined,registered===135);if(providerSource){assert.equal(providerSource.sources.length,8);assert.equal(providerSource.businessSnapshotToken,source.snapshotToken);}
+          assert.equal(providerSource!==undefined,registered>=135);if(providerSource){assert.equal(providerSource.sources.length,8);assert.equal(providerSource.businessSnapshotToken,source.snapshotToken);}
           assert.equal(source.sources.length,167);assert(source.recordCount>0);
-          const coverage=JSON.parse(await readFile(new URL(registered<135?'../support/registered'+registered+'-export-coverage.json':'../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+          const coverage=JSON.parse(await readFile(new URL(registered<136?'../support/registered'+registered+'-export-coverage.json':'../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
           assert.deepEqual(source.sources.map(item=>({table:item.source,required:item.columns})),coverage.tables.filter(item=>item.scope==='business').map(item=>({table:item.table,required:item.required})));
           assert.equal(identitySource.businessSnapshotToken,source.snapshotToken);assert.equal(identitySource.businessId,source.businessId);
           for(const item of identitySource.sources)assert.deepEqual(item.columns,coverage.tables.find(table=>table.table===item.source).required,'identity columns match the registered closed source inventory');
@@ -517,7 +517,7 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134,135]) test((r
           try{await assert.rejects(restricted.query('SELECT crest_commands.business_source_page_v1($1,$2,NULL,NULL,1)',[identityOwner.business,'crest_private.app_sessions']),{code:'22023'});}finally{await restricted.query('ROLLBACK');}
           await assert.rejects(web.query('SELECT crest_commands.business_source_page_v1($1,$2,NULL,NULL,1)',[identityOwner.business,'crest.customers']),{code:'42501'});
           if(registered>=134){
-            const requestName=registered===135?'request_current_source_export_v2_for_execution':'request_current_source_export_for_execution';
+            const requestName=registered===136?'request_current_source_export_v3_for_execution':registered===135?'request_current_source_export_v2_for_execution':'request_current_source_export_for_execution';
             const appReleaseId='a'.repeat(40),jobId=randomUUID(),operationId=randomUUID();
             const command={schemaVersion:1,businessId:identityOwner.business,commandType:'export.request',reference:{operationId,exportJobId:jobId,recoveryEpoch:identityOwner.epoch,appReleaseId,profile:'crest.current-business-source-bundle.v1',sourceSchemaVersion:registered}};
             const args=[...auth(identityOwner),operationId,jobId,appReleaseId];
