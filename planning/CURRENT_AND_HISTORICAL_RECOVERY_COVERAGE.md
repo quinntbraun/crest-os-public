@@ -67,3 +67,24 @@ The original124 case now passes actual encrypted independent restoration,
 exact customer/job/profile comparison, source stability and awaited owned
 cleanup. This is one local case, not an aggregate95/95 or full release pass.
 Hosted checks, complete production recovery and phone acceptance remain open.
+
+## Directory first-save response evidence
+
+Public97fe305 main45108030722 is terminal failure:20/22 jobs pass. Workspace
+records137473703094 reports59/60, failing Chromium's original lead/service/
+address loading and first-save protection case. WebKit passes; both new actual
+current137 original ZIP cases also pass in this hosted candidate. Foundation
+137483688313 correctly refuses the failed prerequisite, and missing service
+screenshots follow skipped steps. No prerequisite/artifact gate is relaxed.
+
+The shared directory fixture waits for a save response, but reads its JSON only
+after delayed context-route cleanup. Successful navigation can then discard the
+old response body: Chromium reports Network.getResponseBody with no resource.
+On a4c150e, the same response's JSON read starts as soon as it arrives. Exact200/
+committed assertions, real save/loading/leave protection and blank-address
+checks remain. This changes evidence collection, not application save behavior.
+
+The original Chromium and WebKit cases pass2/2 locally on a4c150e through the
+actual Next/TLS/Auth/PostgreSQL fixture. Tracked source and compiled server bytes
+stay identical, and owned cleanup completes. This is not an aggregate60/60,
+fresh full release or physical-phone pass. The candidate remains unaccepted.

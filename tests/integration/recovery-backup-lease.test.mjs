@@ -3,7 +3,7 @@ import {before,after,test} from 'node:test';
 import {randomUUID} from 'node:crypto';
 import pg from 'pg';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
-import {withRecoveryBackupLease} from '../../src/tooling/recovery-backup-lease.ts';
+import {withRecoveryBackupLease,recoveryBackupSnapshotMatches} from '../../src/tooling/recovery-backup-lease.ts';
 import {schemaMigrationLock} from '../../src/security/schema-migration-lock.ts';
 
 let sandbox,url,admin;const business=randomUUID(),signal=()=>new AbortController().signal;
@@ -48,4 +48,8 @@ test('terminated database session aborts the attempt and cannot report success',
  const owned=await client(),pid=(await owned.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
  await assert.rejects(withRecoveryBackupLease(owned,business,signal(),async lease=>{await admin.query('SELECT pg_terminate_backend($1)',[pid]);if(!lease.signal.aborted)await new Promise(resolve=>lease.signal.addEventListener('abort',resolve,{once:true}));return'not-success';}),{message:'RECOVERY_BACKUP_LEASE_REVIEW_REQUIRED'});
  await withRecoveryBackupLease(await client(),business,signal(),lease=>lease.assertHeld());
+});
+test('snapshot capability binds its exact source and expires without exposing credentials',async()=>{
+ const source=new URL(url),target={host:source.hostname,port:Number(source.port||5432),database:source.pathname.slice(1),user:decodeURIComponent(source.username),password:decodeURIComponent(source.password),secure:false};let saved;
+ await withRecoveryBackupLease(await client(),business,signal(),lease=>lease.capture(async snapshot=>{saved=snapshot;assert(recoveryBackupSnapshotMatches(snapshot,target));assert.equal(recoveryBackupSnapshotMatches({...snapshot},target),false);for(const altered of [{...target,port:target.port+1},{...target,database:'foreign'},{...target,user:'foreign'},{...target,password:'foreign'},{...target,secure:true}])assert.equal(recoveryBackupSnapshotMatches(snapshot,altered),false);assert.equal(JSON.stringify(snapshot).includes(target.password),false);}));assert.equal(recoveryBackupSnapshotMatches(saved,target),false);
 });

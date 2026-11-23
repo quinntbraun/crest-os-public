@@ -10,12 +10,14 @@ async function reviewFirstSave(page,kind){
  void held.catch(()=>undefined);
  const handler=async route=>{routed=true;try{await gate;await route.continue();}catch(error){routeError=error;}finally{finished();}};
  await page.route(pattern,handler,{times:1});let failure;
- const saved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/business/'+collection+'/save');void saved.catch(()=>undefined);
+ // Read immediately: a committed save may navigate before route-gate cleanup
+ // finishes, after which Chromium can no longer retrieve the previous body.
+ const saved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/business/'+collection+'/save').then(async response=>({status:response.status(),state:(await response.json()).state}));void saved.catch(()=>undefined);
  try{
   await page.getByRole('button',{name:'Save '+kind,exact:true}).click();await held;assert.equal(await leaveGuard(page),true,'Save reverification must protect even an unchanged blank new address');
  }catch(error){failure=error;}finally{release();if(routed)await done;await page.unroute(pattern,handler);}
  if(failure)throw failure;if(routeError)throw routeError;
- const response=await saved;assert.equal(response.status(),200);assert.equal((await response.json()).state,'committed');await expect.poll(()=>leaveGuard(page)).toBe(false);
+ const response=await saved;assert.equal(response.status,200);assert.equal(response.state,'committed');await expect.poll(()=>leaveGuard(page)).toBe(false);
 }
 
 export async function reviewDirectoryLoadingJourney(page,fixture,engine){

@@ -69,7 +69,7 @@
     "test:provider-executor-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-cleanup-executor.test.mjs",
     "test:provider-export-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-evidence-snapshot.test.mjs tests/integration/provider-reference-snapshot.test.mjs",
     "test:provider-review-db": "node --conditions=react-server --test --test-concurrency=1 tests/integration/provider-reconciliation-review.test.mjs",
-    "test:recovery-db": "node --test --test-concurrency=1 tests/integration/private-recovery-permissions.test.mjs tests/integration/recovery-drill.test.mjs tests/integration/recovery-attempt.test.mjs tests/integration/recovery-backup-lease.test.mjs",
+    "test:recovery-db": "node --test --test-concurrency=1 tests/integration/private-recovery-permissions.test.mjs tests/integration/recovery-drill.test.mjs tests/integration/recovery-attempt.test.mjs tests/integration/recovery-backup-lease.test.mjs tests/integration/recovery-database-capture.test.mjs tests/integration/recovery-backup-reader.test.mjs",
     "test:private-files": "node --conditions=react-server --test --test-concurrency=1 tests/integration/private-object-store.test.mjs tests/integration/export-part-store.test.mjs",
     "test:image-validation": "node --conditions=react-server --test --test-concurrency=1 tests/integration/image-validation.test.mjs",
     "test:image-sandbox": "node --test --test-concurrency=1 tests/integration/image-sandbox.test.mjs",

@@ -8,11 +8,21 @@ import {schemaMigrationLock} from '../security/schema-migration-lock.ts';
 export class RecoveryBackupLeaseError extends Error{constructor(){super('RECOVERY_BACKUP_LEASE_REVIEW_REQUIRED');this.name='RecoveryBackupLeaseError';}}
 function require(value:unknown):asserts value{if(!value)throw new RecoveryBackupLeaseError();}
 type Query=(sql:string,values?:unknown[])=>Promise<pg.QueryResult>;
-type Snapshot=Readonly<{id:string;capturedAt:string;database:string;backendPid:number;query:Query}>;
+export type RecoveryBackupSnapshot=Readonly<{id:string;capturedAt:string;database:string;databaseRole:string;backendPid:number;query:Query}>;
+type Snapshot=RecoveryBackupSnapshot;
+type DatabaseTarget=Readonly<{host:string;port:number;database:string;user:string;password:string;secure:boolean}>;
+const sourceBindings=new WeakMap<object,(target:DatabaseTarget)=>boolean>();
+const targetHash=(target:DatabaseTarget)=>createHash('sha256').update(JSON.stringify([target.host,target.port,target.database,target.user,target.password,target.secure])).digest('hex');
+export function recoveryBackupSnapshotMatches(snapshot:unknown,target:DatabaseTarget){return !!snapshot&&typeof snapshot==='object'&&sourceBindings.get(snapshot)?.(target)===true;}
 type Lease=Readonly<{signal:AbortSignal;assertHeld:()=>Promise<void>;capture:<T>(work:(snapshot:Snapshot,signal:AbortSignal)=>Promise<T>)=>Promise<Readonly<{value:T;snapshot:Omit<Snapshot,'query'>}>>}>;
 
 export async function withRecoveryBackupLease<T>(client:pg.Client,businessId:string,external:AbortSignal,work:(lease:Lease)=>Promise<T>):Promise<T>{
  require(client instanceof pg.Client&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(businessId)&&typeof work==='function');
+ // pg's already-connected client properties are trusted composition, not input
+ // from a browser. Fingerprints/credentials never enter the snapshot metadata.
+ const parameters=client as unknown as Record<string,unknown>,tls=parameters.ssl;
+ const secure=tls===true||!!tls&&typeof tls==='object'&&'rejectUnauthorized' in tls&&tls.rejectUnauthorized===true;
+ const source=typeof parameters.host==='string'&&typeof parameters.port==='number'&&typeof parameters.database==='string'&&typeof parameters.user==='string'&&typeof parameters.password==='string'?targetHash({host:parameters.host,port:parameters.port,database:parameters.database,user:parameters.user,password:parameters.password,secure}):null;
  const bytes=createHash('sha256').update('crest.recovery.backup-lease.v1:'+businessId).digest(),key=bytes.readBigInt64BE(0).toString(),high=bytes.readUInt32BE(0),low=bytes.readUInt32BE(4);
  const controller=new AbortController(),signal=AbortSignal.any([external,controller.signal,AbortSignal.timeout(3600000)]);let closing=false,capturing=false,captured=false,activeCapture:Promise<unknown>|undefined;
  const lost=()=>{if(!closing)controller.abort();},abort=()=>{void client.end().catch(()=>{});};client.on('error',lost);client.once('end',lost);signal.addEventListener('abort',abort,{once:true});
@@ -30,11 +40,12 @@ export async function withRecoveryBackupLease<T>(client:pg.Client,businessId:str
     try{
      await assertHeld();require((await query('SELECT pg_try_advisory_lock_shared($1::integer,$2::integer) AS acquired',[...schemaMigrationLock])).rows[0]?.acquired===true);shared=true;
      await query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');transaction=true;
-     const row=(await query("SELECT pg_export_snapshot() AS id,clock_timestamp()::text AS captured_at,current_database() AS database,pg_backend_pid() AS backend_pid,current_setting('transaction_read_only') AS read_only,current_setting('transaction_isolation') AS isolation")).rows[0];
-     require(row&&typeof row.id==='string'&&/^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{8}-[0-9]+$/.test(row.id)&&typeof row.captured_at==='string'&&row.captured_at.length<=128&&typeof row.database==='string'&&row.database.length<=128&&Number.isSafeInteger(row.backend_pid)&&row.read_only==='on'&&row.isolation==='repeatable read');
-     const metadata=Object.freeze({id:row.id as string,capturedAt:row.captured_at as string,database:row.database as string,backendPid:row.backend_pid as number});live=true;
+     const row=(await query("SELECT pg_export_snapshot() AS id,clock_timestamp()::text AS captured_at,current_database() AS database,current_user::text AS database_role,pg_backend_pid() AS backend_pid,current_setting('transaction_read_only') AS read_only,current_setting('transaction_isolation') AS isolation")).rows[0];
+     require(row&&typeof row.id==='string'&&/^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{8}-[0-9]+$/.test(row.id)&&typeof row.captured_at==='string'&&row.captured_at.length<=128&&typeof row.database==='string'&&row.database.length<=128&&typeof row.database_role==='string'&&/^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/.test(row.database_role)&&Number.isSafeInteger(row.backend_pid)&&row.read_only==='on'&&row.isolation==='repeatable read');
+     const metadata=Object.freeze({id:row.id as string,capturedAt:row.captured_at as string,database:row.database as string,databaseRole:row.database_role as string,backendPid:row.backend_pid as number});live=true;
      const snapshot:Snapshot=Object.freeze({...metadata,query:async(sql:string,values:unknown[]=[])=>{require(live&&!closing);return query(sql,values);}});
-     const value=await captureWork(snapshot,signal);live=false;await assertHeld();await query('ROLLBACK');transaction=false;
+     sourceBindings.set(snapshot,target=>live&&!closing&&!signal.aborted&&source!==null&&targetHash(target)===source);
+     const value=await captureWork(snapshot,signal);live=false;sourceBindings.delete(snapshot);await assertHeld();await query('ROLLBACK');transaction=false;
      require((await query('SELECT pg_advisory_unlock_shared($1::integer,$2::integer) AS released',[...schemaMigrationLock])).rows[0]?.released===true);shared=false;
      return Object.freeze({value,snapshot:metadata});
     }catch{controller.abort();throw new RecoveryBackupLeaseError();}

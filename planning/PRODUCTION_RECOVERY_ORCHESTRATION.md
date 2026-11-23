@@ -76,7 +76,11 @@ acceptance. Both files join mandatory `test:recovery-db` without removing checks
 
 ## Remaining composition
 
-Still implement/prove age/pg_dump and complete retained-object capture, the
+The database dump/encryption mechanics are now implemented separately in
+PRODUCTION_RECOVERY_DATABASE_CAPTURE.md. They still require the actual complete
+Crest role/source/object/control recovery composition.
+
+Still implement/prove complete retained-object capture, the
 restricted full-backup role, registry/role/control/reference completeness,
 durable scheduling/reconciliation, point retention, encrypted manifest/final
 marker, backup_runs/independent heartbeat, app/image/configuration/key kit and
