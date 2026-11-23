@@ -9,7 +9,7 @@ import {createSessionRequestAdmission} from './session-request-admission.ts';
 import {createSourceExportOwnerAccess} from './source-export-owner-access.ts';
 import {createSourceExportDownloadReader} from './source-export-download-reader.ts';
 import {sourceExportDownloadResponse} from '../server/source-export-download-response.ts';
-import {parseSourceExportDownloadPageRequest,parseSourceExportDownloadPartRequest} from './source-export-download-contract.ts';
+import {parseSourceExportDownloadPageRequest,parseSourceExportDownloadPartRequest,parseSourceExportCatalogueBatch,sourceExportCatalogueBatchPath,sourceExportCatalogueBatchPages} from './source-export-download-contract.ts';
 import {customerUuid as uuid} from '../customer/customer-contract.ts';
 import type {SessionDatabaseConfiguration} from './session-database.ts';
 import type {createEncryptedExportPartStore} from '../files/export-part-store.ts';
@@ -28,13 +28,21 @@ export function createSourceExportDownloadHttp(config:Configuration,provider:Par
   let started=false;
   try{
    const signal=AbortSignal.any([request.signal,AbortSignal.timeout(60000)]);if(signal.aborted)throw Error();resolve(request,peer);const url=new URL(request.url);
-   if(!enabled||url.search||url.hash||![cataloguePath,filePath].includes(url.pathname))return failure(404);if(request.method!=='POST')return failure(405);
+   if(!enabled||url.search||url.hash||![cataloguePath,filePath,sourceExportCatalogueBatchPath].includes(url.pathname))return failure(404);if(request.method!=='POST')return failure(405);
    protect.requireOrigin(request);const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;if(!cookie)throw Error();
    const file=url.pathname===filePath,input=await readFlatJsonBody(bounded,file?partKeys:pageKeys,16384),page=file?undefined:parseSourceExportDownloadPageRequest(input),part=file?parseSourceExportDownloadPartRequest(input):undefined;
+   const batch=url.pathname===sourceExportCatalogueBatchPath;if(batch&&page?.generationId===null)throw Error();
    await csrf(bounded,cookie,signal);started=true;
    if(!await admit(cookie,'ordinary',signal)){const response=privateJsonResponse({error:'SOURCE_EXPORT_DOWNLOAD_LIMITED'},429);response.headers.set('Retry-After','60');return response;}
    if(signal.aborted)throw Error();
-   if(page){const value=(await access!.downloadCatalogue(cookie,page,signal)).forServer();if(signal.aborted)throw Error();return privateJsonResponse(value);}
+   if(page){
+    if(!batch){const value=(await access!.downloadCatalogue(cookie,page,signal)).forServer();if(signal.aborted)throw Error();return privateJsonResponse(value);}
+    const pages:unknown[]=[];let cursor=page;
+    for(let i=0;i<sourceExportCatalogueBatchPages;i++){
+     const value=(await access!.downloadCatalogue(cookie,cursor,signal)).forServer();if(signal.aborted||value.profile!=='crest.current-business-source-bundle.v1')throw Error();pages.push(value);if(value.nextOrdinal===null)break;cursor={...page,afterOrdinal:value.nextOrdinal};
+    }
+    const value={profile:'crest.source-export-catalogue-batch.v1',schemaVersion:1,pages:parseSourceExportCatalogueBatch({profile:'crest.source-export-catalogue-batch.v1',schemaVersion:1,pages},scope,page)};if(Buffer.byteLength(JSON.stringify(value))>16384)throw Error();return privateJsonResponse(value);
+   }
    let send:(response:Response)=>void=()=>{},supplied=false;const ready=new Promise<Response>(resolve=>{send=resolve;});
    void reader!.deliver(cookie,part,signal,async(value,deliverySignal)=>{const transfer=sourceExportDownloadResponse(value,deliverySignal);supplied=true;send(transfer.response);await transfer.completion;}).catch(()=>{if(!supplied)send(failure());});
    return await ready;

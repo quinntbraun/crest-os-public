@@ -47,3 +47,23 @@ owned cleanup completed. Evidence: .local/financial-history124-recovery/result.j
 and test.log. No application, SQL, source checksums or financial rule is changed.
 This is a local historical-fixture correction, not a successful full release or
 an independent off-laptop production recovery drill.
+
+## Confirmed-booking historical124 recovery correction
+
+Public3e3d177d main45100605205 is terminal failure:21 prerequisite jobs pass,
+then Foundation137459203260 fails the original confirmed-booking context
+registered117-to124 upgrade/recovery case. The combined booking group reports
+94/95. Commercial45100605236 and expense45100605202 succeed. Missing service
+screenshots follow skipped steps; the artifact gate remains required.
+
+The fixture applies124 but calls backupDatabase, whose strict current guard
+requires137. On20ab2b0 that case selects the existing frozen
+backupLegacy124Database/restoreLegacy124Database pair, alongside121/122. An
+explicit assertion preserves the current helper's refusal of historical124.
+No migration/checksum, original customer/job/profile assertion, authority or
+financial rule changes.
+
+The original124 case now passes actual encrypted independent restoration,
+exact customer/job/profile comparison, source stability and awaited owned
+cleanup. This is one local case, not an aggregate95/95 or full release pass.
+Hosted checks, complete production recovery and phone acceptance remain open.

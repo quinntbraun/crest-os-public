@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {mkdir,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
-import {backupDatabase,backupLegacy121Database,backupLegacy122Database,connect,keyPair,recoveryCluster,restoreDatabase,restoreLegacy121Database,restoreLegacy122Database} from '../support/recovery-drill.mjs';
+import {backupDatabase,backupLegacy121Database,backupLegacy122Database,backupLegacy124Database,connect,keyPair,recoveryCluster,restoreLegacy121Database,restoreLegacy122Database,restoreLegacy124Database} from '../support/recovery-drill.mjs';
 import {syntheticCustomerProfileAvailable,syntheticInvoiceOutstandingAvailable,syntheticLeadFollowUpsAvailable,syntheticLeadMatchReviewAvailable,syntheticRecordJobHistoryAvailable} from '../../scripts/synthetic-migrations.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
@@ -233,9 +233,11 @@ for(const schemaVersion of [121,122,124])test('upgrade from schema 117 to '+sche
 
   const folder=join(source.workspace,'customer-profile-'+schemaVersion+'-recovery');
   await mkdir(folder,{mode:0o700});
-  const backup=schemaVersion===121?backupLegacy121Database:schemaVersion===122?backupLegacy122Database:backupDatabase,
-   restore=schemaVersion===121?restoreLegacy121Database:schemaVersion===122?restoreLegacy122Database:restoreDatabase;
-  const keys=await keyPair(folder),checkpoint=await backup(admin,database,folder,keys.recipient);
+  const backup=schemaVersion===121?backupLegacy121Database:schemaVersion===122?backupLegacy122Database:backupLegacy124Database,
+   restore=schemaVersion===121?restoreLegacy121Database:schemaVersion===122?restoreLegacy122Database:restoreLegacy124Database;
+  const keys=await keyPair(folder);
+  if(schemaVersion===124)await assert.rejects(backupDatabase(admin,database,folder,keys.recipient),{code:'ERR_ASSERTION'},'current profile must refuse a historical124 database');
+  const checkpoint=await backup(admin,database,folder,keys.recipient);
   assert.equal(checkpoint.manifest.schemaVersion,schemaVersion);
   assert.equal(checkpoint.manifest.completeBackup,false);
   restoredCluster=await recoveryCluster();

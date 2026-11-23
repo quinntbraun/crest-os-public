@@ -51,6 +51,7 @@ import {createLeadSourceHttp,leadSourceFailureResponse} from '../customer/lead-s
 import {createOriginalOperationHttp,originalOperationFailureResponse} from '../security/original-operation-http.ts';
 import {createSourceExportHttp,sourceExportFailureResponse} from '../security/source-export-http.ts';
 import {createSourceExportDownloadHttp,sourceExportDownloadFailureResponse} from '../security/source-export-download-http.ts';
+import {sourceExportCatalogueBatchPath} from '../security/source-export-download-contract.ts';
 import {createSourceExportOriginalHttp,sourceExportOriginalPath} from '../security/source-export-original-http.ts';
 import {createPostedFinanceOwnerExportHttp,discardPostedFinanceExport,postedFinanceExportFailure} from '../security/posted-finance-owner-export-http.ts';
 import {postedFinanceExportLimit,postedFinanceExportPath} from '../security/posted-finance-owner-export-contract.ts';
@@ -399,7 +400,7 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
       originalOperationRequest=target.business&&(decoded==='/api/business/original-operations'||decoded.startsWith('/api/business/original-operations/'));
       exportRequest=target.business&&(decoded==='/api/business/exports'||decoded.startsWith('/api/business/exports/'));
       postedFinanceExportRequest=exportRequest&&(decoded===postedFinanceExportPath||decoded.startsWith(postedFinanceExportPath+'/'));
-      exportDownloadRequest=exportRequest&&(decoded==='/api/business/exports/downloads'||decoded.startsWith('/api/business/exports/downloads/')||decoded==='/api/business/exports/file'||decoded.startsWith('/api/business/exports/file/')||decoded===sourceExportOriginalPath||decoded.startsWith(sourceExportOriginalPath+'/'));
+      exportDownloadRequest=exportRequest&&(decoded===sourceExportCatalogueBatchPath||decoded.startsWith(sourceExportCatalogueBatchPath+'/')||decoded==='/api/business/exports/downloads'||decoded.startsWith('/api/business/exports/downloads/')||decoded==='/api/business/exports/file'||decoded.startsWith('/api/business/exports/file/')||decoded===sourceExportOriginalPath||decoded.startsWith(sourceExportOriginalPath+'/'));
       googleCalendarRequest=target.business&&(decoded===googleCalendarRuntimePrefix.slice(0,-1)||decoded.startsWith(googleCalendarRuntimePrefix)||decoded==='/api/google-calendar'||decoded.startsWith('/api/google-calendar/'));
       if(googleCalendarRequest&&decoded===googleCalendarCallbackPath&&!productionCalendar){await writeAuthenticationResponse(outgoing,cleanGoogleCalendarOAuthResponse(),controller.signal);return;}
       const exportFileRequest=decoded==='/api/business/exports/file';
@@ -451,3 +452,4 @@ export function bindApplicationHandler(server:Server,config:NodeConfiguration,pa
     }finally{if(legacyUploadReserved)activeLegacyUploads--;if(photoFileReserved)activePhotoFiles--;if(reserved)activeProtected--;incoming.off('aborted',abort);}
   })();});
 }
+

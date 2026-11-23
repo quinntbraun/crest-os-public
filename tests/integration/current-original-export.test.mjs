@@ -9,9 +9,8 @@ import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixtur
 import {custodyFixture} from '../support/source-export-custody-fixture.mjs';
 import {createCurrentBusinessSourceCollector} from '../../src/security/business-foundation-collector.ts';
 import {createCurrentBusinessExportWorker} from '../../src/security/business-source-export-worker.ts';
-import {imageValidationVersion} from '../../src/files/validation-contract.ts';
 import {createExportOriginalReader} from '../../src/security/source-export-original-reader.ts';
-import {confirmedBookingRequest} from '../fixtures/confirmed-booking.ts';
+import {prepareCurrentOriginalSources} from '../support/current-original-sources.mjs';
 import {custodyPhotoObjects} from '../support/custody-photo-objects.mjs';
 import sharp from 'sharp';
 const call=async(connection,name,args)=>(await connection.query('SELECT crest_commands.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') AS result',args)).rows[0].result;
@@ -20,28 +19,8 @@ test('Registered136-to137 original-export access: mixed-kind upgrade, Ready snap
  try{
   sandbox=await migrationSandbox(cluster.testDatabaseUrl);const database=await sandbox.database(),admin=await sandbox.connect(database);await sandbox.apply(database,await sandbox.prefix(0),true);await installProviderSchema(admin,database);await sandbox.apply(database,await sandbox.prefix(136));
   const web=await sandbox.connect(database);await web.query('SET ROLE crest_web');const bootstrap=(await admin.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id,owner=await createConfirmedBookingFixture({client:admin,web,bootstrap})(),auth=owner.auth();
-  const bytes=await sharp({create:{width:1,height:1,channels:3,background:'#304b68'}}).png().toBuffer(),preview=await sharp(bytes).jpeg().toBuffer(),sha=value=>createHash('sha256').update(value).digest('hex'),expenseId=randomUUID(),receiptId=randomUUID();
-  const body={paidOn:'2026-11-22',amountCents:'1299',currency:'USD',category:'supplies',description:'Synthetic original export',vendor:null,paymentMethod:'card',reference:null,notes:null,voided:false,changeReason:null};
-  await call(web,'save_expense',[...auth,owner.epoch,randomUUID(),expenseId,'0',body]);
-  const reserved=await call(web,'reserve_expense_receipt',[...auth,owner.epoch,randomUUID(),receiptId,expenseId,'1','image/png',bytes.length]),reservation=reserved.receipt.record.reservation;
-  const candidate={status:'PrivateValidatedCandidate',validationVersion:imageValidationVersion,source:{sha256:sha(bytes),byteSize:bytes.length,detectedType:'image/png',width:1,height:1},original:{key:reservation.originalKey,byteSize:bytes.length,sha256:sha(bytes)},preview:{key:reservation.previewKey,byteSize:preview.length,sha256:sha(preview),contentType:'image/jpeg',width:1,height:1}};
-  await call(web,'publish_expense_receipt',[...auth,owner.epoch,randomUUID(),receiptId,candidate]);
-  // Publish the other two retained original kinds through their registered
-  // commands, including an unlinked condition photo with a distinct dispatch ID.
-  const finance=await sandbox.connect(database),supplierWorker=await sandbox.connect(database),photoWorker=await sandbox.connect(database);
-  await finance.query('SET ROLE crest_finance_preview');await supplierWorker.query('SET ROLE crest_supplier_bill_document_worker');await photoWorker.query('SET ROLE crest_custody_photo_dispatch');
-  await admin.query("INSERT INTO crest_private.finance_controls(business_id,recovery_authority_id,created_by,origin) SELECT $1,id,$2,'system' FROM crest_private.business_recovery_authorities WHERE business_id=$1",[owner.business,owner.actor]);
-  const billId=randomUUID(),supplierId=randomUUID(),dates=(await admin.query('SELECT current_date::text AS day,(current_date+1)::text AS due')).rows[0];
-  assert.equal((await call(finance,'save_fictional_supplier_bill_draft',[...auth,owner.epoch,randomUUID(),billId,'0',{incurredOn:dates.day,dueOn:dates.due,unknownDueReason:null,vendor:'Synthetic original supplier',unknownVendorReason:null,documentReference:'SYN-ORIGINAL-1',grossCents:'1299',purchaseTaxCents:'0',purpose:'Synthetic original export',missingReceiptReason:'Original pending publication',splits:[{category:'supplies',grossCents:'1299'}],changeReason:null}])).state,'committed');
-  const supplierReservation=(await call(finance,'reserve_fictional_supplier_original',[...auth,owner.epoch,randomUUID(),supplierId,billId,'1','image/png',bytes.length])).receipt.reservation;
-  const supplierCandidate={...candidate,original:{...candidate.original,key:supplierReservation.originalKey},preview:{...candidate.preview,key:supplierReservation.previewKey}};
-  assert.equal((await call(supplierWorker,'publish_fictional_supplier_original',[...auth,owner.epoch,randomUUID(),supplierId,billId,'1',supplierCandidate])).state,'committed');
-  const booking=confirmedBookingRequest(owner);booking.payload.fulfillmentMode='dropoff';
-  assert.equal((await call(web,'book_job',[...auth,owner.epoch,booking.operationId,1,booking.jobId,booking.expectedModeSequence,booking.payload])).state,'committed');
-  const booked=(await admin.query('SELECT j.mode_version_id,v.id FROM crest.jobs j JOIN crest.job_vehicles v ON v.business_id=j.business_id AND v.job_id=j.id WHERE j.business_id=$1 AND j.id=$2 AND v.vehicle_id=$3',[owner.business,booking.jobId,owner.vehicle])).rows[0];
-  assert.equal((await call(web,'save_dropoff_policy',[...auth,owner.epoch,randomUUID(),booked.mode_version_id,{acknowledgementText:null,conditionPhotoRequired:true}])).state,'committed');
-  const photoId=randomUUID(),attempt=await call(web,'reserve_dropoff_photo',[...auth,owner.epoch,photoId,booked.id,randomUUID(),1,'image/png',bytes.length]);
-  await call(photoWorker,'publish_dropoff_photo',[...auth,owner.epoch,photoId,{detected_type:'image/png',byte_size:bytes.length,sha256:sha(bytes),validation_version:imageValidationVersion,width:1,height:1,display_width:null,display_height:null,bit_depth:null,preview_sha256:sha(preview),preview_byte_size:preview.length,preview_width:1,preview_height:1}]);
+  const bytes=await sharp({create:{width:1,height:1,channels:3,background:'#304b68'}}).png().toBuffer(),preview=await sharp(bytes).jpeg().toBuffer(),sha=value=>createHash('sha256').update(value).digest('hex');
+  const {expenseId,receiptId,reservation,candidate,supplierId,supplierReservation,photoId,attempt}=await prepareCurrentOriginalSources({sandbox,database,admin,web,owner,bytes,preview});
   originalObjects=await custodyPhotoObjects({bucket:'crest-synthetic-export-originals'});
   for(const key of[reservation.originalKey,supplierReservation.originalKey,`originals/${owner.business}/${attempt.dispatch_id}`])originalObjects.objects.set(key,{bytes:Buffer.from(bytes),type:'image/png'});
   const jobId=randomUUID(),release='a'.repeat(40);await call(web,'request_current_source_export_v3_for_execution',[...auth,owner.epoch,randomUUID(),jobId,release]);

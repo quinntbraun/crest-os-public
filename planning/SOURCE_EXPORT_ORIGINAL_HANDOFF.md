@@ -69,6 +69,17 @@ inventory SHA-256, business/profile, complete item shapes, portable destinations
 counts and fixed photo/supplier/receipt identities. Its descriptors match the
 server's frozen original index. Pending reservations remain visible and excluded.
 
+Current-format catalogue loading uses the distinct downloads-batch endpoint once
+the first ordinary page pins a generation. One bounded response contains up to
+four original five-entry pages. Each page still obtains fresh provider/SQL owner
+authority; the client still checks sign-in and context before each request.
+All pages must match one immutable header and contiguous cursor sequence. Failure
+of any page withholds the entire batch. Ordinary admission remains 120/minute,
+JSON remains bounded to 16 KiB, and only the batch parser has a 512-node structural
+budget. Old catalogue/part formats and their smaller parser budgets are unchanged.
+This reduces browser round trips for the full current catalogue without changing
+database functions, schema, export snapshots, authority or file-byte limits.
+
 Available originals are grouped deterministically by attachment ID into ZIPs of
 at most 25 originals and 31 MiB of original bytes, with a 32 MiB final archive
 limit. Each download freshly checks the existing owner context, supplies only the
@@ -111,8 +122,24 @@ The focused browser-controller composition also checks actual ZIP creation,
 explicit save, offline comparison/resume, retained pending counts and clearing
 after review or a changed principal. It is not a real-device acceptance check.
 
-Still required: populated native positive photo/supplier cases and integrated
-production-equivalent HTTP/object-store/browser acceptance. Complete reference closure,
+On `2d03499`, both genuine current137 browser cases pass separately in Chromium
+and WebKit with unchanged tracked source and compiled server bytes and owned
+fixture cleanup. The actual Next/TLS app uses local GoTrue sign-in/MFA,
+PostgreSQL command-published receipt/supplier/photo originals, an encrypted Ready
+export and the private object SDK. Each case checks a saved ZIP's three original
+byte streams, index/generation bindings, committed handoff audits, local ZIP
+comparison, and missing-CSRF, foreign-input, corrupt-object and revoked-provider
+refusals. Mobile/desktop accessibility and overflow checks run at390/1440 pixels.
+These are disposable local services, not live hosting or physical iPhone proof.
+
+This fixture exposed catalogue loading that exceeded the existing90-second
+operation deadline. The bounded batch route now loads its201 physical parts in
+11 catalogue HTTP requests instead of41, while reauthorizing every underlying
+five-entry page. Both browser cases reach the complete catalogue and original
+ZIP save within the unchanged deadline. Focused contract, HTTP, client,
+controller and Node routing checks pass235 cases; types and targeted lint pass.
+
+Still required: configured production-host and physical-phone acceptance. Complete reference closure,
 remaining operator metadata and independent database/object/key recovery are
 separate release obligations. This does not make exports complete backups or
 authorize production activation.

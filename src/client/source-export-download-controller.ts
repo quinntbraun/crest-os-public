@@ -48,7 +48,9 @@ export function createSourceExportDownloadController(deps:Dependencies){
  }
  async function pages(signal:AbortSignal){
   while(builder?.request()){
-   const proof=await fresh(signal),request=builder.request();if(!request)throw Error();const page=await api!.catalogue(request,proof,signal,builder.pinnedHeader());live(signal);builder.append(page);emit();
+   const proof=await fresh(signal),request=builder.request(),pin=builder.pinnedHeader();if(!request)throw Error();
+   const pages=pin?.profile==='crest.current-business-source-bundle.v1'&&api!.catalogueBatch?await api!.catalogueBatch(request,proof,signal,pin):[await api!.catalogue(request,proof,signal,pin)];
+   live(signal);for(const page of pages){builder.append(page);emit();}
   }
   if(!builder||!context)throw Error();inventory=builder.snapshot().forDownloadInventory();local=localFactory(context.businessId,inventory);phase='ready';message='The complete file list is checked. Prepare and save one file at a time, then select your local copies to compare them.';
  }

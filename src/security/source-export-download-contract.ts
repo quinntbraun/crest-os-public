@@ -1,6 +1,8 @@
 import {customerUuid as uuid,customerInstant as instant} from '../customer/customer-contract.ts';
 import {sourceExportProfileMatches} from './source-export-profile.ts';
 import type {SourceExportProfileBinding} from './source-export-profile.ts';
+export const sourceExportCatalogueBatchPath='/api/business/exports/downloads-batch';
+export const sourceExportCatalogueBatchPages=4;
 export class SourceExportDownloadError extends Error{constructor(){super('SOURCE_EXPORT_DOWNLOAD_REVIEW_REQUIRED');this.name='SourceExportDownloadError';}}
 function require(v:unknown):asserts v{if(!v)throw new SourceExportDownloadError();}
 export function downloadObject(input:unknown,keys:readonly string[]){
@@ -30,4 +32,16 @@ export function parseSourceExportDownloadCatalogue(input:unknown,businessId:stri
  const names=new Set<string>(),ids=new Set<string>(),files=Array.from({length:count},(_,i)=>{const field=d[String(i)];require(field?.enumerable&&Object.hasOwn(field,'value'));const file=parseSourceExportDownloadFile(field.value);require(file.ordinal===request.afterOrdinal+i+1&&!names.has(file.fileName)&&!ids.has(file.partId)&&file.bytes<=header.totalBytes);names.add(file.fileName);ids.add(file.partId);return file;});
  require(files.reduce((n,f)=>n+f.bytes,0)<=header.totalBytes);const end=request.afterOrdinal+files.length;require(v.nextOrdinal===(end<header.fileCount?end:null));
  return Object.freeze({...header,files:Object.freeze(files),nextOrdinal:v.nextOrdinal as number|null});
+}
+export function parseSourceExportCatalogueBatch(input:unknown,businessId:string,expected:unknown,pinned?:unknown){
+ const request=parseSourceExportDownloadPageRequest(expected),v=downloadObject(input,['profile','schemaVersion','pages']);require(request.generationId!==null&&v.profile==='crest.source-export-catalogue-batch.v1'&&v.schemaVersion===1&&Array.isArray(v.pages)&&v.pages.length>=1&&v.pages.length<=sourceExportCatalogueBatchPages);
+ const fields=Object.getOwnPropertyDescriptors(v.pages),count=v.pages.length;require(Reflect.ownKeys(fields).length===count+1);
+ let cursor=request,pin=pinned===undefined?undefined:parseSourceExportDownloadHeader(pinned,businessId,request.exportJobId,request.generationId),previous='';const pages:ReturnType<typeof parseSourceExportDownloadCatalogue>[]=[],ids=new Set<string>();
+ for(let i=0;i<count;i++){
+  const field=fields[String(i)];require(field?.enumerable&&Object.hasOwn(field,'value'));const page=parseSourceExportDownloadCatalogue(field.value,businessId,cursor),header=parseSourceExportDownloadHeader(Object.fromEntries(downloadHeaderKeys.map(key=>[key,page[key]])),businessId,request.exportJobId,request.generationId);
+  require(header.profile==='crest.current-business-source-bundle.v1'&&(!pin||JSON.stringify(pin)===JSON.stringify(header)));pin=header;
+  for(const file of page.files){require(!ids.has(file.partId)&&(!previous||file.fileName>previous));ids.add(file.partId);previous=file.fileName;}
+  pages.push(page);if(page.nextOrdinal===null){require(i===count-1);break;}require(i<count-1||count===sourceExportCatalogueBatchPages);cursor={...request,afterOrdinal:page.nextOrdinal};
+ }
+ return Object.freeze(pages);
 }
