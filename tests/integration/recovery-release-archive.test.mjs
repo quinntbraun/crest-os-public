@@ -3,7 +3,7 @@ import {before,after,test} from 'node:test';
 import {spawn,execFileSync} from 'node:child_process';
 import {createServer} from 'node:http';
 import {randomBytes,randomUUID,createHash} from 'node:crypto';
-import {mkdtemp,readFile,readdir,rm,writeFile} from 'node:fs/promises';
+import {mkdtemp,readFile,readdir,rm,writeFile,mkdir} from 'node:fs/promises';
 import {join,dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {S3Client} from '@aws-sdk/client-s3';
@@ -16,7 +16,8 @@ import {captureRecoveryReleaseArchive} from '../../src/tooling/recovery-release-
 import {createRecoveryVault,recoveryVaultArtifactKey} from '../../src/tooling/recovery-vault.ts';
 import {createRecoveryAttempt} from '../../src/tooling/recovery-attempt.ts';
 import {createRecoveryReleaseDistribution,readRecoveryReleaseManifest} from '../../src/tooling/recovery-release-distribution.ts';
-import {createRecoveryConfigurationArchive,reconstructRecoveryConfiguration} from '../../src/tooling/recovery-configuration.ts';
+import {createRecoveryConfigurationArchive,reconstructRecoveryConfiguration,prepareRecoveryConfiguration} from '../../src/tooling/recovery-configuration.ts';
+import {createRecoveryOfflineMaterialCapture,readRecoveryOfflineMaterial,materializeRecoveryOfflineConfiguration} from '../../src/tooling/recovery-offline-material.ts';
 import {recoveryConfigurationFixture} from '../support/recovery-configuration-fixture.ts';
 
 const root=new URL('../../',import.meta.url),age=fileURLToPath(new URL('.local/tools/recovery/age/age'+(process.platform==='win32'?'.exe':''),root)),signal=()=>new AbortController().signal,stored=new Map(),calls=[];let workspace,keys,sourcePath,expected,archive,client,vault,attempt,server;
@@ -92,4 +93,22 @@ test('artifact reader rejects age tampering even after the transport digest is c
 });
 test('empty raw quarantine bytes recover without rendering and cannot masquerade as metadata',async()=>{
  const sealed=(await createRecoveryFileEncryption(launch)({workspace,recipient:keys.recipient,bytes:Buffer.alloc(0)},signal())).forRecoveryTools(),artifact=await attempt.publish({artifactId:randomUUID(),purpose:'quarantine',byteSize:sealed.ciphertext.byteSize,sha256:sealed.ciphertext.sha256,retainUntil:archive.parts[0].artifact.retainUntil},sealed.path,vault,signal()),read=createRecoveryArtifactRestore(launch),input={kind:'quarantine',artifact,plaintext:sealed.plaintext,workspace,identityFile:keys.path};const recovered=(await read(input,vault,signal())).forRecoveryTools();assert.equal((await readFile(recovered.path)).length,0);assert.equal(recovered.rendered,false);assert.equal(recovered.applied,false);const before=(await readdir(workspace)).sort(),requests=calls.length;await assert.rejects(read({...input,kind:'metadata'},vault,signal()),{message:'RECOVERY_ARTIFACT_RESTORE_REVIEW_REQUIRED'});assert.deepEqual((await readdir(workspace)).sort(),before);assert.equal(calls.length,requests);
+});
+
+test('owner material kit encrypts exact secrets and file bytes independently of the vault then reconstructs private offline configuration',async()=>{
+ const fixture=recoveryConfigurationFixture(),sourceDirectory=join(workspace,'offline-source-'+randomUUID()),files=new Map();await mkdir(sourceDirectory,{mode:0o700});
+ for(const ref of fixture.references.filter(item=>item.kind==='file')){
+  const path=join(sourceDirectory,ref.referenceId),bytes=Buffer.from('Synthetic private TLS fixture '+ref.referenceId+'\n');await writeFile(path,bytes,{flag:'wx',mode:0o600});files.set(ref.referenceId,bytes);
+  let parent=fixture.profile;const names=ref.path.slice(1).split('/');for(const name of names.slice(0,-1))parent=parent[name];parent[names.at(-1)]=path;
+ }
+ const profileSource=JSON.stringify(fixture.profile),recipe=prepareRecoveryConfiguration({profileSource,binding:fixture.target,references:fixture.references}).forRecoveryTools(),recipeSource=JSON.stringify(recipe),requests=calls.length;
+ const captured=await createRecoveryOfflineMaterialCapture(launch)({recipeSource,expected:fixture.target,profileSource,workspace,recipient:keys.recipient},signal());assert.throws(()=>JSON.stringify(captured));const proof=captured.forRecoveryTools();assert.equal(proof.referenceCount,31);assert.equal(proof.offlineCopiesVerified,false);assert.equal(proof.applicationStarted,false);assert.equal(proof.completeBackup,false);await assertPrivateRecoveryArtifact(proof.path);
+ const ciphertext=await readFile(proof.path);assert.equal(hash(ciphertext),proof.ciphertext.sha256);assert.equal(ciphertext.length,proof.ciphertext.byteSize);for(const ref of fixture.references.filter(item=>item.kind==='secret'))assert(!ciphertext.includes(Buffer.from(fixture.material.get(ref.referenceId))));
+ const plain=execFileSync(age,['--decrypt','--identity',keys.path],{input:ciphertext,maxBuffer:8388608,windowsHide:true});try{
+  assert.equal(hash(plain),proof.plaintext.sha256);assert.equal(plain.length,proof.plaintext.byteSize);const material=readRecoveryOfflineMaterial({source:plain.toString('utf8'),plaintext:proof.plaintext,recipeSource,expected:fixture.target});
+  const changed=fixture.references.find(item=>item.kind==='file');await writeFile(join(sourceDirectory,changed.referenceId),Buffer.from('Changed after capture\n'));
+  const output=await materializeRecoveryOfflineConfiguration({material,recipeSource,expected:fixture.target,parent:workspace},signal());assert.throws(()=>JSON.stringify(output));const restored=output.forRecoveryTools();assert.equal(restored.fileCount,files.size);assert.equal(restored.applicationStarted,false);assert.equal(restored.credentialsRotated,false);assert.equal(restored.certificateValidityVerified,false);await assertPrivateRecoveryArtifact(restored.profilePath);const profile=JSON.parse(await readFile(restored.profilePath,'utf8'));
+  for(const ref of fixture.references){let actual=profile,original=fixture.profile;for(const name of ref.path.slice(1).split('/')){actual=actual[name];original=original[name];}if(ref.kind==='secret')assert.equal(actual,original);else{assert.notEqual(actual,original);await assertPrivateRecoveryArtifact(actual);assert.deepEqual(await readFile(actual),files.get(ref.referenceId));}}
+  assert.equal(calls.length,requests,'offline owner kit must not use scheduled vault credentials');
+ }finally{plain.fill(0);}
 });

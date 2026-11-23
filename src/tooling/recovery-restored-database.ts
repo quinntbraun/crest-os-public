@@ -1,0 +1,30 @@
+// Read-only comparison after separately authorized isolated database application.
+// This does not authorize pg_restore, create credentials or approve reopening.
+import pg from 'pg';
+import {createHash} from 'node:crypto';
+import {lstat} from 'node:fs/promises';
+import {isDeepStrictEqual} from 'node:util';
+import {preparedRecoveryDatabase} from './recovery-run-restore.ts';
+import {parseRecoveryJson} from './recovery-json.ts';
+import {hashRecoveryReleaseFile} from './recovery-release-files.ts';
+import {withRecoveryBackupLease} from './recovery-backup-lease.ts';
+import {verifyRecoveryBackupReader} from './recovery-backup-reader.ts';
+import {captureRecoveryDatabaseInventory} from './recovery-database-inventory.ts';
+import {captureRecoveryOriginalInventory} from './recovery-original-inventory.ts';
+import {captureRecoveryFinancialControls} from './recovery-financial-controls.ts';
+type Stage='preflight'|'files'|'reader'|'capture'|'compare';
+export class RecoveryRestoredDatabaseError extends Error{readonly stage:Stage;constructor(stage:Stage){super('RECOVERY_RESTORED_DATABASE_REVIEW_REQUIRED');this.name='RecoveryRestoredDatabaseError';this.stage=stage;}}
+function require(value:unknown):asserts value{if(!value)throw new RecoveryRestoredDatabaseError('preflight');}
+export async function verifyRecoveryRestoredDatabase(input:Readonly<{prepared:unknown;client:pg.Client;registrySource:string}>,external:AbortSignal){
+ let stage:Stage='preflight';const client=input.client,signal=AbortSignal.any([external,AbortSignal.timeout(900000)]);
+ try{
+  signal.throwIfAborted();require(client instanceof pg.Client);const source=preparedRecoveryDatabase(input.prepared),registrySource=input.registrySource;require(typeof registrySource==='string'&&Buffer.byteLength(registrySource)<=1048576&&createHash('sha256').update(registrySource).digest('hex')===source.binding.migrationRegistrySha256);
+  const registry=parseRecoveryJson(registrySource,1048576) as Record<string,unknown>;require(registry&&Object.keys(registry).sort().join(',')==='migrations,schemaVersion'&&registry.schemaVersion===1&&Array.isArray(registry.migrations)&&registry.migrations.length===138);const migrations=Object.freeze(registry.migrations.map(value=>{require(value&&typeof value==='object');const item=value as Record<string,unknown>;require(Object.keys(item).sort().join(',')==='file,sha256,version'&&typeof item.version==='string'&&/^\d{14}$/.test(item.version)&&typeof item.file==='string'&&new RegExp('^'+item.version+'_[a-z0-9_]+\\.sql$').test(item.file)&&typeof item.sha256==='string'&&/^[a-f0-9]{64}$/.test(item.sha256));return Object.freeze({version:item.version,name:item.file.slice(15,-4)});}));
+  stage='files';async function checkFiles(){const checked=await Promise.allSettled([source.database,source.metadata].map(async file=>{const info=await lstat(file.path);require(info.isFile()&&(process.platform!=='linux'||((info.mode&0o077)===0&&(info.uid===0||info.uid===process.getuid!()))));const actual=await hashRecoveryReleaseFile(file.path,signal);require(actual.byteSize===file.byteSize&&actual.sha256===file.sha256);}));require(checked.every(result=>result.status==='fulfilled'));}await checkFiles();
+  return await withRecoveryBackupLease(client,source.binding.businessId,signal,async lease=>{
+   stage='reader';await verifyRecoveryBackupReader(client,migrations);stage='capture';const captured=await lease.capture(async snapshot=>({database:(await captureRecoveryDatabaseInventory(snapshot,lease.signal)).forRecoveryTools(),originals:(await captureRecoveryOriginalInventory(snapshot,lease.signal)).forRecoveryTools(),financial:(await captureRecoveryFinancialControls(snapshot,lease.signal)).forRecoveryTools()})),current=captured.value;
+   stage='compare';for(const key of ['tables','roles','roleCreationOrder','extensions','rowCount','fingerprint','sequenceValuesTransactional'] as const)require(isDeepStrictEqual(current.database[key],source.inventory[key]));for(const key of ['objects','stagingReservations','pendingCount','scope'] as const)require(isDeepStrictEqual(current.originals[key],source.originals[key]));for(const key of ['centTotals','entries','trialBalance','journalDebitCents','journalCreditCents','journalBalanced','fullBusinessReconciliationVerified'] as const)require(isDeepStrictEqual(current.financial[key],source.financial[key]));await checkFiles();await lease.assertHeld();
+   const evidence=Object.freeze({profile:'crest.restored-database-comparison.v1' as const,pointId:source.binding.pointId,businessId:source.binding.businessId,sourceSnapshotId:source.snapshotId,destinationSnapshotId:captured.snapshot.id,sourceSchemaVersion:138 as const,destinationDatabase:captured.snapshot.database,sourceServerVersion:source.inventory.serverVersion,destinationServerVersion:current.database.serverVersion,tableCount:current.database.tables.length,rowCount:current.database.rowCount,roleCount:current.database.roles.length,exactTableContentsVerified:true as const,exactFinancialComparisonsVerified:true as const,originalInventoryVerified:true as const,migrationNamesVerified:true as const,destinationIsolationVerified:false as const,securityAndIncidentAcceptance:false as const,fullBusinessReconciliationVerified:false as const,runtimeActivated:false as const,completeBackup:false as const});return Object.freeze({forRecoveryTools:()=>evidence,toJSON():never{throw new RecoveryRestoredDatabaseError('compare');}});
+  });
+ }catch{throw new RecoveryRestoredDatabaseError(stage);}finally{if(client instanceof pg.Client)await client.end().catch(()=>{});}
+}

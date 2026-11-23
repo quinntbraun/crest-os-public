@@ -2,8 +2,9 @@
 // or a second implementation of every business/subledger reconciliation rule.
 import {isLiveRecoveryBackupSnapshot} from './recovery-backup-lease.ts';
 import type {RecoveryBackupSnapshot} from './recovery-backup-lease.ts';
+import {verifyRecoveryFundingRoots} from './recovery-funding-roots.ts';
 
-type Stage='snapshot'|'amount_columns'|'cent_totals'|'journal_lines'|'journal_entries'|'trial_balance'|'manifest';
+type Stage='snapshot'|'amount_columns'|'cent_totals'|'funding_roots'|'journal_lines'|'journal_entries'|'trial_balance'|'manifest';
 export class RecoveryFinancialControlsError extends Error{readonly stage:Stage|undefined;constructor(stage?:Stage){super('RECOVERY_FINANCIAL_CONTROLS_REVIEW_REQUIRED');this.name='RecoveryFinancialControlsError';this.stage=stage;}}
 function require(value:unknown):asserts value{if(!value)throw new RecoveryFinancialControlsError();}
 const identifier=(value:string)=>'"'+value.replaceAll('"','""')+'"';
@@ -30,6 +31,7 @@ export async function captureRecoveryFinancialControls(snapshot:RecoveryBackupSn
     return Object.freeze({businessId:row.business_id as string|null,rowCount:count.toString(),columns:Object.freeze(columns)});
    });centTotals.push(Object.freeze({...table,columns:Object.freeze(table.columns),rowCount:rowCount.toString(),groups:Object.freeze(groups)}));
   }
+  stage='funding_roots';await verifyRecoveryFundingRoots(snapshot,signal);
   stage='journal_lines';require((await query('SELECT NOT EXISTS(SELECT 1 FROM crest.journal_lines l LEFT JOIN crest.journal_entries e ON e.business_id=l.business_id AND e.id=l.entry_id WHERE e.id IS NULL OR l.debit_cents<0 OR l.credit_cents<0 OR NOT((l.debit_cents>0)<>(l.credit_cents>0))) AS valid')).rows[0]?.valid===true);
   async function pages(sql:string){
    const rows:Record<string,unknown>[]=[];await query('DECLARE crest_recovery_finance NO SCROLL CURSOR FOR '+sql);

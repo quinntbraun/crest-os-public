@@ -1,5 +1,58 @@
 # Current Crest OS delivery
 
+## Current launch checkpoint, 2026-11-23
+
+Financial recovery now independently validates original receipt funding roots,
+contiguous whole-root partitions and fund-lot parent relationships using fixed
+read-only queries. Native42/42 passes on4d031a1 with source unchanged and owned
+cleanup awaited. A genuine posted receipt passes both source and restored
+capture; a restored-only cent-range gap fails while exact journal totals stay
+unchanged. See [scope and remaining controls](RECOVERY_FUNDING_ROOTS.md).
+No grant, schema, financial posting rule or retained metadata format changed.
+Full business reconciliation and actual controlled-reopen acceptance remain open.
+
+The owner kit now has protected capture/materialize commands and a runbook.
+Four actual Linux CLI cases pass on681e435, including real pinned age encryption,
+independent decryption and complete31-reference private reconstruction; malformed
+requests, digest mismatches, public input and symlinks refuse without secret
+output. Source stays unchanged in a no-network read-only-source container.
+See [operator setup and exact proof](RECOVERY_OWNER_KIT_COMMAND.md). Actual owner
+two-copy key custody/account recovery and controlled reopen remain unverified.
+Public95d main45133165762 remains live:21 prerequisite jobs pass and final
+Foundation137565255751 is at browser accessibility/retained workflows, observed
+08:55:55UTC. Both ancillary runs pass; no current full-release acceptance yet.
+
+Owner-only recovery material capture on7bfe0e0 now seals exact31 configured
+secret/file references using real age, independently decrypts them and rebuilds
+a relocated private profile without vault access or starting the app. Native41/41
+passes with unchanged source and cleanup awaited. The five focused unit cases
+also pass; a follow-up isolates their missing-file paths to temporary fixtures.
+This closes the material capture/reconstruction component, not actual owner
+key copies, account recovery, certificate trust or controlled reopen. See
+[offline owner material](RECOVERY_OFFLINE_MATERIAL.md).
+
+Local1ccf10a now restores authenticated original files to four distinct empty
+object destinations after fresh-process database restoration. Native40/40 passes
+with unchanged source and owned cleanup; seven focused adapter tests also pass.
+Conditional writes preserve existing keys; byte readback and final inventories
+are checked; lost acknowledgements retain uncertainty and stop further writes.
+Quarantine remains isolated and unrendered. See
+[object restoration scope](RECOVERY_OBJECT_APPLICATION.md).
+
+Published95d9ef9439f remains draft/open/unmerged. Its21 prerequisite jobs now
+pass; final Foundation137565255751 in main45133165762 remains live. Both ancillary
+runs pass. This published acceptance excludes the newer local restored-database
+and object-application additions. No production installation is approved by these
+results. Do not advance its branch/title/body while this run remains live.
+
+Remaining launch requirements include actual independent provider/host recovery,
+external secret/file and two-copy offline-key custody, full financial/security
+acceptance and old-session/worker fencing, final locked complete-point metadata,
+scheduled backups with independent failure detection, reviewed complete exports,
+actual hosting/authentication/private storage/workers, owner finance/openings,
+phone acceptance and controlled deployment. No real-data activation, account
+provisioning, expenditure or completed-backup claim has occurred.
+
 ## Launch checkpoint, 2026-11-22
 
 New local release-archive assembly/recovery passes8 native cases on7027ea2:
