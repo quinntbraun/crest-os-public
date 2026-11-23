@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto';
+import {recoveryAgeCiphertextLimit} from './recovery-encryption-limits.ts';
 import {unlink} from 'node:fs/promises';
 import {hashRecoveryReleaseParts,recoveryReleaseFileLimit,recoveryReleasePartLimit} from './recovery-release-files.ts';
 import {recoveryVaultArtifactKey} from './recovery-vault.ts';
@@ -27,7 +28,7 @@ export function readRecoveryReleaseArchive(value:unknown):RecoveryReleaseArchive
   for(const part of value.parts){
    exact(part,['offset','plaintext','artifact']);require(part.offset===offset);exact(part.plaintext,['byteSize','sha256']);require(count(part.plaintext.byteSize,recoveryReleasePartLimit)&&sha(part.plaintext.sha256));
    const a=part.artifact;exact(a,['key','versionId','byteSize','sha256','retainUntil']);require(typeof a.key==='string'&&key.test(a.key)&&!seen.has(a.key)&&typeof a.versionId==='string'&&a.versionId.length>0&&a.versionId.length<=1024&&a.versionId!=='null'&&!/\s|\p{Cc}/u.test(a.versionId)&&count(a.byteSize,1024*1024*1024)&&a.byteSize>=21&&sha(a.sha256)&&typeof a.retainUntil==='string'&&Number.isFinite(Date.parse(a.retainUntil))&&new Date(a.retainUntil).toISOString()===a.retainUntil);seen.add(a.key);
-   require(a.byteSize<=part.plaintext.byteSize+65536);offset+=part.plaintext.byteSize;require(offset<=value.byteSize);parts.push(Object.freeze({offset:part.offset as number,plaintext:Object.freeze({...part.plaintext}) as Part['plaintext'],artifact:Object.freeze({...a}) as RecoveryVaultArtifact}));
+   require(a.byteSize<=recoveryAgeCiphertextLimit(part.plaintext.byteSize));offset+=part.plaintext.byteSize;require(offset<=value.byteSize);parts.push(Object.freeze({offset:part.offset as number,plaintext:Object.freeze({...part.plaintext}) as Part['plaintext'],artifact:Object.freeze({...a}) as RecoveryVaultArtifact}));
   }
   require(offset===value.byteSize);return Object.freeze({profile:value.profile,kind:value.kind,release:Object.freeze({...release}) as Release,byteSize:value.byteSize,sha256:value.sha256,parts:Object.freeze(parts),completeBackup:false});
  }catch{throw new RecoveryReleaseArchiveError();}

@@ -16,3 +16,9 @@ export function nextRecoveryBackupSlot(after:string){
  const value=Number(next);if(!Number.isSafeInteger(value)||value>253402300799999)throw new RecoveryProtectionPolicyError();
  return new Date(value).toISOString();
 }
+// Inclusive most recent slot. A catch-up dispatch still captures the actual
+// current source snapshot; this calendar instant is never its backup age.
+export function latestRecoveryBackupSlot(at:string){
+ const now=milliseconds(at);if(now<offset)throw new RecoveryProtectionPolicyError();
+ const value=Number(((now-offset)/period)*period+offset);if(!Number.isSafeInteger(value))throw new RecoveryProtectionPolicyError();return new Date(value).toISOString();
+}

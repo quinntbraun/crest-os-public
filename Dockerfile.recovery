@@ -1,0 +1,33 @@
+# Separate from the web image: no web server, credentials or decryption keys.
+FROM supabase/postgres:17.11.0.006@sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2 AS postgres-tools
+USER root
+COPY scripts/extract-recovery-postgres.sh /tmp/extract-recovery-postgres.sh
+RUN sh /tmp/extract-recovery-postgres.sh
+
+FROM node:24.22.0-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS dependencies
+WORKDIR /app
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --omit=dev --ignore-scripts --no-fund
+
+FROM dependencies AS age-tools
+COPY scripts/install-recovery-tools.mjs ./scripts/
+COPY src/tooling/migrations.ts ./src/tooling/migrations.ts
+COPY release/toolchain.json ./release/toolchain.json
+RUN node scripts/install-recovery-tools.mjs
+
+FROM node:24.22.0-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS recovery
+WORKDIR /app
+ENV NODE_ENV=production LANG=C.UTF-8
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=postgres-tools /recovery-postgres/nix/store /nix/store
+COPY --from=postgres-tools --chown=0:0 --chmod=0555 /recovery-postgres/bin /opt/crest-postgres/bin
+COPY --from=age-tools --chown=0:0 --chmod=0555 /app/.local/tools/recovery/age /opt/crest-age
+COPY package.json package-lock.json ./
+COPY src ./src
+COPY release/toolchain.json ./release/toolchain.json
+COPY supabase/migration-checksums.json ./supabase/migration-checksums.json
+COPY release/compatibility.json ./release/compatibility.json
+COPY scripts/recovery-capture.mjs scripts/recovery-scheduled-capture.mjs scripts/recovery-owner-kit.mjs scripts/operator-source-export.mjs scripts/verify-recovery-image.mjs ./scripts/
+RUN node --conditions=react-server scripts/verify-recovery-image.mjs
+USER node
+ENTRYPOINT ["node", "--conditions=react-server", "scripts/recovery-scheduled-capture.mjs"]

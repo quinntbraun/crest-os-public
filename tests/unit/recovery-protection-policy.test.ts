@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {recoveryProtectionStatus,nextRecoveryBackupSlot} from '../../src/tooling/recovery-protection-policy.ts';
+import {recoveryProtectionStatus,nextRecoveryBackupSlot,latestRecoveryBackupSlot} from '../../src/tooling/recovery-protection-policy.ts';
 const snapshot='2026-11-23T00:20:00.000Z';
 describe('canonical backup age and UTC schedule policy',()=>{
  it.each([
@@ -25,4 +25,10 @@ describe('canonical backup age and UTC schedule policy',()=>{
   ['2026-11-23T23:59:59.999Z','2026-11-24T00:20:00.000Z'],['2026-12-31T18:20:00.000Z','2027-01-01T00:20:00.000Z'],
   ['2026-03-08T06:20:00.000Z','2026-03-08T12:20:00.000Z'],['2026-11-01T06:20:00.000Z','2026-11-01T12:20:00.000Z']
  ])('keeps the six-hour UTC schedule through day/year/DST boundaries at %s',(after,expected)=>{expect(nextRecoveryBackupSlot(after)).toBe(expected);});
+ it.each([
+  ['2026-11-23T00:19:59.999Z','2026-11-22T18:20:00.000Z'],['2026-11-23T00:20:00.000Z','2026-11-23T00:20:00.000Z'],
+  ['2026-11-23T23:59:59.999Z','2026-11-23T18:20:00.000Z'],['2027-01-01T00:00:00.000Z','2026-12-31T18:20:00.000Z'],
+  ['2026-03-08T06:20:00.000Z','2026-03-08T06:20:00.000Z'],['2026-11-01T06:19:59.999Z','2026-11-01T00:20:00.000Z']
+ ])('selects the inclusive most recent UTC slot at%s',(at,expected)=>{expect(latestRecoveryBackupSlot(at)).toBe(expected);});
+ it('refuses invalid or pre-first-epoch slot clocks',()=>{for(const value of['invalid','2026-02-30T00:20:00.000Z','1970-01-01T00:19:59.999Z'])expect(()=>latestRecoveryBackupSlot(value)).toThrow('RECOVERY_PROTECTION_REVIEW_REQUIRED');});
 });

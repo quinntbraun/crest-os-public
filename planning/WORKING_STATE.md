@@ -2,6 +2,167 @@
 
 ## Current launch checkpoint, 2026-11-23
 
+Actual isolated recovery-tool image now builds on2de7a60, imagea8e21cb993a5200d
+(.local/recovery-tool-image-build-current/result.json). Native image rehearsal
+passes1/1 on ca9c111 with real PG dump/age/decrypt/restore, exact typed values,
+constraint and missing-profile refusal; source stable/owned cleanup. Earlier
+rebuilt-image opaque failure retained; later readiness/diagnostic improvement
+and pass do not prove its cause. See RECOVERY_TOOL_IMAGE.md.
+
+Public100a is now TERMINAL: all21 prerequisites and both ancillary workflows
+pass; Foundation137709178170 passes through actual app build/smoke step40 then
+step41 archive setup fails0/4 RECOVERY_RELEASE_ARCHIVE_REVIEW_REQUIRED. Later
+worker checks skipped. Native default256MiB age reproduction fails on0e2b112
+and unchanged case passes on2de7a60 after per-chunk authentication-tag allowance
+correction with original1GiB cap retained; nine units/types/targetlint pass.
+See RECOVERY_RELEASE_SIZE_CORRECTION.md and ignored before/fixed proof folders.
+No whole-release or worker acceptance. No native runner live after all owned
+checks finish. Next fresh strict-scanned coherent101 publication from locald129
+baseline/public40e99 parent, verify exact newhead/merge/3 workflows, then host
+templates, complete-point/catalog and actual owner-host/financial/security/
+export/off-laptop/phone gates. No merge/install/activation/spending. V1 coding
+roughly80% low confidence; actual Crest use not ready; context sufficient.
+
+Recovery deployment image source now prepared in Dockerfile.recovery with a
+dedicated allowlist context, root-owned pinned PostgreSQL17.11 ELF tool/library
+subset, SHA-pinned age1.3.2, Node24.22 and locked production dependencies. No web
+server or credential included; default unprivileged UTC-slot command remains
+candidate-only/exit2. Image build/native encryption/database acceptance pending.
+See RECOVERY_TOOL_IMAGE.md. Scheduler14/14 actual Linux cases pass on ac55c1d,
+source unchanged/owned cleanup awaited, .local/recovery-scheduled-capture/result.json.
+Latest actual public100a Foundation137709178170 is live at step39 browser
+accessibility/retained workflows, after all21 prerequisites succeed. Preserve
+same public40e99 source/title/body until terminal; no whole release/worker pass
+inferred. Next build/rehearse recovery image, then complete-point/catalog and
+owner-host/financial/security/export/phone gates. Real Crest use not ready;
+V1 coding roughly80% low confidence, context sufficient, $0 new spend.
+
+New durable per-UTC-slot dispatcher selects the most recent adopted slot, wins
+exclusive private claim before UUID generation and flushes identity before
+calling the capture command. Duplicate/failed/torn claims never replay; later
+slots get distinct new captures without pretending missed intervals were safe.
+Profile bytes are rechecked, failures/terminal state persist, bad child success
+receipts refuse. Candidate-only exit2/completeBackupfalse; no timer/healthy
+heartbeat/complete catalog/backup_runs activation. Capture command now requires
+exact Node24.22.36 profile/age/calendar cases/types/targetlint pass; combined new
+eight Linux schedule cases and existing six command cases native execution
+pending. See RECOVERY_SCHEDULED_CAPTURE.md. Commit before frozen checks and keep
+tracked bytes fixed while any actual native handle lives. Host templates defer
+to the canonical isolated pinned recovery-tool image, which must be built and
+rehearsed before activation; do not substitute host Node plus a timer.
+
+Private capture command acceptance on23f2379: six controlled-producer/PG/SDK/HTTP
+cases pass in actual private Linux filesystem/real artifact journal/controller,
+network disabled, tracked source unchanged/owned cleanup. Profile14 cases/types/
+targetlint pass. Shared-file-reader actual restricted PostgreSQL export regression
+also passes on23f2379: original14-file ten-source plus193-file189-source/neutral
+import, references, refusals/repairs, source stable/cleanup. One separate root
+case, Windows test-only loopback/file-flush. Proofs .local/recovery-capture-command/
+result.json and .local/shared-private-reader-native138/result.json. Both actual
+handles71326/30650 are terminal; no native runner live. No actual provider/TLS or
+pinned-producer acceptance is inferred from controlled command ports. Command
+remains explicit-run/candidate-only with exit2; final complete marker, actual
+scheduler/backup_runs, retention/status/alerts and full launch gates still open.
+
+Public100a all21 prerequisites pass. Foundation137709178170/main45174621023
+continues, latest real step28 finance-account configuration/restore active after
+step27 field/frozen upgrade succeeds. Keep same public40e99 head/title/body; do
+not restart/cancel/replace while live. No current compiled image/worker/whole-
+release pass yet. Next independent work: durable per-UTC-slot dispatch and review-
+only host setup without silently generating a retry identity, then actual final
+complete-point/catalog and owner-host/security/financial/phone/export acceptance.
+
+New isolated Linux recovery-capture command composes actual pinned producer,
+explicit TLS backup reader, three read-only R2 adapters, chosen B2 vault and
+failure-only monitor. Private exact profile and explicit run UUID; durable command
+reservation precedes dispatch, same identity refuses restart/replay. Connection
+failure occurs inside durable controller; all owned client/journal/SDK handles
+close. Candidate exits2/completeBackupfalse, errors closed/exit1. No success marker,
+backup_runs/scheduler activation or healthy heartbeat. Shared bounded private-file
+reader now serves operator export too. Fourteen profile cases/types/targetlint
+pass; real Linux controlled-port composition and actual export-reader regression
+pending. See RECOVERY_CAPTURE_COMMAND.md. Commit before frozen checks; preserve
+tracked bytes while either actual native handle lives. Public100a all21
+prerequisites pass; Foundation137709178170 active at field/upgrade step27 at last
+fresh observation. Keep public40e99 head/title/body and exact run handles fixed.
+
+Full instance193-file source/command/neutral reimport plus declared-FK map and
+orphan refusal/repair pass on88abc20 with unchanged tracked source and owned
+cleanup. All189 source cells match PostgreSQL across three businesses including
+a posted invoice; imported relationship metadata matches the source catalog.
+Source-catalog RLS drift and source-row orphan with unchanged catalogs each
+refuse; exact repairs pass. Existing ten-source14-file path is retained. One
+native root case with assertions, not a full recovery rerun or production TLS/
+Linux/independent host acceptance. .local/instance-source-references138/result.json.
+Types/targetlint and two coverage cases pass. Native handle86527 is terminal;
+no native runner live. Latest published100a mandatory Linux DB/recovery passes,
+main45174621023 remains live with19 successful prerequisites and payment/field
+browser jobs still active at observation. Keep publichead/title/body fixed.
+Continue actual complete catalog/final backup marker/scheduling/status/alerts,
+full financial/global/incident readiness, remaining logical/provider/original/
+report portability and owner-host-phone acceptance. No optional design work,
+activation, merge/install/signup/provision/spend. Actual Crest use not ready;
+V1 coding roughly80% low confidence; repository/context sufficient; $0 new spend.
+
+All189 application source capture/193-file actual command delivery and separate
+neutral import pass onfab4dd4 with unchanged source/owned cleanup. It includes
+three businesses and an invoice issued/posted through existing commands, every
+cell compared with actual PostgreSQL, exact file hashes, source-catalog drift
+refusal/repair and second-import refusal preserving data. One native root case,
+Windows explicit test-only loopback/file-flush; no full backup/portability claim.
+Follow-up declared-FK map/counts, excluded/external classification and orphan
+refusal+exact repair are implemented; types/lint pass, expanded native pending.
+Commit before source-frozen run and keep tracked bytes fixed while live.
+
+Public100a mandatory Linux recovery step28 succeeds in137692553204; that entire
+database job succeeds. Its source includes actual Linux capture-controller
+composition and ten-source operatorv1 command plus their mandatory cases. This
+does not accept unpublished14-filev2 or193-file full-instance code, nor later
+compiled image/worker/whole-release acceptance. Main45174621023 remains live;
+keep same public40e99 head/title/body, no restart/cancel on observation expiry.
+
+New private instance source profile captures all189 reviewed application sources
+from one RO/RR snapshot, all businesses, existing restricted backup reader only.
+It checks independent routine/schema138 baselines and exact table/column coverage
+before reading fixed source columns. New193-file package/neutral text import and
+explicit private command requestv2 sourceSet:instance_sources retain credential
+exclusions and false full portability/reference closure/backup flags. Existing
+ten-source requestv1 remains separate. Two exact coverage cases/types/targetlint
+pass; real193-file multiple-business/posted-invoice/neutral reimport/catalog-
+refusal+repair native acceptance is pending. See INSTANCE_SOURCE_EXPORT.md.
+Commit before source-frozen run and preserve tracked bytes while its actual
+handle lives. Public100a head/metadata remain fixed while exact runs live.
+
+Operator v2 neutral import now passes on6d7fadc8: actual restricted capture and
+command delivery,14 files/exact manifest hashes, separate template0 PostgreSQL
+text reconstruction, every cell equals independent CSV decoding including quote/
+backslash/injection-like text/microseconds, exact snapshot metadata, no application
+schema and second-import refusal preserving original rows. Source unchanged,
+owned cleanup; .local/operator-command-reimport138/result.json. One root case
+with retained assertions, not the older22-case recovery rerun or production
+Linux/TLS/independent host acceptance. Full instance reference closure and required
+reports/originals remain. Types/targetlint pass. No native process remains live.
+Public100a40e99b47 and its three exact runs remain fixed; inspect same handles
+before any replacement. Next development: close safe whole-instance source/
+reference boundaries rather than mislabeling a business179-table plus global10
+component as one complete export; continue full backup/scheduler/global finance/
+incident/actual owner-host-phone launch requirements. Actual use remains notready.
+
+Public100a40e99b47 exactly matches locald129c579/treebca1e5d2, soleparentbc97.
+Strict2982-file43072636-byte scan0; metadata-before-nonforceCAS and independent
+ref/PR/testmerge d3c96f30 tree/ordered parents[ea06,40e99]/three exact PR runs
+verified. Main45174621023, expense45174620855, commercial45174620712 remain live;
+keep publichead/title/body fixed. NEXT.json/publicationproof authoritative.
+
+New unpublished operator packagev2 adds neutral PostgreSQL text reconstruction
+as a14th fixed file. It is separate from published100a's13-filev1 and does not
+recreate active sessions/roles or claim reference closure/full portability. All
+ten source tables and metadata import into a fresh neutral schema, one atomic
+transaction, existing schema refuses; literal escaping does not depend on
+destination string settings. Types/targetlint pass; expanded actual command+
+neutral import/refusal/unchanged-row native proof pending. Commit before the
+source-frozen run and preserve tracked bytes while its actual handle is live.
+
 Latest operator command source23b0c03 has real native subprocess acceptance:
 one root case passes all retained source/delivery/refusal assertions, source
 unchanged/owned cleanup; files exactly match direct restricted capture and

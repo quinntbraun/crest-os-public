@@ -134,6 +134,8 @@ jobs:
         run: |
           npm run test:recovery-db
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-capture-controller.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-capture-command.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-scheduled-capture.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/operator-source-export.test.mjs
       - name: Prove proposed durable export requests and fenced lease attempts
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-jobs.test.mjs
@@ -500,6 +502,17 @@ jobs:
           grep -Fx '# pass 4' .local/release/recovery-image-identity.log
           grep -Fx '# fail 0' .local/release/recovery-image-identity.log
           grep -Fx '# skipped 0' .local/release/recovery-image-identity.log
+      - name: Build and rehearse isolated pinned recovery tools
+        timeout-minutes: 5
+        run: |
+          docker build --file Dockerfile.recovery --tag crest-recovery:ci --iidfile .local/release/recovery-tool-image-id.txt .
+          export CREST_TEST_RECOVERY_TOOL_IMAGE_ID="$(cat .local/release/recovery-tool-image-id.txt)"
+          export CREST_TEST_RECOVERY_AGE="$PWD/.local/tools/recovery/age/age"
+          node --test --test-reporter=tap --test-concurrency=1 tests/integration/recovery-tool-image.test.mjs tests/integration/recovery-release-large.test.mjs | tee .local/release/recovery-tool-image.log
+          grep -Fx '# tests 2' .local/release/recovery-tool-image.log
+          grep -Fx '# pass 2' .local/release/recovery-tool-image.log
+          grep -Fx '# fail 0' .local/release/recovery-tool-image.log
+          grep -Fx '# skipped 0' .local/release/recovery-tool-image.log
       - name: Signed-in custody photo journeys with isolated decoder
         timeout-minutes: 6
         shell: bash

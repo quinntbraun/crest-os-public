@@ -41,7 +41,9 @@ never passed through JavaScript numeric/date conversion. Limits are100000 total
 rows and64MiB raw values; excess refuses without partial results.
 
 The private capture capability produces ten RFC4180 CSVs, an exact type/key/
-exclusion dictionary, spreadsheet escape map and SHA256/size manifest. The shared
+exclusion dictionary, spreadsheet escape map, neutral PostgreSQL import script
+and SHA256/size manifest. The new package profile is private-operator-csv.v2 with
+14 files; published100a's v1 remains a13-file historical contract. The shared
 independent CSV decoder must reproduce every row before a file set is returned.
 Null/empty, literal backslashes and formula-like values remain distinguishable;
 CSV display protection never changes the reconstructed source value. Copies of
@@ -112,7 +114,36 @@ uses only the explicitly test/loopback file-flush path; fresh Linux execution
 and actual production TLS/account custody remain separate acceptance. CI requires it after
 the original recovery suite and controller cases. No prior case is removed.
 
-Instance-wide reference closure, neutral reimport of this operator component,
-required reports, original-file custody, actual host/account recovery and full
+Instance-wide reference closure, required reports, original-file custody,
+actual host/account recovery and full
 launch acceptance remain unfinished. No operational activation, source-owner
 rule, real records or spending is included.
+
+## Neutral PostgreSQL reconstruction, v2
+
+The new operator_reimport.sql creates a separate crest_operator_source schema
+inside an empty database. All source cells stay exact text, with original types,
+primary keys, exclusions, snapshot identity/counts and false acceptance flags in
+_crest_export. It recreates no application schema, role, grant, active session,
+OAuth proof/consent or worker. It is inspection/migration evidence, not an app
+restoration procedure. The instance-wide reference-closure gap remains explicit.
+
+The script uses a single transaction and refuses an existing target schema,
+without replacing or deleting data. Identifier quoting is closed to captured
+inventory names; explicit escaped PostgreSQL literals preserve null/empty,
+backslashes, quotes, Unicode, formula-like strings and timestamp microseconds
+regardless of the destination's incoming string settings. Script output is capped
+at32MiB, within the64MiB whole-package limit; overflow refuses the whole format.
+The v2 manifest lists and hashes the SQL alongside all other files.
+
+Types and targeted lint pass. The expanded actual-command fixture passes on
+6d7fadc8, unchanged source and awaited owned cleanup, with evidence in
+.local/operator-command-reimport138/result.json and test.log. It imports the
+delivered script into a separate template0 database, compares every imported cell
+against independently decoded source CSVs and metadata snapshot identity,
+verifies no application schema is created and refuses a second import while
+keeping the original rows. All14 manifest-listed files have exact sizes/hashes.
+This is one native root case with its retained assertions and explicit Windows
+test-only loopback/file-flush seam. It is not a rerun of the earlier22 recovery
+cases, production Linux permission/TLS acceptance, full reference closure or
+application restoration.

@@ -6,7 +6,7 @@ import {captureOperatorSources138,formatOperatorSourceExport} from '../../src/to
 import {operatorSourceInventory138} from '../../src/tooling/operator-source-inventory138.ts';
 import {readCurrentBusinessCsv} from '../../src/security/current-business-source-csv.ts';
 export async function exerciseOperatorSources({admin,owner,other,migrations,createReader,createForbiddenReader}){
- assert.equal(process.env.CREST_ENV,'test');const stamp='2026-01-02T03:04:05.123456Z',secret='OPERATOR_EXCLUDED_SENTINEL',special=" =SUM(1,2)\r\nUnicode 🚙, quote \" and \\N",loginContext=randomUUID();
+ assert.equal(process.env.CREST_ENV,'test');const stamp='2026-01-02T03:04:05.123456Z',secret='OPERATOR_EXCLUDED_SENTINEL',special=" =SUM(1,2)\r\nUnicode 🚙, quote \" and \\N'; SELECT 1; --",loginContext=randomUUID();
  await admin.query('INSERT INTO crest_private.login_attempts(id,identifier_hash,ip_hash,admitted_at) VALUES($1,$2,$3,$4::timestamptz)',[randomUUID(),randomBytes(32),randomBytes(32),stamp]);
  await admin.query("INSERT INTO crest_private.login_contexts(id,credential_hash,ip_hash,csrf_hash,created_at,expires_at) VALUES($1,$2,$3,$4,$5::timestamptz,$5::timestamptz+interval '10 minutes')",[loginContext,randomBytes(32),randomBytes(32),randomBytes(32),stamp]);
  for(const principal of[owner,other]){
@@ -21,7 +21,7 @@ export async function exerciseOperatorSources({admin,owner,other,migrations,crea
  await admin.query("SET timezone='UTC'");await admin.query("SET datestyle='ISO, YMD'");
  const capture=await captureOperatorSources138({client:await createReader(),leaseBusinessId:owner.business,migrations},new AbortController().signal),value=capture.forRecoveryTools();assert.throws(()=>JSON.stringify(capture));assert.equal(value.scope,'instance_operator');assert.equal(value.sourceSchemaVersion,138);assert.equal(value.completePortableExport,false);assert.equal(value.completeBackup,false);assert.equal(value.sources.length,10);
  const files=formatOperatorSourceExport(capture),escapes=JSON.parse(Buffer.from(files['operator_escape_map.json']).toString()),manifest=JSON.parse(Buffer.from(files['operator_manifest.json']).toString());
- assert.equal(manifest.scope,'instance_operator');assert.equal(manifest.referenceClosureVerified,false);assert.equal(manifest.completePortableExport,false);assert.equal(manifest.completeBackup,false);assert.equal(Object.keys(files).length,13);assert.throws(()=>formatOperatorSourceExport(structuredClone(value)),{message:'OPERATOR_SOURCE_EXPORT_REVIEW_REQUIRED'});
+ assert.equal(manifest.profile,'crest.private-operator-csv.v2');assert.equal(manifest.scope,'instance_operator');assert.equal(manifest.referenceClosureVerified,false);assert.equal(manifest.completePortableExport,false);assert.equal(manifest.completeBackup,false);assert.equal(Object.keys(files).length,14);assert.throws(()=>formatOperatorSourceExport(structuredClone(value)),{message:'OPERATOR_SOURCE_EXPORT_REVIEW_REQUIRED'});
  for(const source of value.sources){
   const expected=operatorSourceInventory138.find(item=>item.source===source.source);assert.deepEqual(source.columns,expected.columns);assert(source.rows.length>0,source.source+' must have positive source rows');
   const sql='SELECT '+source.columns.map(column=>'"'+column+'"::text AS "'+column+'"').join(',')+' FROM ONLY '+source.source+' ORDER BY '+source.primaryKey.map(column=>'"'+column+'"').join(',');
