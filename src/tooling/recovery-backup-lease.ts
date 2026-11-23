@@ -16,7 +16,8 @@ const liveSnapshots=new WeakMap<object,()=>boolean>();
 export function isLiveRecoveryBackupSnapshot(snapshot:unknown):snapshot is RecoveryBackupSnapshot{return !!snapshot&&typeof snapshot==='object'&&liveSnapshots.get(snapshot)?.()===true;}
 const targetHash=(target:DatabaseTarget)=>createHash('sha256').update(JSON.stringify([target.host,target.port,target.database,target.user,target.password,target.secure])).digest('hex');
 export function recoveryBackupSnapshotMatches(snapshot:unknown,target:DatabaseTarget){return !!snapshot&&typeof snapshot==='object'&&sourceBindings.get(snapshot)?.(target)===true;}
-type Lease=Readonly<{signal:AbortSignal;assertHeld:()=>Promise<void>;capture:<T>(work:(snapshot:Snapshot,signal:AbortSignal)=>Promise<T>)=>Promise<Readonly<{value:T;snapshot:Omit<Snapshot,'query'>}>>}>;
+export type RecoveryBackupLease=Readonly<{signal:AbortSignal;assertHeld:()=>Promise<void>;capture:<T>(work:(snapshot:Snapshot,signal:AbortSignal)=>Promise<T>)=>Promise<Readonly<{value:T;snapshot:Omit<Snapshot,'query'>}>>}>;
+type Lease=RecoveryBackupLease;
 
 export async function withRecoveryBackupLease<T>(client:pg.Client,businessId:string,external:AbortSignal,work:(lease:Lease)=>Promise<T>):Promise<T>{
  require(client instanceof pg.Client&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(businessId)&&typeof work==='function');

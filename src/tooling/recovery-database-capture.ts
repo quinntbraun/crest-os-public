@@ -1,6 +1,8 @@
 // Isolated recovery-tool mechanics. No web import, credential provisioning,
 // runtime grant, scheduler or complete-backup authority.
 import {spawn} from 'node:child_process';
+import {createReadStream} from 'node:fs';
+import {isDeepStrictEqual} from 'node:util';
 import type {ChildProcessWithoutNullStreams} from 'node:child_process';
 import {createHash,randomUUID} from 'node:crypto';
 import {open,lstat,mkdtemp,rm,unlink} from 'node:fs/promises';
@@ -11,7 +13,10 @@ import {recoveryBackupSnapshotMatches} from './recovery-backup-lease.ts';
 import type {RecoveryBackupSnapshot} from './recovery-backup-lease.ts';
 import {captureRecoveryDatabaseInventory} from './recovery-database-inventory.ts';
 import {captureRecoveryOriginalInventory} from './recovery-original-inventory.ts';
+import {captureRecoveryFinancialControls} from './recovery-financial-controls.ts';
 import {openRecoveryReleaseFile,recoveryReleaseFileLimit,recoveryReleasePartLimit} from './recovery-release-files.ts';
+import {readRecoveryReleaseArchive} from './recovery-release-archive.ts';
+import type {createRecoveryVault,RecoveryVaultArtifact} from './recovery-vault.ts';
 
 type Command='pg_dump'|'age';
 export type RecoveryCaptureLauncher=(command:Command,args:string[],environment:Record<string,string>)=>ChildProcessWithoutNullStreams;
@@ -132,17 +137,71 @@ export function createRecoveryReleaseFileEncryption(launch:RecoveryCaptureLaunch
  };
 }
 export async function createPinnedRecoveryReleaseFileEncryption(tools:Readonly<{pgDump:string;age:string}>){return createRecoveryReleaseFileEncryption(await pinnedRecoveryLauncher(tools));}
+export class RecoveryReleaseRestoreError extends Error{constructor(){super('RECOVERY_RELEASE_RESTORE_REVIEW_REQUIRED');this.name='RecoveryReleaseRestoreError';}}
+export function createRecoveryReleaseArchiveRestore(launch:RecoveryCaptureLauncher){
+ return async(input:Readonly<{archive:unknown;workspace:string;identityFile:string}>,vault:Pick<ReturnType<typeof createRecoveryVault>,'retrieveEncryptedFile'>,external:AbortSignal)=>{
+  let output:Awaited<ReturnType<typeof open>>|undefined,path:string|undefined,home:string|undefined,cipherPath:string|undefined,created=false,complete=false,encryptor:ReturnType<typeof tracked>|undefined;let jobs:Promise<unknown>[]=[];
+  const controller=new AbortController(),signal=AbortSignal.any([external,controller.signal,AbortSignal.timeout(900000)]);
+  try{
+   signal.throwIfAborted();const archive=readRecoveryReleaseArchive(input.archive);require(isAbsolute(input.workspace)&&isAbsolute(input.identityFile));const workspace=await lstat(input.workspace),identity=await lstat(input.identityFile);require(workspace.isDirectory()&&identity.isFile()&&identity.size>0&&identity.size<=65536&&(process.platform!=='linux'||((workspace.mode&0o077)===0&&workspace.uid===process.getuid!()&&(identity.mode&0o077)===0&&(identity.uid===0||identity.uid===process.getuid!()))));
+   home=await mkdtemp(join(input.workspace,'.restore-home-'));const environment=childEnvironment(home);require(['1.3.2','v1.3.2'].includes(await version(launch,'age',environment,AbortSignal.any([signal,AbortSignal.timeout(10000)]))));
+   path=join(input.workspace,'recovered-release-'+randomUUID()+'.tar');output=await open(path,'wx',0o600);created=true;const full=createHash('sha256');let written=0;
+   for(const part of archive.parts){
+    signal.throwIfAborted();require(part.offset===written);const destination=join(input.workspace,'restore-cipher-'+randomUUID()+'.age'),receipt=await vault.retrieveEncryptedFile(part.artifact,destination,signal);cipherPath=destination;require(isDeepStrictEqual(receipt,part.artifact));
+    encryptor=tracked(launch('age',['--decrypt','--identity',input.identityFile],environment),signal);const cipher=meter(ageHeader),plain=meter(Buffer.alloc(0)),file=output;
+    const sink=new Writable({write(chunk:Buffer,_encoding,done){void(async()=>{require(written+chunk.length<=archive.byteSize);let offset=0;while(offset<chunk.length){signal.throwIfAborted();const result=await file.write(chunk,offset,chunk.length-offset);require(result.bytesWritten>0);offset+=result.bytesWritten;}full.update(chunk);written+=chunk.length;})().then(()=>done(),()=>done(new RecoveryReleaseRestoreError()));}});
+    jobs=[pipeline(createReadStream(cipherPath),cipher.stream,encryptor.child.stdin,{signal}),pipeline(encryptor.child.stdout,plain.stream,sink,{signal}),encryptor.closed];for(const job of jobs)void job.catch(()=>controller.abort());await Promise.all(jobs);const actualCipher=cipher.finish(),actualPlain=plain.finish();require(actualCipher.byteSize===part.artifact.byteSize&&actualCipher.sha256===part.artifact.sha256&&actualPlain.byteSize===part.plaintext.byteSize&&actualPlain.sha256===part.plaintext.sha256);signal.throwIfAborted();
+    await unlink(cipherPath);cipherPath=undefined;encryptor=undefined;jobs=[];
+   }
+   require(written===archive.byteSize&&full.digest('hex')===archive.sha256);signal.throwIfAborted();await output.sync();require((await output.stat()).size===archive.byteSize);await output.close();output=undefined;
+   if(process.platform==='linux'){const directory=await open(input.workspace,'r');try{await directory.sync();}finally{await directory.close();}}
+   const evidence=Object.freeze({profile:'crest.authenticated-recovered-release.v1' as const,path,kind:archive.kind,release:archive.release,byteSize:archive.byteSize,sha256:archive.sha256,authenticated:true as const,applicationLoaded:false as const,completeBackup:false as const});complete=true;return Object.freeze({forRecoveryTools:()=>evidence,toJSON():never{throw new RecoveryReleaseRestoreError();}});
+  }catch{throw new RecoveryReleaseRestoreError();}finally{
+   controller.abort();await Promise.allSettled([...jobs,...(encryptor?[encryptor.closed]:[])]);await output?.close().catch(()=>{});if(cipherPath)await unlink(cipherPath).catch(()=>{});if(created&&!complete&&path)await unlink(path).catch(()=>{});if(home&&dirname(resolve(home))===resolve(input.workspace)&&basename(home).startsWith('.restore-home-'))await rm(home,{recursive:true,force:true}).catch(()=>{});
+  }
+ };
+}
+export async function createPinnedRecoveryReleaseArchiveRestore(tools:Readonly<{pgDump:string;age:string}>){return createRecoveryReleaseArchiveRestore(await pinnedRecoveryLauncher(tools));}
+
+export class RecoveryArtifactRestoreError extends Error{constructor(){super('RECOVERY_ARTIFACT_RESTORE_REVIEW_REQUIRED');this.name='RecoveryArtifactRestoreError';}}
+type ArtifactKind='database'|'metadata'|'original'|'quarantine';
+// Runs only on the separate restore host. No SQL, extraction, rendering,
+// provider write or application start follows authenticated byte recovery.
+export function createRecoveryArtifactRestore(launch:RecoveryCaptureLauncher){
+ return async(input:Readonly<{kind:ArtifactKind;artifact:RecoveryVaultArtifact;plaintext:Readonly<{byteSize:number;sha256:string}>;workspace:string;identityFile:string}>,vault:Pick<ReturnType<typeof createRecoveryVault>,'retrieveEncryptedFile'>,external:AbortSignal)=>{
+  let output:Awaited<ReturnType<typeof open>>|undefined,path:string|undefined,cipherPath:string|undefined,home:string|undefined,workspace:string|undefined,created=false,complete=false,tool:ReturnType<typeof tracked>|undefined;let jobs:Promise<unknown>[]=[];
+  const controller=new AbortController(),signal=AbortSignal.any([external,controller.signal,AbortSignal.timeout(900000)]);
+  try{
+   signal.throwIfAborted();const request=Object.freeze({...input,artifact:Object.freeze({...input.artifact}),plaintext:Object.freeze({...input.plaintext})}),maximum=request.kind==='database'?limit:request.kind==='metadata'?8388608:26214400;
+   require(['database','metadata','original','quarantine'].includes(request.kind)&&Number.isSafeInteger(request.plaintext.byteSize)&&request.plaintext.byteSize>=(request.kind==='quarantine'?0:1)&&request.plaintext.byteSize<=maximum&&/^[a-f0-9]{64}$/.test(request.plaintext.sha256)&&isAbsolute(request.workspace)&&isAbsolute(request.identityFile));
+   workspace=request.workspace;const root=await lstat(request.workspace),identity=await lstat(request.identityFile);require(root.isDirectory()&&identity.isFile()&&identity.size>0&&identity.size<=65536&&(process.platform!=='linux'||((root.mode&0o077)===0&&root.uid===process.getuid!()&&(identity.mode&0o077)===0&&(identity.uid===0||identity.uid===process.getuid!()))));
+   home=await mkdtemp(join(request.workspace,'.restore-artifact-home-'));const environment=childEnvironment(home);require(['1.3.2','v1.3.2'].includes(await version(launch,'age',environment,AbortSignal.any([signal,AbortSignal.timeout(10000)]))));
+   const destination=join(request.workspace,'restore-artifact-cipher-'+randomUUID()+'.age'),receipt=await vault.retrieveEncryptedFile(request.artifact,destination,signal);cipherPath=destination;require(isDeepStrictEqual(receipt,request.artifact));
+   path=join(request.workspace,'recovered-artifact-'+randomUUID()+'.bin');output=await open(path,'wx',0o600);created=true;tool=tracked(launch('age',['--decrypt','--identity',request.identityFile],environment),signal);
+   const cipher=meter(ageHeader),plain=meter(request.kind==='database'?dumpHeader:request.kind==='metadata'?Buffer.from('{'):Buffer.alloc(0)),file=output;let written=0;
+   const sink=new Writable({write(chunk:Buffer,_encoding,done){void(async()=>{require(written+chunk.length<=request.plaintext.byteSize);let offset=0;while(offset<chunk.length){signal.throwIfAborted();const result=await file.write(chunk,offset,chunk.length-offset);require(result.bytesWritten>0);offset+=result.bytesWritten;}written+=chunk.length;})().then(()=>done(),()=>done(new RecoveryArtifactRestoreError()));}});
+   jobs=[pipeline(createReadStream(cipherPath),cipher.stream,tool.child.stdin,{signal}),pipeline(tool.child.stdout,plain.stream,sink,{signal}),tool.closed];for(const job of jobs)void job.catch(()=>controller.abort());await Promise.all(jobs);const actualCipher=cipher.finish(),actualPlain=plain.finish();require(actualCipher.byteSize===request.artifact.byteSize&&actualCipher.sha256===request.artifact.sha256&&actualPlain.byteSize===request.plaintext.byteSize&&actualPlain.sha256===request.plaintext.sha256);signal.throwIfAborted();
+   await output.sync();require((await output.stat()).size===request.plaintext.byteSize);await output.close();output=undefined;await unlink(cipherPath);cipherPath=undefined;
+   if(process.platform==='linux'){const directory=await open(request.workspace,'r');try{await directory.sync();}finally{await directory.close();}}
+   signal.throwIfAborted();const evidence=Object.freeze({profile:'crest.authenticated-recovered-artifact.v1' as const,kind:request.kind,path,...actualPlain,authenticated:true as const,applied:false as const,rendered:false as const,completeBackup:false as const});complete=true;return Object.freeze({forRecoveryTools:()=>evidence,toJSON():never{throw new RecoveryArtifactRestoreError();}});
+  }catch{throw new RecoveryArtifactRestoreError();}finally{
+   controller.abort();await Promise.allSettled([...jobs,...(tool?[tool.closed]:[])]);await output?.close().catch(()=>{});if(cipherPath)await unlink(cipherPath).catch(()=>{});if(created&&!complete&&path)await unlink(path).catch(()=>{});if(home&&workspace&&dirname(resolve(home))===resolve(workspace)&&basename(home).startsWith('.restore-artifact-home-'))await rm(home,{recursive:true,force:true}).catch(()=>{});
+  }
+ };
+}
+export async function createPinnedRecoveryArtifactRestore(tools:Readonly<{pgDump:string;age:string}>){return createRecoveryArtifactRestore(await pinnedRecoveryLauncher(tools));}
 async function captureBundle(launch:RecoveryCaptureLauncher,capture:ReturnType<typeof createRecoveryDatabaseCapture>,input:RecoveryDatabaseCaptureInput,signal:AbortSignal){
  // The inventory and encrypted dump must both finish before the lease releases
  // the exported snapshot. No later connection may fill in missing metadata.
  const inventory=await captureRecoveryDatabaseInventory(input.snapshot,signal);
  const originalInventory=await captureRecoveryOriginalInventory(input.snapshot,signal);
+ const financialControls=await captureRecoveryFinancialControls(input.snapshot,signal);
  const database=await capture(input,signal),evidence=database.forRecoveryTools();let complete=false;
  try{
   require(inventory.forRecoveryTools().snapshotId===evidence.snapshotId);
-  const metadata=Object.freeze({profile:'crest.private-database-recovery-metadata.v1' as const,databaseInventory:inventory.forRecoveryTools(),originalInventory:originalInventory.forRecoveryTools()});
+  const metadata=Object.freeze({profile:'crest.private-database-recovery-metadata.v2' as const,databaseInventory:inventory.forRecoveryTools(),originalInventory:originalInventory.forRecoveryTools(),financialControls:financialControls.forRecoveryTools()});
   const metadataBytes=Buffer.from(JSON.stringify(metadata)+'\n');require(metadataBytes.length<=8388608);let encryptedInventory;try{encryptedInventory=await sealPrivateBytes(launch,input,metadataBytes,signal);}finally{metadataBytes.fill(0);}
-  complete=true;return Object.freeze({forRecoveryTools:()=>Object.freeze({profile:'crest.private-database-bundle.v1' as const,database:evidence,inventory:inventory.forRecoveryTools(),originalInventory:originalInventory.forRecoveryTools(),encryptedInventory,completeBackup:false as const}),toJSON():never{throw new RecoveryDatabaseCaptureError();}});
+  complete=true;return Object.freeze({forRecoveryTools:()=>Object.freeze({profile:'crest.private-database-bundle.v1' as const,database:evidence,inventory:inventory.forRecoveryTools(),originalInventory:originalInventory.forRecoveryTools(),financialControls:financialControls.forRecoveryTools(),encryptedInventory,completeBackup:false as const}),toJSON():never{throw new RecoveryDatabaseCaptureError();}});
  }finally{if(!complete)await unlink(evidence.path).catch(()=>{});}
 }
 export function createRecoveryDatabaseBundle(launch:RecoveryCaptureLauncher){const capture=createRecoveryDatabaseCapture(launch);return(input:RecoveryDatabaseCaptureInput,signal:AbortSignal)=>captureBundle(launch,capture,input,signal);}

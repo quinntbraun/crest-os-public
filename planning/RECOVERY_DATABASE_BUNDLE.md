@@ -49,8 +49,10 @@ Object identity includes its storage domain, business, immutable key, attachment
 source row, original/preview variant, validation version, byte count and hash.
 Supplier revision identities remain text rather than JavaScript numbers.
 
-The encrypted metadata envelope is `crest.private-database-recovery-metadata.v1`,
-containing `databaseInventory` and `originalInventory`. Unpublished reservations
+The first encrypted metadata envelope is `crest.private-database-recovery-metadata.v1`,
+containing `databaseInventory` and `originalInventory`. The new v2 additionally
+binds `financialControls` to that same exported snapshot; v1 artifacts do not
+acquire financial-control coverage by relabeling. Unpublished reservations
 remain metadata with no invented hash or downloadable object. Staging reservations
 for both pending and published attachments remain explicit: validation can leave
 retained staging bytes or unpublished original/preview candidates after a failure.

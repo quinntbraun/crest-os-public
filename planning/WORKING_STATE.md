@@ -2,6 +2,22 @@
 
 ## Launch checkpoint, 2026-11-22
 
+New local release-archive assembly/recovery passes8 native cases on7027ea2:
+actual source tar parts traverse the loopback versioned vault and restore through
+age authentication into an exclusive private whole file. Missing/reordered
+metadata, authenticated-transport but invalid age ciphertext, and a wrong final
+checksum fail without publishing recovered files. Source remains unchanged and
+cleanup is awaited. This local follow-up is not yet in the published94f draft;
+it does not load a container or complete the full recovery kit/point. See
+[release-kit verification](RECOVERY_RELEASE_KIT.md).
+
+Published94f ff15582f exactly matches localf3a882f/treeb6866470 and remains
+draft/open/unmerged. Main45120941452 is live; expense45120941605 and
+commercial45120941459 pass. Database foundation137514314951 and its mandatory
+encrypted recovery step pass on that published source. The current full release
+is not accepted; other main groups remain live. Do not transfer this acceptance
+to the newer local archive-recovery workflow or to actual provider/phone use.
+
 Public cf18ea02 is now terminal: main21/22 jobs pass and both ancillary suites
 pass. Foundation137495714370 stopped at both sample customer-reload cases; its
 later container/worker/artifact gates were not accepted. The sample server's
