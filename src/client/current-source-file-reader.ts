@@ -4,7 +4,7 @@ import type {SourceExportDownloadInventory} from './source-export-download-inven
 import {describeCurrentSourceLogicalFiles,readCurrentSourceLogicalSelection} from './current-source-logical-files';
 export type CurrentSourceBrowserFile=Readonly<{header:SourceExportDownloadInventory['header'];logicalFile:Readonly<{fileName:string;contentType:string;bytes:number;sha256:string}>;bytes:Uint8Array<ArrayBuffer>}>;
 export function createCurrentSourceFileReader(inventory:SourceExportDownloadInventory,api:ReturnType<typeof createSourceExportDownloadClient>){
- const header=inventory.header;if(header.profile!=='crest.current-business-source-bundle.v1'||(header.sourceSchemaVersion!==134&&header.sourceSchemaVersion!==135&&header.sourceSchemaVersion!==136))throw Error('CURRENT_SOURCE_FILE_REVIEW_REQUIRED');
+ const header=inventory.header;if(header.profile!=='crest.current-business-source-bundle.v1'||(header.sourceSchemaVersion!==134&&header.sourceSchemaVersion!==135&&header.sourceSchemaVersion!==136&&header.sourceSchemaVersion!==137))throw Error('CURRENT_SOURCE_FILE_REVIEW_REQUIRED');
  const binding={businessId:header.businessId,generationId:header.generationId,appReleaseId:header.appReleaseId,sourceSchemaVersion:header.sourceSchemaVersion};
  let disposed=false,manifest:string|undefined,index:Awaited<ReturnType<typeof describeCurrentSourceLogicalFiles>>|undefined;
  function check(signal:AbortSignal){if(disposed||signal.aborted)throw Error('CURRENT_SOURCE_FILE_REVIEW_REQUIRED');}

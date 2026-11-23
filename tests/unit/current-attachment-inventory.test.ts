@@ -5,6 +5,8 @@ import {currentAttachmentInventory,formatCurrentAttachmentInventory} from '../..
 import {currentBusinessSourceInventory} from '../../src/security/current-business-source-inventory';
 import {imageValidationVersion} from '../../src/files/validation-contract';
 import {createExportOriginalIndex} from '../../src/security/source-export-original-index';
+import {parseOriginalExportInventory,originalExportHash} from '../../src/client/source-export-originals';
+import {originalExportFixture} from '../support/original-export-fixture';
 import type {CurrentBusinessRows} from '../../src/security/current-business-source';
 function fixture(){
  const businessId=randomUUID(),actor=randomUUID(),epoch=randomUUID(),stamp='2026-11-22T20:00:00.123456Z',expenseId=randomUUID(),receiptId=randomUUID(),photoId=randomUUID(),photoDispatch=randomUUID(),supplierId=randomUUID(),billId=randomUUID();
@@ -25,12 +27,13 @@ function fixture(){
  function get(){return{schemaVersion:1,profile:'crest.current-business-rows.v1',businessId,snapshotToken:'c'.repeat(64),observedAt:stamp,sources,recordCount:sources.reduce((sum,source)=>sum+source.rows.length,0),completePortableExport:false,completeBackup:false} satisfies CurrentBusinessRows;}
  return{get,sources,add,receipt,attempt,photo,intent,supplier,businessId,receiptId,photoId,photoDispatch,supplierId,expenseId};
 }
-it('retains all three original kinds, exact references and the distinct photo dispatch object identity',()=>{
+it('retains all three original kinds, exact references and the distinct photo dispatch object identity',async()=>{
  const f=fixture(),inventory=currentAttachmentInventory(f.get());expect(inventory.availableCount).toBe(3);expect(inventory.pendingCount).toBe(0);
  const photo=inventory.attachments.find(item=>item.kind==='condition_photo')!;expect(photo.original!.path).toBe(`attachments/${f.photoId}/${f.photoDispatch}.png`);expect(photo.original!.objectId).not.toBe(f.photoId);
  expect(inventory.attachments.find(item=>item.kind==='supplier_document')!.references.billRevision).toBe('9007199254740993');expect(inventory.attachments.find(item=>item.kind==='expense_receipt')!.references.expenseId).toBe(f.expenseId);
  expect(inventory.attachments.every(item=>item.originalFilename===null&&item.delivery==='not_delivered')).toBe(true);expect(inventory.originalBytesIncluded).toBe(false);expect(inventory.completeBackup).toBe(false);
  const bundle=formatCurrentAttachmentInventory(f.get());expect(JSON.parse(Buffer.from(bundle.files['attachment_inventory.json']).toString())).toEqual(inventory);expect(Buffer.from(bundle.files['attachment_inventory_readme.txt']).toString()).toContain('No original file bytes');
+ const bytes=new Uint8Array(bundle.files['attachment_inventory.json']),header={...originalExportFixture().header,businessId:f.businessId},parsed=await parseOriginalExportInventory(bytes,header,await originalExportHash(bytes),new AbortController().signal);expect(parsed.files).toEqual(createExportOriginalIndex(bundle.inventory,bytes).files);
 });
 it('keeps reservations explicit and never invents hashes or paths for unconfirmed bytes',()=>{
  const f=fixture();f.sources.find(source=>source.source==='crest.expense_receipt_revisions')!.rows.pop();f.sources.find(source=>source.source==='crest.custody_photo_originals')!.rows=[];f.sources.find(source=>source.source==='crest.supplier_bill_originals')!.rows=[];

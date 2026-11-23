@@ -1255,6 +1255,8 @@ main.export-workspace { max-width:68rem; }
 .export-attributes dd { margin:0; font-weight:600; }
 .export-file-picker { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:.5rem .75rem; margin-top:.75rem; }
 .export-file-picker label,.export-compare label { display:block; }
+.export-originals > :first-child,.export-originals > .field-help,.export-original-compare { grid-column:1/-1; min-width:0; }
+.export-original-load { justify-self:start; }
 .export-picked-file {
   grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:baseline; gap:.2rem .65rem;
   min-width:0; margin:0; color:var(--muted); font-size:.875rem;

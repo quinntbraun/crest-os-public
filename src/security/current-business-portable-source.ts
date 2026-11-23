@@ -13,7 +13,7 @@ import {formatCurrentAttachmentInventory} from './current-attachment-inventory.t
 import {createExportOriginalIndex} from './source-export-original-index.ts';
 import type {CurrentBusinessRows,CurrentBusinessSourceBinding} from './current-business-source.ts';
 export function formatCurrentBusinessPortableSource(capture:CurrentBusinessRows,binding:CurrentBusinessSourceBinding,identity?:CurrentBusinessIdentitySource,sessions?:CurrentBusinessSessionSource,provider?:CurrentBusinessProviderSource){
- if(!binding||Object.keys(binding).sort().join(',')!=='appReleaseId,sourceSchemaVersion'||typeof binding.appReleaseId!=='string'||!/^[a-f0-9]{40}$/.test(binding.appReleaseId)||![133,134,135,136].includes(binding.sourceSchemaVersion))throw Error('CURRENT_BUSINESS_PORTABLE_SOURCE_BINDING_REQUIRED');
+ if(!binding||Object.keys(binding).sort().join(',')!=='appReleaseId,sourceSchemaVersion'||typeof binding.appReleaseId!=='string'||!/^[a-f0-9]{40}$/.test(binding.appReleaseId)||![133,134,135,136,137].includes(binding.sourceSchemaVersion))throw Error('CURRENT_BUSINESS_PORTABLE_SOURCE_BINDING_REQUIRED');
  const csv=formatCurrentBusinessCsv(capture),workbook=formatCurrentBusinessWorkbook(capture,binding),identityBundle=identity?formatCurrentIdentitySource(identity,capture):undefined;
  if((sessions||provider)&&!identityBundle)throw Error('CURRENT_BUSINESS_PORTABLE_SOURCE_BINDING_REQUIRED');
  const sessionBundle=sessions?formatCurrentSessionSource(sessions,identityBundle!.identity,capture):undefined;

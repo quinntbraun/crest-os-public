@@ -19,7 +19,7 @@ function fixture(){
  return{...f,request,permit,bytes,copies,object,readOriginal,recordOriginalAccess,stores:{expense_receipt:object,supplier_document:object,condition_photo:object}};
 }
 let f:ReturnType<typeof fixture>;
-const req=(body:unknown=f.request,headers:Record<string,string>={},route='original',method='POST')=>new Request(origin+'/api/business/exports/'+route,{method,headers:{origin,cookie,'content-type':'application/json',...headers},...method==='POST'?{body:typeof body==='string'?body:JSON.stringify(body)}:{}});
+const req=(body:unknown=f.request,headers:Record<string,string>={},route='original-file',method='POST')=>new Request(origin+'/api/business/exports/'+route,{method,headers:{origin,cookie,'content-type':'application/json',...headers},...method==='POST'?{body:typeof body==='string'?body:JSON.stringify(body)}:{}});
 const handler=()=>createSourceExportOriginalHttp({origin,businessId:f.businessId,connectionString:'unused',environment:'production',ingress:{kind:'direct'}},{} as never,{} as never,f.stores);
 beforeEach(()=>{vi.resetAllMocks();f=fixture();calls.api=f;calls.csrf.mockResolvedValue('valid');calls.admit.mockResolvedValue(true);});
 it('delivers exact private bytes after CSRF, admission, two authority reads and acknowledged audit, retaining them until transport completion',async()=>{
@@ -29,10 +29,12 @@ it('delivers exact private bytes after CSRF, admission, two authority reads and 
 });
 it.each(['origin','cookie','csrf','type','extra','path','method'])('rejects invalid %s before object reads or audits',async issue=>{
  const headers:Record<string,string>={};if(issue==='origin')headers.origin='https://other.example.com';if(issue==='cookie')headers.cookie='';if(issue==='type')headers['content-type']='text/plain';if(issue==='csrf')calls.csrf.mockRejectedValueOnce(Error('denied'));
- const response=await handler()(req(issue==='extra'?{...f.request,key:'originals/another-business/file'}:f.request,headers,issue==='path'?'original?key=value':'original',issue==='method'?'GET':'POST'),transportFixture());expect(response.ok).toBe(false);expect(f.readOriginal).not.toHaveBeenCalled();expect(f.object).not.toHaveBeenCalled();expect(f.recordOriginalAccess).not.toHaveBeenCalled();expect(response.headers.get('cache-control')).toContain('no-store');
+ const response=await handler()(req(issue==='extra'?{...f.request,key:'originals/another-business/file'}:f.request,headers,issue==='path'?'original-file?key=value':'original-file',issue==='method'?'GET':'POST'),transportFixture());expect(response.ok).toBe(false);expect(f.readOriginal).not.toHaveBeenCalled();expect(f.object).not.toHaveBeenCalled();expect(f.recordOriginalAccess).not.toHaveBeenCalled();expect(response.headers.get('cache-control')).toContain('no-store');
 });
 it('limits admission before private metadata and object work',async()=>{calls.admit.mockResolvedValueOnce(false);const response=await handler()(req(),transportFixture());expect(response.status).toBe(429);expect(response.headers.get('retry-after')).toBe('60');expect(f.object).not.toHaveBeenCalled();expect(f.readOriginal).not.toHaveBeenCalled();});
+it('leaves the retained interrupted-request original lookup outside the file route',async()=>{const response=await handler()(req(f.request,{},'original'),transportFixture());expect(response.status).toBe(404);expect(calls.csrf).not.toHaveBeenCalled();expect(f.readOriginal).not.toHaveBeenCalled();});
 it.each(['authority','hash','commit'])('returns no binary response after %s failure',async issue=>{
  if(issue==='authority')f.readOriginal.mockRejectedValueOnce(Error('private provider detail'));if(issue==='hash')f.object.mockImplementationOnce(async()=>{const copy=Buffer.alloc(f.bytes.length);f.copies.push(copy);return copy;});if(issue==='commit')f.recordOriginalAccess.mockRejectedValueOnce(Error('commit outcome unknown'));
  const response=await handler()(req(),transportFixture());expect(response.status).toBe(503);expect(isReceiptDownloadResponse(response)).toBe(false);expect(await response.json()).toEqual({error:'SOURCE_EXPORT_ORIGINAL_UNAVAILABLE'});expect(f.copies.every(copy=>copy.every(byte=>byte===0))).toBe(true);
 });
+

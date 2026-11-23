@@ -7,7 +7,7 @@ import {privateJsonResponse,readFlatJsonBody} from './private-http.ts';
 import {createSessionCsrfVerifier} from './session-request-guard.ts';
 import {createSessionRequestAdmission} from './session-request-admission.ts';
 import {createSourceExportOwnerAccess} from './source-export-owner-access.ts';
-import {parseExportOriginalRequest} from './source-export-original-contract.ts';
+import {parseExportOriginalRequest,exportOriginalFilePath} from './source-export-original-contract.ts';
 import {createExportOriginalReader} from './source-export-original-reader.ts';
 import type {ExportOriginalStores} from './source-export-original-reader.ts';
 import type {SessionDatabaseConfiguration} from './session-database.ts';
@@ -15,7 +15,7 @@ import {receiptDownloadHandoff} from '../bookkeeping/expenses/receipt-download-r
 import {customerUuid as uuid} from '../customer/customer-contract.ts';
 
 type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
-export const sourceExportOriginalPath='/api/business/exports/original';
+export const sourceExportOriginalPath=exportOriginalFilePath;
 const keys=Object.freeze(['exportJobId','generationId','kind','attachmentId']);
 export function sourceExportOriginalFailure(status=503){const response=privateJsonResponse({error:status===503?'SOURCE_EXPORT_ORIGINAL_UNAVAILABLE':'SOURCE_EXPORT_ORIGINAL_REQUEST_FAILED'},status);if(status===405)response.headers.set('Allow','POST');return response;}
 // Store selection comes from trusted runtime composition. Browser requests

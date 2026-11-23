@@ -143,7 +143,7 @@ export function createServiceRefundSourceCollector(config:Configuration,includeE
  return createCollector(config,false,false,false,true,includeSupplierPayables?23:includeSupplierBillDrafts?22:includeStatementMatchDrafts?21:includeOpeningReceivables?20:includeStatementStaging?19:includeOpeningWorksheets?18:includeRestoredTips?17:includeCollectionFailureGroupedRecredits?16:includeCollectionFailureRecredits?15:includeRefundTransferFees?14:includeDirectReceiptTips?13:includeRefundTransferAdjustments?12:includeCollectionFailures?11:includeTipReturns?10:includeExcessReturns?9:includeExcessReceipts?8:7);
 }
 export function createCurrentBusinessSourceCollector(config:Configuration){
- if(!config.migrationIdentity||![133,134,135,136].includes(config.migrationIdentity.length))throw new BusinessFoundationCollectionError();
+ if(!config.migrationIdentity||![133,134,135,136,137].includes(config.migrationIdentity.length))throw new BusinessFoundationCollectionError();
  return createCollector(config,false,false,false,false,5,true);
 }
 function createCollector(config:Configuration,includeCrm:false,includeJournal:false,includeCatalog:false,includeFinance:false,financeProfile:FinanceSourceVersion,includeCurrent:true):(signal:AbortSignal)=>Promise<CurrentBusinessSourceCapture>;
@@ -196,7 +196,7 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
      const value=await captureCurrentBusinessRows(businessId,async(sql,args)=>(await query(sql,args)).rows,check);
      const identity=await captureCurrentIdentitySource(value,async(sql,args)=>(await query(sql,args)).rows,check);
      const sessions=await captureCurrentSessionSource(identity,value,async(sql,args)=>(await query(sql,args)).rows,check);
-     const provider=expected&&(expected.length===135||expected.length===136)?await captureCurrentProviderSource(identity,value,async(sql,args)=>(await query(sql,args)).rows,check):undefined;
+     const provider=expected&&(expected.length===135||expected.length===136||expected.length===137)?await captureCurrentProviderSource(identity,value,async(sql,args)=>(await query(sql,args)).rows,check):undefined;
      require((await query('COMMIT')).command==='COMMIT');check();
      return Object.freeze({forCurrentBusinessProviderServer:()=>provider,forCurrentBusinessServer:()=>value,forCurrentBusinessIdentityServer:()=>identity,forCurrentBusinessSessionServer:()=>sessions,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
     }

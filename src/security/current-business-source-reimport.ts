@@ -21,7 +21,7 @@ function literal(value:string|null){
 // authority, changes posted history or claims complete recovery.
 export function formatCurrentBusinessReimport(capture:CurrentBusinessRows,binding:CurrentBusinessSourceBinding,inputIdentity?:CurrentBusinessIdentitySource,inputSessions?:CurrentBusinessSessionSource,inputProvider?:CurrentBusinessProviderSource){
  require(capture.schemaVersion===1&&capture.profile==='crest.current-business-rows.v1'&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===currentBusinessSourceInventory.length);
- require(/^[a-f0-9]{40}$/.test(binding.appReleaseId)&&[133,134,135,136].includes(binding.sourceSchemaVersion));
+ require(/^[a-f0-9]{40}$/.test(binding.appReleaseId)&&[133,134,135,136,137].includes(binding.sourceSchemaVersion));
  const identity=inputIdentity?verifyCurrentIdentitySource(inputIdentity,capture):undefined;require((!inputSessions&&!inputProvider)||identity);
  const sessions=inputSessions?verifyCurrentSessionSource(inputSessions,identity!,capture):undefined,provider=inputProvider?verifyCurrentProviderSource(inputProvider,identity!,capture):undefined,sources=[...capture.sources,...identity?.sources??[],...sessions?[sessions.source]:[],...provider?.sources??[]];
  const expectedSources=[...currentBusinessSourceInventory,...identity?currentIdentityInventory:[],...sessions?[currentSessionSource]:[],...provider?currentProviderSourceInventory:[]];

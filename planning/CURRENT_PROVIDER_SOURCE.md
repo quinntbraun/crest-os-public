@@ -2,9 +2,10 @@
 
 Registered schema135 adopts the reviewed SQL in
 `20270128180000_provider_source_export.sql`. The preceding proposal remains as
-provenance. Registry checksum, compatibility maximum and source inventory are
-explicitly135; no existing migration is edited. Production activation remains
-blocked and real Crest use is not accepted.
+provenance. The current registry, compatibility maximum and source inventory are
+now137, with append-only original-export membership added separately. No existing
+migration is edited. Production activation remains blocked and real Crest use is
+not accepted. See SOURCE_EXPORT_ORIGINAL_HANDOFF.md for the current136/137 contract.
 
 The remaining actor component consists of eight fixed provider login, cleanup,
 inventory and session-event tables. Required columns come from the existing
@@ -22,12 +23,14 @@ claim reference closure, complete portable export or complete backup.
 
 The schema135 request function is separately named. Existing43/134 jobs,
 requests and receipts keep their source identity; snapshots remain bound to the
-exact job tuple. The current execution adapter and production runtime request135;
-stale134 requests are rejected before provider/database I/O. Historical134
-downloads remain supported. The worker has an explicit134 compatibility option;
-its135 path requires the provider component. The collector captures that
-component only for exact135 migration identity, on the existing read-only
-transaction. Financial vocabulary remains109; unknown136 stays distinct.
+exact job tuple. Current execution and production runtime now request137 using
+the separately named v4 command; stale134/135/136 input is refused before provider or
+database I/O. Historical134/135/136 downloads remain supported. The worker retains
+explicit134/135/136 compatibility options. 135,136 and137 require the provider
+component, selected against their exact migration identity on the existing
+read-only transaction. Reviewed135/136/137 financial vocabulary remains109;
+unknown138 stays distinct. The verification history below retains its original
+135 source/version identities.
 
 Verification:40 focused cases across provider, identity, session and neutral SQL
 import pass, with type checking and targeted lint. The source-frozen native case
@@ -74,3 +77,4 @@ Next: exact-source release acceptance. The remaining10 runtime/global tables,
 complete reference closure, required reports,
 original private files, full backup restoration and real owner,
 host, phone and financial acceptance remain separate launch requirements.
+

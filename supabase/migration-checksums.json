@@ -680,6 +680,11 @@
       "version": "20270129180000",
       "file": "20270129180000_source_export_original_membership.sql",
       "sha256": "1bca73d8af8b8b842f0c92beb1a56fee5f2be366571a6798ac7c948a2c53635a"
+    },
+    {
+      "version": "20270130180000",
+      "file": "20270130180000_source_export_original_typed_reader.sql",
+      "sha256": "812b7f9f63a7f577cb554fd4c69223efba3429968dcb0cf4e11483ad5e312d0c"
     }
   ]
 }
