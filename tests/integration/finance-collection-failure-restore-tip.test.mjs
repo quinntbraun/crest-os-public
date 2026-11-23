@@ -1,3 +1,6 @@
+import {withRecoveryBackupLease} from '../../src/tooling/recovery-backup-lease.ts';
+import {verifyRecoveryFundingRanges} from '../../src/tooling/recovery-funding-ranges.ts';
+import {verifyRecoveryFundingRoots} from '../../src/tooling/recovery-funding-roots.ts';
 import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
 import {mkdir,realpath,rm} from 'node:fs/promises';
@@ -208,6 +211,10 @@ test('reinstated original tips retain exact tax offsets through an actual return
         return archive;
       }finally{await connection.query('ROLLBACK');}
     }
+    async function verifyRanges(client,refuseCycle=false){return withRecoveryBackupLease(client,owner.business,new AbortController().signal,lease=>lease.capture(async snapshot=>{await verifyRecoveryFundingRoots(snapshot,lease.signal);if(refuseCycle){await assert.rejects(verifyRecoveryFundingRanges(snapshot,lease.signal),{message:'RECOVERY_FUNDING_RANGE_REVIEW_REQUIRED'});return;}const result=await verifyRecoveryFundingRanges(snapshot,lease.signal);assert.equal(result.typedConsumptionClosureVerified,true);assert.equal(result.restoredTipAncestryVerified,true);assert.equal(result.fullBusinessReconciliationVerified,false);return result;}));}
+    // Fixed current read-only checks over the populated historical101 branch;
+    // this neither changes its frozen recovery format nor installs new grants.
+    await verifyRanges(await sandbox.connect(target));
     const archive=await capture(exporter);
     const changedManifest=JSON.parse(archive.manifest);
     const changedFiles=archive.files.map(file=>{
@@ -243,6 +250,16 @@ test('reinstated original tips retain exact tax offsets through an actual return
       await restoredClient.query('SET ROLE crest_finance_preview');
       assert.deepEqual(await command(restoredClient,'lookup_fictional_collection_failure_recredit',[...owner.auth(),owner.epoch,start[9],start[10]]),
         {state:'committed',receipt:restored});
+      await verifyRanges(await connect(restoredUrl));
+      const faultAdmin=await connect(restoredUrl);try{
+       const link=(await faultAdmin.query('SELECT t.id,c.id AS component_id,c.original_tip_realization_id FROM crest.tip_realizations t JOIN crest.collection_failure_settlement_components c ON c.business_id=t.business_id AND c.id=t.restored_settlement_component_id WHERE t.business_id=$1 LIMIT 1',[owner.business])).rows[0];assert(link);
+       async function changeParent(parent){await faultAdmin.query('BEGIN');try{await faultAdmin.query('SET LOCAL session_replication_role=replica');assert.equal((await faultAdmin.query('UPDATE crest.collection_failure_settlement_components SET original_tip_realization_id=$1 WHERE id=$2',[parent,link.component_id])).rowCount,1);await faultAdmin.query('COMMIT');}catch(error){await faultAdmin.query('ROLLBACK');throw error;}}
+       // Corruption exists only in the separate disposable restored cluster.
+       // A self-parented restored tip must never create an infinite traversal.
+       await changeParent(link.id);try{await verifyRanges(await connect(restoredUrl),true);}finally{await changeParent(link.original_tip_realization_id);}
+       await verifyRanges(await connect(restoredUrl));assert.deepEqual(await inventory(faultAdmin),manifest.rows);
+      }finally{await faultAdmin.end();}
+
     }finally{
       try{await restoredClient?.end();}finally{
         try{await destination?.close();}finally{

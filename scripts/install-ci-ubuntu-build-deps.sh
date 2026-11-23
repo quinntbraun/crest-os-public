@@ -36,10 +36,18 @@ for archive in https://archive.ubuntu.com/ubuntu https://us.archive.ubuntu.com/u
   apt_options=(-o "Dir::Etc::SourceList=$sources" -o 'Dir::Etc::SourceParts=-'
     -o 'Acquire::Retries=0' -o 'Acquire::http::Timeout=20' -o 'Acquire::https::Timeout=20'
     -o 'DPkg::Lock::Timeout=30')
-  if sudo timeout --kill-after=10s 120s apt-get "${apt_options[@]}" --error-on=any update &&
-    sudo timeout --kill-after=10s 180s apt-get "${apt_options[@]}" install --yes --no-install-recommends "${packages[@]}"; then
-    exit 0
+  # A signed universe index alone is about15MB. A progressing download can
+  # exceed two minutes on a hosted runner without hitting transport timeouts.
+  if sudo timeout --kill-after=10s 300s apt-get "${apt_options[@]}" --error-on=any update; then
+    if sudo timeout --kill-after=10s 180s apt-get "${apt_options[@]}" install --yes --no-install-recommends "${packages[@]}"; then
+      exit 0
+    else
+      status=$?
+      echo "Ubuntu build package installation failed from $archive (exit $status; deadline 180s)" >&2
+    fi
+  else
+    status=$?
+    echo "Ubuntu package index update failed from $archive (exit $status; deadline 300s)" >&2
   fi
-  echo "Ubuntu build dependencies could not be installed from $archive" >&2
 done
 exit 1

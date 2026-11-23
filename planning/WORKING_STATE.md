@@ -2,6 +2,48 @@
 
 ## Current launch checkpoint, 2026-11-23
 
+The latest hosted candidate96e is terminal:21/22 main jobs pass and both ancillary
+suites pass. Foundation stops before its build steps because both official
+Ubuntu archive index downloads exceed120 seconds while progressing. Local
+8dca5e10 raises only the bounded update window to300 seconds and retains signed
+sources, strict errors, required packages and install deadline. The isolated
+Linux installer control-flow check passes all four scenarios with unchanged
+source and no network/package changes; proof is
+`.local/ci-build-deps-timeout96e/result.json`. A fresh hosted candidate is required;
+no complete release, deployment or real-use acceptance is inferred.
+
+
+The restored-finance component now checks actual canonical posting rules after
+the genuine successful data comparison. An independently generated schema138
+baseline pins1269 application routine definitions, owners and ACLs before any
+application routine is invoked. A separate restricted offline identity uses
+forced read-only snapshots; source/scheduler reader permissions remain unchanged.
+Native44/44 on e0304c1 passes, including copied-capability/code-tamper refusal,
+four real posting families and changed payment evidence refusal with unchanged
+journal totals. Repair passes again; source and cleanup checks pass. See
+[the verification boundary and remaining gates](RECOVERY_RESTORED_FINANCE.md).
+This code is newer than published96e. Full reconciliation, policy/constraint/
+trigger security acceptance, incident fencing and controlled reopen remain open.
+
+Original-offset fund-lot bounds, disjoint ranges and bidirectional typed
+consumption closure now run in the shared financial recovery collector. Native
+44/44 passes on83746fa, including genuine partial unapplication/reapplication
+and restored-only moved/missing consumption refusals with unchanged journal
+totals. The separately populated registered101 restored-tip workflow passes
+onb7d204a, including source/restored acceptance, cycle refusal and exact repair.
+See [range and generation scope](RECOVERY_FUNDING_RANGES.md). Full financial
+reconciliation, other recredit variants and controlled reopen remain unfinished.
+
+Public96e0f60c22e exactly matches localf5df28e/tree760a56d; PR178 remains
+draft/open/unmerged. All previous95d22 main jobs and both ancillary suites pass.
+New main45145555224 is live with10 successful prerequisites/no failures at the
+09:32:07UTC observation; expense45145555228 and commercial45145555130 pass.
+Database foundation137593831947 and its mandatory Linux recovery step28 pass,
+including the published restored-DB/object/owner-kit/root components. That scope
+excludes the newer local83746fa ranges and b7d204a assertions. No complete-backup,
+current compiled-artifact inspection, deployment or actual-use claim is made.
+Keep public96e head/title/body fixed while any of its runs remain live.
+
 Financial recovery now independently validates original receipt funding roots,
 contiguous whole-root partitions and fund-lot parent relationships using fixed
 read-only queries. Native42/42 passes on4d031a1 with source unchanged and owned
