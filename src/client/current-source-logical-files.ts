@@ -1,6 +1,6 @@
 // Versioned data-only reconstruction for selected/downloaded export parts.
 // No requests, storage credentials, owner authority or file-system paths.
-export type CurrentLogicalBinding=Readonly<{businessId:string;generationId:string;appReleaseId:string;sourceSchemaVersion:134}>;
+export type CurrentLogicalBinding=Readonly<{businessId:string;generationId:string;appReleaseId:string;sourceSchemaVersion:134|135}>;
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/,hash=/^[a-f0-9]{64}$/;
 const decoder=new TextDecoder('utf-8',{fatal:true}),encoder=new TextEncoder();
 function require(value:unknown):asserts value{if(!value)throw Error('CURRENT_SOURCE_LOGICAL_FILES_REVIEW_REQUIRED');}
@@ -24,7 +24,7 @@ async function readLogicalFiles(manifest:string,parts:readonly Readonly<{name:st
  try{
   require(!signal.aborted&&typeof manifest==='string'&&encoder.encode(manifest).length<=4194304&&Array.isArray(parts)&&parts.length>=(selection?0:1)&&parts.length<=1024);
   const wanted=selection?new Set(selection):undefined;require(!wanted||wanted.size===selection!.length&&wanted.size<=1024);
-  const expected=object(binding,['businessId','generationId','appReleaseId','sourceSchemaVersion']);require(uuid.test(String(expected.businessId))&&uuid.test(String(expected.generationId))&&typeof expected.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(expected.appReleaseId)&&expected.sourceSchemaVersion===134);
+  const expected=object(binding,['businessId','generationId','appReleaseId','sourceSchemaVersion']);require(uuid.test(String(expected.businessId))&&uuid.test(String(expected.generationId))&&typeof expected.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(expected.appReleaseId)&&(expected.sourceSchemaVersion===134||expected.sourceSchemaVersion===135));
   const root=object(JSON.parse(manifest),['formatVersion','profile','businessId','generationId','appReleaseId','sourceSchemaVersion','observedAt','totalEncodedBytes','totalDecodedBytes','files','completePortableExport','completeBackup']);
   require(JSON.stringify(root)+'\n'===manifest);
   require(root.formatVersion===1&&root.profile==='crest.current-source-logical-files.v1'&&Object.keys(expected).every(key=>root[key]===expected[key])&&root.completePortableExport===false&&root.completeBackup===false&&typeof root.observedAt==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}\+00:00$/.test(root.observedAt)&&Number.isFinite(Date.parse(root.observedAt)));

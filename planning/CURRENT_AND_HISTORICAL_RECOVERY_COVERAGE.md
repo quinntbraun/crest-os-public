@@ -19,3 +19,31 @@ The workspace-records export test expected the previous assurance sentence. Its 
 The records group failed both Calendar consent-denial cases because they still read the legacy unscoped v1 storage key after the existing controller moved new references to destination/credential/recovery-scoped v2 keys. The tests now derive the exact expected key and saved reference from the actual committed confirm request, require a non-null byte-exact match, preserve it through denied access/return and require its removal only after original confirmation. Empty-reference checks inspect both namespaces, and nested privacy checks preserve every saved reference. On `2b19ad2`, both original affected cases pass with all facts/audit/no-duplicate assertions, frozen source and owned cleanup. This is a two-case scope, not whole-file, genuine Google or physical-device acceptance.
 
 The added business/identity export and neutral import are separate implementation work described in PRODUCTION_EXPORTS.md. Fresh hosted checks must run on the complete next candidate; none of these local scopes inherits or changes the prior candidate's conclusions.
+
+## Registered124 financial recovery correction
+
+Public761053b3 main45084002844 is terminal failure:21 prerequisite jobs passed,
+then Foundation137406513565 failed its historical124 financial-history restore
+case. Commercial45084002867 and expense45084002859 completed successfully. The
+finance group reported82/84, counting the failing child and its parent. The
+missing service screenshot artifact is downstream of the skipped build/browser
+steps; its existing required-artifact rule is retained.
+
+The failure occurred before backup: financial-history-recording.test.mjs applied
+registered124 but called backupDatabase, whose intentionally strict current
+guard required the root134 registry. The fixture now uses separately named
+backupLegacy124Database/restoreLegacy124Database. The registered124 registry is
+pinned to SHA256cc75057edc7e00a04d929c999b90c18577ff9a02bbfda4f185aa99dbe59b8962,
+checked against the current registry's original124-entry prefix, and paired with
+the existing SHA-pinned frozen124 coverage. Only that exact internal snapshot
+profile is added to the reviewed historical helper list. The default current
+guard remains strict; the original test now explicitly verifies its refusal of
+the historical database.
+
+On777cd25, the complete original financial history file passes6/6, including
+encrypted123 and124 restore into a separate owned PostgreSQL cluster, exact rows,
+reader definitions and restricted permissions. Tracked source stayed frozen and
+owned cleanup completed. Evidence: .local/financial-history124-recovery/result.json
+and test.log. No application, SQL, source checksums or financial rule is changed.
+This is a local historical-fixture correction, not a successful full release or
+an independent off-laptop production recovery drill.

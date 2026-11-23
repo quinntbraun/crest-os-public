@@ -46,7 +46,7 @@ export function createSourceExportHttp(config:Configuration,provider:Parameters<
    const stop=route==='stop'||route==='stop-original'?parseSourceExportStopWire(input,businessId):undefined;
    const original=stop||jobId||route==='context'||route==='list'?undefined:retirement?.original??parseSourceExportReferenceWire(input,businessId);
    if(route==='request'&&original?.reference.appReleaseId!==appReleaseId)throw Error();
-   if(route==='request'&&original?.reference.profile!==(runtime?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1'))throw Error();
+   if(route==='request'&&(original?.reference.profile!==(runtime?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1')||original?.reference.sourceSchemaVersion!==(runtime?runtime.sourceSchemaVersion:43)))throw Error();
    await csrf(bounded,cookie,signal);workStarted=true;
    if(!await admit(cookie,'ordinary',signal)){const response=privateJsonResponse({error:'SOURCE_EXPORT_REQUEST_LIMITED'},429);response.headers.set('Retry-After','60');return response;}
    if(signal.aborted)throw new Error();

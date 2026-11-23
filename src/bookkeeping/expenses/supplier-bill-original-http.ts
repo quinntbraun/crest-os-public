@@ -31,7 +31,7 @@ export type SupplierOriginalRuntime=Readonly<{
 export type SyntheticSupplierOriginalRuntime=SupplierOriginalRuntime;
 const fields={
  reserve:['originalId','billId','billRevision','recoveryEpoch','operationId','contentType','byteSize'],
- verify:['originalId','operationId'],status:['originalId'],preview:['originalId'],
+ verify:['originalId','operationId'],status:['originalId'],preview:['originalId'],original:['originalId'],
 } as const;
 export const supplierOriginalFailure=(status=400)=>privateJsonResponse({error:'SUPPLIER_ORIGINAL_REQUEST_UNCONFIRMED'},status);
 function check(value:unknown):asserts value{if(!value)throw Error('SUPPLIER_ORIGINAL_REQUEST_UNCONFIRMED');}
@@ -65,7 +65,7 @@ export function createSupplierBillOriginalHttp(config:Config,provider:Parameters
     await readFlatJsonBody(bounded,fields[action as keyof typeof fields],4096);
    const id=input.originalId;
    check(uuid(id));
-   if(action==='upload'||action==='preview'){
+   if(action==='upload'||action==='preview'||action==='original'){
     if(binary>=2)return supplierOriginalFailure(429);
     binary++;held=true;
    }
@@ -97,7 +97,7 @@ export function createSupplierBillOriginalHttp(config:Config,provider:Parameters
     started=true;
     await runtime.dispatch(credential,businessId,id,input.operationId,signal);
    }
-   if(action==='preview')return await access.download(credential,businessId,id,'preview',signal);
+   if(action==='preview'||action==='original')return await access.download(credential,businessId,id,action,signal);
    const current=await directory.read(credential,businessId,id,signal);
    if(action==='status'&&exact(current,['state'])&&current.state==='absent')return privateJsonResponse({originalId:id,state:'absent'});
    const record=parseSupplierOriginalRecord(current,businessId,id);

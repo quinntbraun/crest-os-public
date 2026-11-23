@@ -24,6 +24,7 @@ import {custodyFixture} from '../support/source-export-custody-fixture.mjs';
 import {parseSourceExportStopCommand,parseSourceExportStopOutcome} from '../../src/security/source-export-stop-contract.ts';
 import {captureCurrentIdentitySource} from '../../src/security/current-business-identity-source.ts';
 import {captureCurrentBusinessRows} from '../../src/security/current-business-source.ts';
+import {captureCurrentSessionSource} from '../../src/security/current-business-session-source.ts';
 import { createGoogleCalendarOAuthTransport } from '../../src/operations/google-calendar-oauth-transport.ts';
 import { confirmedBookingRequest } from '../fixtures/confirmed-booking.ts';
 import { createConfirmedBookingFixture } from '../support/confirmed-booking-fixture.mjs';
@@ -44,7 +45,7 @@ const secret=randomBytes(32), signal=new AbortController().signal;
 const binding=(owner,destination,generation,id,version)=>({businessId:owner.business,destinationId:destination,
   connectionGeneration:generation,recoveryEpoch:owner.epoch,clientId:client,credentialId:id,version});
 
-for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((registered?'Registered schema '+registered+': ':'')+'Calendar credentials are sealed and refresh admits one worker per active credential version', {timeout:120000}, async()=>{
+for(const registered of [false,125,126,127,128,130,131,132,133,134,135]) test((registered?'Registered schema '+registered+': ':'')+'Calendar credentials are sealed and refresh admits one worker per active credential version', {timeout:120000}, async()=>{
   const credentialStore=await createGoogleCalendarCredentialStore({activeKeyId:credentialKey,calendarKeyMaterial:secret});
   const transport=createGoogleCalendarOAuthTransport({clientId:client,callbackUri:callback,clientSecret:'fixture-secret',
     admit:async()=>false,request:async()=>{throw Error('Native credential test has no provider transport');}});
@@ -63,7 +64,7 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((regis
     await installProviderSchema(admin,database);
     await sandbox.apply(database,await sandbox.prefix(registered||76));
     if(registered>=131){
-      const coverage=JSON.parse(await readFile(new URL(registered<134?'../support/registered'+registered+'-export-coverage.json':'../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+      const coverage=JSON.parse(await readFile(new URL(registered<135?'../support/registered'+registered+'-export-coverage.json':'../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
       const observed=(await admin.query("SELECT n.nspname||'.'||c.relname AS table,a.attname AS column FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind='r' AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
       const checked=verifyExportCoverage(coverage,observed,registered);assert.equal(checked.assurance,'schema_inventory_only');assert.equal(checked.completePortableExport,false);assert.equal(checked.completeBackup,false);
     }
@@ -462,13 +463,19 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((regis
         await assert.rejects(restricted.query("UPDATE supabase_migrations.schema_migrations SET name='changed'"),{code:'42501'});
         if(registered>=133){
           await restricted.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
-          try{const direct=await captureCurrentBusinessRows(identityOwner.business,async(sql,args)=>(await restricted.query(sql,args)).rows,()=>{});await captureCurrentIdentitySource(direct,async(sql,args)=>(await restricted.query(sql,args)).rows,()=>{});}finally{await restricted.query('ROLLBACK');}
-          const collected=await createCurrentBusinessSourceCollector(config)(signal),source=collected.forCurrentBusinessServer(),identitySource=collected.forCurrentBusinessIdentityServer();
+          try{const direct=await captureCurrentBusinessRows(identityOwner.business,async(sql,args)=>(await restricted.query(sql,args)).rows,()=>{}),directIdentity=await captureCurrentIdentitySource(direct,async(sql,args)=>(await restricted.query(sql,args)).rows,()=>{});await captureCurrentSessionSource(directIdentity,direct,async(sql,args)=>(await restricted.query(sql,args)).rows,()=>{});}finally{await restricted.query('ROLLBACK');}
+          const collected=await createCurrentBusinessSourceCollector(config)(signal),source=collected.forCurrentBusinessServer(),identitySource=collected.forCurrentBusinessIdentityServer(),sessionSource=collected.forCurrentBusinessSessionServer(),providerSource=collected.forCurrentBusinessProviderServer();
+          assert.equal(providerSource!==undefined,registered===135);if(providerSource){assert.equal(providerSource.sources.length,8);assert.equal(providerSource.businessSnapshotToken,source.snapshotToken);}
           assert.equal(source.sources.length,167);assert(source.recordCount>0);
-          const coverage=JSON.parse(await readFile(new URL(registered===133?'../support/registered133-export-coverage.json':'../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+          const coverage=JSON.parse(await readFile(new URL(registered<135?'../support/registered'+registered+'-export-coverage.json':'../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
           assert.deepEqual(source.sources.map(item=>({table:item.source,required:item.columns})),coverage.tables.filter(item=>item.scope==='business').map(item=>({table:item.table,required:item.required})));
           assert.equal(identitySource.businessSnapshotToken,source.snapshotToken);assert.equal(identitySource.businessId,source.businessId);
           for(const item of identitySource.sources)assert.deepEqual(item.columns,coverage.tables.find(table=>table.table===item.source).required,'identity columns match the registered closed source inventory');
+          assert.deepEqual(sessionSource.source.columns,coverage.tables.find(table=>table.table===sessionSource.source.source).required);assert.equal(sessionSource.businessSnapshotToken,source.snapshotToken);assert.equal(sessionSource.identitySnapshotToken,identitySource.identitySnapshotToken);
+          const ownerIds=identitySource.sources[0].rows.filter(row=>row.auth_provider_issuer!==null).map(row=>row.id);
+          await admin.query("SET TIME ZONE 'UTC'");
+          const actualSessions=(await admin.query('SELECT jsonb_object_agg(field.name,to_jsonb(s)->>field.name) AS row FROM crest_private.app_sessions s CROSS JOIN LATERAL unnest($2::text[]) AS field(name) WHERE s.actor_id=ANY($1::uuid[]) GROUP BY s.id ORDER BY s.id',[ownerIds,sessionSource.source.columns])).rows.map(item=>item.row);
+          assert.deepEqual(sessionSource.source.rows,actualSessions,'all scoped noncredential session values match the actual database');assert(sessionSource.recordCount>0);assert(!sessionSource.source.columns.includes('credential_hash'));
           let directCount=0;
           for(const group of source.sources){
             const businessColumn=group.source==='crest.businesses'?'id':'business_id';
@@ -477,14 +484,14 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((regis
             for(const row of group.rows)assert.equal(row[businessColumn],identityOwner.business);
           }
           assert.equal(source.recordCount,directCount);
-          const bundle=formatCurrentBusinessPortableSource(source,{appReleaseId:'a'.repeat(40),sourceSchemaVersion:registered},identitySource),dictionary=JSON.parse(Buffer.from(bundle.files['current_business_dictionary.json']).toString()),escapes=JSON.parse(Buffer.from(bundle.files['current_business_escape_map.json']).toString());
+          const bundle=formatCurrentBusinessPortableSource(source,{appReleaseId:'a'.repeat(40),sourceSchemaVersion:registered},identitySource,sessionSource,providerSource),dictionary=JSON.parse(Buffer.from(bundle.files['current_business_dictionary.json']).toString()),escapes=JSON.parse(Buffer.from(bundle.files['current_business_escape_map.json']).toString());
           for(const group of source.sources){const file=group.source.replace('.','_')+'.csv';assert.deepEqual(readCurrentBusinessCsv(Buffer.from(bundle.files[file]).toString(),dictionary[file].columns,escapes[file]),group.rows);}
           const workbook=unzipSync(bundle.files['business_records.xlsx']),workbookCoverage=JSON.parse(Buffer.from(bundle.files['workbook_coverage.json']).toString());
           assert.equal(workbookCoverage.sheets.length,source.sources.length+3);assert.equal(Object.keys(workbook).filter(name=>/^xl\/worksheets\/sheet\d+\.xml$/.test(name)).length,source.sources.length+3);
           const neutral=await sandbox.connect(await sandbox.database());
           await neutral.query('SET standard_conforming_strings = off');
           await neutral.query(Buffer.from(bundle.files['business_records_reimport.txt']).toString());
-          for(const table of [...source.sources,...identitySource.sources]){
+          for(const table of [...source.sources,...identitySource.sources,sessionSource.source,...providerSource?.sources??[]]){
             const target=table.source.replace('.','_'),order=table.primaryKey.map(column=>'"'+column.replaceAll('"','""')+'" COLLATE "C"').join(',');
             assert.deepEqual((await neutral.query('SELECT * FROM crest_portable_source."'+target+'" ORDER BY '+order)).rows,table.rows,'neutral SQL reimport retains every exact source value: '+table.source);
             const metadata=(await neutral.query('SELECT * FROM crest_portable_source._crest_export WHERE source_name=$1',[table.source])).rows[0];
@@ -492,7 +499,7 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((regis
           }
           assert.equal((await neutral.query("SELECT count(*)::integer AS total FROM pg_namespace WHERE nspname IN('crest','crest_private')")).rows[0].total,0,'neutral import creates no application schema');
           await assert.rejects(neutral.query(Buffer.from(bundle.files['business_records_reimport.txt']).toString()),{code:'42P06'});await neutral.query('ROLLBACK');
-          assert.equal((await neutral.query('SELECT count(*)::integer AS total FROM crest_portable_source._crest_export')).rows[0].total,source.sources.length+identitySource.sources.length,'existing import is never replaced');
+          assert.equal((await neutral.query('SELECT count(*)::integer AS total FROM crest_portable_source._crest_export')).rows[0].total,source.sources.length+identitySource.sources.length+1+(providerSource?.sources.length??0),'existing import is never replaced');
           const exported=Object.entries(bundle.files).filter(([name])=>!name.endsWith('.xlsx')).map(([,bytes])=>Buffer.from(bytes).toString()).join('\n')+Object.values(workbook).map(bytes=>strFromU8(bytes)).join('\n');
           assert.equal(exported.includes('<f>'),false);
           assert.equal(exported.includes(foreign.business),false);
@@ -509,15 +516,16 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((regis
           await restricted.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
           try{await assert.rejects(restricted.query('SELECT crest_commands.business_source_page_v1($1,$2,NULL,NULL,1)',[identityOwner.business,'crest_private.app_sessions']),{code:'22023'});}finally{await restricted.query('ROLLBACK');}
           await assert.rejects(web.query('SELECT crest_commands.business_source_page_v1($1,$2,NULL,NULL,1)',[identityOwner.business,'crest.customers']),{code:'42501'});
-          if(registered===134){
+          if(registered>=134){
+            const requestName=registered===135?'request_current_source_export_v2_for_execution':'request_current_source_export_for_execution';
             const appReleaseId='a'.repeat(40),jobId=randomUUID(),operationId=randomUUID();
-            const command={schemaVersion:1,businessId:identityOwner.business,commandType:'export.request',reference:{operationId,exportJobId:jobId,recoveryEpoch:identityOwner.epoch,appReleaseId,profile:'crest.current-business-source-bundle.v1',sourceSchemaVersion:134}};
+            const command={schemaVersion:1,businessId:identityOwner.business,commandType:'export.request',reference:{operationId,exportJobId:jobId,recoveryEpoch:identityOwner.epoch,appReleaseId,profile:'crest.current-business-source-bundle.v1',sourceSchemaVersion:registered}};
             const args=[...auth(identityOwner),operationId,jobId,appReleaseId];
-            const admission=parseSourceExportAdmission(await call(web,'request_current_source_export_for_execution',args),command,actorId);
+            const admission=parseSourceExportAdmission(await call(web,requestName,args),command,actorId);
             assert.equal(admission.state,'created');assert.equal(admission.result.receipt.job.profile,command.reference.profile);
-            const replay=parseSourceExportAdmission(await call(web,'request_current_source_export_for_execution',args),command,actorId);assert.equal(replay.state,'recorded');assert.deepEqual(replay.result,admission.result);
-            assert.deepEqual(await call(web,'request_current_source_export_for_execution',[...auth(identityOwner),operationId,jobId,'b'.repeat(40)]),{state:'conflict',reason:'operation'});
-            assert.deepEqual(await call(web,'request_current_source_export_for_execution',[...auth(identityOwner),randomUUID(),randomUUID(),appReleaseId]),{state:'conflict',reason:'active_or_identity'});
+            const replay=parseSourceExportAdmission(await call(web,requestName,args),command,actorId);assert.equal(replay.state,'recorded');assert.deepEqual(replay.result,admission.result);
+            assert.deepEqual(await call(web,requestName,[...auth(identityOwner),operationId,jobId,'b'.repeat(40)]),{state:'conflict',reason:'operation'});
+            assert.deepEqual(await call(web,requestName,[...auth(identityOwner),randomUUID(),randomUUID(),appReleaseId]),{state:'conflict',reason:'active_or_identity'});
             const leaseId=randomUUID(),claimed=await call(web,'claim_source_export',[...auth(identityOwner),randomUUID(),jobId,'1',leaseId]);assert.equal(claimed.receipt.job.state,'Running');
             const current={formatVersion:1,profile:command.reference.profile,businessId:identityOwner.business,actorId,exportJobId:jobId,recoveryEpoch:identityOwner.epoch,leaseId},readyId=randomUUID();
             const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -528,23 +536,23 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((regis
             try{
               const names={authorize:'authorize_source_export_worker',snapshot:'record_source_export_snapshot',intent:'record_source_export_part_intent',verified:'record_source_export_part_verified',ready:'record_source_export_ready'};
               const jobs=Object.fromEntries(Object.entries(names).map(([stage,name])=>[stage,request=>call(web,name,[...auth(identityOwner),...stage==='ready'?[readyId,claimed.receipt.job.version]:[],JSON.stringify(request)])]));
-              const worker=createCurrentBusinessExportWorker({businessId:identityOwner.business,appReleaseId},createCurrentBusinessSourceCollector(config),custody.store,jobs),result=(await worker.run(current,signal)).forServer();
-              const status=await call(web,'read_source_export',[...identityOwner.auth(),jobId]);assert.equal(status.job.state,'Ready');assert.equal(status.job.source_schema_version,134);
-              assert.equal((await call(web,'request_current_source_export_for_execution',args)).state,'recorded');
+              const worker=createCurrentBusinessExportWorker({businessId:identityOwner.business,appReleaseId,sourceSchemaVersion:registered},createCurrentBusinessSourceCollector(config),custody.store,jobs),result=(await worker.run(current,signal)).forServer();
+              const status=await call(web,'read_source_export',[...identityOwner.auth(),jobId]);assert.equal(status.job.state,'Ready');assert.equal(status.job.source_schema_version,registered);
+              assert.equal((await call(web,requestName,args)).state,'recorded');
               const access={downloadPart:async(_credential,request)=>{const raw=await call(web,'read_source_export_download_part',[...identityOwner.auth(),request.exportJobId,request.generationId,request.partId]),value=parseSourceExportDownloadPermit(raw,identityOwner.business,actorId,request);return {forServer:()=>value};},recordDownloadAccess:async(_credential,request,permit)=>{const value=await call(web,'record_source_export_download_access',[...identityOwner.auth(),request.exportJobId,request.generationId,request.partId,JSON.stringify(sourceExportDownloadPermitRecord(permit))]);return {forServer:()=>value};}};
               const delivery=createSourceExportDownloadReader(identityOwner.business,access,custody.store),downloaded=[];let afterOrdinal=0;
               do{
                 const request={exportJobId:jobId,generationId:result.generationId,afterOrdinal},page=parseSourceExportDownloadCatalogue(await call(web,'read_source_export_download_page',[...identityOwner.auth(),jobId,result.generationId,afterOrdinal]),identityOwner.business,request);
-                assert.equal(page.profile,command.reference.profile);assert.equal(page.sourceSchemaVersion,134);
+                assert.equal(page.profile,command.reference.profile);assert.equal(page.sourceSchemaVersion,registered);
                 for(const file of page.files)await delivery.deliver('native-sql-authority-port',{exportJobId:jobId,generationId:result.generationId,partId:file.partId},signal,async value=>{downloaded.push({name:file.fileName,bytes:Buffer.from(value.bytes)});});
                 afterOrdinal=page.nextOrdinal;
               }while(afterOrdinal!==null);
               assert.equal(downloaded.length,result.parts);
               const root=downloaded.find(file=>file.name==='source_manifest.json'),physical=downloaded.filter(file=>file.name!=='source_manifest.json');
-              const restored=await readCurrentSourceLogicalFiles(root.bytes.toString(),physical,{businessId:identityOwner.business,generationId:result.generationId,appReleaseId,sourceSchemaVersion:134},signal);
+              const restored=await readCurrentSourceLogicalFiles(root.bytes.toString(),physical,{businessId:identityOwner.business,generationId:result.generationId,appReleaseId,sourceSchemaVersion:registered},signal);
               assert(restored.some(file=>file.name==='business_records.xlsx'));assert(restored.some(file=>file.name==='crest_customers.csv'));
               const selectedNames=new Set(JSON.parse(root.bytes.toString()).files.find(file=>file.name==='business_records.xlsx').parts.map(part=>part.name));
-              const selected=await readCurrentSourceLogicalSelection(root.bytes.toString(),physical.filter(file=>selectedNames.has(file.name)),{businessId:identityOwner.business,generationId:result.generationId,appReleaseId,sourceSchemaVersion:134},['business_records.xlsx'],signal);
+              const selected=await readCurrentSourceLogicalSelection(root.bytes.toString(),physical.filter(file=>selectedNames.has(file.name)),{businessId:identityOwner.business,generationId:result.generationId,appReleaseId,sourceSchemaVersion:registered},['business_records.xlsx'],signal);
               assert.equal(selected.length,1);assert(Buffer.from(selected[0].bytes).equals(restored.find(file=>file.name==='business_records.xlsx').bytes));
               const book=unzipSync(restored.find(file=>file.name==='business_records.xlsx').bytes);assert.equal(Object.keys(book).filter(name=>/^xl\/worksheets\/sheet\d+\.xml$/.test(name)).length,170);
               const audits=(await admin.query("SELECT count(*)::integer AS total FROM crest_private.audit_events WHERE business_id=$1 AND entity_kind='export_accesses' AND action='authorized_handoff'",[identityOwner.business])).rows[0].total;
@@ -552,7 +560,7 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((regis
               // Stop preserves the original job, operation and any admitted objects.
               // A fresh request gets a different job, generation and snapshot.
               const queuedId=randomUUID(),queuedOperation=randomUUID();
-              assert.equal((await call(web,'request_current_source_export_for_execution',[...auth(identityOwner),queuedOperation,queuedId,appReleaseId])).state,'created');
+              assert.equal((await call(web,requestName,[...auth(identityOwner),queuedOperation,queuedId,appReleaseId])).state,'created');
               const queuedStop=parseSourceExportStopCommand({schemaVersion:1,businessId:identityOwner.business,commandType:'export.stop',reference:{operationId:randomUUID(),recoveryEpoch:identityOwner.epoch,exportJobId:queuedId,expectedVersion:'1'}},identityOwner.business);
               const queuedStopArgs=[...auth(identityOwner),queuedStop.reference.operationId,queuedId,'1'];
               const stoppedQueued=parseSourceExportStopOutcome(await call(web,'stop_source_export',queuedStopArgs),queuedStop,actorId);
@@ -560,7 +568,7 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((regis
               assert.deepEqual(await call(web,'stop_source_export',queuedStopArgs),stoppedQueued,'same stop is idempotent');
               assert.deepEqual(await call(web,'lookup_source_export_operation',[...identityOwner.auth(),queuedStop.reference.operationId]),stoppedQueued);
               const restartedId=randomUUID(),restartedOperation=randomUUID(),restartedLease=randomUUID();
-              assert.equal((await call(web,'request_current_source_export_for_execution',[...auth(identityOwner),restartedOperation,restartedId,appReleaseId])).state,'created');
+              assert.equal((await call(web,requestName,[...auth(identityOwner),restartedOperation,restartedId,appReleaseId])).state,'created');
               const restartedClaim=await call(web,'claim_source_export',[...auth(identityOwner),randomUUID(),restartedId,'1',restartedLease]);
               assert.deepEqual(await call(web,'stop_source_export',[...auth(identityOwner),randomUUID(),restartedId,'1']),{state:'conflict',reason:'version'},'late queued stop cannot stop a newer running version');
               const restarted={...current,exportJobId:restartedId,leaseId:restartedLease};let retainedIntent,stoppedRunning;
@@ -570,17 +578,17 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134]) test((regis
                 stoppedRunning=parseSourceExportStopOutcome(await call(web,'stop_source_export',[...auth(identityOwner),stop.reference.operationId,restartedId,stop.reference.expectedVersion]),stop,actorId);
                 return call(web,names.verified,[...auth(identityOwner),JSON.stringify(request)]);
               }};
-              const interrupted=createCurrentBusinessExportWorker({businessId:identityOwner.business,appReleaseId},createCurrentBusinessSourceCollector(config),custody.store,interruptedJobs);
+              const interrupted=createCurrentBusinessExportWorker({businessId:identityOwner.business,appReleaseId,sourceSchemaVersion:registered},createCurrentBusinessSourceCollector(config),custody.store,interruptedJobs);
               await assert.rejects(interrupted.run(restarted,signal));assert.equal(stoppedRunning.state,'committed');assert.equal(stoppedRunning.receipt.job.state,'Failed');
               assert.equal((await call(web,'read_source_export',[...identityOwner.auth(),restartedId])).job.failure_code,'OWNER_STOPPED');
               assert.notEqual(retainedIntent.generationId,result.generationId);
               assert.equal((await admin.query('SELECT count(*)::integer AS total FROM crest_private.export_part_intents WHERE business_id=$1 AND export_job_id=$2',[identityOwner.business,restartedId])).rows[0].total,1,'intent retained after late PUT/verification refusal');
-              const freshId=randomUUID();assert.equal((await call(web,'request_current_source_export_for_execution',[...auth(identityOwner),randomUUID(),freshId,appReleaseId])).state,'created','fresh export remains available after stopping');
+              const freshId=randomUUID();assert.equal((await call(web,requestName,[...auth(identityOwner),randomUUID(),freshId,appReleaseId])).state,'created','fresh export remains available after stopping');
               assert.equal((await call(web,'stop_source_export',[...auth(identityOwner),randomUUID(),freshId,'1'])).state,'committed');
               assert.equal((await call(web,'read_source_export',[...identityOwner.auth(),jobId])).job.state,'Ready','original completed export remains intact');
               const absent={...command,reference:{...command.reference,operationId:randomUUID(),exportJobId:randomUUID()}};
               assert.equal((await call(web,'retire_source_export_request',[...auth(identityOwner),absent,'Reviewed unsubmitted current export'])).state,'retired');
-              assert.deepEqual(await call(web,'request_current_source_export_for_execution',[...auth(identityOwner),absent.reference.operationId,absent.reference.exportJobId,appReleaseId]),{state:'conflict',reason:'operation'});
+              assert.deepEqual(await call(web,requestName,[...auth(identityOwner),absent.reference.operationId,absent.reference.exportJobId,appReleaseId]),{state:'conflict',reason:'operation'});
               assert.equal((await call(web,'lookup_source_export_request_resolution',[...identityOwner.auth(),absent])).state,'retired');
               for(const file of [...restored,...selected,...downloaded])file.bytes.fill(0);
             }finally{await custody.close();}

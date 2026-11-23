@@ -670,6 +670,11 @@
       "version": "20270127180000",
       "file": "20270127180000_current_source_export_jobs.sql",
       "sha256": "1c4e38684b7bddac84da52ea3852c250d5fd8f912416457b1dda6d70305d4ece"
+    },
+    {
+      "version": "20270128180000",
+      "file": "20270128180000_provider_source_export.sql",
+      "sha256": "750e803bafcc4eba3300d16f64aba9e63b2c6f3029ca0bb0383c0ef7d2153cbb"
     }
   ]
 }

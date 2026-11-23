@@ -4,6 +4,11 @@ vi.mock('server-only',()=>({}));
 import {formatCurrentSourceLogicalFiles} from '../../src/security/current-source-logical-files';
 import {readCurrentSourceLogicalFiles} from '../../src/client/current-source-logical-files';
 const binding=()=>({businessId:randomUUID(),generationId:randomUUID(),appReleaseId:'a'.repeat(40),sourceSchemaVersion:134 as const}),stamp='2026-11-22T20:00:00.000000+00:00',signal=()=>new AbortController().signal;
+it('decodes explicitly adopted135 without relabelling134 or accepting an unknown136',async()=>{
+ const scope={...binding(),sourceSchemaVersion:135 as const},formatted=await formatCurrentSourceLogicalFiles([{name:'records.csv',bytes:Buffer.from('exact')}],scope,stamp,signal()),parts=formatted.parts.map(part=>({name:part.name,bytes:Buffer.from(part.content)}));
+ expect(Buffer.from((await readCurrentSourceLogicalFiles(formatted.manifest,parts,scope,signal()))[0]!.bytes).toString()).toBe('exact');
+ for(const version of[134,136])await expect(readCurrentSourceLogicalFiles(formatted.manifest,parts,{...scope,sourceSchemaVersion:version} as never,signal())).rejects.toThrow();
+});
 it('reconstructs exact binary and UTF8 files across the physical-part boundary',async()=>{
  const scope=binding(),inputs=[{name:'records.csv',bytes:Buffer.from('"value"\r\n"'+('x'.repeat(4194290))+'🧽'.repeat(12)+'"\r\n')},{name:'business_records.xlsx',bytes:Uint8Array.from([0,255,1,254,3,8,9,10])}];
  const formatted=await formatCurrentSourceLogicalFiles(inputs,scope,stamp,signal()),parts=formatted.parts.map(part=>({name:part.name,bytes:Buffer.from(part.content)}));

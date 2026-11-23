@@ -16,10 +16,11 @@ beforeEach(()=>{
  mock.transaction.mockImplementation(async(work,signal)=>{mock.events.push('begin');try{const value=await work(mock.query,signal);mock.events.push('commit');return value;}catch(error){mock.events.push('rollback');throw error;}});
 });
 it('keeps current execution admission separate and binds it to the matching committed current job',async()=>{
- f.original.reference.profile='crest.current-business-source-bundle.v1';f.original.reference.sourceSchemaVersion=134;f.job.profile=f.original.reference.profile;f.job.source_schema_version=134;
+ f.original.reference.profile='crest.current-business-source-bundle.v1';f.original.reference.sourceSchemaVersion=135;f.job.profile=f.original.reference.profile;f.job.source_schema_version=135;
  await expect(factory().request(credential,f.original,signal())).rejects.toThrow('SOURCE_EXPORT_EXECUTION_INPUT_REQUIRED');expect(mock.events).toEqual([]);
  const current=createSourceExportExecutionAccess({connectionString:'unused-by-unit-fixture',environment:'test'},{} as never,{} as never,f.businessId,f.original.reference.appReleaseId,true);
- const value=await current.request(credential,f.original,signal());expect(mock.query.mock.calls[0]![0]).toContain('request_current_source_export_for_execution');expect(consumeSourceExportExecutionAdmission(value,signal()).job.source_schema_version).toBe(134);
+ await expect(current.request(credential,{...f.original,reference:{...f.original.reference,sourceSchemaVersion:134}},signal())).rejects.toThrow('SOURCE_EXPORT_EXECUTION_INPUT_REQUIRED');expect(mock.events).toEqual([]);
+ const value=await current.request(credential,f.original,signal());expect(mock.query.mock.calls[0]![0]).toContain('request_current_source_export_v2_for_execution');expect(consumeSourceExportExecutionAdmission(value,signal()).job.source_schema_version).toBe(135);
  mock.query.mockResolvedValueOnce({state:'recorded',result:f.committed});const replay=await current.request(credential,f.original,signal());expect(()=>consumeSourceExportExecutionAdmission(replay,signal())).toThrow('SOURCE_EXPORT_EXECUTION_ADMISSION_CONSUMED');
 });
 it('mints one private scheduling attempt only after the new request transaction commits',async()=>{

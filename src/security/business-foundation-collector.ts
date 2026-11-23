@@ -23,6 +23,10 @@ import {captureCurrentBusinessRows} from './current-business-source.ts';
 import type {CurrentBusinessRows} from './current-business-source.ts';
 import {captureCurrentIdentitySource} from './current-business-identity-source.ts';
 import type {CurrentBusinessIdentitySource} from './current-business-identity-source.ts';
+import {captureCurrentProviderSource} from './current-business-provider-source.ts';
+import type {CurrentBusinessProviderSource} from './current-business-provider-source.ts';
+import {captureCurrentSessionSource} from './current-business-session-source.ts';
+import type {CurrentBusinessSessionSource} from './current-business-session-source.ts';
 
 type FinanceSourceVersion=5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23;
 type Configuration=Readonly<{connectionString:string;environment:'production'|'test';businessId:string;migrationIdentity?:readonly Readonly<{version:string;name:string}>[]}>;
@@ -45,7 +49,7 @@ type PostedFinanceCapture=Readonly<{
  completePortableExport:false;completeBackup:false;
 }>;
 export type PostedFinanceSourceCapture=Readonly<{forFinanceServer:()=>PostedFinanceCapture;toJSON:()=>never}>;
-export type CurrentBusinessSourceCapture=Readonly<{forCurrentBusinessServer:()=>CurrentBusinessRows;forCurrentBusinessIdentityServer:()=>CurrentBusinessIdentitySource;toJSON:()=>never}>;
+export type CurrentBusinessSourceCapture=Readonly<{forCurrentBusinessServer:()=>CurrentBusinessRows;forCurrentBusinessIdentityServer:()=>CurrentBusinessIdentitySource;forCurrentBusinessSessionServer:()=>CurrentBusinessSessionSource;forCurrentBusinessProviderServer:()=>CurrentBusinessProviderSource|undefined;toJSON:()=>never}>;
 export class BusinessFoundationCollectionError extends Error{
  constructor(){super('BUSINESS_FOUNDATION_COLLECTION_REVIEW_REQUIRED');this.name='BusinessFoundationCollectionError';}
 }
@@ -139,7 +143,7 @@ export function createServiceRefundSourceCollector(config:Configuration,includeE
  return createCollector(config,false,false,false,true,includeSupplierPayables?23:includeSupplierBillDrafts?22:includeStatementMatchDrafts?21:includeOpeningReceivables?20:includeStatementStaging?19:includeOpeningWorksheets?18:includeRestoredTips?17:includeCollectionFailureGroupedRecredits?16:includeCollectionFailureRecredits?15:includeRefundTransferFees?14:includeDirectReceiptTips?13:includeRefundTransferAdjustments?12:includeCollectionFailures?11:includeTipReturns?10:includeExcessReturns?9:includeExcessReceipts?8:7);
 }
 export function createCurrentBusinessSourceCollector(config:Configuration){
- if(!config.migrationIdentity)throw new BusinessFoundationCollectionError();
+ if(!config.migrationIdentity||![133,134,135].includes(config.migrationIdentity.length))throw new BusinessFoundationCollectionError();
  return createCollector(config,false,false,false,false,5,true);
 }
 function createCollector(config:Configuration,includeCrm:false,includeJournal:false,includeCatalog:false,includeFinance:false,financeProfile:FinanceSourceVersion,includeCurrent:true):(signal:AbortSignal)=>Promise<CurrentBusinessSourceCapture>;
@@ -191,8 +195,10 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
     if(includeCurrent){
      const value=await captureCurrentBusinessRows(businessId,async(sql,args)=>(await query(sql,args)).rows,check);
      const identity=await captureCurrentIdentitySource(value,async(sql,args)=>(await query(sql,args)).rows,check);
+     const sessions=await captureCurrentSessionSource(identity,value,async(sql,args)=>(await query(sql,args)).rows,check);
+     const provider=expected?.length===135?await captureCurrentProviderSource(identity,value,async(sql,args)=>(await query(sql,args)).rows,check):undefined;
      require((await query('COMMIT')).command==='COMMIT');check();
-     return Object.freeze({forCurrentBusinessServer:()=>value,forCurrentBusinessIdentityServer:()=>identity,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
+     return Object.freeze({forCurrentBusinessProviderServer:()=>provider,forCurrentBusinessServer:()=>value,forCurrentBusinessIdentityServer:()=>identity,forCurrentBusinessSessionServer:()=>sessions,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
     }
     if(includeFinance){
      const capture=(await captureFinanceSourceExport(businessId,async(sql,args)=>(await query(sql,args)).rows,{

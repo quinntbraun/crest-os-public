@@ -198,6 +198,17 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])for(const s
     const previewImage=page.getByRole('img',{name:'Verified supplier bill preview',exact:true});
     await expect(previewImage).toBeVisible();
     assert(await previewImage.evaluate(image=>image.naturalWidth>0&&image.getBoundingClientRect().right<=innerWidth));
+    await page.route('**/api/business/supplier-original/original',async route=>{
+     const response=await route.fetch();await route.fulfill({response,headers:{...response.headers(),'x-crest-sha256':'0'.repeat(64)}});
+    },{times:1});
+    await page.getByRole('button',{name:'Prepare original file',exact:true}).click();
+    await expect(page.getByText('The original file could not be verified. Check sign-in and try again.',{exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Save original file',exact:true})).toHaveCount(0);
+    await page.getByRole('button',{name:'Prepare original file',exact:true}).click();
+    await expect(page.getByText('Original file checked. Save it within one minute.',{exact:true})).toBeVisible();
+    const [originalDownload]=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Save original file',exact:true}).click()]);
+    const expectedExtension=fixture.originalMimeType==='application/pdf'?'pdf':'png';assert.equal(originalDownload.suggestedFilename(),`supplier-original-${originalId}.${expectedExtension}`);
+    assert.deepEqual(await readFile(await originalDownload.path()),fixture.originalFile,'saved original bytes match the originally uploaded document');
     const input={billId:saved.bill_id,revision:saved.revision,originalId,taxTreatment:'none',reason:'Fictional purchase tax review'};
     let {headers,context:authContext}=await beginFinanceCalls(page);
     const checked=await financeCall(page,headers,'supplier-payable-review',input);

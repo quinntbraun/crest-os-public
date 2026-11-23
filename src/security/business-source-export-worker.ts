@@ -20,20 +20,20 @@ export type SourceExportClaim<P extends Profile='crest.business-source-bundle.v1
  exportJobId:string;recoveryEpoch:string;leaseId:string;
 }>;
 type File=Readonly<{partId:string;fileName:string;contentType:'text/csv; charset=utf-8'|'application/json'|'text/plain; charset=utf-8';bytes:number;sha256:string}>;
-export type SourceExportPlan<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134=42>=Readonly<{
+export type SourceExportPlan<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134|135=42>=Readonly<{
  formatVersion:1;claim:SourceExportClaim<P>;generationId:string;observedAt:string;appReleaseId:string;sourceSchemaVersion:S;
  manifestSha256:string;parts:readonly File[];totalBytes:number;referenceClosureComplete:false;completePortableExport:false;completeBackup:false;
 }>;
-type SnapshotRequest<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134=42>=Readonly<{plan:SourceExportPlan<P,S>;planSha256:string}>;
+type SnapshotRequest<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134|135=42>=Readonly<{plan:SourceExportPlan<P,S>;planSha256:string}>;
 export type SourceExportPartRequest<P extends Profile='crest.business-source-bundle.v1'>=Readonly<{claim:SourceExportClaim<P>;generationId:string;planSha256:string;partId:string;intent:ExportPartIntent}>;
-export type SourceExportReadyRequest<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134=42>=SnapshotRequest<P,S>&Readonly<{parts:readonly SourceExportPartRequest<P>[]} >;
+export type SourceExportReadyRequest<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134|135=42>=SnapshotRequest<P,S>&Readonly<{parts:readonly SourceExportPartRequest<P>[]} >;
 type Stage='authorize'|'snapshot'|'intent'|'verified'|'ready';
 export type SourceExportAck=Readonly<{formatVersion:1;stage:Stage;requestSha256:string}>;
 // Trusted server composition only. The fixed database composition MUST
 // validate frozen job/lease/profile, fresh provider/session/owner membership,
 // recovery authority and expiry on EVERY method; acknowledge committed state
 // only. These callback receipts/hashes are not authentication capabilities.
-export type SourceExportJobPort<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134=42>=Readonly<{
+export type SourceExportJobPort<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134|135=42>=Readonly<{
  authorize:(request:SourceExportClaim<P>,signal:AbortSignal)=>Promise<SourceExportAck>;
  snapshot:(request:SnapshotRequest<P,S>,signal:AbortSignal)=>Promise<SourceExportAck>;
  intent:(request:SourceExportPartRequest<P>,signal:AbortSignal)=>Promise<SourceExportAck>;
@@ -82,18 +82,20 @@ export function createBusinessSourceJournalExportWorker(config:Configuration,col
 }
 type Formatted=ReturnType<ReturnType<typeof formatBusinessSourceBundle>['forServer']>;
 type PhysicalFile=Readonly<{fileName:string;contentType:File['contentType'];bytes:Buffer}>;
-export type CurrentSourceExportJobPort=SourceExportJobPort<'crest.current-business-source-bundle.v1',134>;
+export type CurrentSourceExportJobPort=SourceExportJobPort<'crest.current-business-source-bundle.v1',134|135>;
 export type CurrentSourceExportClaim=SourceExportClaim<'crest.current-business-source-bundle.v1'>;
-export function createCurrentBusinessExportWorker(config:Configuration,collector:(signal:AbortSignal)=>Promise<CurrentBusinessSourceCapture>,store:Store,jobs:CurrentSourceExportJobPort){
- const fixed=Object.freeze({...config});let originals:readonly Readonly<{name:string;bytes:Uint8Array}>[]|undefined,active=false;
- const worker=createWorker(fixed,collector,store,jobs,'crest.current-business-source-bundle.v1',134,
+export function createCurrentBusinessExportWorker(config:Configuration&Readonly<{sourceSchemaVersion?:134|135}>,collector:(signal:AbortSignal)=>Promise<CurrentBusinessSourceCapture>,store:Store,jobs:CurrentSourceExportJobPort){
+ require(config!==null&&typeof config==='object');const {sourceSchemaVersion:requestedSchema,...settings}=config;
+ const schema=requestedSchema??135;require(schema===134||schema===135);const fixed=Object.freeze({...settings});let originals:readonly Readonly<{name:string;bytes:Uint8Array}>[]|undefined,active=false;
+ const worker=createWorker(fixed,collector,store,jobs,'crest.current-business-source-bundle.v1',schema,
   async(captured,signal)=>{
-   const source=captured.forCurrentBusinessServer(),formatted=formatCurrentBusinessPortableSource(source,{appReleaseId:fixed.appReleaseId,sourceSchemaVersion:134},captured.forCurrentBusinessIdentityServer());
+   const provider=captured.forCurrentBusinessProviderServer?.();require(schema!==135||provider);
+   const source=captured.forCurrentBusinessServer(),formatted=formatCurrentBusinessPortableSource(source,{appReleaseId:fixed.appReleaseId,sourceSchemaVersion:schema},captured.forCurrentBusinessIdentityServer(),captured.forCurrentBusinessSessionServer(),schema===135?provider:undefined);
    originals=Object.entries({...formatted.files,'current_business_source_manifest.json':Buffer.from(formatted.manifest)}).map(([name,bytes])=>({name,bytes}));
-   return formatCurrentSourceLogicalFiles(originals,{businessId:fixed.businessId,generationId:randomUUID(),appReleaseId:fixed.appReleaseId,sourceSchemaVersion:134},source.observedAt.replace(/Z$/,'+00:00'),signal);
+   return formatCurrentSourceLogicalFiles(originals,{businessId:fixed.businessId,generationId:randomUUID(),appReleaseId:fixed.appReleaseId,sourceSchemaVersion:schema},source.observedAt.replace(/Z$/,'+00:00'),signal);
   },async(root,files,captured,signal)=>{
    const header:unknown=JSON.parse(root.toString('utf8'));require(header!==null&&typeof header==='object'&&'generationId' in header&&typeof header.generationId==='string');
-   const binding={businessId:fixed.businessId,generationId:header.generationId,appReleaseId:fixed.appReleaseId,sourceSchemaVersion:134 as const};
+   const binding={businessId:fixed.businessId,generationId:header.generationId,appReleaseId:fixed.appReleaseId,sourceSchemaVersion:schema};
    const decoded=await readCurrentSourceLogicalFiles(root.toString('utf8'),files.map(file=>({name:file.fileName,bytes:file.bytes})),binding,signal);
    try{require(originals&&decoded.length===originals.length&&decoded.every((file,index)=>file.name===originals![index]!.name&&Buffer.from(file.bytes).equals(originals![index]!.bytes)));}
    finally{for(const file of decoded)file.bytes.fill(0);}
@@ -101,7 +103,7 @@ export function createCurrentBusinessExportWorker(config:Configuration,collector
   });
  return Object.freeze({async run(input:unknown,signal:AbortSignal){require(!active);active=true;try{return await worker.run(input,signal);}finally{for(const file of originals??[])file.bytes.fill(0);originals=undefined;active=false;}}});
 }
-function createWorker<C,P extends Profile,S extends 42|43|134>(config:Configuration,collector:(signal:AbortSignal)=>Promise<C>,store:Store,jobs:SourceExportJobPort<P,S>,profile:P,schema:S,format:(captured:C,signal:AbortSignal)=>Promise<Formatted>,verify:(root:Buffer,files:readonly PhysicalFile[],captured:C,signal:AbortSignal)=>Readonly<{generationId:string;observedAt:unknown}>|Promise<Readonly<{generationId:string;observedAt:unknown}>>){
+function createWorker<C,P extends Profile,S extends 42|43|134|135>(config:Configuration,collector:(signal:AbortSignal)=>Promise<C>,store:Store,jobs:SourceExportJobPort<P,S>,profile:P,schema:S,format:(captured:C,signal:AbortSignal)=>Promise<Formatted>,verify:(root:Buffer,files:readonly PhysicalFile[],captured:C,signal:AbortSignal)=>Readonly<{generationId:string;observedAt:unknown}>|Promise<Readonly<{generationId:string;observedAt:unknown}>>){
  require(config!==null&&typeof config==='object'&&store!==null&&typeof store==='object'&&jobs!==null&&typeof jobs==='object');
  require(exact(config,config.timeoutMs===undefined?['businessId','appReleaseId']:['businessId','appReleaseId','timeoutMs'])&&typeof config.businessId==='string'&&uuid.test(config.businessId)&&typeof config.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(config.appReleaseId));
  const {businessId,appReleaseId}=config,timeoutMs=config.timeoutMs??900000;

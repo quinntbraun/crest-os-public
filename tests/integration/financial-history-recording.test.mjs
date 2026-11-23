@@ -7,7 +7,7 @@ import {test} from 'node:test';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
-import {backupDatabase,backupLegacy123Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster,restoreDatabase,restoreLegacy123Database} from '../support/recovery-drill.mjs';
+import {backupDatabase,backupLegacy123Database,backupLegacy124Database,connect,inventory,keyPair,privateWorkspace,recoveryCluster,restoreLegacy124Database,restoreLegacy123Database} from '../support/recovery-drill.mjs';
 const authority='bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid';
 const readers=[
  {kind:'account',name:'read_finance_account_history',tail:'uuid,bigint,integer'},
@@ -90,10 +90,11 @@ test('registered124 financial recording evidence preserves123 and independently 
    for(const reader of readers){const args=owner.auth();args[1]=randomUUID();await assert.rejects(call(finance,reader.name+'_evidence',[...args,...selections.get(owner)[reader.kind]]),error=>error.code==='42501');}
   });
   await t.test('independent encrypted123 and124 restores retain exact source, reader definitions and restricted permissions',async()=>{
-   const current=await backupDatabase(admin,target,currentPoint,keys.recipient);assert.equal(current.manifest.schemaVersion,124);assert.equal(current.manifest.completeBackup,false);
+   await assert.rejects(backupDatabase(admin,target,currentPoint,keys.recipient),{code:'ERR_ASSERTION'},'current profile must still refuse a historical124 database');
+   const current=await backupLegacy124Database(admin,target,currentPoint,keys.recipient);assert.equal(current.manifest.schemaVersion,124);assert.equal(current.manifest.completeBackup,false);
    const definitions=await Promise.all(readers.map(async reader=>(await admin.query('SELECT pg_get_functiondef(to_regprocedure($1)) AS result',[signature(reader)])).rows[0].result));
    destination=await recoveryCluster();
-   for(const [version,point,restore,manifest]of [[123,oldPoint,restoreLegacy123Database,frozen.manifest],[124,currentPoint,restoreDatabase,current.manifest]]){
+   for(const [version,point,restore,manifest]of [[123,oldPoint,restoreLegacy123Database,frozen.manifest],[124,currentPoint,restoreLegacy124Database,current.manifest]]){
     const url=await destination.database();assert.notEqual(new URL(url).port,new URL(target).port);assert.deepEqual(await restore(point,keys.path,url),manifest);
     const client=await connect(url);restored.push(client);assert.deepEqual(await inventory(client),manifest.rows);assert.equal(await facts(client)===before,true);
     for(let index=0;index<readers.length;index++){const actual=(await client.query('SELECT pg_get_functiondef(to_regprocedure($1)) AS result',[signature(readers[index])])).rows[0].result;assert.equal(version===124?actual===definitions[index]:actual===null,true);}

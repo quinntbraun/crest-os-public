@@ -2,7 +2,7 @@ import 'server-only';
 import {createHash,randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {verifyBusinessIdentityEvidence} from './business-identity-evidence.ts';
-import {readCurrentBusinessCsv} from './current-business-source-csv.ts';
+import {readCurrentBusinessCsv,currentSourceCsvScalarFormat} from './current-business-source-csv.ts';
 import type {CurrentBusinessRows} from './current-business-source.ts';
 
 export const currentIdentityInventory=Object.freeze([
@@ -73,6 +73,6 @@ export function formatCurrentIdentitySource(input:CurrentBusinessIdentitySource,
   files[name]=Buffer.from(csv);dictionary[name]={source:source.source,columns:source.columns,types:source.types,primaryKey:source.primaryKey,records:source.rows.length};escapeMap[name]=flags;
  }
  files['current_identity_dictionary.json']=Buffer.from(JSON.stringify(dictionary)+'\n');files['current_identity_escape_map.json']=Buffer.from(JSON.stringify(escapeMap)+'\n');files['business_identity_evidence.json']=Buffer.from(value.evidence);
- files['current_identity_source_manifest.json']=Buffer.from(JSON.stringify({schemaVersion:1,profile:value.profile,businessId:value.businessId,businessSnapshotToken:value.businessSnapshotToken,businessObservedAt:value.businessObservedAt,identitySnapshotToken:value.identitySnapshotToken,identityObservedAt:value.identityObservedAt,recordCount:value.recordCount,scope:'Existing reviewed business identity projection: scoped actors, global role capabilities and relevant retained identity events. Provider/session/runtime-security components remain separate.',completePortableExport:false,completeBackup:false,files:Object.entries(files).map(([name,bytes])=>({name,bytes:bytes.byteLength,sha256:sha(bytes)}))})+'\n');
+ files['current_identity_source_manifest.json']=Buffer.from(JSON.stringify({schemaVersion:1,profile:value.profile,businessId:value.businessId,businessSnapshotToken:value.businessSnapshotToken,businessObservedAt:value.businessObservedAt,identitySnapshotToken:value.identitySnapshotToken,identityObservedAt:value.identityObservedAt,recordCount:value.recordCount,scope:'Existing reviewed business identity projection: scoped actors, global role capabilities and relevant retained identity events. Provider/session/runtime-security components remain separate.',scalarFormat:currentSourceCsvScalarFormat,completePortableExport:false,completeBackup:false,files:Object.entries(files).map(([name,bytes])=>({name,bytes:bytes.byteLength,sha256:sha(bytes)}))})+'\n');
  require(Object.values(files).reduce((sum,bytes)=>sum+bytes.byteLength,0)<=33554432);return Object.freeze({files:Object.freeze(files),identity:value});
 }

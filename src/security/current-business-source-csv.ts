@@ -9,6 +9,7 @@ const quote=(value:string)=>'"'+value.replaceAll('"','""')+'"';
 const formula=(value:string)=>value.startsWith("'")||['=','+','-','@'].includes(value.trimStart()[0]??'');
 function require(value:unknown):asserts value{if(!value)throw Error('CURRENT_BUSINESS_CSV_REVIEW_REQUIRED');}
 const sha=(value:Uint8Array)=>createHash('sha256').update(value).digest('hex');
+export const currentSourceCsvScalarFormat='Exact PostgreSQL text; UTC ISO instants; quoted \\N null; escaped paired backslashes; remove only escape-map marked apostrophes before unescaping.';
 
 // Independent decoder for this versioned all-text profile. Row ordinals avoid
 // inventing a UUID id for a source with a composite or non-UUID primary key.
@@ -57,7 +58,7 @@ export function formatCurrentBusinessCsv(capture:CurrentBusinessRows){
  files['current_business_escape_map.json']=Buffer.from(JSON.stringify(escapeMap)+'\n');
  const manifest=JSON.stringify({schemaVersion:1,profile:'crest.current-business-csv.v1',businessId:capture.businessId,snapshotToken:capture.snapshotToken,observedAt:capture.observedAt,recordCount,
   scope:'All fixed business-scoped required columns. Actor/global/security metadata and private original bytes require their separate components.',
-  scalarFormat:'Exact PostgreSQL text; UTC ISO instants; quoted \\N null; escaped paired backslashes; remove only escape-map marked apostrophes before unescaping.',
+  scalarFormat:currentSourceCsvScalarFormat,
   completePortableExport:false,completeBackup:false,files:Object.entries(files).map(([name,bytes])=>({name,bytes:bytes.byteLength,sha256:sha(bytes)}))})+'\n';
  require(Object.values(files).reduce((sum,file)=>sum+file.byteLength,Buffer.byteLength(manifest))<=67108864);
  return Object.freeze({manifest,files:Object.freeze(files)});
