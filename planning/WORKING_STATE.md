@@ -2,6 +2,62 @@
 
 ## Current launch checkpoint, 2026-11-23
 
+Latest local2086dea8 preserves authenticated application capabilities through
+coordinated preparation and separates dependency installation from browser test
+budgets. Actual-image verifier implementation29fab496 has four passing real
+archive/encryption/import/identity cases. Combined selected integration run on
+2086dea8 passes25/25, no skips/cancellations, unchanged tracked source and awaited
+owned cleanup. Its separate acceptance.json corrects inherited wrapper scope
+prose: this is not a44-case rerun. Details: RECOVERY_APPLICATION_IMAGE.md.
+
+All public98b625b5025 workflows are now terminal: main45160039723 has19 pass,
+schedule/records cancelled at the35-minute whole-job limit, and Foundation fails
+its strict prerequisite guard; owner expense45160039767 passes; auxiliary
+commercial45160039720 has2 pass/1 cancelled at25 minutes. Long dependency installs
+now succeed but consume the old enclosing budget. Main browser jobs now53min,
+test step35min; auxiliary commercial job43min/test25min. Original cases/engines/
+assertions remain. New exact-source hosted acceptance is pending; no earlier
+compiled artifact acceptance transfers. Linux database recovery step28 and that
+database job pass independently, without proving later Foundation image/worker.
+
+The actual local schema138 image is sourcef5203c1d/app1140220c, not public98b's
+expected appbcce3838. Its standard encrypted recovery, candidate-only cold import
+and isolated compiled/file identity pass on the same host; no independent host,
+provider custody or key-file/account recovery is implied. No service is activated.
+
+Next publish a fresh strict-scanned99 candidate from base locald5f9ce84/tree75ee8ab0
+with sole public parent625b5025, after independently verifying terminal runs and
+unchanged PR178 base/head/draft. Then continue complete-point publication,
+scheduler/backup_runs/retention/escalation/status, full financial/security and
+incident acceptance, safe exports, independent recovery, hosting/owner setup and
+physical iPhone. No optional decorative redesign. No merge/install/signup/
+provision/spend/real-data activation. V1 coding roughly80% (low confidence), actual
+Crest use not ready; repository and exact run evidence sufficient; $0 new spend.
+
+Independent Healthchecks start/failure transport and canonical backup age/UTC
+schedule policy are implemented locally onc152b126. Types, targeted lint and27
+focused cases pass; no network/live signal/account provisioning occurs. The
+adapter requires the exact bounded OK acknowledgment (HTTP200 alone is not
+success), refuses unsafe/private-URL leaks, redirects and automatic duplicate
+retry, preserves unknown dispatch, and has no success method. Age is measured
+from an authoritative complete snapshot: warn8h, critical12h, breach24h;
+ordinary financial writes remain allowed under the documented owner decision.
+The six-hour UTC slots survive DST/year boundaries. This is policy/transport,
+not the actual durable scheduler, complete-point store/status reader, delivery
+proof or success heartbeat. See RECOVERY_MONITOR_AND_AGE_POLICY.md and
+.local/recovery-monitor-and-policy/result.json. These changes are unpublished.
+
+Public98b625b5025 exactly matches locald5f9ce84/tree75ee8ab0. Metadata-before-CAS,
+strict2960-file scan0, soleparent24d08214, actual ref/PR/testmerge3064c683 exact
+tree and ordered parents are independently verified. Main45160039723,
+expense45160039767 and commercial45160039720 are live; preserve head/title/body
+and these handles. Last job observation has3 successful main jobs/no failures;
+mandatory Linux recovery is active, not complete acceptance. Expected build
+bcce38380c4e5e6357fe5f03fba30361a2f3bcb9 is source-derived only, not a compiled
+artifact. Previous97c is terminal19/22 main, expensepass/commercial installer
+failure; final payment-recovery passes. No current full-release/deployment claim.
+
+
 Restored posted-account controls now reuse the canonical registered six report
 checks for every captured financial business through its latest effective date.
 A separate restricted restore-only account-owner identity uses forced read-only

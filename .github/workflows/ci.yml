@@ -238,7 +238,8 @@ jobs:
   browser_workflows:
     name: Browser workflows (${{ matrix.suite }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    # Preserve the original35-minute browser budget after the bounded installer.
+    timeout-minutes: 53
     strategy:
       fail-fast: false
       matrix:
@@ -290,6 +291,7 @@ jobs:
       - name: Build actual product source
         run: npm run build
       - name: Run required browser group
+        timeout-minutes: 35
         env:
           CREST_BROWSER_JOB_TOTAL: ${{ strategy.job-total }}
         run: node scripts/run-browser-group.mjs ${{ matrix.suite }}
@@ -484,6 +486,17 @@ jobs:
           git archive --format=tar --output=.local/release/crest-os-source.tar HEAD
           sha256sum .local/release/crest-os-source.tar > .local/release/crest-os-source.tar.sha256
           npm run release:manifest
+      - name: Recover the actual application archive and verify compiled identity
+        timeout-minutes: 6
+        env:
+          CREST_TEST_RECOVERY_IMAGE_MANIFEST: ${{ github.workspace }}/.local/release/build-manifest.json
+          CREST_TEST_RECOVERY_IMAGE_ARCHIVE: ${{ github.workspace }}/.local/release/crest-os-image.tar
+        run: |
+          node --conditions=react-server --test --test-reporter=tap --test-concurrency=1 tests/integration/recovery-image-identity.test.mjs | tee .local/release/recovery-image-identity.log
+          grep -Fx '# tests 4' .local/release/recovery-image-identity.log
+          grep -Fx '# pass 4' .local/release/recovery-image-identity.log
+          grep -Fx '# fail 0' .local/release/recovery-image-identity.log
+          grep -Fx '# skipped 0' .local/release/recovery-image-identity.log
       - name: Signed-in custody photo journeys with isolated decoder
         timeout-minutes: 6
         shell: bash

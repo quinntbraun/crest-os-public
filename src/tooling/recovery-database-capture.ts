@@ -18,6 +18,9 @@ import {openRecoveryReleaseFile,recoveryReleaseFileLimit,recoveryReleasePartLimi
 import {readRecoveryReleaseArchive} from './recovery-release-archive.ts';
 import type {createRecoveryVault,RecoveryVaultArtifact} from './recovery-vault.ts';
 
+type VerifiedReleaseFile=Readonly<{path:string;kind:'source'|'image';release:ReturnType<typeof readRecoveryReleaseArchive>['release'];byteSize:number;sha256:string}>;
+const verifiedReleaseFiles=new WeakMap<object,VerifiedReleaseFile>();
+export function verifiedRecoveryReleaseFile(value:unknown):VerifiedReleaseFile{const found=value&&typeof value==='object'?verifiedReleaseFiles.get(value):undefined;if(!found)throw new RecoveryReleaseRestoreError();return found;}
 type Command='pg_dump'|'age';
 export type RecoveryCaptureLauncher=(command:Command,args:string[],environment:Record<string,string>)=>ChildProcessWithoutNullStreams;
 export type RecoveryDatabaseCaptureInput=Readonly<{environment:'production'|'test';connectionString:string;rootCertificate:string|null;workspace:string;snapshot:RecoveryBackupSnapshot;recipient:string}>;
@@ -155,7 +158,7 @@ export function createRecoveryReleaseArchiveRestore(launch:RecoveryCaptureLaunch
    }
    require(written===archive.byteSize&&full.digest('hex')===archive.sha256);signal.throwIfAborted();await output.sync();require((await output.stat()).size===archive.byteSize);await output.close();output=undefined;
    if(process.platform==='linux'){const directory=await open(input.workspace,'r');try{await directory.sync();}finally{await directory.close();}}
-   const evidence=Object.freeze({profile:'crest.authenticated-recovered-release.v1' as const,path,kind:archive.kind,release:archive.release,byteSize:archive.byteSize,sha256:archive.sha256,authenticated:true as const,applicationLoaded:false as const,completeBackup:false as const});complete=true;return Object.freeze({forRecoveryTools:()=>evidence,toJSON():never{throw new RecoveryReleaseRestoreError();}});
+   const evidence=Object.freeze({profile:'crest.authenticated-recovered-release.v1' as const,path,kind:archive.kind,release:archive.release,byteSize:archive.byteSize,sha256:archive.sha256,authenticated:true as const,applicationLoaded:false as const,completeBackup:false as const});complete=true;const verified=Object.freeze({forRecoveryTools:()=>evidence,toJSON():never{throw new RecoveryReleaseRestoreError();}});verifiedReleaseFiles.set(verified,evidence);return verified;
   }catch{throw new RecoveryReleaseRestoreError();}finally{
    controller.abort();await Promise.allSettled([...jobs,...(encryptor?[encryptor.closed]:[])]);await output?.close().catch(()=>{});if(cipherPath)await unlink(cipherPath).catch(()=>{});if(created&&!complete&&path)await unlink(path).catch(()=>{});if(home&&dirname(resolve(home))===resolve(input.workspace)&&basename(home).startsWith('.restore-home-'))await rm(home,{recursive:true,force:true}).catch(()=>{});
   }
