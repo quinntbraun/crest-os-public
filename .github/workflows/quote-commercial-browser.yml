@@ -73,8 +73,9 @@ jobs:
       - run: node scripts/install-tools.mjs
       - name: Install browser dependencies with bounded Ubuntu downloads
         if: matrix.suite != 'amendment_integrity'
-        timeout-minutes: 12
+        timeout-minutes: 18
         run: |
+          bash tests/integration/ci-ubuntu-browser-deps.sh
           bash scripts/install-ci-browsers.sh
       - if: matrix.suite != 'amendment_integrity'
         run: npm run build

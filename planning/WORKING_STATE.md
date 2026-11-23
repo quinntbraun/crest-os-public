@@ -2,6 +2,69 @@
 
 ## Current launch checkpoint, 2026-11-23
 
+Restored posted-account controls now reuse the canonical registered six report
+checks for every captured financial business through its latest effective date.
+A separate restricted restore-only account-owner identity uses forced read-only
+snapshots; backup and integrity identities keep their original privileges.
+Private genuine comparison state binds the full business list/count/horizon;
+tenant reads reproduce the whole event fingerprint before/after canonical
+controls, after independent code/schema checks. Native44/44 on1f667a73 passes
+with two real posted businesses/five events: copied/wrong-role inputs refuse;
+a restored one-cent receivable discrepancy fails controls despite unchanged
+journal; repair passes both businesses. Source unchanged and cleanup awaited.
+The earlier41/44 stale fixture-total failure is retained; exact expectations now
+include the second25000 invoice (51250 total), with no rule/guard weakened.
+Types and targeted lint pass. See RECOVERY_POSTED_ACCOUNT_CONTROLS.md. Tax/AP
+are empty in this fixture; full openings/global/incident/physical recovery and
+complete-backup acceptance remain open. This code is unpublished.
+
+Public97c45153513036 is still live at the latest10:40UTC observation:17 jobs
+pass, income-statement/commercial dependency installs fail, and records/payment-
+recovery remain active. Auxiliary expense passes and commercial fails only its
+installer. Keep same public head/title/body and handles until terminal; no new
+Foundation/build or full-release acceptance. Old98a preparation is invalidated
+by the later account-control source; use a fresh strict scan before publication.
+
+
+Restored schema protections now pin15454 structural observations against an
+independent migration-only baseline before application execution. Native44/44
+on56790035 passes with source unchanged/cleanup awaited: unexpected app table,
+changed payment policy and disabled internal FK trigger refuse schema; repair
+passes again. The initial42/44 refusal of the numeric fixture is preserved;
+only the test-only table location changes for coordinated run cases, with all
+original numeric/snapshot assertions intact. See RECOVERY_SCHEMA_PROTECTIONS.md.
+No complete incident/security or full financial reconciliation claim is made.
+
+Public97c main45153513036 remains live, with known income-statement/commercial
+installer failures before application tests. Auxiliary owner expense passes;
+commercial fails at dependency installation. Actual logs confirm210-second
+browser installer deadlines exhausting during index downloads. Localea639a25
+raises only that bounded combined attempt to480 seconds, retains all signed
+sources/packages/engines and adjusts four installer step budgets to18 minutes.
+The isolated Linux mock check passes all four scenarios, source unchanged. See
+BROWSER_DEPENDENCY_INDEX_DEADLINE.md. Preserve public97c head/title/body and same
+handles until every run is terminal; no Foundation/build or release acceptance.
+These source/event/schema/browser-installer additions remain unpublished.
+
+
+Financial source/event closure now checks sixteen issued/posted root families in
+both directions without invoking application code. Native44/44 on84f17759 passes:
+removing only the restored invoice event fails source_events despite unchanged
+journal totals; exact server-JSON repair passes the full original comparison.
+Source stays unchanged and owned cleanup is awaited. Types and targeted lint
+pass; see RECOVERY_FINANCIAL_SOURCES.md. Populated four-family scope does not
+establish every-family/global reconciliation or complete backup. This source is
+newer than public97c and remains unpublished while that candidate runs.
+
+Public97c24d08214 exactly matches localaa983203/treeef80a151; PR178 remains
+draft/open/unmerged. The19-file delta and2951-file strict scan have zero findings.
+Metadata-before-ref, sole parent0f60, branch and exact test mergefb9b0466 ordered
+parents are independently verified. Main45153513036, expense45153513021 and
+commercial45153512985 are live at publication; preserve these handles and public
+head/title/body until terminal. No compiled artifact, final release or deployment
+acceptance is inferred. Previous96e terminal download failure is described below.
+
+
 The latest hosted candidate96e is terminal:21/22 main jobs pass and both ancillary
 suites pass. Foundation stops before its build steps because both official
 Ubuntu archive index downloads exceed120 seconds while progressing. Local

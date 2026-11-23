@@ -8,8 +8,10 @@ import {recoveryDatabaseEndpoint} from './recovery-database-endpoint.ts';
 import {withRecoveryBackupLease} from './recovery-backup-lease.ts';
 import {captureRecoveryRoutineCatalog} from './recovery-routine-catalog.ts';
 import {recoveryRoutineBaseline138} from './recovery-routine-baseline138.ts';
+import {captureRecoverySchemaCatalog} from './recovery-schema-catalog.ts';
+import {recoverySchemaBaseline138} from './recovery-schema-baseline138.ts';
 import type {RecoveryBackupSnapshot} from './recovery-backup-lease.ts';
-type Stage='comparison'|'identity'|'snapshot'|'endpoint'|'migrations'|'roles'|'catalog'|'event_state'|'postings';
+type Stage='comparison'|'identity'|'snapshot'|'endpoint'|'migrations'|'roles'|'catalog'|'schema'|'event_state'|'postings';
 export class RecoveryRestoredFinanceError extends Error{readonly stage:Stage;constructor(stage:Stage){super('RECOVERY_RESTORED_FINANCE_REVIEW_REQUIRED');this.name='RecoveryRestoredFinanceError';this.stage=stage;}}
 function require(value:unknown):asserts value{if(!value)throw Error('REVIEW_REQUIRED');}
 async function fingerprintEvents(snapshot:RecoveryBackupSnapshot,signal:AbortSignal){
@@ -38,13 +40,14 @@ export async function verifyRecoveryRestoredFinance(input:Readonly<{comparison:u
     stage='migrations';require(isDeepStrictEqual((await snapshot.query('SELECT version,name FROM supabase_migrations.schema_migrations ORDER BY version')).rows,comparison.migrations));
     stage='roles';require(isDeepStrictEqual((await snapshot.query("SELECT rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolbypassrls,rolconnlimit,rolconfig FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' AND NOT rolcanlogin ORDER BY oid")).rows,comparison.roles));
     stage='catalog';const catalog=await captureRecoveryRoutineCatalog(snapshot,lease.signal);require(catalog.profile===baseline.profile&&catalog.routineCount===baseline.routineCount&&catalog.sha256===baseline.sha256);
+    stage='schema';const schema=await captureRecoverySchemaCatalog(snapshot,lease.signal),schemaBaseline=recoverySchemaBaseline138;require(comparison.sourceSchemaVersion===schemaBaseline.sourceSchemaVersion&&comparison.migrationRegistrySha256===schemaBaseline.migrationRegistrySha256&&schema.profile===schemaBaseline.profile&&schema.objectCount===schemaBaseline.objectCount&&schema.sha256===schemaBaseline.sha256);
     await snapshot.query('SET LOCAL ROLE crest_finance_integrity_owner');
     stage='event_state';require(isDeepStrictEqual(await fingerprintEvents(snapshot,lease.signal),comparison.eventFingerprint));
     stage='postings';let checked=0;await snapshot.query('DECLARE crest_finance_events NO SCROLL CURSOR FOR SELECT business_id::text,id::text FROM crest.financial_events ORDER BY business_id,id');
     try{for(;;){lease.signal.throwIfAborted();const page=(await snapshot.query('FETCH FORWARD 64 FROM crest_finance_events')).rows;if(!page.length)break;for(const event of page){lease.signal.throwIfAborted();require(++checked<=100000);await snapshot.query('SELECT crest_private.verify_finance_event_posting($1::uuid,$2::uuid)',[event.business_id,event.id]);}}}finally{await snapshot.query('CLOSE crest_finance_events');}
     stage='event_state';require(String(checked)===comparison.eventFingerprint.rowCount&&isDeepStrictEqual(await fingerprintEvents(snapshot,lease.signal),comparison.eventFingerprint));return checked;
    });await lease.assertHeld();
-   const evidence=Object.freeze({profile:'crest.restored-financial-postings.v1' as const,pointId:comparison.pointId,businessId:comparison.businessId,destinationDatabase:comparison.destinationDatabase,snapshotId:captured.snapshot.id,checkedEventCount:captured.value,canonicalRoutineCatalogVerified:true as const,canonicalPostingRulesVerified:true as const,exactEventStateMatchesComparison:true as const,atomicWithDataComparison:false as const,fullBusinessReconciliationVerified:false as const,securityAndIncidentAcceptance:false as const,runtimeActivated:false as const,completeBackup:false as const});return Object.freeze({forRecoveryTools:()=>evidence,toJSON():never{throw new RecoveryRestoredFinanceError('postings');}});
+   const evidence=Object.freeze({profile:'crest.restored-financial-postings.v1' as const,pointId:comparison.pointId,businessId:comparison.businessId,destinationDatabase:comparison.destinationDatabase,snapshotId:captured.snapshot.id,checkedEventCount:captured.value,canonicalRoutineCatalogVerified:true as const,canonicalSchemaCatalogVerified:true as const,canonicalPostingRulesVerified:true as const,exactEventStateMatchesComparison:true as const,atomicWithDataComparison:false as const,fullBusinessReconciliationVerified:false as const,securityAndIncidentAcceptance:false as const,runtimeActivated:false as const,completeBackup:false as const});return Object.freeze({forRecoveryTools:()=>evidence,toJSON():never{throw new RecoveryRestoredFinanceError('postings');}});
   });
  }catch{throw new RecoveryRestoredFinanceError(stage);}finally{if(client instanceof pg.Client)await client.end().catch(()=>{});}
 }
