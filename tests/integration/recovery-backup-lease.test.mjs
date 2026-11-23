@@ -5,6 +5,7 @@ import pg from 'pg';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {withRecoveryBackupLease,recoveryBackupSnapshotMatches} from '../../src/tooling/recovery-backup-lease.ts';
 import {schemaMigrationLock} from '../../src/security/schema-migration-lock.ts';
+import {captureRecoveryDatabaseInventory} from '../../src/tooling/recovery-database-inventory.ts';
 
 let sandbox,url,admin;const business=randomUUID(),signal=()=>new AbortController().signal;
 async function client(){const value=new pg.Client({connectionString:url,connectionTimeoutMillis:5000,query_timeout:6000});await value.connect();return value;}
@@ -51,5 +52,5 @@ test('terminated database session aborts the attempt and cannot report success',
 });
 test('snapshot capability binds its exact source and expires without exposing credentials',async()=>{
  const source=new URL(url),target={host:source.hostname,port:Number(source.port||5432),database:source.pathname.slice(1),user:decodeURIComponent(source.username),password:decodeURIComponent(source.password),secure:false};let saved;
- await withRecoveryBackupLease(await client(),business,signal(),lease=>lease.capture(async snapshot=>{saved=snapshot;assert(recoveryBackupSnapshotMatches(snapshot,target));assert.equal(recoveryBackupSnapshotMatches({...snapshot},target),false);for(const altered of [{...target,port:target.port+1},{...target,database:'foreign'},{...target,user:'foreign'},{...target,password:'foreign'},{...target,secure:true}])assert.equal(recoveryBackupSnapshotMatches(snapshot,altered),false);assert.equal(JSON.stringify(snapshot).includes(target.password),false);}));assert.equal(recoveryBackupSnapshotMatches(saved,target),false);
+ await withRecoveryBackupLease(await client(),business,signal(),lease=>lease.capture(async snapshot=>{saved=snapshot;assert(recoveryBackupSnapshotMatches(snapshot,target));assert.equal(recoveryBackupSnapshotMatches({...snapshot},target),false);let queried=false;await assert.rejects(captureRecoveryDatabaseInventory({...snapshot,query:async()=>{queried=true;assert.fail('forged query executed');}},signal()));assert.equal(queried,false);for(const altered of [{...target,port:target.port+1},{...target,database:'foreign'},{...target,user:'foreign'},{...target,password:'foreign'},{...target,secure:true}])assert.equal(recoveryBackupSnapshotMatches(snapshot,altered),false);assert.equal(JSON.stringify(snapshot).includes(target.password),false);}));assert.equal(recoveryBackupSnapshotMatches(saved,target),false);await assert.rejects(captureRecoveryDatabaseInventory(saved,signal()));
 });

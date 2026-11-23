@@ -3,9 +3,10 @@
 Registered schema135 adopts the reviewed SQL in
 `20270128180000_provider_source_export.sql`. The preceding proposal remains as
 provenance. The current registry, compatibility maximum and source inventory are
-now137, with append-only original-export membership added separately. No existing
+now138, with original membership and the isolated backup reader added separately.
+No existing
 migration is edited. Production activation remains blocked and real Crest use is
-not accepted. See SOURCE_EXPORT_ORIGINAL_HANDOFF.md for the current136/137 contract.
+not accepted. See SOURCE_EXPORT_ORIGINAL_HANDOFF.md for the136/137/138 contracts.
 
 The remaining actor component consists of eight fixed provider login, cleanup,
 inventory and session-event tables. Required columns come from the existing
@@ -23,13 +24,13 @@ claim reference closure, complete portable export or complete backup.
 
 The schema135 request function is separately named. Existing43/134 jobs,
 requests and receipts keep their source identity; snapshots remain bound to the
-exact job tuple. Current execution and production runtime now request137 using
-the separately named v4 command; stale134/135/136 input is refused before provider or
-database I/O. Historical134/135/136 downloads remain supported. The worker retains
-explicit134/135/136 compatibility options. 135,136 and137 require the provider
+exact job tuple. Current execution and production runtime now request138 using
+the separately named v5 command; stale134/135/136/137 input is refused before provider or
+database I/O. Historical134/135/136/137 downloads remain supported. The worker retains
+explicit134/135/136/137 compatibility options. 135,136,137 and138 require the provider
 component, selected against their exact migration identity on the existing
-read-only transaction. Reviewed135/136/137 financial vocabulary remains109;
-unknown138 stays distinct. The verification history below retains its original
+read-only transaction. Reviewed135/136/137/138 financial vocabulary remains109;
+unknown139 stays distinct. The verification history below retains its original
 135 source/version identities.
 
 Verification:40 focused cases across provider, identity, session and neutral SQL

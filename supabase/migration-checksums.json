@@ -685,6 +685,11 @@
       "version": "20270130180000",
       "file": "20270130180000_source_export_original_typed_reader.sql",
       "sha256": "812b7f9f63a7f577cb554fd4c69223efba3429968dcb0cf4e11483ad5e312d0c"
+    },
+    {
+      "version": "20270131180000",
+      "file": "20270131180000_recovery_backup_reader.sql",
+      "sha256": "5751224fb82987c1e38546818c4f645c4149b6713cea9ab6827a86d57064fb28"
     }
   ]
 }

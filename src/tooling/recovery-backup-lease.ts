@@ -12,6 +12,8 @@ export type RecoveryBackupSnapshot=Readonly<{id:string;capturedAt:string;databas
 type Snapshot=RecoveryBackupSnapshot;
 type DatabaseTarget=Readonly<{host:string;port:number;database:string;user:string;password:string;secure:boolean}>;
 const sourceBindings=new WeakMap<object,(target:DatabaseTarget)=>boolean>();
+const liveSnapshots=new WeakMap<object,()=>boolean>();
+export function isLiveRecoveryBackupSnapshot(snapshot:unknown):snapshot is RecoveryBackupSnapshot{return !!snapshot&&typeof snapshot==='object'&&liveSnapshots.get(snapshot)?.()===true;}
 const targetHash=(target:DatabaseTarget)=>createHash('sha256').update(JSON.stringify([target.host,target.port,target.database,target.user,target.password,target.secure])).digest('hex');
 export function recoveryBackupSnapshotMatches(snapshot:unknown,target:DatabaseTarget){return !!snapshot&&typeof snapshot==='object'&&sourceBindings.get(snapshot)?.(target)===true;}
 type Lease=Readonly<{signal:AbortSignal;assertHeld:()=>Promise<void>;capture:<T>(work:(snapshot:Snapshot,signal:AbortSignal)=>Promise<T>)=>Promise<Readonly<{value:T;snapshot:Omit<Snapshot,'query'>}>>}>;
@@ -44,10 +46,12 @@ export async function withRecoveryBackupLease<T>(client:pg.Client,businessId:str
      require(row&&typeof row.id==='string'&&/^[A-Fa-f0-9]{8}-[A-Fa-f0-9]{8}-[0-9]+$/.test(row.id)&&typeof row.captured_at==='string'&&row.captured_at.length<=128&&typeof row.database==='string'&&row.database.length<=128&&typeof row.database_role==='string'&&/^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/.test(row.database_role)&&Number.isSafeInteger(row.backend_pid)&&row.read_only==='on'&&row.isolation==='repeatable read');
      const metadata=Object.freeze({id:row.id as string,capturedAt:row.captured_at as string,database:row.database as string,databaseRole:row.database_role as string,backendPid:row.backend_pid as number});live=true;
      const snapshot:Snapshot=Object.freeze({...metadata,query:async(sql:string,values:unknown[]=[])=>{require(live&&!closing);return query(sql,values);}});
-     sourceBindings.set(snapshot,target=>live&&!closing&&!signal.aborted&&source!==null&&targetHash(target)===source);
-     const value=await captureWork(snapshot,signal);live=false;sourceBindings.delete(snapshot);await assertHeld();await query('ROLLBACK');transaction=false;
+     sourceBindings.set(snapshot,target=>live&&!closing&&!signal.aborted&&source!==null&&targetHash(target)===source);liveSnapshots.set(snapshot,()=>live&&!closing&&!signal.aborted);
+     try{
+     const value=await captureWork(snapshot,signal);live=false;sourceBindings.delete(snapshot);liveSnapshots.delete(snapshot);await assertHeld();await query('ROLLBACK');transaction=false;
      require((await query('SELECT pg_advisory_unlock_shared($1::integer,$2::integer) AS released',[...schemaMigrationLock])).rows[0]?.released===true);shared=false;
      return Object.freeze({value,snapshot:metadata});
+     }finally{liveSnapshots.delete(snapshot);sourceBindings.delete(snapshot);}
     }catch{controller.abort();throw new RecoveryBackupLeaseError();}
     finally{live=false;clearTimeout(timer);capturing=false;if(transaction)await client.query('ROLLBACK').catch(()=>{});if(shared&&!signal.aborted)await client.query('SELECT pg_advisory_unlock_shared($1::integer,$2::integer)',[...schemaMigrationLock]).catch(()=>{});}
    })();activeCapture=task;void task.catch(()=>{});return await task;

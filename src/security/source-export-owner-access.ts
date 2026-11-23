@@ -101,7 +101,7 @@ export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguratio
     require(release!==undefined);return privateResult(await authorized(credential,external,async(args,actor,signal)=>{
      const value=await database('SELECT crest_commands.read_business_settings_context($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid) AS result',args,signal);
      require(!signal.aborted&&exact(value,['schemaVersion','businessId','legalName','businessVersion','writeState','recoveryEpoch'])&&value.schemaVersion===1&&value.businessId===scope);
-     return parseSourceExportOwnerContext({schemaVersion:1,businessId:scope,actorId:actor,appReleaseId:release,profile:currentProfile?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1',sourceSchemaVersion:currentProfile?137:43,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
+     return parseSourceExportOwnerContext({schemaVersion:1,businessId:scope,actorId:actor,appReleaseId:release,profile:currentProfile?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1',sourceSchemaVersion:currentProfile?138:43,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
     }));
    }catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_READ_FAILED');}
   },

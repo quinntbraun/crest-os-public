@@ -370,6 +370,11 @@ const legacy124Profile=Object.freeze({schemaVersion:124,registrySha256:hash(lega
 const legacy124Snapshot={profile:legacy124Profile,versions:legacy124.migrations.map(row=>row.version),coverage:historicalCoverage};
 
 
+const legacy137Bytes=await readFile(join(root,'tests/support/registered137-migration-checksums.json'));
+assert.equal(hash(legacy137Bytes),'398e9694c8a827df8af8e9a8abc5e1b0770bb3057ff8b59ac85ba3e26976fe85');const legacy137=JSON.parse(legacy137Bytes);assert.equal(legacy137.migrations.length,137);assert.deepEqual(registry.migrations.slice(0,137),legacy137.migrations);
+const legacy137CoverageBytes=await readFile(join(root,'tests/support/registered137-export-coverage.json'));assert.equal(hash(legacy137CoverageBytes),'58623c380da145ed77bf5d05137ce323eef0d70af81523b15cb5d9068f9b96db');const legacy137Coverage=JSON.parse(legacy137CoverageBytes);assert.equal(legacy137Coverage.migrationCount,137);
+const legacy137Profile=Object.freeze({schemaVersion:137,registrySha256:hash(legacy137Bytes)}),legacy137Snapshot={profile:legacy137Profile,versions:legacy137.migrations.map(row=>row.version),coverage:legacy137Coverage};
+
 const contactCandidateFiles=['legacy-contact-external-identities.sql','legacy-contact-application.sql','legacy-contact-application-source.sql'];
 const contactCandidateSources=await Promise.all(contactCandidateFiles.map(async file=>({file,sha256:hash(await readFile(join(root,'planning/proposals',file)))})));
 const contactCandidateTables={
@@ -462,10 +467,11 @@ async function multiRolePolicySets(client){
   for(const row of rows)assert(row.roles.every(role=>typeof role==='string'));
   return rows;
 }
-export async function roleDefinitions(client){
+export async function roleDefinitions(client,allowBackupReader=false){
   const roles=(await client.query("SELECT rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolbypassrls,rolconnlimit,rolconfig FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' ORDER BY rolname")).rows;
   assert(roles.length>0);
-  for(const r of roles)assert(!r.rolsuper&&!r.rolinherit&&!r.rolcreaterole&&!r.rolcreatedb&&!r.rolcanlogin&&!r.rolreplication&&!r.rolbypassrls&&r.rolconnlimit===-1&&r.rolconfig===null,'unexpected source role authority');
+  assert.equal(typeof allowBackupReader,'boolean');if(allowBackupReader)assert.equal(roles.filter(r=>r.rolname==='crest_backup_reader').length,1);
+  for(const r of roles)assert(!r.rolsuper&&!r.rolinherit&&!r.rolcreaterole&&!r.rolcreatedb&&!r.rolcanlogin&&!r.rolreplication&&r.rolbypassrls===(allowBackupReader&&r.rolname==='crest_backup_reader')&&r.rolconnlimit===-1&&r.rolconfig===null,'unexpected source role authority');
   const links=(await client.query("SELECT 1 FROM pg_auth_members m JOIN pg_roles a ON a.oid=m.roleid JOIN pg_roles b ON b.oid=m.member WHERE a.rolname ~ '^crest_[a-z_]+$' AND b.rolname ~ '^crest_[a-z_]+$'")).rows;
   assert.equal(links.length,0,'unreviewed internal role membership');return roles;
 }
@@ -1293,7 +1299,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy101Profile
       ||profile===legacy102Profile||profile===legacy103Profile||profile===legacy104Profile||profile===legacy105Profile||profile===legacy106Profile
       ||profile===legacy107Profile||profile===legacy108Profile||profile===legacy113Profile||profile===legacy114Profile
-      ||profile===legacy115Profile||profile===legacy116Profile||profile===legacy117Profile||profile===legacy118Profile||profile===legacy119Profile||profile===legacy120Profile||profile===legacy121Profile||profile===legacy122Profile||profile===legacy123Profile||profile===legacy124Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
+      ||profile===legacy115Profile||profile===legacy116Profile||profile===legacy117Profile||profile===legacy118Profile||profile===legacy119Profile||profile===legacy120Profile||profile===legacy121Profile||profile===legacy122Profile||profile===legacy123Profile||profile===legacy124Profile||profile===legacy137Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
@@ -1328,7 +1334,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
     }
     // Coverage has passed. Pending-object/source refusal belongs to snapshot
     // capture, rather than being misreported as a schema-coverage failure.
-    stage='snapshot';const rows=await inventory(client),roles=await roleDefinitions(client);
+    stage='snapshot';const rows=await inventory(client),roles=await roleDefinitions(client,profile===currentProfile&&profile.schemaVersion===138);
     // PG stores a policy's role set in OID order. Preserve the relative role
     // creation order from schema53 so a multi-role policy deparses byte-exact after
     // restore; do not normalize away policy or permission differences.
@@ -1504,12 +1510,13 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     }
     for(const r of orderedRoles){
       assert.match(r.rolname,/^crest_[a-z_]+$/);
-      assert(!r.rolsuper&&!r.rolinherit&&!r.rolcreaterole&&!r.rolcreatedb&&!r.rolcanlogin&&!r.rolreplication&&!r.rolbypassrls&&r.rolconnlimit===-1&&r.rolconfig===null);
+      const backupReader=profile===currentProfile&&profile.schemaVersion===138&&r.rolname==='crest_backup_reader';
+      assert(!r.rolsuper&&!r.rolinherit&&!r.rolcreaterole&&!r.rolcreatedb&&!r.rolcanlogin&&!r.rolreplication&&r.rolbypassrls===backupReader&&r.rolconnlimit===-1&&r.rolconfig===null);
       // Restore only closed migration roles; fresh runtime credentials are separate.
       if(!(await client.query('SELECT 1 FROM pg_roles WHERE rolname=$1',[r.rolname])).rowCount)
-        await client.query(`CREATE ROLE "${r.rolname}" NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`);
+        await client.query(`CREATE ROLE "${r.rolname}" NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION ${backupReader?'BYPASSRLS':'NOBYPASSRLS'}`);
     }
-    assert.deepEqual(await roleDefinitions(client),manifest.roles);
+    assert.deepEqual(await roleDefinitions(client,profile===currentProfile&&profile.schemaVersion===138),manifest.roles);
     stage='restore';await postgresTool('pg_restore',url,['--exit-on-error','--single-transaction'],dump);
     stage='rows';assert.deepEqual(await inventory(client),manifest.rows,'restored row content differs');
     stage='schema';
@@ -1572,3 +1579,6 @@ export async function backupLegacy124Database(client,url,directory,recipient,dur
  return backupWithProfile(legacy124Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy124Snapshot);
 }
 export async function restoreLegacy124Database(...args){return restoreWithProfile(legacy124Profile,...args);}
+
+export async function backupLegacy137Database(client,url,directory,recipient,duringSnapshot,objectCapture){return backupWithProfile(legacy137Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy137Snapshot);}
+export async function restoreLegacy137Database(...args){return restoreWithProfile(legacy137Profile,...args);}

@@ -474,9 +474,12 @@ jobs:
           node scripts/install-recovery-tools.mjs
           npm run test:object-recovery
           export CREST_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
-          npm run release:manifest
-          docker save crest-os:ci -o .local/release/crest-os-image.tar
+          mkdir -p .local/release
+          docker save "$CREST_IMAGE_ID" -o .local/release/crest-os-image.tar
           sha256sum .local/release/crest-os-image.tar > .local/release/crest-os-image.tar.sha256
+          git archive --format=tar --output=.local/release/crest-os-source.tar HEAD
+          sha256sum .local/release/crest-os-source.tar > .local/release/crest-os-source.tar.sha256
+          npm run release:manifest
       - name: Signed-in custody photo journeys with isolated decoder
         timeout-minutes: 6
         shell: bash

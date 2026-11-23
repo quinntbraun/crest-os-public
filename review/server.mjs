@@ -6,6 +6,7 @@ import {join,resolve} from 'node:path';
 import {build} from 'rolldown';
 import {createReviewData} from './data.mjs';
 import {createReviewAddressLookup} from './address-lookup.mjs';
+import {readReviewCustomerNavigation} from './customer-navigation.ts';
 const root=fileURLToPath(new URL('../',import.meta.url));
 export async function buildReview(directory=join(root,'.local','owner-review')){
  await mkdir(directory,{recursive:true});
@@ -30,7 +31,7 @@ export async function startReviewServer({port=4318,assets,initial}={}){
    try{
     if(incoming.headers.host!==new URL(origin).host){send(403,{error:'REVIEW_LOCAL_HOST_REQUIRED'});return;}
     const url=new URL(incoming.url,origin),path=url.pathname;
-    if(url.hash||url.search&&!(incoming.method==='GET'&&['/addresses','/vehicles'].includes(path))){send(404,{error:'REVIEW_ROUTE_UNAVAILABLE'});return;}
+    if(url.hash||url.search&&!(incoming.method==='GET'&&(['/addresses','/vehicles'].includes(path)||path==='/customers'&&readReviewCustomerNavigation(url.searchParams)!==null))){send(404,{error:'REVIEW_ROUTE_UNAVAILABLE'});return;}
     if(incoming.method==='GET'){
      if(['/fonts/IBMPlexSans-Regular.woff2','/fonts/IBMPlexSans-SemiBold.woff2'].includes(path)){
       const bytes=await readFile(join(root,'public',path.slice(1)));if(bytes.length>131072||bytes.subarray(0,4).toString()!=='wOF2')throw Error();

@@ -1,7 +1,8 @@
 # Encrypted database snapshot capture
 
-The dedicated-reader proposal and native full137 restoration evidence are in
-PRODUCTION_RECOVERY_READER.md. It still needs registered-migration adoption.
+The reader is registered in138. Its proposal, upgrade and independent restore
+evidence are in PRODUCTION_RECOVERY_READER.md; complete recovery assembly and
+actual-provider acceptance remain required.
 
 `src/tooling/recovery-database-capture.ts` implements the standard pg_dump/age
 mechanics required by EXPORTS_AND_BACKUPS5. It is isolated recovery tooling, not

@@ -1,5 +1,12 @@
 # Original-file export handoff
 
+Current138 adds the isolated backup reader and V5 request identity. Original
+plan/receipt/read contracts explicitly admit138 while preserving136/137 source
+labels, original index membership and immutable audits. The current138 browser
+pair passes on a55baba; the historical136-to137 SQL/SDK regression remains fixed
+to its actual137 capture and passes on e42f5e6. See PRODUCTION_RECOVERY_READER.md
+for exact scopes and remaining actual-use gates.
+
 Registered migration 136 adds original-file access for new current business
 exports. Earlier 43/134/135 jobs retain their original download contracts and do
 not gain this new authority. No financial posting rule changes.

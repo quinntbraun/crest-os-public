@@ -5,10 +5,13 @@ import type {ChildProcessWithoutNullStreams} from 'node:child_process';
 import {createHash,randomUUID} from 'node:crypto';
 import {open,lstat,mkdtemp,rm,unlink} from 'node:fs/promises';
 import {isAbsolute,join,resolve,dirname,basename} from 'node:path';
-import {Transform,Writable} from 'node:stream';
+import {Readable,Transform,Writable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 import {recoveryBackupSnapshotMatches} from './recovery-backup-lease.ts';
 import type {RecoveryBackupSnapshot} from './recovery-backup-lease.ts';
+import {captureRecoveryDatabaseInventory} from './recovery-database-inventory.ts';
+import {captureRecoveryOriginalInventory} from './recovery-original-inventory.ts';
+import {openRecoveryReleaseFile,recoveryReleaseFileLimit,recoveryReleasePartLimit} from './recovery-release-files.ts';
 
 type Command='pg_dump'|'age';
 export type RecoveryCaptureLauncher=(command:Command,args:string[],environment:Record<string,string>)=>ChildProcessWithoutNullStreams;
@@ -78,9 +81,72 @@ export function createRecoveryDatabaseCapture(launch:RecoveryCaptureLauncher){
  };
 }
 
-export async function createPinnedRecoveryDatabaseCapture(tools:Readonly<{pgDump:string;age:string}>){
+async function pinnedRecoveryLauncher(tools:Readonly<{pgDump:string;age:string}>):Promise<RecoveryCaptureLauncher>{
  require(process.platform==='linux'&&Object.keys(tools).sort().join(',')==='age,pgDump');
  for(const path of [tools.pgDump,tools.age]){require(isAbsolute(path));const file=await lstat(path);require(file.isFile()&&(file.mode&0o111)!==0&&(file.mode&0o022)===0&&(file.uid===0||file.uid===process.getuid!()));}
- const capture=createRecoveryDatabaseCapture((command,args,env)=>spawn(command==='pg_dump'?tools.pgDump:tools.age,args,{env:{...env,NODE_ENV:'production'},stdio:['pipe','pipe','pipe'],windowsHide:true}));
+ return(command,args,env)=>spawn(command==='pg_dump'?tools.pgDump:tools.age,args,{env:{...env,NODE_ENV:'production'},stdio:['pipe','pipe','pipe'],windowsHide:true});
+}
+export async function createPinnedRecoveryDatabaseCapture(tools:Readonly<{pgDump:string;age:string}>){
+ const capture=createRecoveryDatabaseCapture(await pinnedRecoveryLauncher(tools));
  return(input:Omit<RecoveryDatabaseCaptureInput,'environment'>,signal:AbortSignal)=>capture({...input,environment:'production'},signal);
+}
+
+async function sealPrivateBytes(launch:RecoveryCaptureLauncher,input:Readonly<{workspace:string;recipient:string}>,plainInput:Uint8Array,signal:AbortSignal){
+ let file:Awaited<ReturnType<typeof open>>|undefined,path:string|undefined,home:string|undefined,created=false,complete=false,plain:Buffer|undefined;
+ let encryptor:ReturnType<typeof tracked>|undefined;let jobs:Promise<unknown>[]=[];
+ const controller=new AbortController(),active=AbortSignal.any([signal,controller.signal,AbortSignal.timeout(60000)]);
+ try{
+  active.throwIfAborted();require(isAbsolute(input.workspace)&&/^age1[a-z0-9]{58}$/.test(input.recipient)&&plainInput instanceof Uint8Array&&plainInput.byteLength<=26214400);const workspace=await lstat(input.workspace);require(workspace.isDirectory()&&(process.platform!=='linux'||((workspace.mode&0o077)===0&&workspace.uid===process.getuid!())));plain=Buffer.from(plainInput);
+  const plaintext=Object.freeze({byteSize:plain.length,sha256:createHash('sha256').update(plain).digest('hex')});
+  home=await mkdtemp(join(input.workspace,'.capture-home-'));const environment=childEnvironment(home);require(['1.3.2','v1.3.2'].includes(await version(launch,'age',environment,AbortSignal.any([active,AbortSignal.timeout(10000)]))));path=join(input.workspace,'artifact-'+randomUUID()+'.age');file=await open(path,'wx',0o600);created=true;
+  encryptor=tracked(launch('age',['--encrypt','--recipient',input.recipient],environment),active);
+  const cipher=meter(ageHeader),output=file;
+  const sink=new Writable({write(chunk:Buffer,_encoding,done){void(async()=>{let offset=0;while(offset<chunk.length){active.throwIfAborted();const result=await output.write(chunk,offset,chunk.length-offset);require(result.bytesWritten>0);offset+=result.bytesWritten;}})().then(()=>done(),()=>done(new RecoveryDatabaseCaptureError()));}});
+  jobs=[pipeline(Readable.from([plain]),encryptor.child.stdin,{signal:active}),pipeline(encryptor.child.stdout,cipher.stream,sink,{signal:active}),encryptor.closed];for(const job of jobs)void job.catch(()=>controller.abort());await Promise.all(jobs);
+  active.throwIfAborted();const ciphertext=cipher.finish();require(ciphertext.byteSize<=plain.length+65536);await output.sync();await output.close();file=undefined;
+  if(process.platform==='linux'){const directory=await open(input.workspace,'r');try{await directory.sync();}finally{await directory.close();}}
+  complete=true;return Object.freeze({path,plaintext,ciphertext});
+ }catch{throw new RecoveryDatabaseCaptureError();}
+ finally{
+  controller.abort();await Promise.allSettled([...jobs,...(encryptor?[encryptor.closed]:[])]);plain?.fill(0);await file?.close().catch(()=>{});if(created&&!complete&&path)await unlink(path).catch(()=>{});
+  if(home&&dirname(resolve(home))===resolve(input.workspace)&&basename(home).startsWith('.capture-home-'))await rm(home,{recursive:true,force:true}).catch(()=>{});
+ }
+}
+export function createRecoveryFileEncryption(launch:RecoveryCaptureLauncher){return async(input:Readonly<{workspace:string;recipient:string;bytes:Uint8Array}>,signal:AbortSignal)=>{const evidence=await sealPrivateBytes(launch,input,input.bytes,signal);return Object.freeze({forRecoveryTools:()=>evidence,toJSON():never{throw new RecoveryDatabaseCaptureError();}});};}
+export async function createPinnedRecoveryFileEncryption(tools:Readonly<{pgDump:string;age:string}>){return createRecoveryFileEncryption(await pinnedRecoveryLauncher(tools));}
+export function createRecoveryReleaseFileEncryption(launch:RecoveryCaptureLauncher){
+ return async(input:Readonly<{workspace:string;recipient:string;path:string;expected:Readonly<{byteSize:number;sha256:string}>;range?:Readonly<{offset:number;byteSize:number;sha256:string}>}>,external:AbortSignal)=>{
+  let source:Awaited<ReturnType<typeof openRecoveryReleaseFile>>|undefined,file:Awaited<ReturnType<typeof open>>|undefined,home:string|undefined,path:string|undefined,created=false,complete=false,encryptor:ReturnType<typeof tracked>|undefined;let jobs:Promise<unknown>[]=[];
+  const controller=new AbortController(),signal=AbortSignal.any([external,controller.signal,AbortSignal.timeout(900000)]);
+  try{
+   signal.throwIfAborted();require(isAbsolute(input.workspace)&&/^age1[a-z0-9]{58}$/.test(input.recipient)&&Number.isSafeInteger(input.expected.byteSize)&&input.expected.byteSize>0&&input.expected.byteSize<=recoveryReleaseFileLimit&&/^[a-f0-9]{64}$/.test(input.expected.sha256));const workspace=await lstat(input.workspace);require(workspace.isDirectory()&&(process.platform!=='linux'||((workspace.mode&0o077)===0&&workspace.uid===process.getuid!())));
+   const range=input.range??{offset:0,...input.expected};require(Number.isSafeInteger(range.offset)&&range.offset>=0&&Number.isSafeInteger(range.byteSize)&&range.byteSize>0&&range.byteSize<=recoveryReleasePartLimit&&range.offset+range.byteSize<=input.expected.byteSize&&/^[a-f0-9]{64}$/.test(range.sha256));source=await openRecoveryReleaseFile(input.path);require(source.byteSize===input.expected.byteSize);home=await mkdtemp(join(input.workspace,'.capture-home-'));const environment=childEnvironment(home);require(['1.3.2','v1.3.2'].includes(await version(launch,'age',environment,AbortSignal.any([signal,AbortSignal.timeout(10000)]))));
+   path=join(input.workspace,'release-'+randomUUID()+'.age');file=await open(path,'wx',0o600);created=true;encryptor=tracked(launch('age',['--encrypt','--recipient',input.recipient],environment),signal);
+   const plain=meter(Buffer.alloc(0)),cipher=meter(ageHeader),output=file,sink=new Writable({write(chunk:Buffer,_encoding,done){void(async()=>{let offset=0;while(offset<chunk.length){signal.throwIfAborted();const result=await output.write(chunk,offset,chunk.length-offset);require(result.bytesWritten>0);offset+=result.bytesWritten;}})().then(()=>done(),()=>done(new RecoveryDatabaseCaptureError()));}});
+   jobs=[pipeline(source.stream(signal,range),plain.stream,encryptor.child.stdin,{signal}),pipeline(encryptor.child.stdout,cipher.stream,sink,{signal}),encryptor.closed];for(const job of jobs)void job.catch(()=>controller.abort());await Promise.all(jobs);signal.throwIfAborted();const plaintext=plain.finish(),ciphertext=cipher.finish();require(plaintext.byteSize===range.byteSize&&plaintext.sha256===range.sha256&&ciphertext.byteSize<=plaintext.byteSize+65536);await source.verifyUnchanged();await output.sync();await output.close();file=undefined;
+   if(process.platform==='linux'){const directory=await open(input.workspace,'r');try{await directory.sync();}finally{await directory.close();}}
+   const evidence=Object.freeze({profile:'crest.encrypted-release-file.v1' as const,path,plaintext,ciphertext,source:Object.freeze({...input.expected}),offset:range.offset,completeBackup:false as const});complete=true;return Object.freeze({forRecoveryTools:()=>evidence,toJSON():never{throw new RecoveryDatabaseCaptureError();}});
+  }catch{throw new RecoveryDatabaseCaptureError();}finally{
+   controller.abort();await Promise.allSettled([...jobs,...(encryptor?[encryptor.closed]:[])]);await source?.close().catch(()=>{});await file?.close().catch(()=>{});if(created&&!complete&&path)await unlink(path).catch(()=>{});if(home&&dirname(resolve(home))===resolve(input.workspace)&&basename(home).startsWith('.capture-home-'))await rm(home,{recursive:true,force:true}).catch(()=>{});
+  }
+ };
+}
+export async function createPinnedRecoveryReleaseFileEncryption(tools:Readonly<{pgDump:string;age:string}>){return createRecoveryReleaseFileEncryption(await pinnedRecoveryLauncher(tools));}
+async function captureBundle(launch:RecoveryCaptureLauncher,capture:ReturnType<typeof createRecoveryDatabaseCapture>,input:RecoveryDatabaseCaptureInput,signal:AbortSignal){
+ // The inventory and encrypted dump must both finish before the lease releases
+ // the exported snapshot. No later connection may fill in missing metadata.
+ const inventory=await captureRecoveryDatabaseInventory(input.snapshot,signal);
+ const originalInventory=await captureRecoveryOriginalInventory(input.snapshot,signal);
+ const database=await capture(input,signal),evidence=database.forRecoveryTools();let complete=false;
+ try{
+  require(inventory.forRecoveryTools().snapshotId===evidence.snapshotId);
+  const metadata=Object.freeze({profile:'crest.private-database-recovery-metadata.v1' as const,databaseInventory:inventory.forRecoveryTools(),originalInventory:originalInventory.forRecoveryTools()});
+  const metadataBytes=Buffer.from(JSON.stringify(metadata)+'\n');require(metadataBytes.length<=8388608);let encryptedInventory;try{encryptedInventory=await sealPrivateBytes(launch,input,metadataBytes,signal);}finally{metadataBytes.fill(0);}
+  complete=true;return Object.freeze({forRecoveryTools:()=>Object.freeze({profile:'crest.private-database-bundle.v1' as const,database:evidence,inventory:inventory.forRecoveryTools(),originalInventory:originalInventory.forRecoveryTools(),encryptedInventory,completeBackup:false as const}),toJSON():never{throw new RecoveryDatabaseCaptureError();}});
+ }finally{if(!complete)await unlink(evidence.path).catch(()=>{});}
+}
+export function createRecoveryDatabaseBundle(launch:RecoveryCaptureLauncher){const capture=createRecoveryDatabaseCapture(launch);return(input:RecoveryDatabaseCaptureInput,signal:AbortSignal)=>captureBundle(launch,capture,input,signal);}
+export async function createPinnedRecoveryDatabaseBundle(tools:Readonly<{pgDump:string;age:string}>){
+ const bundle=createRecoveryDatabaseBundle(await pinnedRecoveryLauncher(tools));
+ return(input:Omit<RecoveryDatabaseCaptureInput,'environment'>,signal:AbortSignal)=>bundle({...input,environment:'production'},signal);
 }

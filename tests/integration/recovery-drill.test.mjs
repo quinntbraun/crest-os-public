@@ -185,7 +185,8 @@ test('schema recovery tolerates only display reordering of the exact policy role
 test('actual encrypted database recovery works in a fresh process and separate cluster',async()=>{
   assert.notEqual(new URL(sourceUrl).port,new URL(restoredUrl).port);
   assert.deepEqual(await inventory(restored),backup.manifest.rows);
-  assert.deepEqual(await roleDefinitions(restored),backup.manifest.roles);
+  assert.deepEqual(await roleDefinitions(restored,appliedSchemaVersion===138),backup.manifest.roles);
+  if(appliedSchemaVersion===138)await assert.rejects(roleDefinitions(restored),/unexpected source role authority/,'historical default must refuse the new backup-reader exception');
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,backup.manifest.schemaVersion);
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n,(await source.query('SELECT count(*)::int AS n FROM auth.schema_migrations')).rows[0].n);
   assert.equal(backup.manifest.completeBackup,false); // vault/files/config/full release remain unfinished

@@ -1,5 +1,57 @@
 # Current Crest OS delivery
 
+## Launch checkpoint, 2026-11-22
+
+Public cf18ea02 is now terminal: main21/22 jobs pass and both ancillary suites
+pass. Foundation137495714370 stopped at both sample customer-reload cases; its
+later container/worker/artifact gates were not accepted. The sample server's
+query refusal and missing customer bootstrap are fixed. Both original complete
+browser cases pass locally on01c5b6f with HTTP200/history recovery and all five
+widths/exact values/overflow/Axe retained. Four source-archive encryption and
+part-reassembly cases pass in the same frozen-source6/6 run. See
+[the root cause and exact scope](REVIEW_CUSTOMER_ROUTE_RELOAD.md).
+
+Release metadata now binds the exact saved image ID and source/container archive
+checksums. Streamed image-sized recovery uses256MiB parts and whole-file hashes
+for up to8GiB, since existing local app images exceed1GiB. Current container
+build/load, independent vault/key/config kit custody, complete point assembly
+and fresh release acceptance remain required; local artifacts are not promoted.
+See [release-kit scope](RECOVERY_RELEASE_KIT.md).
+
+Retained primary-store capture now includes unreferenced/staging bytes and empty
+unpublished candidates as isolated encrypted evidence.8 SDK unit cases pass;
+native26f54b0 passes18 cases with source unchanged and cleanup awaited, including
+actual encryption/decryption and refusal of a changed second listing. This is
+storage capture mechanics, not an atomic primary snapshot or complete point:
+all-three-domain assembly and actual provider/no-delete acceptance remain. See
+[retained-object scope](RECOVERY_RETAINED_OBJECTS.md).
+
+Registered138 includes the dedicated read-only backup group and current export
+adoption while preserving frozen137 compatibility. Local recovery work now pairs
+an actual age-encrypted database dump with encrypted same-snapshot roles, table
+counts/fingerprints, and original-file inventory. Published receipts, supplier
+documents and condition photos can be independently encrypted and copied through
+the version-pinned recovery vault. The focused native run on f101b587 passes16
+cases, including independent database/file decryption and restoration, voided and
+unlinked retained evidence, pending metadata, corruption and lost-upload refusal.
+See [the exact scope and limitations](RECOVERY_DATABASE_BUNDLE.md). Local Windows
+publication uses an explicit seam; it does not prove Linux journal composition or
+actual cloud/provider acceptance. This development is not yet published/installed.
+
+Actual use remains NOT READY. Launch blockers are complete retained staging,
+quarantine and unpublished-candidate coverage; snapshot financial controls and a
+final locked complete-point manifest; independent application/configuration/key
+recovery; scheduling/reconciliation and independent failure alerts; complete safe
+CSV/source/report coverage; production host/access/provider setup; verified owner
+financial settings/openings; full off-laptop restore and physical-phone acceptance.
+The next release must pass its own required checks. Public cf18ea02's main run
+45112010919 is terminal as described above; its21 prerequisite jobs and both
+ancillary suites pass. No merge/install, real data, live financial/provider
+activation or new spending has occurred. Earlier checkpoints below retain their
+own historical scope and do not replace this launch status.
+
+## Earlier checkpoints
+
 Current export/private-state follow-through: definite ended access and verified actor/business changes clear export history, download details and prepared finance/source copies together. Explicit authorized recheck restores focus and original-review access without preparing files or dispatching originals. Private retirement input clears; exact opaque request references remain. Four nested vehicle/status lead reload expectations now verify the actual saved record and opaque ID.69 controller checks and production build/types/full lint pass. Complete original export16/16 and lead/source/status/vehicle32/32 pass separately on fixed1c331c3, with owned cleanup and100/34 hashed artifacts, including12 new denial views. First export14/16 remains its separately retained request-gate failure. See EXPORT_ACCESS_AND_LEAD_RETURN_REVIEW.md.
 
 Publishedf2d581da/tree7b1afe94 exactly matches localf3aabce5 and is terminal20/22 main, both ancillary suites pass. Intake fails old mobile directory-return assumptions; dependent Foundation refuses prerequisites and screenshot preservation fails. Both full hosted conversion parents and the other20 main jobs pass for their own source. No release acceptance transfers to the newer coherent follow-up. Strict scan/exact-tree publication and fresh all-gate verification remain. Audit67 main/1partial/2open; all70 original requirements/hash and false sign-offs retained. Actual Crest use NOT READY; V1 coding roughly80%, low confidence; context sufficient; $0 new spending. No merge/install or real-data/financial/provider activation.

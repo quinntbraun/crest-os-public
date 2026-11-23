@@ -10,7 +10,7 @@ import type {RecoveryVaultArtifact,createRecoveryVault} from './recovery-vault.t
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const digest=/^[a-f0-9]{64}$/,maxLog=4*1024*1024,maxEvents=4096;
 const hash=(text:string)=>createHash('sha256').update(text).digest('hex');
-const purposes=['database','roles','original','application','configuration','manifest'] as const;
+const purposes=['database','roles','original','quarantine','application','configuration','manifest'] as const;
 export type RecoveryAttemptHeader=Readonly<{formatVersion:1;pointId:string;businessId:string;startedAt:string;appReleaseId:string;migrationRegistrySha256:string;sourceSchemaVersion:number}>;
 export type RecoveryArtifactReservation=Readonly<{artifactId:string;purpose:typeof purposes[number];byteSize:number;sha256:string;retainUntil:string}>;
 type Event={kind:'started';header:RecoveryAttemptHeader}|{kind:'reserved';reservation:RecoveryArtifactReservation}|{kind:'verified';artifactId:string;artifact:RecoveryVaultArtifact}|{kind:'uncertain';artifactId:string};

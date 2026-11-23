@@ -30,7 +30,7 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
    await page.screenshot({path:'.local/review/long-content/customer-'+name+'-'+width+'.png',fullPage:true});
   }
-  await page.reload();await page.getByRole('button',{name:label,exact:true}).click();await page.getByText('Notes and more customer details',{exact:true}).click();await expect(page.getByLabel('Notes',{exact:true})).toHaveValue(notes);await expect(page.getByLabel('Phone value',{exact:true})).toHaveValue('+1 (555) 555-0123 ext 42');
+  const refreshed=await page.reload();assert.equal(refreshed.status(),200);await expect(page.getByRole('region',{name:'Customer history',exact:true}).getByRole('heading',{name:'Retained history',exact:true})).toBeVisible();await page.getByRole('button',{name:'← Back to customers',exact:true}).click();await page.getByRole('button',{name:label,exact:true}).click();await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Overview',exact:true}).click();await page.getByText('Notes and more customer details',{exact:true}).click();await expect(page.getByLabel('Notes',{exact:true})).toHaveValue(notes);await expect(page.getByLabel('Phone value',{exact:true})).toHaveValue('+1 (555) 555-0123 ext 42');
   await context.close();
  }finally{try{await browser?.close();}finally{await app.close();}}
 });

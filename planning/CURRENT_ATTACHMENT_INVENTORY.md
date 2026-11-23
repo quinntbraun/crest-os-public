@@ -13,7 +13,9 @@ This is a source inventory, not object-read authority or evidence of downloaded
 bytes. originalBytesIncluded, completePortableExport and completeBackup remain
 false. Every available record still needs separately authorized and audited byte
 retrieval, length/hash verification and the batch/resumable downloader required
-by EXPORTS_AND_BACKUPS. Original delivery is unfinished.
+by EXPORTS_AND_BACKUPS. Separate original-file ZIP delivery is implemented and
+locally checked through138; see SOURCE_EXPORT_ORIGINAL_HANDOFF.md. The combined
+complete source/recovery package and actual-provider acceptance remain unfinished.
 
 Portable originals use attachments/<attachment-id>/<object-id>.<extension>.
 Photo object identity is its dispatch ID, rather than its photo ID, matching the

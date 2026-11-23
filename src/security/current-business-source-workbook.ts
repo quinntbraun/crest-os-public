@@ -19,7 +19,7 @@ export function workbookColumn(index:number){
  require(Number.isSafeInteger(index)&&index>=0&&index<16384);let value=index+1,result='';while(value){value--;result=String.fromCharCode(65+value%26)+result;value=Math.floor(value/26);}return result;
 }
 export function formatCurrentBusinessWorkbook(capture:CurrentBusinessRows,binding:CurrentBusinessSourceBinding){
- require(binding&&typeof binding.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(binding.appReleaseId)&&[133,134,135,136,137].includes(binding.sourceSchemaVersion));
+ require(binding&&typeof binding.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(binding.appReleaseId)&&[133,134,135,136,137,138].includes(binding.sourceSchemaVersion));
  require(capture.schemaVersion===1&&capture.profile==='crest.current-business-rows.v1'&&capture.sources.length===currentBusinessSourceInventory.length);
  const sidecars:Sidecar[]=[],schemaRows:string[][]=[['Source','Column','PostgreSQL type','Primary key','CSV file']],coverageRows:string[][]=[['Source','Data rows','Workbook sheet','Coverage']];
  const dataSheets:Sheet[]=capture.sources.map((source,index)=>{

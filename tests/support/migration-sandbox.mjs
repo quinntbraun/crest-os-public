@@ -20,6 +20,7 @@ export async function migrationSandbox(testConnection=process.env.CREST_TEST_DAT
   roles.push("crest_calendar_budget_owner","crest_business_source_owner","crest_provider_source_owner");
   roles.push("crest_calendar_intent_owner","crest_calendar_dispatch_owner","crest_calendar_dispatch","crest_calendar_oauth_owner","crest_calendar_oauth","crest_calendar_export_owner");
   roles.push("crest_collection_failure_export_owner");
+  roles.push("crest_backup_reader");
   roles.push("crest_refund_transfer_export_owner");
   roles.push("crest_opening_worksheet_export_owner","crest_statement_export_owner","crest_supplier_bill_document_worker","crest_legacy_contact_export_owner","crest_legacy_contact_review_owner","crest_legacy_contact_decision_owner","crest_legacy_contact_apply_owner","crest_legacy_contact_dispatch");
   try { assert.equal((await admin.query("SELECT count(*)::int AS n FROM pg_roles WHERE rolname=ANY($1::text[])",[roles])).rows[0].n,0,"refuse to adopt/drop other operators' roles"); }
