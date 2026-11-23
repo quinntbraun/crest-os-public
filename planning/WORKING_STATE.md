@@ -2,6 +2,98 @@
 
 ## Current launch checkpoint, 2026-11-23
 
+Latest operator command source23b0c03 has real native subprocess acceptance:
+one root case passes all retained source/delivery/refusal assertions, source
+unchanged/owned cleanup; files exactly match direct restricted capture and
+manifest SHA, no credential output. Earlier f17e5c48 actual extraction+recovery
+22/22 remains separate evidence. Types and targetlint pass; Linux production
+permissions/TLS and combined capture-controller acceptance still require hosted/
+owner setup. Docs OPERATOR_SOURCE_EXPORT.md. Both native handles are terminal.
+
+Public99a bc97f0a0 is now ALL terminal: main45168821565 has20 successful jobs,
+commercial137672682889 fails only the package-source regression precheck before
+app build/tests, and Foundation137688617108 fails its strict prerequisite guard
+(step6), with later compiled-image/worker acceptance skipped. Both auxiliary
+workflows45168821543/45168821637 pass. Schedule and records now pass with the
+separated dependency/test budgets. Keep strict guards; underlying precheck
+assertion was unlogged and remains unproven. Local private-list isolation/ERR
+diagnostic preserves all assertions and passes offline Ubuntu, not a hosted cure.
+Next fresh100a preparation: base locald018942d/tree4ef08c49, sole public parent
+bc97f0a0. Strict scan every tracked file, metadata before expected-head non-force
+ref, verify exact tree/commit/PR/testmerge/three actual run handles. No merge,
+install, production activation, signup/provisioning, real records or spending.
+
+Native operator extraction onf17e5c48 passes22/22 actual backup-reader/source/
+encrypted restore cases, unchanged source/owned cleanup. All ten sources have
+positive rows; exact PostgreSQL/CSV cells, two-business instance scope, credential
+exclusion, role/copy/unknown-column refusal and repair pass. Evidence
+.local/operator-source-native138/result.json. This remains a separate operator
+component, not an189-table one-business export or complete reference closure.
+New operator command now delivers its13 fixed files to a fresh private folder,
+verified TLS in production, fixed backup role and registry, private request
+file-only credentials, exact flush/readback, manifest last and bounded partial
+cleanup. Types/targetlint pass; actual-subprocess native delivery pending next.
+Windows is explicitly test-only/loopback and file-flush; Linux production fsync
+acceptance remains separate. Preserve tracked bytes during that real run.
+
+New private operator-source component addresses the ten remaining138 runtime/
+global projections without assigning business ownership or changing grants.
+Exact coverage complement to179 existing sources, types and targetlint pass;
+native extraction is pending. It uses existing dedicated backup-reader preflight,
+one leased RO/RR snapshot, fixed required/excluded columns and known built-in
+types, exact scalar text and independently decoded CSVs. Unknown columns refuse;
+copied capture cannot format. It remains an operator component, never a product
+download or active-session recovery recipe; full portability/reference closure/
+backup flags false. Existing138 reader fixture now seeds all ten with positive
+rows and two-business references, checks exact cells, exclusions and refusal/
+repair while retaining original restore/financial assertions. See
+OPERATOR_SOURCE_EXPORT.md. Commit before source-frozen native run and preserve
+tracked bytes while its actual handle is live. Public99a remains fixed until all
+main jobs terminal; auxiliary commercial and owner expense now pass at latest
+verified observations. No actual Crest use or new spending.
+
+New local capture controller connects the actual coordinated capture contract to
+exclusive private Linux run directories, durable started/finished records and
+separate monitor acknowledgment records. It preserves uncertain files, refuses
+reopening/replay, closes its dedicated client, and sends only start/failure:
+successful staging remains candidate_review_required/completeBackupfalse. Ten
+controlled-capture/HTTP cases pass with actual Linux fsync in network-disabled
+pinned Node24, source stable/owned cleanup; types/targetlint pass. Existing actual
+database/age/SDK run fixture now invokes it on Linux while keeping every original
+assertion; that fresh combined Linux acceptance is pending. CI adds the ten cases
+after the original recovery suite. No production scheduler/catalog/backup_runs,
+success marker, healthy heartbeat or complete-backup claim exists. Details
+RECOVERY_CAPTURE_CONTROLLER.md. Preserve public99a exact runs/metadata while live.
+
+Latest committed retention planner e8043d94/tree934bd22c passes13 focused cases,
+types and targetlint with all tracked bytes/index stable during checks. Proof
+.local/recovery-retention/result.json. It remains newer than published99a.
+Public99a main45168821565 commercial137672682889 fails step6 package-source
+regression after the browser partition listing and before build/tests. Inner
+failing assertion is not logged; no app assertion or proven root cause is claimed.
+Local private-list isolation plus failing-line diagnostics preserves every
+original check and passes real pinned Ubuntu offline execution, source unchanged,
+owned cleanup. Details BROWSER_DEPENDENCY_INDEX_DEADLINE.md. Keep all three99a
+run handles/publichead/metadata fixed while the other jobs remain live.
+
+Publication99a bc97f0a0d10f292c4142f2c72db99c2bd7ecc7df exactly matches local
+d018942d/tree4ef08c49, sole public parent625b5025. Strict2968-file42990071-byte
+scan has zero findings; metadata verified before expected-head non-force update,
+actual ref/PR/testmerge9c559938 tree and ordered parents[ea06,bc97] verified.
+Actual pull-request runs: main45168821565, expense45168821637,
+commercial45168821543. Keep that public source/title/body until all terminal;
+inspect the same handles, without restarting on an observation timeout.
+
+New unpublished retention calendar implements35 daily designations, all live
+400-day month boundaries (potentially14), seven-day extra points and never
+shortens existing locks. Daily gaps and expired/insufficient locks stay visible;
+monthly selection uses last completion before the actual local boundary.
+Thirteen focused cases/types/targetlint pass; initial13-month test expectation
+was corrected to14 from real400-day arithmetic. This is a pure planner over a
+future authenticated complete catalog, not provider retention application or a
+deletion permit. See RECOVERY_RETENTION_CALENDAR.md. Continue actual catalog/
+complete-point/scheduler and full goal; completeBackup/actualUseReady remainfalse.
+
 Latest local2086dea8 preserves authenticated application capabilities through
 coordinated preparation and separates dependency installation from browser test
 budgets. Actual-image verifier implementation29fab496 has four passing real

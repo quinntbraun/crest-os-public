@@ -131,7 +131,10 @@ jobs:
       - name: Prove registered atomic conversion, source export and encrypted recovery
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/lead-conversion.test.mjs
       - name: Encrypted isolated database recovery drill
-        run: npm run test:recovery-db
+        run: |
+          npm run test:recovery-db
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-capture-controller.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/operator-source-export.test.mjs
       - name: Prove proposed durable export requests and fenced lease attempts
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-jobs.test.mjs
       - name: Prove registered43 journal upgrade, full workflow matrix and independent encrypted recovery

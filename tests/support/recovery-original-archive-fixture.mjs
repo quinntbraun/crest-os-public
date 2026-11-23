@@ -15,6 +15,8 @@ import {createRecoveryPrimaryStore} from '../../src/tooling/recovery-primary-sto
 import {captureRecoveryRetainedArchive} from '../../src/tooling/recovery-retained-archive.ts';
 import {createRecoveryDataArchive} from '../../src/tooling/recovery-data-archive.ts';
 import {createRecoveryRun} from '../../src/tooling/recovery-run.ts';
+import {createRecoveryCaptureController} from '../../src/tooling/recovery-capture-controller.ts';
+import {createRecoveryMonitorAttempt} from '../../src/tooling/recovery-monitor.ts';
 import {withRecoveryBackupLease} from '../../src/tooling/recovery-backup-lease.ts';
 import {recoveryDistributionFixture} from './recovery-distribution-fixture.mjs';
 import {recoveryConfigurationFixture} from './recovery-configuration-fixture.ts';
@@ -54,7 +56,14 @@ export async function exerciseRecoveryOriginalArchive({inventory,workspace,recip
      if(count===11&&mode==='run-changed-image')await writeFile(distribution.imagePath,Buffer.from('Changed image fixture.\n'));
      if(count!==12)return;if(mode==='run-lease-loss'){await dataConfiguration.terminateReader(pid);}else{const competitor=await dataConfiguration.createReader();await assert.rejects(withRecoveryBackupLease(competitor,point.businessId,new AbortController().signal,async()=>{throw Error('BUSINESS_LEASE_MUST_REMAIN_HELD');}),{message:'RECOVERY_BACKUP_LEASE_REVIEW_REQUIRED'});lockChecked=true;}
     };
-    const capture=()=>createRecoveryRun(dataConfiguration.launch)({...input,distribution,configuration:{source:configuration.source,expected:configuration.target}},{sources,attempt,vault},new AbortController().signal);
+    const capture=async()=>{
+     const execute=createRecoveryRun(dataConfiguration.launch),request={...input,distribution,configuration:{source:configuration.source,expected:configuration.target}},ports={sources,attempt,vault},signal=new AbortController().signal;
+     if(process.platform!=='linux'||mode!=='run')return execute(request,ports,signal);
+     const signals=[],monitor=createRecoveryMonitorAttempt('https://hc-ping.com/'+randomUUID(),{runId:point.pointId,startedAt:point.startedAt},async(url,options)=>{signals.push({url:String(url),body:JSON.parse(options.body)});return new Response('OK',{status:200});});
+     const controlled=(await createRecoveryCaptureController(execute)({request,ports,recordDirectory:directory,monitor},signal)).forRecoveryTools();
+     assert.equal(controlled.state,'candidate_review_required');assert.equal(controlled.completeBackup,false);assert.equal(controlled.startAcknowledged,true);assert.equal(controlled.failureAcknowledged,true);assert.equal(signals.length,2);assert(signals[0].url.includes('/start?'));assert(signals[1].url.includes('/fail?'));assert.equal(signals[1].body.category,'recovery_review');
+     const finish=JSON.parse(await readFile(join(directory,'run-'+point.pointId,'finished.json'),'utf8'));assert.equal(finish.state,'candidate_review_required');assert.equal(finish.completeBackup,false);assert.deepEqual(finish.manifest,controlled.candidate.forRecoveryTools().manifest);return controlled.candidate;
+    };
     if(mode!=='run'){await assert.rejects(capture(),{message:'RECOVERY_RUN_REVIEW_REQUIRED'});assert.equal(retained.size,mode==='run-changed-image'?11:12);if(mode==='run-lease-loss')assert.equal(attempt.view().reviewRequired,true);}else{
      const result=await capture();assert.throws(()=>JSON.stringify(result));const proof=result.forRecoveryTools();assert.equal(proof.completeBackup,false);assert.equal(lockChecked,true);assert.equal(retained.size,11+Math.ceil(distribution.manifest.sourceArchive.byteSize/distribution.partByteSize)+4);const index=JSON.parse((await decrypt(retained.get(proof.manifest.key).body)).toString('utf8'));assert.equal(index.profile,'crest.private-recovery-run-candidate.v1');assert.equal(index.completeBackup,false);assert.equal(index.data.snapshotId,proof.snapshotId);assert.equal(index.header.pointId,proof.pointId);assert.equal(index.requiredAcceptance.length,5);assert.equal(index.application.pointId,proof.pointId);assert.equal(index.configuration.pointId,proof.pointId);assert.equal(index.data.publishedObjectCount,6);assert.equal(index.data.quarantineObjectCount,2);
      const application=JSON.parse((await decrypt(retained.get(index.application.manifest.key).body)).toString('utf8')),settings=JSON.parse((await decrypt(retained.get(index.configuration.artifact.key).body)).toString('utf8')),data=JSON.parse((await decrypt(retained.get(index.data.manifest.key).body)).toString('utf8'));assert.deepEqual(application.buildManifest,distribution.manifest);assert.deepEqual(settings,configuration.recipe);assert.equal(data.snapshot.id,proof.snapshotId);assert.equal(data.financialSummary.debitCents,'51250');for(const receipt of [index.data.manifest,index.application.manifest,index.configuration.artifact,proof.manifest])assert.equal(retained.get(receipt.key).retainUntil,index.retention.data);

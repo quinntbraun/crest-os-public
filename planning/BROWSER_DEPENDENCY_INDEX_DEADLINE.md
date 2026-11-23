@@ -59,3 +59,23 @@ Individual case limits, matrices, engines, assertions and prerequisite gates are
 unchanged. Foundation and owner-expense job limits are unchanged. Fresh hosted
 acceptance must verify the correction; local workflow inspection is not a hosted
 pass. This changes execution budgeting only, not dependency trust or app behavior.
+
+## Public99a package-target precheck observation
+
+Main45168821565 commercial137672682889 stops at step6 before tooling/install/
+build/browser execution. The partition listing prints successfully, then the
+real Ubuntu package-target regression exits1 without an inner-command diagnostic.
+The exact failing shell assertion and underlying runner cause are unproven; this
+is not an application assertion failure or evidence that the timeout change
+failed. Other jobs are still running at this checkpoint; do not replace99a yet.
+
+The local regression now compares both target lists against the same empty
+private lists directory, avoiding dependence on mutable runner Release metadata.
+An ERR trap reports the failing line/exit code without printing raw command state.
+All original assertions remain: exact source preservation, every package target,
+non-package translation presence in baseline, optimized target equality, both
+official archives, unsigned/unapproved/preconfigured input refusal and unchanged
+runner sources. This does not alter production package installation or trust.
+Pinned Ubuntu offline execution passes with source unchanged and owned container
+cleanup, .local/apt-index-isolation99a/result.json. No network/package mutation or
+hosted cause/cure is claimed; the fresh hosted regression must still pass.

@@ -21,6 +21,7 @@ import {withRecoveryBackupLease} from '../../src/tooling/recovery-backup-lease.t
 import {verifyRecoveryBackupReader} from '../../src/tooling/recovery-backup-reader.ts';
 import {assertPrivateRecoveryArtifact} from '../support/private-recovery-permissions.mjs';
 import {exerciseRecoveryOriginalArchive} from '../support/recovery-original-archive-fixture.mjs';
+import {exerciseOperatorSources} from '../support/operator-source-fixture.mjs';
 
 const root=new URL('../../',import.meta.url),registry=JSON.parse(await readFile(new URL('supabase/migration-checksums.json',root),'utf8')),pins=JSON.parse(await readFile(new URL('release/toolchain.json',root),'utf8')),age=fileURLToPath(new URL('.local/tools/recovery/age/age'+(process.platform==='win32'?'.exe':''),root)),proposal=await readFile(new URL('planning/proposals/recovery-backup-reader.sql',root),'utf8');
 const expected=registry.migrations.map(entry=>({version:entry.version,name:entry.file.slice(15,-4)})),signal=()=>new AbortController().signal;
@@ -67,6 +68,10 @@ test('Registered138 full backup reader: limited login, protected source and inde
    for(const sql of ['DELETE FROM crest.customers WHERE false','TRUNCATE crest.jobs','CREATE TABLE crest.backup_probe(id integer)','SET ROLE crest_command_owner','SELECT * FROM pg_authid'])await assert.rejects(reader.query(sql),{code:'42501'});
    await assert.rejects(restrictedWeb.query('SET ROLE crest_backup_reader'),{code:'42501'});await assert.rejects(restrictedWeb.query('SELECT * FROM crest.customers'),{code:'42501'});
    assert.equal((await reader.query("SELECT count(*)::int AS n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN('crest','crest_private','crest_commands') AND p.prosecdef AND has_function_privilege(current_user,p.oid,'EXECUTE')")).rows[0].n,0);
+  });
+  await t.test('operator-only ten-source export preserves every reviewed cell and excludes credentials',async()=>{
+   const createReader=async()=>{const client=new pg.Client({connectionString:target.toString(),options:'-c role=crest_backup_reader',connectionTimeoutMillis:5000,query_timeout:6000});await client.connect();return client;};
+   const proof=await exerciseOperatorSources({admin,owner,other,migrations:expected,createReader,createForbiddenReader:()=>sandbox.connect(database)});assert.equal(proof.allPositive,true);assert.equal(proof.unknownColumnRefused,true);
   });
   const originalInventory=await inventory(admin);workspace=await privateWorkspace();const keys=await keyPair(workspace),capture=createRecoveryDatabaseBundle(launch);
   const result=await withRecoveryBackupLease(reader,owner.business,signal(),lease=>lease.capture(async snapshot=>{assert.deepEqual(await inventory({query:snapshot.query}),originalInventory);let captured;try{captured=await capture({environment:'test',connectionString:target.toString(),rootCertificate:null,workspace,snapshot,recipient:keys.recipient},lease.signal);}catch(error){console.error('SAFE_BACKUP_CAPTURE_STAGE:'+error.name+':'+(error.stage??'unavailable'));throw error;}await admin.query(`INSERT INTO public."recovery inventory ""fixture" VALUES(1,1,now(),''::bytea,'after captured snapshot')`);const repeated=await captureRecoveryDatabaseInventory(snapshot,lease.signal);assert.deepEqual(repeated.forRecoveryTools().tables,captured.forRecoveryTools().inventory.tables);return captured;}));reader=undefined;
