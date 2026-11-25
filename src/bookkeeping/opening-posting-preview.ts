@@ -10,6 +10,7 @@ type PreviewLine={accountCode:string;label:string;debitCents:string;creditCents:
 
 export function previewOpeningPosting(worksheet:Worksheet,receivables:ReceivablesEvidence|null){
  const blockers:string[]=[];
+ const warnings:string[]=[];
  const lines:PreviewLine[]=[];
  let net=0n;
  function add(accountCode:string,label:string,cents:bigint){
@@ -24,8 +25,7 @@ export function previewOpeningPosting(worksheet:Worksheet,receivables:Receivable
   }
   const book=BigInt(bank.bookCents);
   if(book<0n){
-   blockers.push(bank.label+' has a negative book balance that needs classification before posting.');
-   continue;
+   warnings.push(bank.label+' has a negative balance. It remains on this account; review any borrowing agreement separately.');
   }
   add(bank.accountCode,bank.label,book);
  }
@@ -44,5 +44,5 @@ export function previewOpeningPosting(worksheet:Worksheet,receivables:Receivable
  }
  add('3000','Provisional opening equity',-net);
  const totalDebit=lines.reduce((total,line)=>total+BigInt(line.debitCents),0n);
- return {lines,blockers,totalDebitCents:String(totalDebit),totalCreditCents:String(totalDebit)} as const;
+ return {lines,blockers,warnings,totalDebitCents:String(totalDebit),totalCreditCents:String(totalDebit)} as const;
 }

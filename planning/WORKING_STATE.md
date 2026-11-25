@@ -2,6 +2,95 @@
 
 ## Latest launch checkpoint, 2026-11-25
 
+Actual Next/Node build on4422ab9 passes with stable source
+(.local/opening-balance-details-build), app release
+2a9577784b413d19ac9a92d4c70e0f494bab1171 and source SHA
+2a9577784b413d19ac9a92d4c70e0f494bab11717982b41fe24b9f884107c16b.
+Registered database source remains142/3d215728...; the balance-details SQL is
+held and not installed. There is no current actual image/recovery proof for
+this new app identity; prior d164a84c actual-image evidence stays separate.
+
+Public110 is terminal: expense succeeded; commercial failed only its generic
+recovery role assertion, fixed locally in1555756; main failed Database
+foundation and its prerequisite aggregate (20 other jobs succeeded).
+Database foundation also found the all-capabilities recovery fixture missing
+openingDocuments settings and the recipe reference scanner missing that section.
+Local55e9f64 adds its two storage secrets/three worker TLS-file references and
+the matching fixture. Nine focused recipe checks, types and affected lint pass,
+including secret-free roundtrip, omitted-reference refusal and the old31-reference
+profile shape. New profiles have36 references. No values are printed or embedded
+in the recipe.
+
+The targeted current142 original/configuration restore and first owner-kit CLI
+case pass23/23 on55e9f64 (.local/document-recovery-configuration), source stable
+and owned cleanup. Other schema groups/other owner-kit cases were not selected.
+The point uses same-host provider/storage seams and a synthetic image; it is
+separate from the actual-image recovery4/4, not off-host acceptance.
+
+Held balance-details audit/identity guards pass native1/1 onf0313c2
+(.local/opening-balance-details-integrity): two controlled cash revisions retain
+exact receipts and reject altered audit/data/account pins or missing/orphan
+items, with unchanged financial events. There is still no application writer.
+See OPENING_BALANCE_DETAILS.md. All these local follow-ups remain unpublished.
+
+Local held opening-balance storage now defines origins, typed identities,
+schedule revisions and per-item revisions tied to real worksheet/account
+versions. It has forced RLS, retained-history triggers, immutable operation/audit
+references and no application writer grants. Native1/1 onb0aba6e passes
+(.local/opening-balance-details-storage), stable source/owned cleanup: actual
+registered142 accepts the held DDL, app/table-owner writes and history
+rewrite/truncation refuse, tables stay empty and the registered registry is
+unchanged. This is storage construction, not a usable saved workflow. The
+database validator/resolver, semantic audit/identity checks, save/lookup/
+retirement/history commands and export/recovery/UI integration remain next.
+No schema143 registration, production activation or financial posting occurred.
+
+Public110 commercial run45694925810 failed only amendment_integrity
+job139489706855; its commercial and amendment browser groups passed. The
+runtime recovery helper had already been corrected, but the independent
+recovery test still passed the old138/139/140 role exception list directly.
+Local1555756 adds exact141/142 to both the manifest-role comparison and the
+negative assertion: the default historical validator must still reject the
+backup-reader exception. No role permission guard was removed.
+
+The entire current142 generic encrypted recovery/incident suite now passes38/38
+on1555756 (.local/current142-generic-recovery), source stable and owned cleanup.
+This includes a fresh process/separate cluster, exact source/role/column
+inventory, same-snapshot files, wrong-key/missing/tampered data refusals,
+unchanged-source checks and revoked/paused authority. Same-host fictional
+evidence only. Current110 main run remains live; no public branch/metadata
+change is included in these local follow-ups.
+
+Local preparation now covers the thirteen remaining non-bank opening-detail
+classes with strict account/evidence pins, individual review states, asset
+cost/depreciation links, historical transit fee arithmetic and classification
+warnings. Runtime-frozen data-only account rules are shared with the planner;
+existing positive-plan hashes remain unchanged. Details/planner/preview78/78
+checks pass. This is not yet a saved workflow: immutable database/history,
+actual authority/context resolution, export/recovery and route/screen wiring
+are still required, followed by full source closure and approval/P27/corrections.
+See OPENING_BALANCE_DETAILS.md. No migration or source registration changed.
+
+Public110 is now published at1cd047159dd1a2836e12cf187f29b1290c7a8ca6,
+matching localad23fc0/treece4e711. Actual merged tree and ordered base/head
+parents are independently verified; metadata was verified before a nonforce
+expected-head update and ref/PR verified afterward. Exact runs45694925806,
+45694925810 and45694925787 are queued/running. Keep public head/title/body
+fixed until all three finish. Local follow-ups below are not in that release.
+Current actual d164a84c image encrypted recovery/load/identity and refusal4/4
+also passes onad23fc0 (.local/production-document142-image-recovery), stable
+source, same-host disk vault only.
+
+New local correction: the opening-journal planner and saved-evidence preview
+were refusing/omitting negative dedicated bank/wallet balances, contradicting
+ACCOUNTING section6. Signed evidence now gives a flagged asset credit and
+balancing opening-equity debit, with no invented loan. Cash/custody/funds/AP
+and all other source kinds stay positive-only. Exact positive-plan hashes are
+unchanged;54 focused checks, types and affected lint pass. No migration,
+posting/approval authority, current follow-up build or installation is claimed.
+See OPENING_JOURNAL_PLAN.md. Remaining full typed-source/approval/P27/correction
+and actual provider/off-host/owner/phone requirements remain open.
+
 Public109 accounting-settings job139468280373 failed one of11 cases before
 the opening-deposit workflow started: openingFunds139Candidate admitted root
 registries only through140. Local712d7a8 adds exact reviewed141/142 registry

@@ -30,7 +30,7 @@ function paths(value:unknown){
  secret('/authentication/databaseUrl');secret('/authentication/loginKey');auth.tokenKeys.forEach((_,index)=>secret(`/authentication/tokenKeys/${index}/key`));
  if(Object.hasOwn(profile,'tls')){file('/tls/keyFile');file('/tls/certFile');}
  for(const section of ['finance','financeExports','exports','calendar'])if(Object.hasOwn(profile,section))secret('/'+section+'/connectionString');
- for(const section of ['receipts','photos','supplierOriginals','exports'])if(Object.hasOwn(profile,section)){secret('/'+section+'/storage/accessKeyId');secret('/'+section+'/storage/secretAccessKey');if(section!=='exports')for(const name of ['keyFile','certFile','caFile'])file('/'+section+'/worker/'+name);}
+ for(const section of ['receipts','photos','supplierOriginals','openingDocuments','exports'])if(Object.hasOwn(profile,section)){secret('/'+section+'/storage/accessKeyId');secret('/'+section+'/storage/secretAccessKey');if(section!=='exports')for(const name of ['keyFile','certFile','caFile'])file('/'+section+'/worker/'+name);}
  if(Object.hasOwn(profile,'exports')){const section=profile.exports as Record<string,unknown>;require(section&&typeof section==='object'&&Array.isArray(section.keys)&&section.keys.length>=1&&section.keys.length<=8);section.keys.forEach((_,index)=>secret(`/exports/keys/${index}/key`));}
  if(Object.hasOwn(profile,'calendar')){secret('/calendar/clientSecret');secret('/calendar/calendarKeyMaterial');}
  require(result.length<=64);return result.sort(order);

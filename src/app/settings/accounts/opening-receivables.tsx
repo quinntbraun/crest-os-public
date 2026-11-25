@@ -185,6 +185,7 @@ export function OpeningReceivables({worksheet}:{worksheet:OpeningReceipt}){
    {posting&&<details>
     <summary>Preview opening entry from saved evidence</summary>
     <p>This preview uses the saved bank and receivables evidence. Posting requires verified controls, approved account mappings, and cutover approval.</p>
+    {posting.warnings.length>0&&<ul aria-label="Negative account balances">{posting.warnings.map(warning=><li key={warning}>{warning}</li>)}</ul>}
     {posting.blockers.length>0&&<ul>{posting.blockers.map(blocker=><li key={blocker}>{blocker}</li>)}</ul>}
     {posting.lines.length>0&&<dl>
      {posting.lines.map(line=><div key={line.accountCode}>

@@ -5,12 +5,35 @@ import {prepareRecoveryConfiguration,readRecoveryConfiguration,reconstructRecove
 import {recoveryConfigurationFixture} from '../support/recovery-configuration-fixture.ts';
 const signal=()=>new AbortController().signal;
 it('covers every current private profile section and retained keys without carrying their values',()=>{
- const fixture=recoveryConfigurationFixture(),recipe=readRecoveryConfiguration(fixture.source,fixture.target);expect(recipe.references.length).toBe(31);expect(recipe.externalMaterialAvailabilityVerified).toBe(false);for(const reference of fixture.references.filter(item=>item.kind==='secret'))expect(fixture.source).not.toContain(fixture.material.get(reference.referenceId));
+ const fixture=recoveryConfigurationFixture(),recipe=readRecoveryConfiguration(fixture.source,fixture.target);expect(recipe.references.length).toBe(36);expect(recipe.externalMaterialAvailabilityVerified).toBe(false);for(const reference of fixture.references.filter(item=>item.kind==='secret'))expect(fixture.source).not.toContain(fixture.material.get(reference.referenceId));
  for(const path of ['/authentication/tokenKeys/1/key','/exports/keys/1/key','/calendar/calendarKeyMaterial','/supplierOriginals/worker/keyFile','/receipts/storage/secretAccessKey','/photos/storage/accessKeyId','/financeExports/connectionString'])expect(recipe.references.some(item=>item.path===path)).toBe(true);
  const prepared=prepareRecoveryConfiguration({profileSource:fixture.profileSource,binding:fixture.target,references:[...fixture.references].reverse()});expect(()=>JSON.stringify(prepared)).toThrow('RECOVERY_CONFIGURATION_REVIEW_REQUIRED');expect(prepared.forRecoveryTools()).toEqual(recipe);
 });
 it('reconstructs the exact original profile through explicit offline references without starting resources',async()=>{
  const fixture=recoveryConfigurationFixture(),requests:string[]=[];const result=await reconstructRecoveryConfiguration({source:fixture.source,expected:fixture.target},async reference=>{requests.push(reference.referenceId);return fixture.material.get(reference.referenceId)!;},signal());expect(()=>JSON.stringify(result)).toThrow('RECOVERY_CONFIGURATION_REVIEW_REQUIRED');expect(JSON.parse(result.forRecoveryTools().profileSource)).toEqual(fixture.profile);expect(requests).toEqual(fixture.recipe.references.map(item=>item.referenceId));expect(result.forRecoveryTools().applicationStarted).toBe(false);expect(result.forRecoveryTools().completeBackup).toBe(false);
+});
+it('replaces document storage credentials and all worker TLS paths with offline references',async()=>{
+ const fixture=recoveryConfigurationFixture(),paths=fixture.references.filter(reference=>reference.path.startsWith('/openingDocuments/'));
+ expect(paths.map(reference=>reference.path)).toEqual([
+  '/openingDocuments/storage/accessKeyId','/openingDocuments/storage/secretAccessKey',
+  '/openingDocuments/worker/caFile','/openingDocuments/worker/certFile','/openingDocuments/worker/keyFile',
+ ]);
+ for(const reference of paths)expect(fixture.recipe.template).not.toContain(fixture.material.get(reference.referenceId)!);
+ const result=await reconstructRecoveryConfiguration({source:fixture.source,expected:fixture.target},async reference=>fixture.material.get(reference.referenceId)!,signal());
+ expect(JSON.parse(result.forRecoveryTools().profileSource)).toEqual(fixture.profile);
+ expect(()=>prepareRecoveryConfiguration({profileSource:fixture.profileSource,binding:fixture.target,references:fixture.references.filter(reference=>!reference.path.startsWith('/openingDocuments/'))})).toThrow('RECOVERY_CONFIGURATION_REVIEW_REQUIRED');
+ const resolver=vi.fn();
+ await expect(reconstructRecoveryConfiguration({source:JSON.stringify({...fixture.recipe,references:fixture.recipe.references.filter(reference=>reference.path!=='/openingDocuments/storage/secretAccessKey')}),expected:fixture.target},resolver,signal())).rejects.toThrow('RECOVERY_CONFIGURATION_REVIEW_REQUIRED');
+ expect(resolver).not.toHaveBeenCalled();
+});
+it('preserves the old recipe material set when opening documents are not configured',async()=>{
+ const fixture=recoveryConfigurationFixture(),profile=JSON.parse(fixture.profileSource);
+ delete profile.openingDocuments;profile.capabilities=profile.capabilities.filter((name:string)=>name!=='openingDocuments');
+ const profileSource=JSON.stringify(profile),references=fixture.references.filter(reference=>!reference.path.startsWith('/openingDocuments/'));
+ expect(requiredRecoveryConfigurationReferences(profileSource)).toHaveLength(31);
+ const recipe=prepareRecoveryConfiguration({profileSource,binding:fixture.target,references}).forRecoveryTools();
+ const result=await reconstructRecoveryConfiguration({source:JSON.stringify(recipe),expected:fixture.target},async reference=>fixture.material.get(reference.referenceId)!,signal());
+ expect(JSON.parse(result.forRecoveryTools().profileSource)).toEqual(profile);
 });
 it('requires exactly the configured private paths and distinct immutable reference identifiers',()=>{
  const fixture=recoveryConfigurationFixture(),input={profileSource:fixture.profileSource,binding:fixture.target,references:fixture.references};for(const references of [fixture.references.slice(1),[...fixture.references,fixture.references[0]!],fixture.references.map((item,index)=>index===1?{...item,referenceId:fixture.references[0]!.referenceId}:item),fixture.references.map((item,index)=>index===0?{...item,path:'/authentication/publicKey'}:item),fixture.references.map((item,index)=>index===0?{...item,kind:'file' as const}:item)])expect(()=>prepareRecoveryConfiguration({...input,references})).toThrow('RECOVERY_CONFIGURATION_REVIEW_REQUIRED');

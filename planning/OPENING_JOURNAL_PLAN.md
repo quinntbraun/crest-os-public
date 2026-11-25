@@ -16,8 +16,10 @@ is substituted for it.
 
 ## Implemented arithmetic and input boundaries
 
-All values are exact integer cents using BigInt, with positive bigint-sized
-source amounts and a bounded balancing opening-equity line. No monetary value
+All values are exact integer cents using BigInt, with bigint-sized source
+amounts and a bounded balancing opening-equity line. Dedicated bank/wallet
+whole-book sources may be signed, following ACCOUNTING section6; all other
+source kinds remain positive. No monetary value
 passes through floating point. The per-source type/normal-side/control identity
 must match its pinned active USD account snapshot and version. Revenue/expense,
 contribution/distribution and suspense sources are refused. The balancing account
@@ -90,3 +92,31 @@ types and targeted lint pass. Initial synthetic fixtures used three-digit time
 strings and correctly failed the existing six-digit customerInstant contract;
 fixtures were corrected, not the production contract. No native posting,
 authorization, source-closure, database or production-cutover acceptance is claimed.
+
+## Dedicated negative money balances
+
+The original preparation implementation incorrectly required positive amounts
+for every source, despite ACCOUNTING section6 explicitly allowing evidenced
+negative dedicated bank/provider balances. It now accepts canonical signed,
+nonzero bigint cents only for bank/wallet whole-book sources, retains the same
+account/version/evidence pins and one-book-source rule, and places a negative
+asset position on the credit side. Opening equity balances on the debit side.
+It does not create or infer a borrowing liability. All fifteen other source
+kinds retain their positive-only restrictions, including cash, owner custody,
+customer funds and supplier payables.
+
+Negative money positions are copied into an immutable negativeMoneyBalances
+list in the hashed plan. That field is absent for existing positive-only plans,
+preserving their exact material and hashes; the prior positive fixture hash
+539b6fa1cba2d92fb22788b3d009c10bcebef94ce412be6826315f1b1bad0b6f is
+retained. Signed account reviews must match. Zero, negative zero, leading zero,
+fractional/unsafe representations and bigint overflow still refuse. Positive
+and negative money accounts that net to zero retain both gross lines.
+
+The saved-evidence screen preview now also includes the negative account line
+and its balancing equity, showing an accessible negative-account notice. Other
+unknown controls and contradictory sources still block completion; this is
+still a nonposting preview, not approval. Fifty-four focused planner/preview
+checks, types and affected lint pass. No SQL, schema, posted history or canonical
+business rule was changed. No current application build or deployment is
+claimed for this follow-up.

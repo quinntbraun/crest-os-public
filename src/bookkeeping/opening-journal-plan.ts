@@ -6,20 +6,11 @@ import {isDeepStrictEqual} from 'node:util';
 import {customerDate,customerInstant,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {financeAccountReviewReason,parseFinanceAccountIdentity} from './finance-account-contract.ts';
 import type {FinanceAccount} from './finance-account-contract.ts';
+import {openingSourceAccountRules as sources} from './opening-source-account-rules.ts';
 
 // Type/side/control pins follow ACCOUNTING12/P27 and chart identities. New
 // source/mapping registrations still need their database implementation. No
 // revenue, expense, contribution, distribution or suspense opening is inferred.
-const sources={
- bank:['asset','debit','bank'],wallet:['asset','debit','wallet'],cash:['asset','debit','cash'],
- checks:['asset','debit','checks'],transfer_transit:['asset','debit','transfer_transit'],
- owner_custody:['asset','debit','owner_custody'],receivable:['asset','debit','ar'],
- customer_funds:['liability','credit','customer_funds'],supplier_payable:['liability','credit','payable'],
- tax_liability:['liability','credit','tax_payable'],debt:['liability','credit','debt'],
- due_owner:['liability','credit','due_owner'],equipment_cost:['asset','debit','fixed_asset'],
- accumulated_depreciation:['asset','credit','accumulated_depreciation'],prepaid:['asset','debit','prepaid'],
- other_asset:['asset','debit',null],other_liability:['liability','credit',null],
-} as const;
 export type OpeningSourceKind=keyof typeof sources;
 type Evidence=Readonly<{reference:string;sha256:string}>;
 export type OpeningJournalSource=Readonly<{sourceId:string;sourceVersion:string;sourceSha256:string;kind:OpeningSourceKind;
@@ -63,13 +54,19 @@ export function prepareOpeningJournalPlan(input:OpeningJournalInput){
    require(!codes.has(account.code)&&(account.accountType==='asset'||account.accountType==='liability'||account.id===input.openingEquityAccountId));codes.add(account.code);accounts.set(account.id,account);
   }
   const equity=accounts.get(input.openingEquityAccountId);require(equity&&equity.active&&equity.code==='3000'&&equity.accountType==='equity'&&equity.normalSide==='credit'&&equity.controlKind===null&&equity.reportRole!=='contra_equity');
-  stage='sources';require(Array.isArray(input.sources)&&input.sources.length<=10000);const sourceIds=new Set<string>(),bookBalances=new Set<string>(),netByAccount=new Map<string,bigint>(),lines:JournalLine[]=[];let net=0n;
+  stage='sources';require(Array.isArray(input.sources)&&input.sources.length<=10000);const sourceIds=new Set<string>(),bookBalances=new Set<string>(),netByAccount=new Map<string,bigint>(),lines:JournalLine[]=[];
+  const negativeMoneyBalances:{sourceId:string;accountId:string;kind:'bank'|'wallet';netDebitCents:string}[]=[];let net=0n;
   for(const source of input.sources as readonly OpeningJournalSource[]){
    require(fields(source,['sourceId','sourceVersion','sourceSha256','kind','accountId','accountVersion','amountCents','evidence'])&&customerUuid(source.sourceId)&&source.sourceId!==input.cutoverId&&!sourceIds.has(source.sourceId)&&customerVersion(source.sourceVersion)&&typeof source.sourceSha256==='string'&&/^[a-f0-9]{64}$/.test(source.sourceSha256)&&Object.hasOwn(sources,source.kind));sourceIds.add(source.sourceId);evidence(source.evidence);
    const account=accounts.get(source.accountId),rule=sources[source.kind as OpeningSourceKind];require(account&&account.active&&source.accountId!==equity.id&&source.accountVersion===account.version&&isDeepStrictEqual([account.accountType,account.normalSide,account.controlKind],rule));
    if(source.kind==='bank'||source.kind==='wallet'){require(!bookBalances.has(account.id));bookBalances.add(account.id);}
-   const amount=cents(source.amountCents);require(amount>0n);const debit=rule[1]==='debit',signed=debit?amount:-amount;net+=signed;netByAccount.set(account.id,(netByAccount.get(account.id)??0n)+signed);
-   lines.push({sequence:lines.length+1,sourceId:source.sourceId,sourceVersion:source.sourceVersion,sourceSha256:source.sourceSha256,kind:source.kind,accountId:account.id,accountVersion:account.version,debitCents:debit?amount.toString():'0',creditCents:debit?'0':amount.toString()});
+   // ACCOUNTING12 section6 permits evidenced negative dedicated business bank/
+   // wallet balances. Cash/custody and obligation capacities remain positive.
+   // A negative asset balance is not automatically reclassified as borrowing.
+   const money=source.kind==='bank'||source.kind==='wallet',amount=cents(source.amountCents,money);require(amount!==0n&&(money||amount>0n));
+   const signed=rule[1]==='debit'?amount:-amount,debit=signed>0n,magnitude=amount<0n?-amount:amount;net+=signed;netByAccount.set(account.id,(netByAccount.get(account.id)??0n)+signed);
+   if(money&&amount<0n)negativeMoneyBalances.push({sourceId:source.sourceId,accountId:account.id,kind:source.kind as 'bank'|'wallet',netDebitCents:amount.toString()});
+   lines.push({sequence:lines.length+1,sourceId:source.sourceId,sourceVersion:source.sourceVersion,sourceSha256:source.sourceSha256,kind:source.kind,accountId:account.id,accountVersion:account.version,debitCents:debit?magnitude.toString():'0',creditCents:debit?'0':magnitude.toString()});
   }
   stage='reviews';require(Array.isArray(input.reviews)&&input.reviews.length===accounts.size-1);const reviewed=new Set<string>();
   for(const review of input.reviews as readonly Review[]){
@@ -82,7 +79,7 @@ export function prepareOpeningJournalPlan(input:OpeningJournalInput){
   // Copy all evidence/account pins into the plan: later caller mutation cannot
   // change the material reviewed under this hash. Hashes establish bytes only.
   const basis=canonical(input) as OpeningJournalInput;
-  const plan={profile:'crest.opening-journal-plan.v1' as const,template:'P27' as const,basis,lines,totalDebitCents:debit.toString(),totalCreditCents:credit.toString(),profitAndLossCents:'0',openingBeforeOrdinary:true as const,zeroEffect:lines.length===0,posted:false as const,postingAuthorized:false as const,sourceClosureVerified:false as const,completeOpening:false as const};
+  const plan={profile:'crest.opening-journal-plan.v1' as const,template:'P27' as const,basis,lines,...negativeMoneyBalances.length?{negativeMoneyBalances}:{},totalDebitCents:debit.toString(),totalCreditCents:credit.toString(),profitAndLossCents:'0',openingBeforeOrdinary:true as const,zeroEffect:lines.length===0,posted:false as const,postingAuthorized:false as const,sourceClosureVerified:false as const,completeOpening:false as const};
   const bytes=JSON.stringify(canonical(plan));require(Buffer.byteLength(bytes)<=32*1024*1024);return freeze({...plan,planSha256:createHash('sha256').update(bytes).digest('hex')});
  }catch{throw new OpeningJournalPlanError(stage);}
 }

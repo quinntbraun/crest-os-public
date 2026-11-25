@@ -15,6 +15,32 @@ function fixture(rows:[OpeningSourceKind,string][]=[['bank','10000'],['customer_
 const clone=(value:OpeningJournalInput)=>structuredClone(value);
 function rejects(value:OpeningJournalInput,stage:string){expect(()=>prepareOpeningJournalPlan(value)).toThrow(expect.objectContaining({stage}));}
 describe('prospective opening journal plan',()=>{
+ it('preserves the existing positive-balance plan material and hash',()=>{
+  const plan=prepareOpeningJournalPlan(fixture());expect(plan.planSha256).toBe('539b6fa1cba2d92fb22788b3d009c10bcebef94ce412be6826315f1b1bad0b6f');
+  expect(Object.hasOwn(plan,'negativeMoneyBalances')).toBe(false);
+ });
+ it.each(['bank','wallet'] as const)('retains a negative %s balance as a flagged asset credit without inventing a loan',kind=>{
+  const input=fixture([[kind,'-12500']]),plan=prepareOpeningJournalPlan(input);
+  expect(plan.lines.map(line=>[line.kind,line.debitCents,line.creditCents])).toEqual([[kind,'0','12500'],['opening_equity','12500','0']]);
+  expect(plan.negativeMoneyBalances).toEqual([{sourceId:input.sources[0]!.sourceId,accountId:input.accounts[0]!.id,kind,netDebitCents:'-12500'}]);
+  expect(Object.isFrozen(plan.negativeMoneyBalances)).toBe(true);
+  expect(Object.isFrozen(plan.negativeMoneyBalances![0])).toBe(true);
+  expect(plan.profitAndLossCents).toBe('0');expect(plan.posted).toBe(false);expect(plan.completeOpening).toBe(false);
+  rejects({...input,reviews:[{...input.reviews[0]!,netDebitCents:'12500'}]},'reviews');
+  rejects({...input,sources:[input.sources[0]!,{...input.sources[0]!,sourceId:id(301)}]},'sources');
+ });
+ it('preserves gross opening lines when positive and negative money accounts net to zero',()=>{
+  const plan=prepareOpeningJournalPlan(fixture([['bank','10000'],['wallet','-10000']]));
+  expect(plan.lines.map(line=>line.kind)).toEqual(['bank','wallet']);expect(plan.zeroEffect).toBe(false);
+  expect(plan.totalDebitCents).toBe('10000');expect(plan.totalCreditCents).toBe('10000');
+ });
+ it.each((Object.keys(definitions) as OpeningSourceKind[]).filter(kind=>kind!=='bank'&&kind!=='wallet'))('continues to refuse a negative %s source',kind=>rejects(fixture([[kind,'-1']]),'sources'));
+ it('retains exact negative money cents beyond safe-number precision and rejects signed overflow',()=>{
+  const plan=prepareOpeningJournalPlan(fixture([['bank','-9007199254740993']]));
+  expect(plan.lines[0]!.creditCents).toBe('9007199254740993');expect(plan.lines.at(-1)!.debitCents).toBe('9007199254740993');
+  rejects(fixture([['bank','-9223372036854775808']]),'sources');
+  rejects(fixture([['bank','-9223372036854775807'],['wallet','-1']]),'equity');
+ });
  it('does not count cash twice when opening customer funds are already inside the bank balance',()=>{const plan=prepareOpeningJournalPlan(fixture());expect(plan.lines.map(row=>[row.kind,row.debitCents,row.creditCents])).toEqual([['bank','10000','0'],['customer_funds','0','6000'],['opening_equity','0','4000']]);expect(plan.totalDebitCents).toBe('10000');expect(plan.totalCreditCents).toBe('10000');expect(plan.profitAndLossCents).toBe('0');expect(plan.posted).toBe(false);expect(plan.postingAuthorized).toBe(false);expect(plan.completeOpening).toBe(false);});
  it('uses debit opening equity for a verified net liability position',()=>{const plan=prepareOpeningJournalPlan(fixture([['supplier_payable','12000']]));expect(plan.lines.at(-1)?.debitCents).toBe('12000');expect(plan.totalCreditCents).toBe('12000');});
  it('does not accept a second whole-book opening for the same bank or wallet account',()=>{for(const kind of['bank','wallet'] as const){const input=fixture([[kind,'100']]);rejects({...input,sources:[input.sources[0]!,{...input.sources[0]!,sourceId:id(201)}],reviews:[{...input.reviews[0]!,netDebitCents:'200'}]},'sources');}});
@@ -24,7 +50,7 @@ describe('prospective opening journal plan',()=>{
  it('requires explicit zero evidence even when no amount sources exist',()=>{const input=fixture([['bank','1']]);const zero={...input,sources:[],reviews:[{accountId:input.accounts[0]!.id,state:'verified_zero' as const,netDebitCents:'0',evidence:document}]};const plan=prepareOpeningJournalPlan(zero);expect(plan.zeroEffect).toBe(true);expect(plan.lines).toEqual([]);rejects({...zero,reviews:[]},'reviews');rejects({...zero,reviews:[{...zero.reviews[0]!,state:'unknown',netDebitCents:null,evidence:null}]},'reviews');});
  it('retains inactive accounts in explicit zero reviews but never posts a nonzero source to them',()=>{const input=clone(fixture([['bank','1']]));(input.accounts[0] as {active:boolean}).active=false;rejects(input,'sources');const zero={...input,sources:[],reviews:[{accountId:input.accounts[0]!.id,state:'verified_zero' as const,netDebitCents:'0',evidence:document}]};expect(prepareOpeningJournalPlan(zero).zeroEffect).toBe(true);const inactiveEquity=clone(zero);(inactiveEquity.accounts.at(-1) as {active:boolean}).active=false;rejects(inactiveEquity,'accounts');});
  it('refuses unknown, missing, duplicate, contradictory or unevidenced account reviews',()=>{const input=fixture();rejects({...input,reviews:input.reviews.slice(0,1)},'reviews');rejects({...input,reviews:[input.reviews[0]!,input.reviews[0]!]},'reviews');rejects({...input,reviews:[{...input.reviews[0]!,netDebitCents:'9999'},input.reviews[1]!]},'reviews');rejects({...input,reviews:[{...input.reviews[0]!,evidence:null},input.reviews[1]!]},'reviews');});
- it('refuses stale account/source identities, duplicate sources and invalid amount representations',()=>{const input=fixture();for(const source of[{...input.sources[0]!,accountVersion:'2'},{...input.sources[0]!,sourceVersion:'0'},{...input.sources[0]!,sourceId:input.cutoverId},{...input.sources[0]!,sourceSha256:'invalid'}])rejects({...input,sources:[source,input.sources[1]!]},'sources');rejects({...input,sources:[input.sources[0]!,input.sources[0]!]},'sources');for(const amount of['-1','01','1.5','1e3','9223372036854775808'])rejects({...input,sources:[{...input.sources[0]!,amountCents:amount},input.sources[1]!]},'sources');});
+ it('refuses stale account/source identities, duplicate sources and invalid amount representations',()=>{const input=fixture();for(const source of[{...input.sources[0]!,accountVersion:'2'},{...input.sources[0]!,sourceVersion:'0'},{...input.sources[0]!,sourceId:input.cutoverId},{...input.sources[0]!,sourceSha256:'invalid'}])rejects({...input,sources:[source,input.sources[1]!]},'sources');rejects({...input,sources:[input.sources[0]!,input.sources[0]!]},'sources');for(const amount of['-0','-01','01','1.5','1e3','9223372036854775808'])rejects({...input,sources:[{...input.sources[0]!,amountCents:amount},input.sources[1]!]},'sources');});
  it('rejects revenue/expense sources, account aliasing and contributions masquerading as opening equity',()=>{const input=fixture();const revenue=clone(input);(revenue.accounts[0] as {accountType:string}).accountType='revenue';rejects(revenue,'accounts');const equity=clone(input);(equity.accounts.at(-1) as {code:string}).code='3100';rejects(equity,'accounts');const aliased=clone(input);(aliased.accounts[1] as {code:string}).code=aliased.accounts[0]!.code;rejects(aliased,'accounts');rejects({...input,sources:[{...input.sources[0]!,kind:'customer_funds'},input.sources[1]!]},'sources');});
  it('preserves integers above the JavaScript safe-number range and refuses an overflowing equity line',()=>{const plan=prepareOpeningJournalPlan(fixture([['bank','9007199254740993']]));expect(plan.totalDebitCents).toBe('9007199254740993');rejects(fixture([['bank','9223372036854775807'],['wallet','1']]),'equity');});
  it('uses the actual business-local midnight and refuses a guessed UTC or unsupported intraday boundary',()=>{const input=fixture();rejects({...input,cutoverAt:'2026-01-01T00:00:00.000000Z'},'boundary');rejects({...input,cutoverAt:'2026-01-01T18:00:00.000000Z'},'boundary');rejects({...input,cutoverAt:'2026-01-01T06:00:00.000001Z'},'boundary');rejects({...input,timeZone:'-06:00'},'boundary');});
