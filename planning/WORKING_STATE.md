@@ -2,38 +2,72 @@
 
 ## Current launch checkpoint, 2026-11-25
 
-Public104a PR178 at7dcb30e34b9b1fb8e91550ce5802a5e91206e2ac remains draft,
-unmerged/uninstalled. All three exact-head runs terminal: main45619295043 FAILED,
-commercial45619295049 and expense45619295232 SUCCESS. Main failures were database
-recovery archive schema138/header against139 manifest, plus workspace-records'
-historical138 original-browser collector using root139 registry. Foundation then
-failed prerequisite/artifact aggregation. Both fixture identities are corrected;
-no safety checks or required cases were removed. Local archive12/12 PASS on1b593a2;
-historical138 and proposed140 genuine-MFA Chrome original delivery2/2 PASS on
-e82c5e7b38b41d77e2fbe3ea3b9cf21cea3da04e. Next/server builds passed on that source.
+New held opening supplier AP evidence uses the existing audited schedule pattern:
+original bill less evidenced historic payments/credits equals only remaining
+liability, with explicit unknown due/tax and no new expense/payment. Save/replay/
+lookup/read/retirement, retained vendor/source identities, deferred audit/orphan
+guards and private source snapshots are implemented.21 focused units/types/lint
+pass. Native save boundary1/1 on7bffb55; retirement/empty revision1/1 on94eb8fa;
+verified9-file CSV/JSON/neutral reconstruction1/1 on25ec9d4. Controlled auth only.
+Root140 unchanged; two held SQL parts are not registered or connected to owner UI,
+opening plan, ordinary export or posting. See OPENING_PAYABLES_EVIDENCE.md.
 
-Direct140 deposit CSV download retains9007199254740993 and original evidence, with
-actual owner sign-in, session-fenced encrypted worker, all3 original kinds/ZIP compare,
-privacy/revocation and390/1440 layout/Axe checks:1/1 PASS on1af561bd46d17c4b1c2b62a1141b15eac95b9019.
-Proofs: .local/workspace-export140-product-auth/result.json and
-.local/workspace-export140-csv-auth/result.json. No WebKit/physical iPhone/cloud
-acceptance. Source stable and owned cleanup awaited; original138 case retained.
+Public105 is now terminal: all18 browser groups, genuine authentication, provider/
+evidence and commercial workflow pass. Database failed missing migrations in
+the old controller fixture, expense failed the old future140 negative, and main
+foundation failed prerequisite/artifact aggregation. Both causal fixtures are
+fixed locally; do not call105 green. Prepare106 with registered140 and held AP
+evidence; refresh exact-head source/strict-scan/commit/tree/metadata/ref/merge/runs.
+All9990 unit checks/483 files PASS on765f22d (normal Windows file environment), .local/schema140-payables-full-units.log. No live local source-frozen runner. No installation/real-data/financial activation.
+Earlier current checkpoint below retains its own release/source evidence:
 
-Proposed140 captures170 business sources including deposits plus actor/session/
-provider in one fenced RR snapshot. Scoped native140 capture/reimport passes on
-55d9256; encrypted worker/durable Ready/parsed owner catalogue passes on c08dc8e.
-Exact140 migration/routine/schema observations are in WORKSPACE_EXPORT140.md.
-Explicit140 admission/worker/logical/original/browser-save and production/owner
-HTTP bindings implemented. Finance vocabulary remains109 for reviewed140 export
-SQL;141 stays unsupported. Root registry/compatibility139 unchanged: proposed140
-still needs source adoption/recovery integration and exact-source hosted acceptance.
 
-Prepare a fresh strictly scanned draft publication including both hosted fixes and
-proposed140 delivery; do not merge/install. Essential remaining:140 adoption/
-recovery release, full opening controls/approval/posting, provider/security/keys/
-offhost and owner facts/device/installation. No new business rule or financial
-activation. No live source-frozen runner. Actual use NOT READY; roughly80% coding,
-low confidence; context sufficient;$0 spent. See WORKSPACE_EXPORT140.md.
+Local registered140 source adds the exact export-only migration365b1bc6, root
+registry823ffc623e93cc0f2c6122b6a04a47b5b1c776dbd6d9c0f779211869f5e75234,
+192-source coverage and blocked compatibility. Frozen139 registry/coverage/
+compatibility are preserved byte-for-byte, with independently pinned138/139/140
+recovery profiles.140 has170 scoped business sources and separately branded192-
+source instance capture/196-file operator command. No owner DB installation or
+opening approval/posting. WORKSPACE_EXPORT140_ADOPTION.json records adoption.
+
+Actual registered140 upgrade/scoped capture/encrypted Ready/catalogue/operator
+command plus frozen139 source/reconstruction/isolated recovery PASS2/2 on0b262d;
+.local/schema140-adoption-native/result.json. All138/139/140 coordinated encrypted
+restore families PASS66/66 on that source: populated records/financial controls,
+originals/quarantine/config/source/synthetic image and corruption/missing/lease/
+ledger refusals. .local/schema140-backup-compatibility/result.json. Windows journal
+seam/synthetic unloaded image; not physical offhost/key/real provider/reopen or
+complete backup acceptance. Source stayed unchanged and owned cleanup awaited.
+
+Actual Next/server140 build PASS0b262d, compiled identityf452ea4a7d19dc681f19f3626158b8254599230e.
+Actual140 image build PASS58d3054: nonroot/compiled-file identity/closed startup,
+image sha256:98c91e2a95e223054805cd8592564792476ca75fd8d48d5f4af6b0fa912586e7,
+237404672-byte tar SHA b5fb917e00e06ac6e465702b0b6f5fdefaebb3db62c537fe6565b399dcee55c9.
+Actual age/archive/image restore4/4 PASS same58d3054. Proofs .local/schema140-build,
+.local/workspace-export140-image and .local/workspace-export140-image-recovery.
+Same Docker host only. Image retained privately; not installed.
+
+Public105 PR178 still draft at96038d196087f21bd3b708f8196d05211c6e49dd, from
+locale430370/treecf7968ab (root139/proposed140). Receipt CURRENT.json. HOLD its
+head/title/body while main45628509832 live. Commercial45628509811 SUCCESS;
+expense45628509837 FAILED old future140 negative, now locally positive140/negative141.
+Database139255059984 failed a later recovery controller fixture missing migrations;
+fixed to exact frozen138 bytes/list. Actual Linux controller/current140 command
+controls16/16 PASS on a1dd9b679c243d068a13e59f60bfc6cb0b308c53 with current image
+as runtime, source mounted read-only/network none. .local/schema140-linux-controls.
+Controlled PG/provider/encryption ports, not full Linux/provider recovery acceptance.
+Do not claim105 green; other hosted jobs still running. No gate relaxed.
+
+Initial broad units9963 passed with stale140 assertion and restricted-host symlink
+setup failures; affected131 cases and unchanged normal-Windows10 CLI cases pass.
+Current types/affected lint/140 migration verifier pass. No aggregate full-green claim.
+Prior genuine MFA/Chrome138+proposed140 originals2/2 e82c5e7 and direct140 deposit
+CSV1/1 1af561b retain their exact source/scope, not physical iPhone/WebKit/cloud proof.
+
+Next: fresh140 publication only after105 terminal, complete current trusted owner
+release acceptance, full opening controls/approval/posting, real provider/security/
+keys/offhost/reopen and owner facts/device/install. No live local frozen runner.
+Actual use NOT READY; roughly80% coding low confidence; context sufficient;$0 spent.
 
 ## Earlier checkpoint, 2026-11-25
 

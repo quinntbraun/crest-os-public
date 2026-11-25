@@ -1334,7 +1334,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
     }
     // Coverage has passed. Pending-object/source refusal belongs to snapshot
     // capture, rather than being misreported as a schema-coverage failure.
-    stage='snapshot';const rows=await inventory(client),roles=await roleDefinitions(client,profile===currentProfile&&[138,139].includes(profile.schemaVersion));
+    stage='snapshot';const rows=await inventory(client),roles=await roleDefinitions(client,profile===currentProfile&&[138,139,140].includes(profile.schemaVersion));
     // PG stores a policy's role set in OID order. Preserve the relative role
     // creation order from schema53 so a multi-role policy deparses byte-exact after
     // restore; do not normalize away policy or permission differences.
@@ -1510,13 +1510,13 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     }
     for(const r of orderedRoles){
       assert.match(r.rolname,/^crest_[a-z_]+$/);
-      const backupReader=profile===currentProfile&&[138,139].includes(profile.schemaVersion)&&r.rolname==='crest_backup_reader';
+      const backupReader=profile===currentProfile&&[138,139,140].includes(profile.schemaVersion)&&r.rolname==='crest_backup_reader';
       assert(!r.rolsuper&&!r.rolinherit&&!r.rolcreaterole&&!r.rolcreatedb&&!r.rolcanlogin&&!r.rolreplication&&r.rolbypassrls===backupReader&&r.rolconnlimit===-1&&r.rolconfig===null);
       // Restore only closed migration roles; fresh runtime credentials are separate.
       if(!(await client.query('SELECT 1 FROM pg_roles WHERE rolname=$1',[r.rolname])).rowCount)
         await client.query(`CREATE ROLE "${r.rolname}" NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION ${backupReader?'BYPASSRLS':'NOBYPASSRLS'}`);
     }
-    assert.deepEqual(await roleDefinitions(client,profile===currentProfile&&[138,139].includes(profile.schemaVersion)),manifest.roles);
+    assert.deepEqual(await roleDefinitions(client,profile===currentProfile&&[138,139,140].includes(profile.schemaVersion)),manifest.roles);
     stage='restore';await postgresTool('pg_restore',url,['--exit-on-error','--single-transaction'],dump);
     stage='rows';assert.deepEqual(await inventory(client),manifest.rows,'restored row content differs');
     stage='schema';

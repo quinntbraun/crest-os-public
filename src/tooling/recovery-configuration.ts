@@ -16,7 +16,7 @@ export class RecoveryConfigurationError extends Error{constructor(){super('RECOV
 function require(value:unknown):asserts value{if(!value)throw new RecoveryConfigurationError();}
 function exact(value:unknown,fields:string[]):asserts value is Record<string,unknown>{require(value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).sort().join(',')===[...fields].sort().join(','));}
 const uuid=(value:unknown):value is string=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
-type Binding=Readonly<{businessId:string;appReleaseId:string;migrationRegistrySha256:string;sourceSchemaVersion:138|139;referenceDirectoryId:string}>;
+type Binding=Readonly<{businessId:string;appReleaseId:string;migrationRegistrySha256:string;sourceSchemaVersion:138|139|140;referenceDirectoryId:string}>;
 type ReferenceBinding=Readonly<{path:string;kind:'secret'|'file';referenceId:string}>;
 type Reference=ReferenceBinding&Readonly<{valueSha256:string|null}>;
 const hash=(value:string)=>createHash('sha256').update(value,'utf8').digest('hex');

@@ -13,7 +13,7 @@ import {verifyRecoveryBackupReader} from './recovery-backup-reader.ts';
 import {captureRecoveryDatabaseInventory} from './recovery-database-inventory.ts';
 import {captureRecoveryOriginalInventory} from './recovery-original-inventory.ts';
 import {captureRecoveryFinancialControls} from './recovery-financial-controls.ts';
-type VerifiedComparison=Readonly<{pointId:string;businessId:string;sourceSchemaVersion:138|139;migrationRegistrySha256:string;destinationDatabase:string;endpoint:string;migrations:readonly Readonly<{version:string;name:string}>[];roles:unknown;postedBusinesses:readonly Readonly<{businessId:string;throughOn:string;timeZone:string;eventCount:string}>[];eventFingerprint:Readonly<{rowCount:string;rowMultisetSha256:string}>}>;
+type VerifiedComparison=Readonly<{pointId:string;businessId:string;sourceSchemaVersion:138|139|140;migrationRegistrySha256:string;destinationDatabase:string;endpoint:string;migrations:readonly Readonly<{version:string;name:string}>[];roles:unknown;postedBusinesses:readonly Readonly<{businessId:string;throughOn:string;timeZone:string;eventCount:string}>[];eventFingerprint:Readonly<{rowCount:string;rowMultisetSha256:string}>}>;
 const verifiedComparisons=new WeakMap<object,VerifiedComparison>();
 export function verifiedRecoveryDatabaseComparison(value:unknown):VerifiedComparison{const result=value&&typeof value==='object'?verifiedComparisons.get(value):undefined;if(!result)throw new RecoveryRestoredDatabaseError('preflight');return result;}
 type Stage='preflight'|'files'|'reader'|'capture'|'compare';

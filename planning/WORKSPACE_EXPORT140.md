@@ -91,3 +91,58 @@ verifies its exact9007199254740993 amount and retained review evidence. The same
 case retains all3 original ZIP/compare/privacy/revocation and390/1440 checks.
 .local/workspace-export140-csv-auth/result.json. Only140 ran in that follow-up;
 historical138 acceptance remains the separate preceding2-case source.
+
+Local140 source adoption now registers the exact observed migration,192-source
+coverage and140 compatibility with activation blocked. Frozen139 registry/coverage/
+compatibility are preserved byte-for-byte;138/139 baselines remain independent.
+140 has separate1286-routine/15613-object pins and a separately branded192-source
+operator capture/196-file command delivery. Historical fixtures use their exact
+source registry/coverage and remove newer SQL from separately committed archives.
+No owner database migration, production install, opening approval or posting.
+Adoption record: WORKSPACE_EXPORT140_ADOPTION.json. Native registered delivery and
+coordinated140 restore are pending execution. Broad units9963 passed with two
+failures: a stale future140 negative assertion (moved to141, affected131 cases pass)
+and restricted-host symlink setup (unchanged10-case CLI passes in normal Windows).
+Current types and affected lint pass. No full-suite-green claim from that first run.
+
+Registered140 native acceptance2/2 PASS on0b262dcc35c6235c05dae6f47ff283323a3e1483:
+actual coordinator140/no pending upgrade, scoped capture/format/encrypted Ready
+and owner catalogue, full192-source operator capture and196-file command delivery,
+plus independently frozen139 upgrade/capture/reconstruction/isolated recovery.
+Proof .local/schema140-adoption-native/result.json; unchanged source/owned cleanup.
+
+All three138/139/140 coordinated recovery families PASS66/66 on the same0b262d
+source: populated business/financial records, published and quarantined originals,
+configuration/source/synthetic image archive, corruption/missing/lease/image/ledger
+refusals and separate database restoration. .local/schema140-backup-compatibility/
+result.json. Windows publication/journal seam and synthetic unloaded image bytes;
+no Linux durability, real provider retention, physical independence, key-custody,
+controlled reopening or complete-backup approval. These limits remain launch gates.
+
+Actual Next/server production build also PASS on0b262d, identity source140 and
+registry823ffc623e93cc0f2c6122b6a04a47b5b1c776dbd6d9c0f779211869f5e75234.
+.local/schema140-build/result.json. A current140 image build is next; the shared
+image builder now accepts exact139/140 packages and copies only the requested
+prior migration prefix, preserving historical source packaging on newer roots.
+
+
+Actual140 Docker image build PASS on58d30548ab184a0301925b3097c189962cd6f4b0:
+nonroot/compiled-file identity/closed startup,237404672-byte archive SHA
+b5fb917e00e06ac6e465702b0b6f5fdefaebb3db62c537fe6565b399dcee55c9, image
+sha256:98c91e2a95e223054805cd8592564792476ca75fd8d48d5f4af6b0fa912586e7.
+.local/workspace-export140-image/result.json. Actual age/image recovery and loaded
+compiled identity4/4 PASS on same58d3054 (.local/workspace-export140-image-recovery).
+Same Docker host only, not independent recovery or a complete backup.
+
+Hosted105 database reached a second stale controller fixture after the earlier
+archive fix: request.migrations was absent while the guard requires its exact
+length. Fixture now uses frozen138 registry bytes and matching migration identities,
+retaining historical controller coverage and every failure assertion. No controller
+guard relaxed. Linux controller plus current140 command controls pending execution.
+
+Actual Linux controller and current140 command controls16/16 PASS on a1dd9b6,
+.local/schema140-linux-controls/result.json. Current verified image supplies Node;
+current source mounted read-only, network disabled and private temporary storage.
+Real Linux fsync/control paths with controlled PG/provider/encryption ports only;
+not actual provider/encryption/full restore or power-loss durability acceptance.
+All local source-frozen runners are terminal at this checkpoint.

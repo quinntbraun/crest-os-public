@@ -2,7 +2,10 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {randomBytes,randomUUID} from 'node:crypto';
-import {readFile} from 'node:fs/promises';
+import {readFile,writeFile} from 'node:fs/promises';
+import {join} from 'node:path';
+import {captureInstanceSources140,formatInstanceSourceExport140} from '../../src/tooling/operator-source-export.ts';
+import {runOperatorSourceCommand} from '../../src/tooling/operator-source-command.ts';
 import pg from 'pg';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
@@ -18,11 +21,11 @@ import {parseSourceExportDownloadCatalogue} from '../../src/security/source-expo
 const document=reference=>({reference,sha256:'a'.repeat(64)});
 async function command(client,name,args){return(await client.query('SELECT crest_commands.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') AS result',args.map(value=>Array.isArray(value)?JSON.stringify(value):value))).rows[0].result;}
 async function transaction(client,run){await client.query('BEGIN');try{const result=await run();await client.query('COMMIT');return result;}catch(error){await client.query('ROLLBACK');throw error;}}
-test('proposed140 keeps deposit exports tenant-scoped, snapshot-consistent and reversible',{timeout:180000},async()=>{
- const sandbox=await migrationSandbox();let login,reader,custody;
+test('registered140 keeps deposit exports tenant-scoped, snapshot-consistent and reversible',{timeout:180000},async()=>{
+ const sandbox=await migrationSandbox();let login,reader,custody,backupLogin;
  try{
-  const target=await sandbox.database(),admin=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(admin,target);assert.equal((await sandbox.apply(target)).history.length,139);
-  const candidate=await workspaceExport140Candidate(sandbox);assert.equal((await sandbox.apply(target,candidate.directory)).history.length,140);
+  const target=await sandbox.database(),admin=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(admin,target);assert.equal((await sandbox.apply(target,await sandbox.prefix(139))).history.length,139);
+  const candidate=await workspaceExport140Candidate(sandbox);assert.equal((await sandbox.apply(target,candidate.directory)).history.length,140);assert.equal((await sandbox.apply(target)).history.length,140);
   const web=await sandbox.connect(target);await web.query('SET ROLE crest_web');const bootstrap=(await admin.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   const seed=createConfirmedBookingFixture({client:admin,web,bootstrap}),owner=await seed(),other=await seed();
   const finance=await sandbox.connect(target);await finance.query('SET ROLE crest_finance_preview');
@@ -75,7 +78,14 @@ test('proposed140 keeps deposit exports tenant-scoped, snapshot-consistent and r
   const page=await command(web,'read_source_export_download_page',[...owner.auth(),jobId,delivered.generationId,0]);
   const download=parseSourceExportDownloadCatalogue(page,owner.business,{exportJobId:jobId,generationId:delivered.generationId,afterOrdinal:0});
   assert.equal(download.sourceSchemaVersion,140);assert(custody.requests.some(item=>item.method==='PUT'));assert(custody.requests.some(item=>item.method==='GET'));
+  backupLogin='crest_workspace140_backup_'+randomBytes(8).toString('hex');const backupPassword=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+backupLogin+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+backupPassword+"'");await sandbox.admin.query('GRANT crest_backup_reader TO '+backupLogin+' WITH INHERIT FALSE, SET TRUE');
+  const backupUrl=new URL(target);backupUrl.username=backupLogin;backupUrl.password=backupPassword;
+  const backup=new pg.Client({connectionString:backupUrl.toString(),options:'-c role=crest_backup_reader'});await backup.connect();
+  const instance=await captureInstanceSources140({client:backup,leaseBusinessId:owner.business,migrations:candidate.registry.migrations.map(row=>({version:row.version,name:row.file.slice(15,-4)}))},new AbortController().signal),files=formatInstanceSourceExport140(instance);
+  const instanceManifest=JSON.parse(Buffer.from(files['instance_manifest.json']).toString());assert.equal(instanceManifest.profile,'crest.private-instance-csv140.v1');assert.equal(instanceManifest.sourceCount,192);assert.equal(instanceManifest.canonicalDefinition.migrationRegistrySha256,candidate.registrySha256);assert.equal(Object.keys(files).length,196);
+  const requestPath=join(sandbox.workspace,'registered140-operator-request.json');await writeFile(requestPath,JSON.stringify({schemaVersion:2,sourceSet:'instance_sources',leaseBusinessId:owner.business,databaseUrl:backupUrl.toString(),rootCertificateFile:null,outputParent:sandbox.workspace}),{flag:'wx',mode:0o600});
+  const delivery=await runOperatorSourceCommand([requestPath],new AbortController().signal);assert.equal(delivery.profile,'crest.private-instance140-export-delivery.v1');assert.equal(delivery.sourceSchemaVersion,140);assert.equal(delivery.fileCount,196);assert.equal(delivery.catalogRegistered,true);assert.equal(delivery.completeBackup,false);
   assert.deepEqual(await financialCounts(),before);
-  assert.equal(JSON.parse(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url),'utf8')).migrations.length,139);
- }finally{await custody?.close();if(reader)await reader.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox.close();}
+  assert.equal(JSON.parse(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url),'utf8')).migrations.length,140);
+ }finally{await custody?.close();if(reader)await reader.end();if(login)await sandbox.admin.query('DROP ROLE '+login);if(backupLogin)await sandbox.admin.query('DROP ROLE '+backupLogin);await sandbox.close();}
 });

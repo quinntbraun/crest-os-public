@@ -695,6 +695,11 @@
       "version": "20270205183000",
       "file": "20270205183000_fictional_opening_funds_sources.sql",
       "sha256": "dc1f24a26ff12e0b599f779faf5d9c733c9f297b327fff40ca8031c9acfe9136"
+    },
+    {
+      "version": "20270206183000",
+      "file": "20270206183000_opening_funds_workspace_export.sql",
+      "sha256": "365b1bc6fec419a131f757da79a44211ec42d92fed472a716ff299f96e583b75"
     }
   ]
 }

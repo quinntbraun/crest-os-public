@@ -9,7 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {connect,inventory,keyPair,normalizedSchema,postgresTool,privateWorkspace,recoveryCluster,roleDefinitions,run} from './recovery-drill.mjs';
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 export async function exerciseOpeningFundsCandidateRestore(source,url,inspect,{schemaVersion=138}={}){
- assert([138,139].includes(schemaVersion));
+ assert([138,139,140].includes(schemaVersion));
  const root=fileURLToPath(new URL('../../',import.meta.url));
  const workspace=await privateWorkspace();let cluster,restored;const age=join(root,'.local/tools/recovery/age/age'+(process.platform==='win32'?'.exe':''));
  try{

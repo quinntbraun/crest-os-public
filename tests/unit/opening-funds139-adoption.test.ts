@@ -11,14 +11,14 @@ const hash=(value:Uint8Array)=>createHash('sha256').update(value).digest('hex');
 const adoption=json('planning/OPENING_FUNDS_SCHEMA139_ADOPTION.json');
 it('preserves exact138 registry, coverage and compatibility while adding one reviewed migration',()=>{
  for(const prior of [adoption.previousRegistry,adoption.previousCoverage,adoption.previousCompatibility])expect(hash(bytes(prior.file))).toBe(prior.sha256);
- const old=json(adoption.previousRegistry.file),current=json('supabase/migration-checksums.json');
+ const old=json(adoption.previousRegistry.file),current=json('tests/support/registered139-migration-checksums.json');
  expect(current.migrations.slice(0,-1)).toEqual(old.migrations);expect(current.migrations).toHaveLength(139);
  expect(current.migrations.at(-1)).toEqual({version:adoption.migration.version,file:adoption.migration.file.split('/').at(-1),sha256:adoption.migration.sha256});
- expect(hash(bytes(adoption.migration.file))).toBe(adoption.migration.sha256);expect(hash(bytes('supabase/migration-checksums.json'))).toBe(adoption.migration.registrySha256);
- expect(json('release/compatibility.json')).toEqual({...json(adoption.previousCompatibility.file),schemaMaximum:139});
+ expect(hash(bytes(adoption.migration.file))).toBe(adoption.migration.sha256);expect(hash(bytes('tests/support/registered139-migration-checksums.json'))).toBe(adoption.migration.registrySha256);
+ expect(json('tests/support/registered139-compatibility.json')).toEqual({...json(adoption.previousCompatibility.file),schemaMaximum:139});
 });
 it('covers all192 noncredential sources once while retaining the old coverage unchanged',()=>{
- const previous=json(adoption.previousCoverage.file),current=json('planning/SECURITY_EXPORT_COVERAGE.json');
+ const previous=json(adoption.previousCoverage.file),current=json('tests/support/registered139-security-export-coverage.json');
  expect(current).toEqual({...previous,migrationCount:139,tables:[...previous.tables,...openingFundsSourceCoverage]});
  expect(openingFunds139SourceInventory).toHaveLength(192);expect(new Set(openingFunds139SourceInventory.map(row=>row.source)).size).toBe(192);
  expect(openingFunds139SourceInventory.map(row=>row.source)).toEqual(current.tables.map((row:{table:string})=>row.table).sort());

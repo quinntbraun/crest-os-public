@@ -5,16 +5,17 @@ import assert from 'node:assert/strict';
 import {mkdtemp,readFile,readdir,lstat,rm,chmod} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,dirname,basename} from 'node:path';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,createHash} from 'node:crypto';
 import pg from 'pg';
 import {createRecoveryCaptureController} from '../../src/tooling/recovery-capture-controller.ts';
 import {createRecoveryMonitorAttempt} from '../../src/tooling/recovery-monitor.ts';
 assert.equal(process.platform,'linux','Actual Linux durability is required');assert.equal(process.env.CREST_ENV,'test');
+const registryBytes=await readFile(new URL('../support/registered138-migration-checksums.json',import.meta.url)),registry=JSON.parse(registryBytes),migrations=registry.migrations.map(row=>({version:row.version,name:row.file.slice(15,-4)})),registrySha256=createHash('sha256').update(registryBytes).digest('hex');
 const directories=[];
 after(async()=>{for(const directory of directories){assert.equal(dirname(directory),tmpdir());assert(basename(directory).startsWith('crest-capture-controller-'));await rm(directory,{recursive:true,force:true});}});
 async function fixture(options={}){
  const directory=options.directory??await mkdtemp(join(tmpdir(),'crest-capture-controller-'));if(!options.directory)directories.push(directory);
- const pointId=options.pointId??randomUUID(),startedAt=new Date(Date.now()-1000).toISOString(),header={formatVersion:1,pointId,businessId:randomUUID(),startedAt,appReleaseId:'a'.repeat(40),migrationRegistrySha256:'b'.repeat(64),sourceSchemaVersion:138},artifactId=randomUUID();
+ const pointId=options.pointId??randomUUID(),startedAt=new Date(Date.now()-1000).toISOString(),header={formatVersion:1,pointId,businessId:randomUUID(),startedAt,appReleaseId:'a'.repeat(40),migrationRegistrySha256:registrySha256,sourceSchemaVersion:138},artifactId=randomUUID();
  const manifest={key:`recovery/${pointId}/artifacts/${artifactId}.age`,versionId:'fixture-version',byteSize:100,sha256:'c'.repeat(64),retainUntil:'2028-01-01T00:00:00.000Z'},artifacts=[],requests=[];let captureCount=0,closeCount=0;
  const monitor=createRecoveryMonitorAttempt('https://hc-ping.com/'+randomUUID(),{runId:pointId,startedAt},async(url,request)=>{
   requests.push({url:String(url),body:JSON.parse(request.body),aborted:request.signal.aborted});
@@ -22,7 +23,7 @@ async function fixture(options={}){
   return new Response('OK',{status:200});
  });
  const client=new pg.Client();client.end=async()=>{closeCount++;if(options.closeFailure)throw Error('PRIVATE_CONNECTION_DETAIL');};
- const attempt={view:()=>({header,artifacts,reviewRequired:false,completeBackup:false})},request={client,businessId:header.businessId,expectedAppReleaseId:header.appReleaseId,migrationRegistrySha256:header.migrationRegistrySha256,database:{connectionString:'PRIVATE_DATABASE_CREDENTIAL'}};
+ const attempt={view:()=>({header,artifacts,reviewRequired:false,completeBackup:false})},request={client,migrations,businessId:header.businessId,expectedAppReleaseId:header.appReleaseId,migrationRegistrySha256:header.migrationRegistrySha256,database:{connectionString:'PRIVATE_DATABASE_CREDENTIAL'}};
  const evidence={profile:'crest.verified-recovery-run-candidate.v1',pointId,snapshotId:'00000001-00000002-1',manifest,manifestPlaintext:{byteSize:100,sha256:'d'.repeat(64)},completeBackup:false};
  const capture=async()=>{captureCount++;options.onCapture?.();if(options.captureFailure)throw Error('PRIVATE_CAPTURE_SOURCE_PATH');artifacts.push({state:'verified',reservation:{artifactId,purpose:options.wrongPurpose?'original':'manifest'},artifact:manifest});return Object.freeze({forRecoveryTools:()=>evidence,toJSON(){throw Error('PRIVATE_RESULT');}});};
  return{directory,pointId,request,monitor,requests,input:{request,ports:{attempt},recordDirectory:directory,monitor},capture,counts:()=>({captureCount,closeCount}),record:name=>readFile(join(directory,'run-'+pointId,name),'utf8'),run:signal=>createRecoveryCaptureController(capture)({request,ports:{attempt},recordDirectory:directory,monitor},signal??new AbortController().signal)};
