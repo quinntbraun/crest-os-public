@@ -27,11 +27,11 @@ export function consumeSourceExportExecutionAdmission(input:unknown,signal:Abort
 // and task-manager activation still require explicit trusted composition.
 // Only a resolved COMMIT from the fresh database branch can mint scheduling
 // permission. Original lookup/JSON/replayed responses cannot recreate it.
-export function createSourceExportExecutionAccess(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>,businessId:string,appReleaseId:string,currentProfile=false){
- if(!uuid(businessId)||typeof appReleaseId!=='string'||!/^[a-f0-9]{40}$/.test(appReleaseId)||typeof currentProfile!=='boolean')throw new SourceExportExecutionAccessError('SOURCE_EXPORT_EXECUTION_INPUT_REQUIRED');
+export function createSourceExportExecutionAccess(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>,businessId:string,appReleaseId:string,currentProfile=false,currentSourceSchemaVersion:138|140=138){
+ if(!uuid(businessId)||typeof appReleaseId!=='string'||!/^[a-f0-9]{40}$/.test(appReleaseId)||(typeof currentProfile!=='boolean'||(currentSourceSchemaVersion!==138&&currentSourceSchemaVersion!==140)||(!currentProfile&&currentSourceSchemaVersion!==138)))throw new SourceExportExecutionAccessError('SOURCE_EXPORT_EXECUTION_INPUT_REQUIRED');
  const scope=businessId,release=appReleaseId,database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
  function request(input:unknown):RequestCommand{
-  try{const command=parseSourceExportCommand(input);if(command.commandType!=='export.request'||command.businessId!==scope||command.reference.appReleaseId!==release||command.reference.profile!==(currentProfile?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1')||command.reference.sourceSchemaVersion!==(currentProfile?138:43))throw Error();return command;}
+  try{const command=parseSourceExportCommand(input);if(command.commandType!=='export.request'||command.businessId!==scope||command.reference.appReleaseId!==release||command.reference.profile!==(currentProfile?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1')||command.reference.sourceSchemaVersion!==(currentProfile?currentSourceSchemaVersion:43))throw Error();return command;}
   catch{throw new SourceExportExecutionAccessError('SOURCE_EXPORT_EXECUTION_INPUT_REQUIRED');}
  }
  return Object.freeze({
@@ -41,7 +41,7 @@ export function createSourceExportExecutionAccess(config:SessionDatabaseConfigur
     if(signal.aborted)throw Error();hash=sessionCredentialHash(credential);const verified=await sessions.verify(credential,signal,'background',true);if(signal.aborted)throw Error();
     const admission=await database.commandTransaction(async(query,current)=>{
      if(current.aborted)throw Error();submitted=true;
-     const value=await query('SELECT crest_commands.'+(currentProfile?'request_current_source_export_v5_for_execution':'request_source_export_for_execution')+'($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid,$12::text) AS result',[hash,verified.sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,verified.provider.sessionId,new Date(verified.provider.expiresAt),scope,reference.recoveryEpoch,reference.operationId,reference.exportJobId,release]);
+     const value=await query('SELECT crest_commands.'+(currentProfile?(currentSourceSchemaVersion===140?'request_current_source_export_v6_for_execution':'request_current_source_export_v5_for_execution'):'request_source_export_for_execution')+'($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::uuid,$12::text) AS result',[hash,verified.sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,verified.provider.sessionId,new Date(verified.provider.expiresAt),scope,reference.recoveryEpoch,reference.operationId,reference.exportJobId,release]);
      if(current.aborted)throw Error();return parseSourceExportAdmission(value,command,verified.actorId);
     },signal);
     if(signal.aborted)throw Error();

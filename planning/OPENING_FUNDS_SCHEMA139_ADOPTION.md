@@ -60,3 +60,9 @@ Browser fixture metadata must remain loadable under normal native Node condition
 the unchanged source columns now live in a data-only module rather than importing
 server-only export implementation. A native import regression and affected33 cases
 pass. New exact-source hosted acceptance remains required after publication.
+
+Public104 recovery archive failure: the fixture used schema138 beside the current139
+build registry. The distribution guard correctly refused the mismatch. The current
+archive point/release now use the compiled build source version, and offline
+configuration uses that same point header. No recovery validator was relaxed.
+

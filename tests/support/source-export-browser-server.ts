@@ -29,3 +29,5 @@ export {createSupplierOriginalDispatcher} from '../../src/bookkeeping/expenses/s
 
 export {createReceiptDirectory} from '../../src/bookkeeping/expenses/receipt-directory.ts';
 export {createReceiptWorkflow} from '../../src/bookkeeping/expenses/receipt-workflow.ts';
+
+export {createSourceExportExecutionAccess,consumeSourceExportExecutionAdmission} from '../../src/security/source-export-execution-access.ts';

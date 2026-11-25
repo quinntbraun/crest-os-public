@@ -1,6 +1,6 @@
 import 'server-only';
 import {isDeepStrictEqual} from 'node:util';
-import {currentBusinessSourceInventory} from './current-business-source-inventory.ts';
+import {currentBusinessInventoryForProfile,currentBusinessBindingMatches} from './current-business-source-inventory.ts';
 import type {CurrentBusinessRows,CurrentBusinessSourceBinding} from './current-business-source.ts';
 import {currentIdentityInventory,verifyCurrentIdentitySource} from './current-business-identity-source.ts';
 import type {CurrentBusinessIdentitySource} from './current-business-identity-source.ts';
@@ -20,11 +20,12 @@ function literal(value:string|null){
 // A separate, neutral text schema. Never executes SQL, recreates application
 // authority, changes posted history or claims complete recovery.
 export function formatCurrentBusinessReimport(capture:CurrentBusinessRows,binding:CurrentBusinessSourceBinding,inputIdentity?:CurrentBusinessIdentitySource,inputSessions?:CurrentBusinessSessionSource,inputProvider?:CurrentBusinessProviderSource){
- require(capture.schemaVersion===1&&capture.profile==='crest.current-business-rows.v1'&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===currentBusinessSourceInventory.length);
- require(/^[a-f0-9]{40}$/.test(binding.appReleaseId)&&[133,134,135,136,137,138].includes(binding.sourceSchemaVersion));
+ const inventory=currentBusinessInventoryForProfile(capture.profile);require(inventory);
+ require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2')&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===inventory.length);
+ require(/^[a-f0-9]{40}$/.test(binding.appReleaseId)&&currentBusinessBindingMatches(capture.profile,binding.sourceSchemaVersion));
  const identity=inputIdentity?verifyCurrentIdentitySource(inputIdentity,capture):undefined;require((!inputSessions&&!inputProvider)||identity);
  const sessions=inputSessions?verifyCurrentSessionSource(inputSessions,identity!,capture):undefined,provider=inputProvider?verifyCurrentProviderSource(inputProvider,identity!,capture):undefined,sources=[...capture.sources,...identity?.sources??[],...sessions?[sessions.source]:[],...provider?.sources??[]];
- const expectedSources=[...currentBusinessSourceInventory,...identity?currentIdentityInventory:[],...sessions?[currentSessionSource]:[],...provider?currentProviderSourceInventory:[]];
+ const expectedSources=[...inventory,...identity?currentIdentityInventory:[],...sessions?[currentSessionSource]:[],...provider?currentProviderSourceInventory:[]];
  const lines:string[]=[];let bytes=0,count=0;
  function add(value:string){bytes+=Buffer.byteLength(value)+1;require(bytes<=limit);lines.push(value);}
  add('-- Crest business source: neutral PostgreSQL reimport, exact text values.');

@@ -24,8 +24,8 @@ function privateResult<T>(value:T){return Object.freeze({forServer:()=>value,toJ
 
 // Trusted server boundary, fixed business only. No route, automatic dispatch,
 // retry, current lease or download authority follows from historical receipts.
-export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>,businessId:string,appReleaseId?:string,currentProfile=false){
- require(uuid(businessId)&&typeof currentProfile==='boolean'&&(appReleaseId===undefined||typeof appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(appReleaseId)));const scope=businessId,release=appReleaseId,database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
+export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>,businessId:string,appReleaseId?:string,currentProfile=false,currentSourceSchemaVersion:138|140=138){
+ require(uuid(businessId)&&typeof currentProfile==='boolean'&&(currentSourceSchemaVersion===138||currentSourceSchemaVersion===140)&&(currentProfile||currentSourceSchemaVersion===138)&&(appReleaseId===undefined||typeof appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(appReleaseId)));const scope=businessId,release=appReleaseId,database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
  function requestCommand(input:unknown):Extract<SourceExportCommand,{commandType:'export.request'}>{
   try{const command=parseSourceExportCommand(input);require(command.businessId===scope&&command.commandType==='export.request');return command;}
   catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_ACCESS_INPUT_REQUIRED');}
@@ -101,7 +101,7 @@ export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguratio
     require(release!==undefined);return privateResult(await authorized(credential,external,async(args,actor,signal)=>{
      const value=await database('SELECT crest_commands.read_business_settings_context($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid) AS result',args,signal);
      require(!signal.aborted&&exact(value,['schemaVersion','businessId','legalName','businessVersion','writeState','recoveryEpoch'])&&value.schemaVersion===1&&value.businessId===scope);
-     return parseSourceExportOwnerContext({schemaVersion:1,businessId:scope,actorId:actor,appReleaseId:release,profile:currentProfile?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1',sourceSchemaVersion:currentProfile?138:43,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
+     return parseSourceExportOwnerContext({schemaVersion:1,businessId:scope,actorId:actor,appReleaseId:release,profile:currentProfile?'crest.current-business-source-bundle.v1':'crest.business-source-journal-bundle.v1',sourceSchemaVersion:currentProfile?currentSourceSchemaVersion:43,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
     }));
    }catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_READ_FAILED');}
   },

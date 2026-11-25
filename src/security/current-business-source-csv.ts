@@ -1,7 +1,7 @@
 import 'server-only';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
-import {currentBusinessSourceInventory} from './current-business-source-inventory.ts';
+import {currentBusinessInventoryForProfile} from './current-business-source-inventory.ts';
 import type {CurrentBusinessRows} from './current-business-source.ts';
 
 type Escape=Readonly<{row:number;column:string}>;
@@ -39,10 +39,11 @@ export function readCurrentBusinessCsv(csv:string,columns:readonly string[],esca
 }
 
 export function formatCurrentBusinessCsv(capture:CurrentBusinessRows){
- require(capture.schemaVersion===1&&capture.profile==='crest.current-business-rows.v1'&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===currentBusinessSourceInventory.length);
+ const inventory=currentBusinessInventoryForProfile(capture.profile);require(inventory);
+ require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2')&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===inventory.length);
  const files:Record<string,Uint8Array>={},dictionary:Record<string,unknown>={},escapeMap:Record<string,readonly Escape[]>={};let total=0,recordCount=0;
  for(const [index,source]of capture.sources.entries()){
-  const expected=currentBusinessSourceInventory[index]!;require(source.source===expected.source&&isDeepStrictEqual(source.columns,expected.columns));
+  const expected=inventory[index]!;require(source.source===expected.source&&isDeepStrictEqual(source.columns,expected.columns));
   const name=source.source.replace('.','_')+'.csv',escapes:Escape[]=[],lines=[source.columns.map(quote).join(',')];
   for(const [rowIndex,row]of source.rows.entries())lines.push(source.columns.map(column=>{
    const original=row[column];require(original===null||typeof original==='string');if(original===null)return quote('\\N');

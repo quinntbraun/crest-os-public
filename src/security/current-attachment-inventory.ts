@@ -3,7 +3,7 @@ import {isDeepStrictEqual} from 'node:util';
 import {parseReceiptRecord,parseReceiptReservation,parseReceiptCandidate} from '../bookkeeping/expenses/receipt-contract.ts';
 import {photoStatus} from '../operations/dropoff-photo-workflow.ts';
 import {customerUuid as uuid} from '../customer/customer-contract.ts';
-import {currentBusinessSourceInventory} from './current-business-source-inventory.ts';
+import {currentBusinessInventoryForProfile} from './current-business-source-inventory.ts';
 import type {CurrentBusinessRows} from './current-business-source.ts';
 
 type Kind='expense_receipt'|'supplier_document'|'condition_photo';
@@ -28,10 +28,11 @@ function metadata(id:string,objectId:string,type:string,byteSize:number,sha256:s
 // Inventory and source consistency only. This neither authorizes an object read
 // nor proves that a file exists, has been downloaded, or is in a backup vault.
 export function currentAttachmentInventory(capture:CurrentBusinessRows){
- require(capture.schemaVersion===1&&capture.profile==='crest.current-business-rows.v1'&&uuid(capture.businessId)&&/^[a-f0-9]{64}$/.test(capture.snapshotToken)&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===currentBusinessSourceInventory.length);
+ const selected=currentBusinessInventoryForProfile(capture.profile);require(selected);const inventory=selected;
+ require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2')&&uuid(capture.businessId)&&/^[a-f0-9]{64}$/.test(capture.snapshotToken)&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===inventory.length);
  const sources=unique(capture.sources,value=>value.source);require(capture.recordCount===capture.sources.reduce((sum,source)=>sum+source.rows.length,0)&&capture.recordCount<=100000);
  function rows(name:string){
-  const source=sources.get(name),expected=currentBusinessSourceInventory.find(value=>value.source===name);require(source&&expected&&isDeepStrictEqual(source.columns,expected.columns));
+  const source=sources.get(name),expected=inventory.find(value=>value.source===name);require(source&&expected&&isDeepStrictEqual(source.columns,expected.columns));
   for(const row of source.rows)require(exact(row,source.columns)&&source.columns.every(key=>row[key]===null||typeof row[key]==='string')&&row.business_id===capture.businessId);
   return source.rows;
  }

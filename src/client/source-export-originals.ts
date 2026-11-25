@@ -14,7 +14,7 @@ export async function originalExportHash(bytes:Uint8Array){const owned=new Uint8
 // consistency checks grant neither server authority nor proof of saved files.
 export async function parseOriginalExportInventory(bytes:Uint8Array<ArrayBuffer>,header:SourceExportDownloadInventory['header'],expectedSha256:string,signal:AbortSignal):Promise<OriginalExportInventory>{
  signal.throwIfAborted();require(bytes.byteLength>=1&&bytes.byteLength<=33554432&&/^[a-f0-9]{64}$/.test(expectedSha256));
- const h=parseSourceExportDownloadHeader(header,header.businessId,header.exportJobId,header.generationId);require(h.profile==='crest.current-business-source-bundle.v1'&&(h.sourceSchemaVersion===136||h.sourceSchemaVersion===137||h.sourceSchemaVersion===138));
+ const h=parseSourceExportDownloadHeader(header,header.businessId,header.exportJobId,header.generationId);require(h.profile==='crest.current-business-source-bundle.v1'&&(h.sourceSchemaVersion===136||h.sourceSchemaVersion===137||h.sourceSchemaVersion===138||h.sourceSchemaVersion===140));
  const text=new TextDecoder('utf-8',{fatal:true}).decode(bytes),raw:unknown=JSON.parse(text);require(JSON.stringify(raw)+'\n'===text&&await originalExportHash(bytes)===expectedSha256);signal.throwIfAborted();
  const v=downloadObject(raw,['schemaVersion','profile','businessId','snapshotToken','observedAt','attachments','availableCount','pendingCount','originalBytesIncluded','originalFilenamesRetained','completePortableExport','completeBackup']);
  require(v.schemaVersion===1&&v.profile==='crest.current-attachment-inventory.v1'&&v.businessId===h.businessId&&typeof v.snapshotToken==='string'&&/^[a-f0-9]{64}$/.test(v.snapshotToken)&&instant(v.observedAt)&&v.originalBytesIncluded===false&&v.originalFilenamesRetained===false&&v.completePortableExport===false&&v.completeBackup===false&&Array.isArray(v.attachments)&&v.attachments.length<=100000);
@@ -35,7 +35,7 @@ export async function parseOriginalExportInventory(bytes:Uint8Array<ArrayBuffer>
 }
 // The caller owns the returned mutable buffer and must wipe it after use.
 export async function downloadExportOriginal(inventory:OriginalExportInventory,file:OriginalExportFile,proof:Proof,external:AbortSignal){
- const h=inventory.header;require(inventory.files.includes(file)&&(h.sourceSchemaVersion===136||h.sourceSchemaVersion===137||h.sourceSchemaVersion===138)&&/^[A-Za-z0-9_-]{43}$/.test(proof.csrfToken)&&Number.isSafeInteger(proof.expiresAt)&&proof.expiresAt>Date.now()&&Date.parse(h.expiresAt)>Date.now());
+ const h=inventory.header;require(inventory.files.includes(file)&&(h.sourceSchemaVersion===136||h.sourceSchemaVersion===137||h.sourceSchemaVersion===138||h.sourceSchemaVersion===140)&&/^[A-Za-z0-9_-]{43}$/.test(proof.csrfToken)&&Number.isSafeInteger(proof.expiresAt)&&proof.expiresAt>Date.now()&&Date.parse(h.expiresAt)>Date.now());
  const signal=AbortSignal.any([external,AbortSignal.timeout(Math.max(1,Math.min(95000,proof.expiresAt-Date.now(),Date.parse(h.expiresAt)-Date.now())))]);signal.throwIfAborted();
  const response=await fetch(exportOriginalFilePath,{method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',headers:{'content-type':'application/json','x-crest-csrf':proof.csrfToken},body:JSON.stringify({exportJobId:h.exportJobId,generationId:h.generationId,kind:file.kind,attachmentId:file.attachmentId}),signal});
  let owned:Awaited<ReturnType<typeof readPrivateOriginalFile>>|undefined;

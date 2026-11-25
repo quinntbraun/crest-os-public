@@ -1,7 +1,7 @@
 import 'server-only';
 import {zipSync,strToU8} from 'fflate';
 import type {CurrentBusinessRows,CurrentBusinessSourceBinding} from './current-business-source.ts';
-import {currentBusinessSourceInventory} from './current-business-source-inventory.ts';
+import {currentBusinessInventoryForProfile,currentBusinessBindingMatches} from './current-business-source-inventory.ts';
 import {isDeepStrictEqual} from 'node:util';
 
 type Sheet=Readonly<{name:string;rows:readonly (readonly (string|null)[])[]}>;
@@ -19,11 +19,12 @@ export function workbookColumn(index:number){
  require(Number.isSafeInteger(index)&&index>=0&&index<16384);let value=index+1,result='';while(value){value--;result=String.fromCharCode(65+value%26)+result;value=Math.floor(value/26);}return result;
 }
 export function formatCurrentBusinessWorkbook(capture:CurrentBusinessRows,binding:CurrentBusinessSourceBinding){
- require(binding&&typeof binding.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(binding.appReleaseId)&&[133,134,135,136,137,138].includes(binding.sourceSchemaVersion));
- require(capture.schemaVersion===1&&capture.profile==='crest.current-business-rows.v1'&&capture.sources.length===currentBusinessSourceInventory.length);
+ const inventory=currentBusinessInventoryForProfile(capture.profile);require(inventory);
+ require(binding&&typeof binding.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(binding.appReleaseId)&&currentBusinessBindingMatches(capture.profile,binding.sourceSchemaVersion));
+ require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2')&&capture.sources.length===inventory.length);
  const sidecars:Sidecar[]=[],schemaRows:string[][]=[['Source','Column','PostgreSQL type','Primary key','CSV file']],coverageRows:string[][]=[['Source','Data rows','Workbook sheet','Coverage']];
  const dataSheets:Sheet[]=capture.sources.map((source,index)=>{
-  const expected=currentBusinessSourceInventory[index]!;require(source.source===expected.source&&isDeepStrictEqual(source.columns,expected.columns));
+  const expected=inventory[index]!;require(source.source===expected.source&&isDeepStrictEqual(source.columns,expected.columns));
   const name=(String(index+1).padStart(3,'0')+' '+source.source.split('.')[1]!.replaceAll('_',' ')).slice(0,31),csv=source.source.replace('.','_')+'.csv';
   coverageRows.push([source.source,String(source.rows.length),name,'Business-scoped required columns']);
   for(const column of source.columns)schemaRows.push([source.source,column,source.types[column]!,source.primaryKey.includes(column)?'Yes':'',csv]);

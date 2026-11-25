@@ -30,7 +30,7 @@ export function createSourceExportHttp(config:Configuration,provider:Parameters<
  if(!uuid(config.businessId)||typeof config.appReleaseId!=='string'||!/^[a-f0-9]{40}$/.test(config.appReleaseId)||typeof enabled!=='boolean')throw new Error('SOURCE_EXPORT_HTTP_CONFIGURATION_REQUIRED');
  if(runtime!==undefined&&(config.environment!=='production'||!enabled||!productionCapability(config,'businessExports')||!sourceExportRuntimeBelongsTo(runtime,config.businessId,config.appReleaseId)))throw Error('SOURCE_EXPORT_HTTP_CONFIGURATION_REQUIRED');
  const businessId=config.businessId,appReleaseId=config.appReleaseId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
- const access=enabled?createSourceExportOwnerAccess(config,provider,tokens,businessId,appReleaseId,runtime!==undefined):undefined;
+ const access=enabled?createSourceExportOwnerAccess(config,provider,tokens,businessId,appReleaseId,runtime!==undefined,runtime?.sourceSchemaVersion??138):undefined;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{
   let mutation:'request'|'resolution'|'stop'|undefined,workStarted=false;
   try{

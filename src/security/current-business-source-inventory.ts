@@ -1,3 +1,4 @@
+import {openingFundsSourceCoverage} from '../bookkeeping/opening-funds-source-columns.ts';
 // Fixed schema133 business-row projection. Credential exclusions are explicit
 // in the reviewed coverage manifest and matching SQL dictionary.
 export const currentBusinessSourceInventory=Object.freeze([
@@ -169,3 +170,14 @@ export const currentBusinessSourceInventory=Object.freeze([
  Object.freeze({source:"crest_private.google_calendar_account_bindings",columns:Object.freeze(["business_id","destination_id","client_id","provider_issuer","credential_id","source_attempt","recovery_epoch","actor_id","bound_at"])}),
  Object.freeze({source:"crest_private.google_calendar_reconnection_stagings",columns:Object.freeze(["business_id","attempt_id","destination_id","credential_id","generation","recovery_epoch","actor_id","app_session_id","provider_issuer","staged_at"])})
 ]);
+
+//140 uses the separately versioned scoped reader; the original projection stays fixed.
+export const currentBusinessSourceInventory140:readonly Readonly<{source:string;columns:readonly string[]}>[]=Object.freeze([...currentBusinessSourceInventory,...openingFundsSourceCoverage.map(row=>Object.freeze({source:row.table,columns:row.required}))]);
+export function currentBusinessInventoryForProfile(profile:unknown){
+ if(profile==='crest.current-business-rows.v1')return currentBusinessSourceInventory;
+ if(profile==='crest.current-business-rows.v2')return currentBusinessSourceInventory140;
+ return undefined;
+}
+export function currentBusinessBindingMatches(profile:unknown,version:unknown){
+ return profile==='crest.current-business-rows.v1'&&[133,134,135,136,137,138].includes(version as number)||profile==='crest.current-business-rows.v2'&&version===140;
+}

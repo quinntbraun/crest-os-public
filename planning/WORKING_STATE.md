@@ -2,6 +2,41 @@
 
 ## Current launch checkpoint, 2026-11-25
 
+Public104a PR178 at7dcb30e34b9b1fb8e91550ce5802a5e91206e2ac remains draft,
+unmerged/uninstalled. All three exact-head runs terminal: main45619295043 FAILED,
+commercial45619295049 and expense45619295232 SUCCESS. Main failures were database
+recovery archive schema138/header against139 manifest, plus workspace-records'
+historical138 original-browser collector using root139 registry. Foundation then
+failed prerequisite/artifact aggregation. Both fixture identities are corrected;
+no safety checks or required cases were removed. Local archive12/12 PASS on1b593a2;
+historical138 and proposed140 genuine-MFA Chrome original delivery2/2 PASS on
+e82c5e7b38b41d77e2fbe3ea3b9cf21cea3da04e. Next/server builds passed on that source.
+
+Direct140 deposit CSV download retains9007199254740993 and original evidence, with
+actual owner sign-in, session-fenced encrypted worker, all3 original kinds/ZIP compare,
+privacy/revocation and390/1440 layout/Axe checks:1/1 PASS on1af561bd46d17c4b1c2b62a1141b15eac95b9019.
+Proofs: .local/workspace-export140-product-auth/result.json and
+.local/workspace-export140-csv-auth/result.json. No WebKit/physical iPhone/cloud
+acceptance. Source stable and owned cleanup awaited; original138 case retained.
+
+Proposed140 captures170 business sources including deposits plus actor/session/
+provider in one fenced RR snapshot. Scoped native140 capture/reimport passes on
+55d9256; encrypted worker/durable Ready/parsed owner catalogue passes on c08dc8e.
+Exact140 migration/routine/schema observations are in WORKSPACE_EXPORT140.md.
+Explicit140 admission/worker/logical/original/browser-save and production/owner
+HTTP bindings implemented. Finance vocabulary remains109 for reviewed140 export
+SQL;141 stays unsupported. Root registry/compatibility139 unchanged: proposed140
+still needs source adoption/recovery integration and exact-source hosted acceptance.
+
+Prepare a fresh strictly scanned draft publication including both hosted fixes and
+proposed140 delivery; do not merge/install. Essential remaining:140 adoption/
+recovery release, full opening controls/approval/posting, provider/security/keys/
+offhost and owner facts/device/installation. No new business rule or financial
+activation. No live source-frozen runner. Actual use NOT READY; roughly80% coding,
+low confidence; context sufficient;$0 spent. See WORKSPACE_EXPORT140.md.
+
+## Earlier checkpoint, 2026-11-25
+
 Registered139 adoption native PASS2/2 on6cffbfc9229b4d9bd62b4c4864b0df985f3650c9,
 .local/schema139-adoption-bound/result.json, stable source/owned cleanup. Actual
 root139 and frozen138 registry identities both preserved; real registered139
