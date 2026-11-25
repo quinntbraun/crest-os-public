@@ -2,6 +2,329 @@
 
 ## Latest launch checkpoint, 2026-11-25
 
+Root source142 is now registered, preserving the exact five-part dd77400a...
+package and3d215728... registry. The full141 registry/coverage/compatibility bytes
+are frozen in tests/support/registered141-*; old migration SQL is unchanged.
+Registered142 has a distinct198-source/202-file operator brand/CLI and compiled
+production export selection requires its exact registry/full migration identity.
+Opening-document runtime remains test-only; no financial or owner activation.
+See OPENING_DOCUMENT142_ADOPTION.md/JSON.
+
+Registered141→142 upgrade, actual registered CLI and branded capture, owner worker/
+original delivery and encrypted restore pass on369b75b, together with frozen141
+archive/CLI and scoped owner regression3/3
+(`.local/opening142-registered-acceptance`), source stable/owned cleanup. Full
+unit suite10101/495 files passes, with types/affected lint and migration/canonical
+verification. The first ordinary Windows unit run failed its symlink setup EPERM
+and one stale139 future-schema expectation; the expectation now recognizes142
+and refuses143, and the complete privileged run passes without skips.
+
+Actual Next/server build passes on369b75b
+(`.local/opening142-registered-build`), release
+b9eb6518ff066eb2242aeb91dfc999fc31a0c217. The real non-root image84a01109... builds
+on3b715ef and has that exact compiled/file identity and closed startup
+(`.local/registered-document142-image`). Its238096384-byte archive hashes
+c2e74961...; actual age archive recovery/Docker load/identity and tamper/forged/
+cancellation refusals4/4 pass (`.local/registered-document142-image-recovery`).
+Same-host disk-vault proof; no actual provider/off-host/keys/device/installation.
+
+The earlier22/22 coordinated backup used a synthetic image; the actual image
+recovery above is a separate executed proof, not a relabelled combined run.
+Current hosted source publication/acceptance remains due. No PR head mutation,
+merge, owner installation, real data, production activation or spending occurred.
+
+Next: strict current-source scan/publication and exact hosted release checks;
+finish production document-worker/storage composition and isolated file-format
+acceptance, remaining opening approval/posting/corrections, actual provider/
+off-host/key/phone/owner configuration and cutover. Root142 source registration
+does not clear those actual-use gates. Supersedes pending registration/image
+wording below.
+
+Full coordinated142 recovery22/22 passes onad89d2a
+(`.local/opening142-coordinated-recovery-complete`), source stable/owned cleanup.
+It captures/restores the exact database, eight published original/preview files,
+two quarantined objects, source archive, synthetic image archive and configuration
+recipe in one point. The separate restore process verifies table contents and
+canonical definitions, five financial events across two posted businesses,
+account controls and application authority, then restores ten file destinations.
+Corruption, missing store/original, lost write, changed image, lost lease, mixed
+snapshot, changed routine/policy/trigger/source/receivable and reused/uncertain
+object destination checks remain enforced. No suppressed/skipped cases.
+
+New142 release manifests must keep both activation fields blocked. The generic
+restore fixture now expects the actual published count while retaining all old
+six-file behavior. Earlier full runs remain recorded: e922a5f19/22 exposed old
+pending and restored-object counts; d36c2e320/22 exposed a final destination count.
+Those fixture expectations now include the added opening files; the complete
+ad89d2a run passes.24 focused recovery checks/types/affected lint pass, with final
+fixture lint after the last count correction.
+
+Limits remain explicit: same-host clusters/loopback providers, synthetic image
+bytes and Windows publication/object-journal seams. Configuration recipe recovery
+does not prove availability of real external credentials/keys; the actual packaged
+application was not loaded from that synthetic image. Full production backup and
+off-host/device/security/owner acceptance are not claimed.
+
+Next: register/adopt the exact142 source while freezing141 references, build the
+real updated application/image and complete current hosted release acceptance,
+then configured provider/off-host/phone/opening approval/posting/cutover gates.
+Exact141 registry/coverage/compatibility bytes are preserved in
+`.local/opening142-registration-baseline`; root is still141. No installation,
+real data, production activation or spending occurred. Supersedes the pending
+coordinated142 wording below.
+
+Pinned142 instance export and main original inventory are now connected. Native
+source/recovery1/1 passes ond59e76d (`.local/opening142-source-recovery`), source
+stable/owned cleanup:198-source capture,202 files, actual neutral SQL reimport,
+old141 formatter refusal, original+preview age/SDK immutable-vault roundtrip and
+encrypted database restore into a separate cluster. All226 table contents,
+72 closed role definitions and strict schema dump equality pass. Restored routine
+and schema catalogues match the observed142 pins, and restored main original/
+staging inventories match the source. Wrong-key/ciphertext-corruption refusals
+run in the database rehearsal. Original bytes decrypt to their expected hashes;
+pending staging remains unverified and is not counted as a published original.
+
+The142 recovery profile is explicitly unregistered and pinned to registry
+3d215728.../package dd77400a...; wrong142 and future143 identities refuse. Root141
+and older profiles stay unchanged.20 focused checks/types/affected lint pass.
+Source/tool changes after the previous browser build are not represented as a
+fresh application build/image. CI now requires the custody/source/recovery case
+and the genuine document HTTP/picker case; the existing142 product loop covers
+Chromium/WebKit. Public-source boundary check passes on6fe2f9c; no hosted run has
+accepted these newest changes yet.
+
+Limit: the database restore and original-vault retrieval are tested together in
+one rehearsal, but the full coordinated recovery-point/configuration/release/
+primary-object restoration flow still needs142 integration and execution. This
+is same-host synthetic storage; Windows uses the explicit original-publication
+journal seam, not a durable Windows journal claim. No complete-backup/actual
+off-host/provider/production acceptance follows.
+
+Next: coordinated142 recovery profiles and strict full-point restore, then exact
+source registration/runtime adoption, current hosted release/build/image and
+owner/provider/off-host/physical-phone/opening approval/posting/cutover gates.
+Root remains141; no installation, real data, production activation or spending.
+Earlier pending198-source/main-original inventory wording below is superseded.
+
+Genuine142 owner downloads now pass through the actual Next page and HTTPS Node
+dispatch onaffa1ef (`.local/opening142-original-browser`): real password/TOTP,
+210-part encrypted export catalogue, exact opening-intent CSV, four-original ZIP,
+one explicit pending upload, local ZIP comparison and four committed file audits.
+Missing CSRF/business injection, pending file, corrupt opening bytes and revoked
+session refuse without extra object reads/audits where applicable.390/1440 Axe
+and overflow pass; both original-download screenshots were inspected. Actual
+Next/server build passes onaffa1ef (`.local/opening142-browser-build`), compiled
+release debf24c1845bb0a2a19c3d359b35b0a81ed8421c, root schema141 unchanged. Browser
+proof is Chromium only; WebKit142 is written for hosted execution, not run locally.
+Provider/storage are loopback fixtures; no actual provider/physical phone claim.
+
+Financial vocabulary explicitly maps the nonposting142 increment to109, with
+unknown143 still refused. Production composition remains pinned to141; this is
+not registration, installation or activation.133 Node/finance/production checks
+pass after the test-only unknown143 follow-up35287bc; types/affected lint pass.
+
+The exact142 recovery observation passes on30260b9
+(`.local/opening142-recovery-catalog`):198 application sources,226 database tables,
+closed-reader opening intent/original counts2/1 and two original/preview entries
+with one pending upload. Catalogue is1337 routines/15982 schema objects. Its
+artifact records candidate registry3d215728.../package dd77400a... and exact SQL
+part offsets/checksums. Root141 and older identities remain unchanged. This
+observation provides pins for the next capture/recovery profile; the registered
+capture/archive/restore path still excludes142 until explicitly integrated.
+
+Next: connect the observed198-source candidate to instance export and complete
+original archive/recovery, prove restore and register coherent142. Then exact
+current hosted release, isolated worker/provider/off-host/physical phone/opening
+approval/posting/corrections/owner setup/cutover gates remain. No real data,
+installation, production activation or spending occurred. Supersedes older
+pending genuine142 Chromium wording below.
+
+Opening-document candidate142 now reaches Ready through the actual176-source
+worker/encrypted-part store, then delivers the exact frozen original through the
+reader after a committed SQL access audit. Native1/1 passes on83cd283
+(`.local/opening-document-ready-export-accepted`), source stable/owned cleanup.
+It includes coordinated141→candidate142 upgrade, request v8 replay versus v7
+conflict, snapshot original membership, candidate/private object identity,
+pending/foreign/tampered refusals, byte equality and post-handoff buffer clearing.
+Original bytes use the explicit memory seam; encrypted export parts use the
+loopback SDK fixture. Auth is controlled SQL authority, decoder inline; this is
+not genuine MFA/HTTP/browser/provider/full recovery acceptance for142.
+
+The142 private original helper is versioned; ordinary kinds delegate to the
+unchanged helper. Shared download dispatch uses it only for142 jobs. Browser
+inventory parsing accepts the opening source-table variant only for142 and
+requires null bill links. Worker/collector/logical-file/controller contracts
+explicitly admit142; unknown143 stays closed. Production composition remains
+pinned to registered141. The five-part disposable candidate leaves root141 and
+all registered migration SQL unchanged.202 focused checks plus a second227-case
+group (one overlapping case), types and affected lint pass.
+
+Two failed native runs remain recorded:2187134 assumed sandbox manifest bytes
+equalled the root's formatting;12c310e exposed a missed collector constructor
+allowlist. Candidate construction now verifies ordered registry identity plus
+every prefix SQL checksum without rewriting the prefix; the explicit142 guard
+was added. The complete final run passes on83cd283.
+
+Next: genuine MFA/browser142 original export acceptance, exact198-source instance
+capture and full original archive/restore/catalogue proof, coherent142 adoption,
+isolated decoder and actual-provider/off-host/phone/release/cutover gates. Source
+registration, installation, production activation, real data and spending remain
+unchanged. Later paragraphs are superseded where they call the142 core export
+request/worker/reader or browser parser unimplemented.
+
+Held owner source142 now has dictionary/page v4 and an explicit176-source capture.
+CSV roundtrip, Excel generation and actual neutral PostgreSQL reimport pass with
+the opening original's exact candidate metadata. The attachment inventory now
+includes opening intents/publications using their truthful source table and
+null bill ID/revision, alongside their reference and verified fingerprint. It
+keeps the existing physical supplier-document domain; no bill is fabricated.
+Native acceptance passes onf3c29f8 (`.local/opening-document-portable-source`),
+source stable/owned cleanup: owner pagination/snapshot checks, another business's
+empty result, no web-role execute, old v3 dictionary still174, new v4 is176,
+backup-reader checks and unchanged financial counts.43 affected units, types and
+affected lint pass. Root remains registered141; new constructors are explicit
+held entry points, not selected by production composition.
+
+Next: versioned142 export request/worker/download and frozen-original permit,
+browser inventory parsing for the new source variant, complete198-source
+instance capture/archive/restore and coherent142 registration. Actual file-byte
+delivery through an export has not been implemented by the source-format work.
+Earlier next-step wording below is superseded where this paragraph records
+executed owner dictionary/page and source formats.
+
+Current continuation supersedes the older pending-picker statements below.
+The opening-document picker now supports private upload, stable-ID interrupted
+save retry, reference/fingerprint lookup after reopening a saved bill, and exact
+original download. Genuine MFA/rendered acceptance passes onbc3117c
+(`.local/opening-document-picker-final-auth`), including read-only checking while
+writes are paused and390/1440 accessibility/overflow/minimum220px field checks.
+The actual Next/server build passes one21bd9e (`.local/opening-document-picker-final-build`).
+Both picker screenshots were inspected; redundant nested form padding is removed.
+These remain synthetic/test-only capabilities, with an inline decoder and loopback
+storage fixture, not isolated-worker/provider or production acceptance.
+
+Held opening-document backup metadata and exact source columns are implemented.
+The existing non-login backup reader receives SELECT on only the two new tables.
+The bounded cursor collector preserves `crest.opening_document_originals` identity
+while reusing the supplier-document storage domain, validates each candidate
+against the reserved fingerprint and distinguishes pending staging reservations.
+Native custody plus backup-reader/column checks pass on457463b
+(`.local/opening-document-source-inventory`), source stable/owned cleanup; both
+published file hashes match the fixture bytes and financial counts are unchanged.
+33 focused units, types and affected lint pass. Candidate instance inventory is198
+sources; registered141 remains196 and is unchanged. This collector is not yet
+connected to a registered142 capture/archive/restore path. No complete-backup claim.
+
+Next essential work: add the two tables to the versioned owner export dictionary
+and original-file index/delivery, connect the198-source capture and full original
+archive/recovery path, then observe and adopt a coherent142 candidate. Retain
+existing141 and older identities. Current release publication/hosted acceptance,
+remaining opening approval/posting/corrections and actual provider/off-host/phone/
+owner setup/cutover gates remain. No installation, real data or spending occurred.
+
+Opening-document protected HTTP/Node integration passes genuine MFA1/1 on078bb14
+(.local/opening-document-http-auth): private upload, separate worker publication,
+exact original>16KiB download, replay/conflict and CSRF/scope/Range/fingerprint/
+corruption/revocation refusals, with unchanged financial counts. Inline decoder/
+loopback SDK fixture, not isolated worker/provider proof. Six routes remain
+test-only/off by default; private context advertises the optional capability only
+when configured. Direct supplier-original binary handling is corrected too.
+Picker upload/reload lookup/interrupted-save UI remains next; it still saves only
+reference/hash. Source/original/recovery142 integration is unfinished.
+
+Full unit10074/491 files passes d5977f2, source stable; types/affected lint pass.
+Historical Calendar138 and held AP cases pass f7c92f1; frozen140 export/actual140 CLI
+passes e5b43d0. Fixtures now use their own frozen registries/coverage and do not
+reapply registered supplier SQL. See OPENING_DOCUMENT_CUSTODY.md for scope/evidence.
+
+Public108 d2d1824 is terminal: main45652741276 FAILED the Calendar138 test's moving
+coverage mismatch; all21 prerequisite jobs passed. Commercial45652742768 and
+expense45652741566 SUCCESS. Both stale Calendar coverage reads are fixed to the
+frozen138 file and the full138 case passes locally. No full108 acceptance; later
+Foundation steps/build/screenshots were skipped. All108 runs now terminal, so the
+public head hold is lifted; current-source publication/hosted checks remain due.
+
+Opening-document custody now has a held nonposting implementation. Separate
+intent/publication tables retain the existing reference/hash pairs without
+manufacturing ordinary supplier bills. Restricted reserve/read/write/publish,
+replay/conflict, deferred audit closure and cross-domain storage-key-ID collision
+guards reuse the existing private validator/storage boundary. Native1/1 passes
+6c0adac (.local/opening-document-custody-accepted), source stable/owned cleanup:
+actual PNG validation/publication/read, permission/tenant/hash/collision/immutable/
+orphan refusals and unchanged financial/bill counts. Memory object seam/inline
+decoder, not provider/MFA/recovery proof.14 focused checks/types/lint pass.
+
+The authenticated directory/separate-worker dispatcher is implemented test-only;
+its genuine session/HTTP execution remains pending. Next connect the protected
+upload/read routes and picker, then complete source/original/recovery coverage
+before142 registration. Root remains141; held document SQL is not installed or
+enabled. See OPENING_DOCUMENT_CUSTODY.md. Prior141 image/build/download proofs
+below remain source-specific; they do not accept this newer held code.
+
+Supplier141 is now registered as exact ten-part migration20270217183000, registry
+7bcd4b1b/packageab087b77. Frozen140 and older bytes remain unchanged. Supported
+recovery and registered196-source/200-file instance CLI use exact141 brands; the
+compiled trusted export runtime accepts141 only with the pinned registry and
+selects the174-source owner path. Financial vocabulary explicitly remains109;
+unknown142 refuses. Production supplier editing/posting is still held. See
+OPENING_SUPPLIER141_ADOPTION.md/JSON for source decisions and exact evidence.
+
+Registered upgrade/actual CLI/owner flow2/2 passes cf85ee7.35 adoption/recovery/
+financial-version units plus13 production configuration/composition checks, types,
+affected lint, migration/canonical verification pass. Actual Next/server build and
+genuine-MFA141 supplier CSV/original ZIP downloads pass on81145b1, with390/1440
+Axe/overflow/security refusal checks. Actual non-root closed image6873d979 builds;
+encrypted archive recovery/compiled identity4/4 passes on81145b1. All owned runners
+terminal/source stable. Same-host/loopback proofs; no actual provider/off-host/key/
+physical-phone or real-use acceptance. Local source was normalized to unchanged
+committed LF bytes (six CRLF-only differences) and rebuilt server617cb641 now
+matches the image exactly. Earlier Windows build9f39f39d receipts are preserved.
+
+Public108 d2d1824 is still held while main45652741276 runs Foundation checks;
+18 browser groups, database/auth/provider and commercial/expense gates pass. That
+head predates coherent141. Do not mutate PR head/title/body while its run is live.
+Next launch work: exact current hosted release/source publication after terminal
+108, actual deployment/recovery setup, stored opening-original evidence and the
+remaining opening classes/approval/atomic posting/corrections. No installation,
+production opening approval, real data, provider activation or spending occurred.
+
+## Earlier checkpoints (superseded by registered141 above)
+
+Coherent supplier141 now has an exact unregistered recovery profile. Configuration
+recipes, release custody, offline run preparation, restored-database comparisons
+and original inventory support the coherent registry while rejecting the earlier
+nine-part141 identity and activation claims. Registered commands still refuse the
+candidate.28 focused checks/types/lint pass; native catalog/original/financial
+metadata1/1 passes on3d595c5. Coordinated encrypted recovery22/22 passes onffd5061:
+populated supplier/deposit records, published/quarantined files, tracked source,
+configuration and posted financial controls, plus corruption/missing-file/lease
+refusals. Source stable/owned cleanup. See OPENING_SUPPLIER141_RECOVERY.md. Synthetic
+image and same-host/loopback proof; actual image/off-host/provider/key/device gates
+remain. Root140 unchanged; next is registered141 source adoption and trusted runtime.
+
+Public108 head d2d1824 remains held while main45652741276 runs. All18 browser groups,
+database/auth/provider jobs and commercial45652742768/expense45652741566 pass;
+Foundation checks are still live. This is the earlier preliminary candidate source,
+not the new local coherent141 owner/recovery extension. No install or production use.
+
+The coherent supplier141 candidate now includes the owner174-source export
+reader v3 and request writer v7. Exact profile/schema bindings, current source
+collection, CSV/Excel/neutral formatting, encrypted worker plans and browser
+logical/original handling explicitly support141 while preserving140 and refusing
+142.138+99 focused old/new checks, types/affected lint pass. Coherent native2/2
+passes on74a8b1f (.local/opening-supplier141-coherent-acceptance), unchanged source/
+owned cleanup:196-source/200-file capture and strict separate-cluster encrypted
+restore, plus174-source tenant/snapshot-consistent owner delivery through durable
+Ready/download catalogue. Required in CI. See OPENING_SUPPLIER_WORKSPACE_EXPORT.md.
+
+Unregistered combined file20270217183000_fictional_opening_supplier_sources.sql
+has ten parts; packageab087b77/registry7bcd4b1b,1323 routines/15859 objects,
+schema67bfbb5f. This intentionally supersedes only the preliminary nine-part
+candidate described below. Frozen140 and older definitions remain exact; root
+registry remains140. Canonical/coordinated recovery, originals/configuration/
+release-image custody, registered adoption and trusted runtime/genuine owner
+device acceptance are still required before installation/production use.
+
 Supplier candidate141 now has pinned196-source capture/200-file neutral export
 and an actual separate-cluster encrypted database rehearsal. Full native1/1
 passes on fa39b26 (.local/opening-supplier141-source-recovery-stable), source

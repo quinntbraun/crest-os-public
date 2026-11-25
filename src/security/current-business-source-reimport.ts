@@ -21,7 +21,7 @@ function literal(value:string|null){
 // authority, changes posted history or claims complete recovery.
 export function formatCurrentBusinessReimport(capture:CurrentBusinessRows,binding:CurrentBusinessSourceBinding,inputIdentity?:CurrentBusinessIdentitySource,inputSessions?:CurrentBusinessSessionSource,inputProvider?:CurrentBusinessProviderSource){
  const inventory=currentBusinessInventoryForProfile(capture.profile);require(inventory);
- require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2')&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===inventory.length);
+ require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2'||capture.profile==='crest.current-business-rows.v3'||capture.profile==='crest.current-business-rows.v4')&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===inventory.length);
  require(/^[a-f0-9]{40}$/.test(binding.appReleaseId)&&currentBusinessBindingMatches(capture.profile,binding.sourceSchemaVersion));
  const identity=inputIdentity?verifyCurrentIdentitySource(inputIdentity,capture):undefined;require((!inputSessions&&!inputProvider)||identity);
  const sessions=inputSessions?verifyCurrentSessionSource(inputSessions,identity!,capture):undefined,provider=inputProvider?verifyCurrentProviderSource(inputProvider,identity!,capture):undefined,sources=[...capture.sources,...identity?.sources??[],...sessions?[sessions.source]:[],...provider?.sources??[]];

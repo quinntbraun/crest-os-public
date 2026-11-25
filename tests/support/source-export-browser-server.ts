@@ -25,6 +25,7 @@ export {createDropoffPhotoDispatcherDirectory} from '../../src/operations/dropof
 export {createDropoffPhotoDispatch} from '../../src/operations/dropoff-photo-workflow.ts';
 export {validateImage} from '../../src/files/image-validation.ts';
 export {createLocalSandboxValidator} from '../../src/files/local-sandbox-validator.ts';
+export {createOpeningDocumentDispatcher} from '../../src/bookkeeping/opening-document-directory.ts';
 export {createSupplierOriginalDispatcher} from '../../src/bookkeeping/expenses/supplier-bill-original-directory.ts';
 
 export {createReceiptDirectory} from '../../src/bookkeeping/expenses/receipt-directory.ts';

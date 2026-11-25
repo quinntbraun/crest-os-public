@@ -4,6 +4,7 @@ import {parseReceiptRecord,parseReceiptReservation,parseReceiptCandidate} from '
 import {photoStatus} from '../operations/dropoff-photo-workflow.ts';
 import {customerUuid as uuid} from '../customer/customer-contract.ts';
 import {currentBusinessInventoryForProfile} from './current-business-source-inventory.ts';
+import {parseOpeningDocumentRecord} from '../bookkeeping/opening-document-workflow.ts';
 import type {CurrentBusinessRows} from './current-business-source.ts';
 
 type Kind='expense_receipt'|'supplier_document'|'condition_photo';
@@ -29,7 +30,7 @@ function metadata(id:string,objectId:string,type:string,byteSize:number,sha256:s
 // nor proves that a file exists, has been downloaded, or is in a backup vault.
 export function currentAttachmentInventory(capture:CurrentBusinessRows){
  const selected=currentBusinessInventoryForProfile(capture.profile);require(selected);const inventory=selected;
- require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2')&&uuid(capture.businessId)&&/^[a-f0-9]{64}$/.test(capture.snapshotToken)&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===inventory.length);
+ require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2'||capture.profile==='crest.current-business-rows.v3'||capture.profile==='crest.current-business-rows.v4')&&uuid(capture.businessId)&&/^[a-f0-9]{64}$/.test(capture.snapshotToken)&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===inventory.length);
  const sources=unique(capture.sources,value=>value.source);require(capture.recordCount===capture.sources.reduce((sum,source)=>sum+source.rows.length,0)&&capture.recordCount<=100000);
  function rows(name:string){
   const source=sources.get(name),expected=inventory.find(value=>value.source===name);require(source&&expected&&isDeepStrictEqual(source.columns,expected.columns));
@@ -74,6 +75,16 @@ export function currentAttachmentInventory(capture:CurrentBusinessRows){
   if(original)require(original.bill_id===intent.bill_id&&original.bill_revision===intent.bill_revision&&original.document_reference===intent.document_reference&&original.object_key===candidate!.original.key&&original.file_sha256===candidate!.original.sha256&&original.byte_size===String(candidate!.original.byteSize)&&original.media_type===candidate!.source.detectedType);
   add({...defaults,attachmentId:id,kind:'supplier_document',status:candidate?'available':'reserved',sourceTable:'crest.supplier_bill_original_intents',mediaType:reservation.declaredType,byteSize:reservation.byteSize,recordedAt:original?text(original.verified_at):text(intent.reserved_at),references:{billId:text(intent.bill_id),billRevision:text(intent.bill_revision),documentReference:intent.document_reference??null},
    original:candidate?metadata(id,id,candidate.source.detectedType,candidate.original.byteSize,candidate.original.sha256):null,preview:candidate?metadata(id,id,'image/jpeg',candidate.preview.byteSize,candidate.preview.sha256,true):null});
+ }
+ if(capture.profile==='crest.current-business-rows.v4'){
+  const openingIntents=unique(rows('crest.opening_document_intents'),row=>text(row.id)),openingOriginals=unique(rows('crest.opening_document_originals'),row=>text(row.id));
+  for(const id of openingOriginals.keys())require(openingIntents.has(id));
+  for(const[id,intent]of openingIntents){
+   const original=openingOriginals.get(id),record=parseOpeningDocumentRecord({state:'ready',schemaVersion:1,reservation:{businessId:capture.businessId,documentId:id,reference:intent.reference,sha256:intent.expected_sha256,recoveryEpoch:intent.recovery_epoch,declaredType:intent.media_type,byteSize:integer(intent.byte_size,26214400),dispatchId:intent.dispatch_id,stagingKey:`staging/${capture.businessId}/${id}/${intent.dispatch_id}`,originalKey:`originals/${capture.businessId}/${id}`,previewKey:`previews/${capture.businessId}/${id}`},candidate:original?json(original.candidate):null},capture.businessId,id),r=record.reservation,c=record.candidate;
+   require(!original||c!==null);
+   // Same physical document domain, truthful source table, no fabricated bill.
+   add({...defaults,attachmentId:id,kind:'supplier_document',status:c?'available':'reserved',sourceTable:'crest.opening_document_intents',mediaType:r.declaredType,byteSize:r.byteSize,recordedAt:original?text(original.recorded_at):text(intent.recorded_at),references:{billId:null,billRevision:null,documentReference:record.evidence.reference},original:c?metadata(id,id,c.source.detectedType,c.original.byteSize,c.original.sha256):null,preview:c?metadata(id,id,'image/jpeg',c.preview.byteSize,c.preview.sha256,true):null});
+  }
  }
  result.sort((a,b)=>a.attachmentId<b.attachmentId?-1:a.attachmentId>b.attachmentId?1:0);
  return Object.freeze({schemaVersion:1 as const,profile:'crest.current-attachment-inventory.v1' as const,businessId:capture.businessId,snapshotToken:capture.snapshotToken,observedAt:capture.observedAt,attachments:Object.freeze(result),availableCount:result.filter(item=>item.status==='available').length,pendingCount:result.filter(item=>item.status==='reserved').length,originalBytesIncluded:false as const,originalFilenamesRetained:false as const,completePortableExport:false as const,completeBackup:false as const});

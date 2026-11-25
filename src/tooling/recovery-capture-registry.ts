@@ -9,7 +9,7 @@ export function readRecoveryCaptureRegistry(bytes:Uint8Array){
  const parsed=parseRecoveryJson(Buffer.from(bytes).toString('utf8'),262144) as {migrations?:unknown};
  if(!Array.isArray(parsed.migrations))throw Error('RECOVERY_CAPTURE_REGISTRY_REQUIRED');
  const sourceSchemaVersion=parsed.migrations.length;
- recoveryCanonicalSourceProfile(sourceSchemaVersion,registrySha256);
+ if(!recoveryCanonicalSourceProfile(sourceSchemaVersion,registrySha256).registered)throw Error('RECOVERY_CAPTURE_REGISTERED_SOURCE_REQUIRED');
  const migrations=parsed.migrations.map((row:unknown)=>{
   if(!row||typeof row!=='object'||!('version'in row)||!('file'in row)||typeof row.version!=='string'||typeof row.file!=='string'
    ||!/^\d{14}$/.test(row.version)||!row.file.startsWith(row.version+'_')||!row.file.endsWith('.sql'))throw Error('RECOVERY_CAPTURE_REGISTRY_REQUIRED');

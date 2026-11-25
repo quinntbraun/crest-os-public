@@ -11,7 +11,7 @@ import {readRecoveryReleaseArchive} from './recovery-release-archive.ts';
 import {readRecoveryConfiguration} from './recovery-configuration.ts';
 import type {RecoveryVaultArtifact,createRecoveryVault} from './recovery-vault.ts';
 
-type Expected=Readonly<{pointId:string;businessId:string;appReleaseId:string;migrationRegistrySha256:string;sourceSchemaVersion:138|139|140;referenceDirectoryId:string}>;
+type Expected=Readonly<{pointId:string;businessId:string;appReleaseId:string;migrationRegistrySha256:string;sourceSchemaVersion:import('./recovery-source-profile.ts').RecoverySourceSchemaVersion;referenceDirectoryId:string}>;
 const preparedDatabases=new WeakMap<object,Readonly<{binding:Expected;snapshotId:string;database:Readonly<{path:string;byteSize:number;sha256:string}>;metadata:Readonly<{path:string;byteSize:number;sha256:string}>;inventory:Readonly<Record<string,unknown>>;originals:Readonly<Record<string,unknown>>;financial:Readonly<Record<string,unknown>>}>>();
 export type PreparedRecoveryObject=Readonly<{path:string;domain:'expense_receipt'|'supplier_document'|'condition_photo';key:string;byteSize:number;sha256:string;retention:'published'|'quarantine';contentType:string}>;
 const preparedObjects=new WeakMap<object,Readonly<{binding:Expected;objects:readonly PreparedRecoveryObject[]}>>();

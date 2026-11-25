@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 142,
+  "registeredSourceOnly": true,
+  "reason": "Preserve private opening originals in owner and instance exports and recoverable custody without changing financial posting semantics.",
+  "migration": {
+    "version": "20270218185000",
+    "file": "supabase/migrations/20270218185000_opening_document_workspace.sql",
+    "sha256": "dd77400ae479eee8777c4d0a8dfdb3eb15f6d458c9e171e32822c4581e143a7f",
+    "registrySha256": "3d215728bdcf52da73eefe4f1c4a6a5bcb682cbd947b178939f1d7175add5279"
+  },
+  "parts": [
+    {
+      "path": "planning/proposals/20270218180000_opening_document_custody.sql",
+      "offset": 196,
+      "bytes": 25679,
+      "sha256": "97368a622f23f147b2906937696e49c1027a9ca72cb375acef99e50140b862e9"
+    },
+    {
+      "path": "planning/proposals/20270218181000_opening_document_recovery_read.sql",
+      "offset": 26067,
+      "bytes": 303,
+      "sha256": "1c96ec48a049145cd3d76a959b06059dcb24737dbfbd1cc9e8623d3f6a0112e2"
+    },
+    {
+      "path": "planning/proposals/20270218182000_opening_document_workspace_source.sql",
+      "offset": 26571,
+      "bytes": 7034,
+      "sha256": "5908c96056957168b8f725945b8605976457ded03ab6b307d56f2dd7432559c0"
+    },
+    {
+      "path": "planning/proposals/20270218183000_opening_document_export_original.sql",
+      "offset": 33808,
+      "bytes": 3036,
+      "sha256": "1bb168aee1808c438d0296d6ff7c561e4c993466494e58abef021ecd923860b7"
+    },
+    {
+      "path": "planning/proposals/20270218184000_opening_document_workspace_jobs.sql",
+      "offset": 37045,
+      "bytes": 20320,
+      "sha256": "767376d4533e10a70bbac3298587751de9cc76b4968059e50989680fdb0deee9"
+    }
+  ],
+  "previousRegistry": {
+    "file": "tests/support/registered141-migration-checksums.json",
+    "sha256": "7bcd4b1b7374f163442c2528ccd4984020f0cadadea0ac3d38f36cf66facf4eb"
+  },
+  "previousCoverage": {
+    "file": "tests/support/registered141-security-export-coverage.json",
+    "sha256": "f110e2643a7d310011b32f66e9f17712df572856d6427391457a6db7707d0b3d"
+  },
+  "previousCompatibility": {
+    "file": "tests/support/registered141-compatibility.json",
+    "sha256": "b9d67c10cdac0d744d24320d968bf948878eb033661f70c8ea7f9bdf42210dd0"
+  },
+  "sourceCount": 198,
+  "businessSourceCount": 176,
+  "ownerDatabaseApplied": false,
+  "productionDatabaseApplied": false,
+  "productionActivation": "blocked",
+  "openingBalancesApproved": false,
+  "openingJournalPosted": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "requiredAcceptance": [
+    "Exact registered141-to142 upgrade and retained SQL bytes",
+    "Registered198-source instance CLI and176-source owner delivery",
+    "Registered coordinated database/original/configuration/source recovery",
+    "Current actual application image identity and recovery",
+    "Actual provider/off-host/keys/phone and owner opening configuration"
+  ]
+}

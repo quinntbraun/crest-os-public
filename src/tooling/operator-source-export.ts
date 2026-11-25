@@ -2,6 +2,8 @@
 import pg from 'pg';
 import {openingSupplier141SourceProfile} from './opening-supplier141-catalog.ts';
 import {openingSupplier141SourceInventory} from './opening-supplier141-source-inventory.ts';
+import {openingDocument142SourceProfile} from './opening-document142-catalog.ts';
+import {openingDocument142SourceInventory} from './opening-document142-source-inventory.ts';
 import {workspaceExport140SourceProfile} from './workspace-export140-catalog.ts';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
@@ -20,7 +22,7 @@ import {readCurrentBusinessCsv} from '../security/current-business-source-csv.ts
 
 type Row=Readonly<Record<string,string|null>>;
 type Source=Readonly<{source:string;columns:readonly string[];excluded:readonly string[];types:Readonly<Record<string,string>>;primaryKey:readonly string[];rows:readonly Row[]}>;
-type Capture=Readonly<{profile:'crest.private-operator-source.v1'|'crest.private-instance-source.v1'|'crest.private-instance-source139.v1'|'crest.private-instance-source140.v1'|'crest.private-opening-funds-instance-candidate.v1'|'crest.private-opening-supplier-instance-candidate.v1';sourceSchemaVersion:138|139|140|141;snapshotId:string;snapshotAt:string;scope:'instance_operator';sources:readonly Source[];recordCount:number;foreignKeys:readonly InstanceSourceForeignKey[];completePortableExport:false;completeBackup:false}>;
+type Capture=Readonly<{profile:'crest.private-operator-source.v1'|'crest.private-instance-source.v1'|'crest.private-instance-source139.v1'|'crest.private-instance-source140.v1'|'crest.private-instance-source141.v1'|'crest.private-instance-source142.v1'|'crest.private-opening-funds-instance-candidate.v1'|'crest.private-opening-supplier-instance-candidate.v1'|'crest.private-opening-document-instance-candidate.v1';sourceSchemaVersion:138|139|140|141|142;snapshotId:string;snapshotAt:string;scope:'instance_operator';sources:readonly Source[];recordCount:number;foreignKeys:readonly InstanceSourceForeignKey[];completePortableExport:false;completeBackup:false}>;
 type Input=Readonly<{client:pg.Client;leaseBusinessId:string;migrations:readonly Readonly<{version:string;name:string}>[]}>;
 const captures=new WeakMap<object,Capture>(),maximum=67108864;
 type ExportStage='input'|'reader'|'catalog'|'references'|'columns'|'rows'|'format';
@@ -49,16 +51,16 @@ function neutralReimport(data:Capture){
  add('COMMIT;');return Buffer.from(lines.join('\n')+'\n');
 }
 
-async function captureSources138(input:Input,external:AbortSignal,instance:boolean,candidate=false,registered139=false,registered140=false,supplier141=false){
- const catalog=supplier141?openingSupplier141SourceProfile:registered140?workspaceExport140SourceProfile:openingFunds139SourceProfile;
+async function captureSources138(input:Input,external:AbortSignal,instance:boolean,candidate=false,registered139=false,registered140=false,supplier141=false,registered141=false,document142=false,registered142=false){
+ const catalog=document142?openingDocument142SourceProfile:supplier141?openingSupplier141SourceProfile:registered140?workspaceExport140SourceProfile:openingFunds139SourceProfile;
  const client=input.client;let stage:ExportStage='input';try{
-  require(client instanceof pg.Client&&(!supplier141||instance&&candidate&&!registered139&&!registered140)&&input.migrations.length===(supplier141?141:registered140?140:candidate?139:138)&&(!candidate||instance&&input.migrations.at(-1)?.version===(supplier141?'20270215183000':registered140?'20270206183000':'20270205183000')&&input.migrations.at(-1)?.name===(supplier141?'fictional_opening_supplier_sources':registered140?'opening_funds_workspace_export':'fictional_opening_funds_sources')));stage='reader';await verifyRecoveryBackupReader(client,input.migrations);
+  require(client instanceof pg.Client&&(!registered142||document142)&&(!document142||instance&&candidate&&!registered139&&!registered140&&!supplier141&&!registered141)&&(!supplier141||instance&&candidate&&!registered139&&!registered140)&&input.migrations.length===(document142?142:supplier141?141:registered140?140:candidate?139:138)&&(!candidate||instance&&input.migrations.at(-1)?.version===(document142?'20270218185000':supplier141?'20270217183000':registered140?'20270206183000':'20270205183000')&&input.migrations.at(-1)?.name===(document142?'opening_document_workspace':supplier141?'fictional_opening_supplier_sources':registered140?'opening_funds_workspace_export':'fictional_opening_funds_sources')));stage='reader';await verifyRecoveryBackupReader(client,input.migrations);
   return await withRecoveryBackupLease(client,input.leaseBusinessId,external,async lease=>{
    const captured=await lease.capture(async snapshot=>{
-    const inventory=supplier141?openingSupplier141SourceInventory:candidate?openingFunds139SourceInventory:instance?instanceSourceInventory138:operatorSourceInventory138;
+    const inventory=document142?openingDocument142SourceInventory:supplier141?openingSupplier141SourceInventory:candidate?openingFunds139SourceInventory:instance?instanceSourceInventory138:operatorSourceInventory138;
     if(instance){
      stage='catalog';
-     require(inventory.length===(supplier141?196:candidate?192:189)&&new Set(inventory.map(source=>source.source)).size===inventory.length);
+     require(inventory.length===(document142?198:supplier141?196:candidate?192:189)&&new Set(inventory.map(source=>source.source)).size===inventory.length);
      const routines=await captureRecoveryRoutineCatalog(snapshot,lease.signal),schema=await captureRecoverySchemaCatalog(snapshot,lease.signal);
      require(routines.routineCount===(candidate?catalog.routineCount:recoveryRoutineBaseline138.routineCount)&&routines.sha256===(candidate?catalog.routineSha256:recoveryRoutineBaseline138.sha256)&&schema.objectCount===(candidate?catalog.schemaObjectCount:recoverySchemaBaseline138.objectCount)&&schema.sha256===(candidate?catalog.schemaSha256:recoverySchemaBaseline138.sha256));
      const tables=(await snapshot.query("SELECT n.nspname||'.'||c.relname AS source FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN('crest','crest_private') AND c.relkind IN('r','p') ORDER BY (n.nspname||'.'||c.relname) COLLATE \"C\"")).rows.map(row=>row.source);
@@ -79,9 +81,9 @@ async function captureSources138(input:Input,external:AbortSignal,instance:boole
       for(const raw of page){require(isDeepStrictEqual(Object.keys(raw),expected.columns));const row:Record<string,string|null>={};for(const column of expected.columns){const value=raw[column];require(value===null||typeof value==='string'&&!value.includes('\0')&&Buffer.from(value).toString('utf8')===value);row[column]=value;total+=value===null?1:Buffer.byteLength(value);require(total<=maximum);}rows.push(Object.freeze(row));recordCount++;require(recordCount<=100000);}
      }}finally{await snapshot.query('CLOSE crest_operator_source');}
      sources.push(Object.freeze({...expected,types:Object.freeze(types),primaryKey:Object.freeze(keys),rows:Object.freeze(rows)}));
-    }stage='references';const foreignKeys=instance?await captureInstanceSourceReferences(snapshot,lease.signal,supplier141?'supplier141':candidate):Object.freeze([]);return Object.freeze({sources:Object.freeze(sources),recordCount,foreignKeys});
+    }stage='references';const foreignKeys=instance?await captureInstanceSourceReferences(snapshot,lease.signal,document142?'document142':supplier141?'supplier141':candidate):Object.freeze([]);return Object.freeze({sources:Object.freeze(sources),recordCount,foreignKeys});
    });await lease.assertHeld();
-   const evidence:Capture=Object.freeze({profile:supplier141?'crest.private-opening-supplier-instance-candidate.v1':registered140?'crest.private-instance-source140.v1':registered139?'crest.private-instance-source139.v1':candidate?'crest.private-opening-funds-instance-candidate.v1':instance?'crest.private-instance-source.v1':'crest.private-operator-source.v1',sourceSchemaVersion:supplier141?141:registered140?140:candidate?139:138,snapshotId:captured.snapshot.id,snapshotAt:captured.snapshot.capturedAt,scope:'instance_operator',...captured.value,completePortableExport:false,completeBackup:false}),result=Object.freeze({forRecoveryTools:()=>evidence,toJSON():never{throw new OperatorSourceExportError();}});captures.set(result,evidence);return result;
+   const evidence:Capture=Object.freeze({profile:registered142?'crest.private-instance-source142.v1':document142?'crest.private-opening-document-instance-candidate.v1':registered141?'crest.private-instance-source141.v1':supplier141?'crest.private-opening-supplier-instance-candidate.v1':registered140?'crest.private-instance-source140.v1':registered139?'crest.private-instance-source139.v1':candidate?'crest.private-opening-funds-instance-candidate.v1':instance?'crest.private-instance-source.v1':'crest.private-operator-source.v1',sourceSchemaVersion:document142?142:supplier141?141:registered140?140:candidate?139:138,snapshotId:captured.snapshot.id,snapshotAt:captured.snapshot.capturedAt,scope:'instance_operator',...captured.value,completePortableExport:false,completeBackup:false}),result=Object.freeze({forRecoveryTools:()=>evidence,toJSON():never{throw new OperatorSourceExportError();}});captures.set(result,evidence);return result;
   });
  }catch{throw new OperatorSourceExportError(stage);}finally{if(client instanceof pg.Client)await client.end().catch(()=>{});}
 }
@@ -90,10 +92,10 @@ export function captureOperatorSources138(input:Input,external:AbortSignal){retu
 export function captureInstanceSources138(input:Input,external:AbortSignal){return captureSources138(input,external,true);}
 export function captureOpeningFunds139CandidateSources(input:Input,external:AbortSignal){return captureSources138(input,external,true,true);}
 export function captureInstanceSources139(input:Input,external:AbortSignal){return captureSources138(input,external,true,true,true);}
-function formatSourceExport(capture:unknown,instance:boolean,candidate=false,registered139=false,registered140=false,supplier141=false){
- const catalog=supplier141?openingSupplier141SourceProfile:registered140?workspaceExport140SourceProfile:openingFunds139SourceProfile;
+function formatSourceExport(capture:unknown,instance:boolean,candidate=false,registered139=false,registered140=false,supplier141=false,registered141=false,document142=false,registered142=false){
+ const catalog=document142?openingDocument142SourceProfile:supplier141?openingSupplier141SourceProfile:registered140?workspaceExport140SourceProfile:openingFunds139SourceProfile;
  try{
-  require(capture&&typeof capture==='object');const data=captures.get(capture);require(data&&data.profile===(supplier141?'crest.private-opening-supplier-instance-candidate.v1':registered140?'crest.private-instance-source140.v1':registered139?'crest.private-instance-source139.v1':candidate?'crest.private-opening-funds-instance-candidate.v1':instance?'crest.private-instance-source.v1':'crest.private-operator-source.v1'));const prefix=instance?'instance':'operator',files:Record<string,Uint8Array>={},dictionary:Record<string,unknown>={},escapeMap:Record<string,unknown>={};let size=0;
+  require(capture&&typeof capture==='object');const data=captures.get(capture);require(data&&data.profile===(registered142?'crest.private-instance-source142.v1':document142?'crest.private-opening-document-instance-candidate.v1':registered141?'crest.private-instance-source141.v1':supplier141?'crest.private-opening-supplier-instance-candidate.v1':registered140?'crest.private-instance-source140.v1':registered139?'crest.private-instance-source139.v1':candidate?'crest.private-opening-funds-instance-candidate.v1':instance?'crest.private-instance-source.v1':'crest.private-operator-source.v1'));const prefix=instance?'instance':'operator',files:Record<string,Uint8Array>={},dictionary:Record<string,unknown>={},escapeMap:Record<string,unknown>={};let size=0;
   for(const source of data.sources){
    const name=source.source.replace('.','_')+'.csv',escapes:{row:number;column:string}[]=[],lines=[source.columns.map(quote).join(',')];
    for(const[rowIndex,row]of source.rows.entries())lines.push(source.columns.map(column=>{const original=row[column];require(original===null||typeof original==='string');if(original===null)return quote('\\N');let cell=original.replaceAll('\\','\\\\');if(formula(cell)){cell="'"+cell;escapes.push({row:rowIndex+1,column});}return quote(cell);}).join(','));
@@ -102,9 +104,9 @@ function formatSourceExport(capture:unknown,instance:boolean,candidate=false,reg
   }
   files[prefix+'_dictionary.json']=Buffer.from(JSON.stringify(dictionary)+'\n');files[prefix+'_escape_map.json']=Buffer.from(JSON.stringify(escapeMap)+'\n');
   files[prefix+'_reimport.sql']=neutralReimport(data);
-  files[prefix+'_manifest.json']=Buffer.from(JSON.stringify({profile:supplier141?'crest.private-opening-supplier-instance-csv-candidate.v1':registered140?'crest.private-instance-csv140.v1':registered139?'crest.private-instance-csv139.v1':candidate?'crest.private-opening-funds-instance-csv-candidate.v1':instance?'crest.private-instance-csv.v1':'crest.private-operator-csv.v2',
+  files[prefix+'_manifest.json']=Buffer.from(JSON.stringify({profile:registered142?'crest.private-instance-csv142.v1':document142?'crest.private-opening-document-instance-csv-candidate.v1':registered141?'crest.private-instance-csv141.v1':supplier141?'crest.private-opening-supplier-instance-csv-candidate.v1':registered140?'crest.private-instance-csv140.v1':registered139?'crest.private-instance-csv139.v1':candidate?'crest.private-opening-funds-instance-csv-candidate.v1':instance?'crest.private-instance-csv.v1':'crest.private-operator-csv.v2',
     sourceSchemaVersion:data.sourceSchemaVersion,
-    ...((registered139||registered140)?{catalogRegistered:true,migrationSha256:catalog.migrationSha256}:candidate?{catalogRegistered:false,candidateMigrationSha256:catalog.migrationSha256}:{}),
+    ...((registered139||registered140||registered141||registered142)?{catalogRegistered:true,migrationSha256:catalog.migrationSha256}:candidate?{catalogRegistered:false,candidateMigrationSha256:catalog.migrationSha256}:{}),
     snapshotId:data.snapshotId,
     snapshotAt:data.snapshotAt,
     scope:'instance_operator',
@@ -147,3 +149,15 @@ export function formatInstanceSourceExport140(capture:unknown){return formatSour
 // Separately pinned candidate identity; never routes a registered140 export here.
 export function captureOpeningSupplier141CandidateSources(input:Input,external:AbortSignal){return captureSources138(input,external,true,true,false,false,true);}
 export function formatOpeningSupplier141CandidateSourceExport(capture:unknown){return formatSourceExport(capture,true,true,false,false,true);}
+
+// Registered141 has its own capture brand; candidate/older formatters refuse it.
+export function captureInstanceSources141(input:Input,external:AbortSignal){return captureSources138(input,external,true,true,false,false,true,true);}
+export function formatInstanceSourceExport141(capture:unknown){return formatSourceExport(capture,true,true,false,false,true,true);}
+
+// Candidate142 is separately branded; registered141 and all older formatters refuse it.
+export function captureOpeningDocument142CandidateSources(input:Input,external:AbortSignal){return captureSources138(input,external,true,true,false,false,false,false,true);}
+export function formatOpeningDocument142CandidateSourceExport(capture:unknown){return formatSourceExport(capture,true,true,false,false,false,false,true);}
+
+// Registered142 has a distinct brand; candidate and historical formatters refuse it.
+export function captureInstanceSources142(input:Input,external:AbortSignal){return captureSources138(input,external,true,true,false,false,false,false,true,true);}
+export function formatInstanceSourceExport142(capture:unknown){return formatSourceExport(capture,true,true,false,false,false,false,true,true);}

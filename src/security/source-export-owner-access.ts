@@ -24,8 +24,8 @@ function privateResult<T>(value:T){return Object.freeze({forServer:()=>value,toJ
 
 // Trusted server boundary, fixed business only. No route, automatic dispatch,
 // retry, current lease or download authority follows from historical receipts.
-export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>,businessId:string,appReleaseId?:string,currentProfile=false,currentSourceSchemaVersion:138|140=138){
- require(uuid(businessId)&&typeof currentProfile==='boolean'&&(currentSourceSchemaVersion===138||currentSourceSchemaVersion===140)&&(currentProfile||currentSourceSchemaVersion===138)&&(appReleaseId===undefined||typeof appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(appReleaseId)));const scope=businessId,release=appReleaseId,database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
+export function createSourceExportOwnerAccess(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,tokens:Awaited<ReturnType<typeof createProviderTokenStore>>,businessId:string,appReleaseId?:string,currentProfile=false,currentSourceSchemaVersion:138|140|141|142=138){
+ require(uuid(businessId)&&typeof currentProfile==='boolean'&&(currentSourceSchemaVersion===138||currentSourceSchemaVersion===140||(currentSourceSchemaVersion===141||currentSourceSchemaVersion===142))&&(currentProfile||currentSourceSchemaVersion===138)&&(appReleaseId===undefined||typeof appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(appReleaseId)));const scope=businessId,release=appReleaseId,database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
  function requestCommand(input:unknown):Extract<SourceExportCommand,{commandType:'export.request'}>{
   try{const command=parseSourceExportCommand(input);require(command.businessId===scope&&command.commandType==='export.request');return command;}
   catch{throw new SourceExportOwnerAccessError('SOURCE_EXPORT_ACCESS_INPUT_REQUIRED');}

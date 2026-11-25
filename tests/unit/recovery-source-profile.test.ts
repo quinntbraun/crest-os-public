@@ -1,15 +1,26 @@
 import {randomUUID} from 'node:crypto';
+import {readFileSync} from 'node:fs';
 import {it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
 import {recoverySourceProfileMatches,recoveryCanonicalSourceProfile} from '../../src/tooling/recovery-source-profile.ts';
 import {openingFunds139SourceProfile as candidate} from '../../src/tooling/opening-funds139-source-profile.ts';
 import {recoveryRoutineBaseline138} from '../../src/tooling/recovery-routine-baseline138.ts';
+import {openingDocument142SourceProfile} from '../../src/tooling/opening-document142-catalog.ts';
 import {recoveryConfigurationFixture} from '../support/recovery-configuration-fixture.ts';
 import {prepareRecoveryConfiguration,readRecoveryConfiguration,reconstructRecoveryConfiguration} from '../../src/tooling/recovery-configuration.ts';
 import {readRecoveryRunCandidate} from '../../src/tooling/recovery-run-restore.ts';
 import {readRecoveryReleaseManifest} from '../../src/tooling/recovery-release-distribution.ts';
 it('preserves138 parsing while139 requires its exact reviewed registry, excluding future versions',()=>{
  expect(recoverySourceProfileMatches(138,'b'.repeat(64))).toBe(true);expect(recoverySourceProfileMatches(139,candidate.migrationRegistrySha256)).toBe(true);for(const version of [0,137,140,999,'139'])expect(recoverySourceProfileMatches(version,candidate.migrationRegistrySha256)).toBe(false);expect(recoverySourceProfileMatches(139,'b'.repeat(64))).toBe(false);
+});
+it('registers only the exact142 identity and refuses other142 or future143 identities',()=>{
+ const candidate=openingDocument142SourceProfile,profile=recoveryCanonicalSourceProfile(142,candidate.migrationRegistrySha256);expect(profile.registered).toBe(true);expect(profile.routines.sha256).toBe(candidate.routineSha256);expect(profile.schema.sha256).toBe(candidate.schemaSha256);expect(recoverySourceProfileMatches(142,candidate.migrationRegistrySha256)).toBe(true);expect(recoverySourceProfileMatches(142,'b'.repeat(64))).toBe(false);expect(recoverySourceProfileMatches(143,candidate.migrationRegistrySha256)).toBe(false);expect(()=>recoveryCanonicalSourceProfile(142,'b'.repeat(64))).toThrow();
+});
+it('requires production activation to remain blocked on an explicit142 release manifest',()=>{
+ const source=JSON.parse(readFileSync(new URL('../../release/compatibility.json',import.meta.url),'utf8'));
+ const digest='a'.repeat(64),registry=openingDocument142SourceProfile.migrationRegistrySha256;
+ const manifest={formatVersion:2,sourceCommit:'c'.repeat(40),workingTreeDirty:false,nodeVersion:'24.22.0',packageManager:'npm@11.19.1',lockfileSha256:digest,migrationRegistrySha256:registry,canonicalMaintenanceSha256:digest,toolchainSha256:digest,compatibility:{...source,schemaMaximum:142,productionActivation:'blocked'},containerImageId:'sha256:'+digest,buildIdentity:{schemaVersion:1,appReleaseId:digest.slice(0,40),sourceContentSha256:digest,migrationRegistrySha256:registry,sourceSchemaVersion:142},distributionDigest:'sha256:'+digest,imageArchive:{file:'crest-os-image.tar',byteSize:100,sha256:digest},sourceArchive:{file:'crest-os-source.tar',byteSize:100,sha256:digest},productionActivation:'blocked'};
+ expect(readRecoveryReleaseManifest(manifest).buildIdentity.sourceSchemaVersion).toBe(142);expect(()=>readRecoveryReleaseManifest({...manifest,productionActivation:'accepted',compatibility:{...manifest.compatibility,productionActivation:'accepted'}})).toThrow();
 });
 it('canonical comparison requires the actual138 baseline or separately registered139 fingerprints',()=>{
  expect(recoveryCanonicalSourceProfile(138,recoveryRoutineBaseline138.migrationRegistrySha256).routines).toBe(recoveryRoutineBaseline138);expect(()=>recoveryCanonicalSourceProfile(138,'b'.repeat(64))).toThrow();const profile=recoveryCanonicalSourceProfile(139,candidate.migrationRegistrySha256);expect(profile.registered).toBe(true);expect(profile.routines.sha256).toBe(candidate.routineSha256);expect(profile.schema.sha256).toBe(candidate.schemaSha256);

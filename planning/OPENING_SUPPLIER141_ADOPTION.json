@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 141,
+  "registeredSourceOnly": true,
+  "reason": "Retain supplier bill/allocation evidence in scoped owner exports and supported recovery without changing financial posting semantics.",
+  "migration": {
+    "version": "20270217183000",
+    "file": "supabase/migrations/20270217183000_fictional_opening_supplier_sources.sql",
+    "sha256": "ab087b772c825b2c99521941444df8f94ba31cd727b69a5d85e1d4a3b852c6e8",
+    "registrySha256": "7bcd4b1b7374f163442c2528ccd4984020f0cadadea0ac3d38f36cf66facf4eb"
+  },
+  "parts": [
+    {
+      "path": "planning/proposals/20270207180000_opening_payables_sources.sql",
+      "offset": 194,
+      "bytes": 37118,
+      "sha256": "3ae5fa6b54cfd3e4419f1c344ad886bddd1e496d318bc93983c5bde01cf1dd0a"
+    },
+    {
+      "path": "planning/proposals/20270208180000_opening_payables_export_history.sql",
+      "offset": 37505,
+      "bytes": 5284,
+      "sha256": "43eb759dbfb2503012a60230f1f6a0b6cec620a661c582a071c93f6c4ea798e0"
+    },
+    {
+      "path": "planning/proposals/20270209180000_opening_journal_payables_context.sql",
+      "offset": 42990,
+      "bytes": 2848,
+      "sha256": "fe569132c3a0778e7c27e840726800a18f331432fd8ff10b056cda0bb17b24ba"
+    },
+    {
+      "path": "planning/proposals/20270210180000_opening_payables_allocation_review.sql",
+      "offset": 46042,
+      "bytes": 36031,
+      "sha256": "4570cdf81777d1aecf6038d019fc67ccc158e3db2dd04aa55034e171f6330682"
+    },
+    {
+      "path": "planning/proposals/20270211180000_opening_allocation_export_history.sql",
+      "offset": 82278,
+      "bytes": 5389,
+      "sha256": "0d079f305c99ee93d4dcc9e447dc70c8d133d0761d8348f7c0b4a081fb0a785b"
+    },
+    {
+      "path": "planning/proposals/20270212180000_opening_allocation_context.sql",
+      "offset": 87864,
+      "bytes": 2872,
+      "sha256": "c334555e99b68a05589283556e72174f3746788230fa3a5775c6ed2b386216a2"
+    },
+    {
+      "path": "planning/proposals/20270213180000_opening_allocation_private_response.sql",
+      "offset": 90935,
+      "bytes": 6387,
+      "sha256": "18a2edf1dc6052d65284e6a6498e0c5af14790739fc64b640c42a610773b670b"
+    },
+    {
+      "path": "planning/proposals/20270214180000_opening_supplier_source_history.sql",
+      "offset": 97526,
+      "bytes": 9686,
+      "sha256": "5caba48e57c0169c84e9116cc18fe3fb56031c249aa7855cfafe5ef808659142"
+    },
+    {
+      "path": "planning/proposals/20270215180000_opening_supplier_recovery_read.sql",
+      "offset": 107411,
+      "bytes": 398,
+      "sha256": "6cb7ba6175065b7aded193a079b60e78dadfdd7f1e5e30e54c99a07efd23ed23"
+    },
+    {
+      "path": "planning/proposals/20270216180000_opening_supplier_workspace_export.sql",
+      "offset": 108010,
+      "bytes": 27683,
+      "sha256": "e7435c90f22a714f4cfcbf715b420e5088e6cfd9787fb494afb147ad5521831b"
+    }
+  ],
+  "previousRegistry": {
+    "file": "tests/support/registered140-migration-checksums.json",
+    "sha256": "823ffc623e93cc0f2c6122b6a04a47b5b1c776dbd6d9c0f779211869f5e75234"
+  },
+  "previousCoverage": {
+    "file": "tests/support/registered140-security-export-coverage.json",
+    "sha256": "69360a328bb723b3dd06d869cd27efdd8ee88788c8dd5e35c69c6fbf22b3341e"
+  },
+  "previousCompatibility": {
+    "file": "tests/support/registered140-compatibility.json",
+    "sha256": "4a4fd476b6c25997c254c621f0f295cb142405aaace2c2dc383131e2795172e1"
+  },
+  "sourceCount": 196,
+  "businessSourceCount": 174,
+  "ownerDatabaseApplied": false,
+  "productionDatabaseApplied": false,
+  "productionActivation": "blocked",
+  "openingBalancesApproved": false,
+  "openingJournalPosted": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "requiredAcceptance": [
+    "Registered141 upgrade and exact original held SQL preservation",
+    "Registered196-source operator delivery and historical140 reader preservation",
+    "Registered174-source authenticated owner delivery through the trusted runtime",
+    "Exact current application image/build identity and recovery",
+    "Actual provider/off-host/key/device acceptance and owner opening configuration"
+  ]
+}

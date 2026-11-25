@@ -19,7 +19,7 @@ import {collectServiceCatalogSources,catalogCollectionContext} from './service-c
 import {captureFinanceSourceExport} from '../bookkeeping/finance-source-export.ts';
 import {verifyFinanceSourceExport} from '../tooling/verify-finance-source-export.ts';
 import {schemaMigrationLock} from './schema-migration-lock.ts';
-import {captureCurrentBusinessRows,captureCurrentBusinessRows140} from './current-business-source.ts';
+import {captureCurrentBusinessRows,captureCurrentBusinessRows140,captureCurrentBusinessRows141,captureCurrentBusinessRows142} from './current-business-source.ts';
 import type {CurrentBusinessRows} from './current-business-source.ts';
 import {captureCurrentIdentitySource} from './current-business-identity-source.ts';
 import type {CurrentBusinessIdentitySource} from './current-business-identity-source.ts';
@@ -143,7 +143,7 @@ export function createServiceRefundSourceCollector(config:Configuration,includeE
  return createCollector(config,false,false,false,true,includeSupplierPayables?23:includeSupplierBillDrafts?22:includeStatementMatchDrafts?21:includeOpeningReceivables?20:includeStatementStaging?19:includeOpeningWorksheets?18:includeRestoredTips?17:includeCollectionFailureGroupedRecredits?16:includeCollectionFailureRecredits?15:includeRefundTransferFees?14:includeDirectReceiptTips?13:includeRefundTransferAdjustments?12:includeCollectionFailures?11:includeTipReturns?10:includeExcessReturns?9:includeExcessReceipts?8:7);
 }
 export function createCurrentBusinessSourceCollector(config:Configuration){
- if(!config.migrationIdentity||![133,134,135,136,137,138,140].includes(config.migrationIdentity.length))throw new BusinessFoundationCollectionError();
+ if(!config.migrationIdentity||![133,134,135,136,137,138,140,141,142].includes(config.migrationIdentity.length))throw new BusinessFoundationCollectionError();
  return createCollector(config,false,false,false,false,5,true);
 }
 function createCollector(config:Configuration,includeCrm:false,includeJournal:false,includeCatalog:false,includeFinance:false,financeProfile:FinanceSourceVersion,includeCurrent:true):(signal:AbortSignal)=>Promise<CurrentBusinessSourceCapture>;
@@ -193,10 +193,10 @@ function createCollector(config:Configuration,includeCrm:boolean,includeJournal=
       require(observed.rows.length===expected.length&&observed.rows.every((row,index)=>exact(row,['version','name'])&&row.version===expected[index]!.version&&row.name===expected[index]!.name));
     }
     if(includeCurrent){
-     const value=await (expected?.length===140?captureCurrentBusinessRows140:captureCurrentBusinessRows)(businessId,async(sql,args)=>(await query(sql,args)).rows,check);
+     const value=await (expected?.length===142?captureCurrentBusinessRows142:expected?.length===141?captureCurrentBusinessRows141:expected?.length===140?captureCurrentBusinessRows140:captureCurrentBusinessRows)(businessId,async(sql,args)=>(await query(sql,args)).rows,check);
      const identity=await captureCurrentIdentitySource(value,async(sql,args)=>(await query(sql,args)).rows,check);
      const sessions=await captureCurrentSessionSource(identity,value,async(sql,args)=>(await query(sql,args)).rows,check);
-     const provider=expected&&(expected.length===135||expected.length===136||expected.length===137||expected.length===138||expected.length===140)?await captureCurrentProviderSource(identity,value,async(sql,args)=>(await query(sql,args)).rows,check):undefined;
+     const provider=expected&&(expected.length===135||expected.length===136||expected.length===137||expected.length===138||expected.length===140||expected.length===141||expected.length===142)?await captureCurrentProviderSource(identity,value,async(sql,args)=>(await query(sql,args)).rows,check):undefined;
      require((await query('COMMIT')).command==='COMMIT');check();
      return Object.freeze({forCurrentBusinessProviderServer:()=>provider,forCurrentBusinessServer:()=>value,forCurrentBusinessIdentityServer:()=>identity,forCurrentBusinessSessionServer:()=>sessions,toJSON():never{throw new Error('BUSINESS_FOUNDATION_CAPTURE_PRIVATE');}});
     }

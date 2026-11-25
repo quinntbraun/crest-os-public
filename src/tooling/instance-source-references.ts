@@ -5,11 +5,12 @@ import type {RecoveryBackupSnapshot} from './recovery-backup-lease.ts';
 import {instanceSourceInventory138} from './instance-source-inventory138.ts';
 import {openingFunds139SourceInventory} from './opening-funds139-source-profile.ts';
 import {openingSupplier141SourceInventory} from './opening-supplier141-source-inventory.ts';
+import {openingDocument142SourceInventory} from './opening-document142-source-inventory.ts';
 export type InstanceSourceForeignKey=Readonly<{source:string;name:string;columns:readonly string[];target:string;targetColumns:readonly string[];match:'simple'|'full';constraintValidated:boolean;verification:'snapshot_no_orphans'|'excluded_column'|'external_source'}>;
-export async function captureInstanceSourceReferences(snapshot:RecoveryBackupSnapshot,signal:AbortSignal,candidate:boolean|'supplier141'=false){
+export async function captureInstanceSourceReferences(snapshot:RecoveryBackupSnapshot,signal:AbortSignal,candidate:boolean|'supplier141'|'document142'=false){
  function require(value:unknown):asserts value{if(!value)throw Error('INSTANCE_SOURCE_REFERENCES_REVIEW_REQUIRED');}
  require(isLiveRecoveryBackupSnapshot(snapshot)&&snapshot.databaseRole==='crest_backup_reader');signal.throwIfAborted();
- const inventory=new Map((candidate==='supplier141'?openingSupplier141SourceInventory:candidate?openingFunds139SourceInventory:instanceSourceInventory138).map(source=>[source.source,source])),quote=(value:string)=>'"'+value.replaceAll('"','""')+'"',relation=(value:string)=>value.split('.').map(quote).join('.');
+ const inventory=new Map((candidate==='document142'?openingDocument142SourceInventory:candidate==='supplier141'?openingSupplier141SourceInventory:candidate?openingFunds139SourceInventory:instanceSourceInventory138).map(source=>[source.source,source])),quote=(value:string)=>'"'+value.replaceAll('"','""')+'"',relation=(value:string)=>value.split('.').map(quote).join('.');
  const definitions=(await snapshot.query(`SELECT n.nspname||'.'||c.relname AS source,f.conname AS name,
   ARRAY(SELECT a.attname::text FROM unnest(f.conkey) WITH ORDINALITY k(num,pos) JOIN pg_catalog.pg_attribute a ON a.attrelid=f.conrelid AND a.attnum=k.num ORDER BY k.pos) AS local_columns,
   pn.nspname||'.'||p.relname AS target,

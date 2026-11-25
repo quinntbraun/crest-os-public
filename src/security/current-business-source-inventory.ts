@@ -1,4 +1,7 @@
 import {openingFundsSourceCoverage} from '../bookkeeping/opening-funds-source-columns.ts';
+import {openingPayablesSourceCoverage} from '../bookkeeping/opening-payables-source-columns.ts';
+import {openingAllocationsSourceCoverage} from '../bookkeeping/opening-allocations-source-columns.ts';
+import {openingDocumentSourceCoverage} from '../bookkeeping/opening-document-source-columns.ts';
 // Fixed schema133 business-row projection. Credential exclusions are explicit
 // in the reviewed coverage manifest and matching SQL dictionary.
 export const currentBusinessSourceInventory=Object.freeze([
@@ -173,11 +176,15 @@ export const currentBusinessSourceInventory=Object.freeze([
 
 //140 uses the separately versioned scoped reader; the original projection stays fixed.
 export const currentBusinessSourceInventory140:readonly Readonly<{source:string;columns:readonly string[]}>[]=Object.freeze([...currentBusinessSourceInventory,...openingFundsSourceCoverage.map(row=>Object.freeze({source:row.table,columns:row.required}))]);
+export const currentBusinessSourceInventory141:readonly Readonly<{source:string;columns:readonly string[]}>[]=Object.freeze([...currentBusinessSourceInventory140,...[...openingPayablesSourceCoverage,...openingAllocationsSourceCoverage].map(row=>Object.freeze({source:row.table,columns:row.required}))]);
+export const currentBusinessSourceInventory142:readonly Readonly<{source:string;columns:readonly string[]}>[]=Object.freeze([...currentBusinessSourceInventory141,...openingDocumentSourceCoverage.map(row=>Object.freeze({source:row.table,columns:row.required}))]);
 export function currentBusinessInventoryForProfile(profile:unknown){
  if(profile==='crest.current-business-rows.v1')return currentBusinessSourceInventory;
  if(profile==='crest.current-business-rows.v2')return currentBusinessSourceInventory140;
+ if(profile==='crest.current-business-rows.v3')return currentBusinessSourceInventory141;
+ if(profile==='crest.current-business-rows.v4')return currentBusinessSourceInventory142;
  return undefined;
 }
 export function currentBusinessBindingMatches(profile:unknown,version:unknown){
- return profile==='crest.current-business-rows.v1'&&[133,134,135,136,137,138].includes(version as number)||profile==='crest.current-business-rows.v2'&&version===140;
+ return profile==='crest.current-business-rows.v1'&&[133,134,135,136,137,138].includes(version as number)||profile==='crest.current-business-rows.v2'&&version===140||profile==='crest.current-business-rows.v3'&&version===141||profile==='crest.current-business-rows.v4'&&version===142;
 }

@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 140,
+  "migrationCount": 142,
   "tables": [
     {
       "table": "crest.businesses",
@@ -4125,6 +4125,114 @@
         "recorded_at",
         "evidence",
         "evidence_sha256"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.opening_payables_origins",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "source_namespace",
+        "external_id",
+        "vendor",
+        "operation_id",
+        "recorded_by",
+        "recorded_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.opening_payables_schedule_revisions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "worksheet_revision_id",
+        "revision",
+        "prior_revision",
+        "operation_id",
+        "audit_event_id",
+        "recorded_by",
+        "recorded_at",
+        "evidence",
+        "evidence_sha256"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.opening_allocations_origins",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "source_namespace",
+        "external_id",
+        "vendor",
+        "kind",
+        "reference",
+        "operation_id",
+        "recorded_by",
+        "recorded_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.opening_allocations_schedule_revisions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "worksheet_revision_id",
+        "payables_revision",
+        "revision",
+        "prior_revision",
+        "operation_id",
+        "audit_event_id",
+        "recorded_by",
+        "recorded_at",
+        "evidence",
+        "evidence_sha256"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.opening_document_intents",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "reference",
+        "expected_sha256",
+        "recovery_epoch",
+        "media_type",
+        "byte_size",
+        "dispatch_id",
+        "operation_id",
+        "audit_event_id",
+        "created_by",
+        "recorded_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.opening_document_originals",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "candidate",
+        "operation_id",
+        "audit_event_id",
+        "created_by",
+        "recorded_at"
       ],
       "excluded": [],
       "partialEvidenceGroup": null

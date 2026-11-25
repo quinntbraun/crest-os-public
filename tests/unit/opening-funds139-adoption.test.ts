@@ -26,5 +26,5 @@ it('covers all192 noncredential sources once while retaining the old coverage un
 });
 it('does not treat source registration as installation, opening approval or completed backups',()=>{
  expect(adoption).toMatchObject({registeredSourceOnly:true,ownerDatabaseApplied:false,productionDatabaseApplied:false,productionActivation:'blocked',openingBalancesApproved:false,openingJournalPosted:false,completePortableExport:false,completeBackup:false});
- expect(financePostingSchema(139)).toBe(109);expect(financePostingSchema(141)).toBe(141);
+ expect(financePostingSchema(139)).toBe(109);expect(financePostingSchema(142)).toBe(109);expect(financePostingSchema(143)).toBe(143);
 });

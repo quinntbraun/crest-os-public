@@ -17,6 +17,8 @@ import type {NodeConfiguration} from './node-server.ts';
 import {getServerBuildIdentity,getServerMigrationIdentity} from './build-identity.ts';
 import {validateFinanceExportConnection} from './production-finance-export-configuration.ts';
 import {parseProductionSourceExportConfiguration} from './production-source-export-configuration.ts';
+import {openingDocument142SourceProfile} from '../tooling/opening-document142-catalog.ts';
+import {openingSupplier141SourceProfile} from '../tooling/opening-supplier141-catalog.ts';
 import type {ProductionSourceExportConfiguration} from './production-source-export-configuration.ts';
 
 type Authentication=NonNullable<NodeConfiguration['authentication']>;
@@ -24,9 +26,9 @@ type Store=Awaited<ReturnType<typeof createEncryptedExportPartStore>>;
 type Execution=ReturnType<typeof createSourceExportExecutionAccess>;
 function require(value:unknown):asserts value{if(!value)throw Error('PRODUCTION_SOURCE_EXPORT_CONFIGURATION_REQUIRED');}
 class GrantedSourceExportRuntime{
- readonly appReleaseId:string;readonly sourceSchemaVersion:138|140;readonly profile='crest.current-business-source-bundle.v1';
+ readonly appReleaseId:string;readonly sourceSchemaVersion:138|140|141|142;readonly profile='crest.current-business-source-bundle.v1';
  #businessId:string;#store:Store;#execution:Execution;#schedule:(admission:unknown,credential:string)=>void;#close:()=>Promise<void>;#cancel:(jobId:string)=>void;#closed=false;
- constructor(businessId:string,appReleaseId:string,sourceSchemaVersion:138|140,store:Store,execution:Execution,schedule:(admission:unknown,credential:string)=>void,cancel:(jobId:string)=>void,close:()=>Promise<void>){this.#businessId=businessId;this.appReleaseId=appReleaseId;this.sourceSchemaVersion=sourceSchemaVersion;this.#store=store;this.#execution=execution;this.#schedule=schedule;this.#cancel=cancel;this.#close=close;Object.freeze(this);}
+ constructor(businessId:string,appReleaseId:string,sourceSchemaVersion:138|140|141|142,store:Store,execution:Execution,schedule:(admission:unknown,credential:string)=>void,cancel:(jobId:string)=>void,close:()=>Promise<void>){this.#businessId=businessId;this.appReleaseId=appReleaseId;this.sourceSchemaVersion=sourceSchemaVersion;this.#store=store;this.#execution=execution;this.#schedule=schedule;this.#cancel=cancel;this.#close=close;Object.freeze(this);}
  belongsTo(businessId:string,appReleaseId:string){return !this.#closed&&this.#businessId===businessId&&this.appReleaseId===appReleaseId;}
  forDownloads(){return Object.freeze({readVerified:this.#store.readVerified.bind(this.#store)});}
  request(...args:Parameters<Execution['request']>){require(!this.#closed);return this.#execution.request(...args);}
@@ -40,7 +42,7 @@ export function sourceExportRuntimeBelongsTo(value:unknown,businessId:string,app
 export async function openProductionSourceExportRuntime(input:ProductionSourceExportConfiguration,businessId:string,authentication:Authentication,capabilities:ProductionCapabilities,financeConnection?:string):Promise<ProductionSourceExportRuntime>{
  let client:ReturnType<typeof createR2ObjectClient>|undefined;
  try{
-  const identity=getServerBuildIdentity(),migrationIdentity=getServerMigrationIdentity();require(identity&&(identity.sourceSchemaVersion===138||identity.sourceSchemaVersion===140)&&migrationIdentity&&migrationIdentity.length===identity.sourceSchemaVersion&&productionCapability({environment:'production',businessId,productionCapabilities:capabilities},'businessExports'));
+  const identity=getServerBuildIdentity(),migrationIdentity=getServerMigrationIdentity();require(identity&&(identity.sourceSchemaVersion===138||identity.sourceSchemaVersion===140||identity.sourceSchemaVersion===141&&identity.migrationRegistrySha256===openingSupplier141SourceProfile.migrationRegistrySha256||identity.sourceSchemaVersion===142&&identity.migrationRegistrySha256===openingDocument142SourceProfile.migrationRegistrySha256)&&migrationIdentity&&migrationIdentity.length===identity.sourceSchemaVersion&&productionCapability({environment:'production',businessId,productionCapabilities:capabilities},'businessExports'));
   const sourceSchemaVersion=identity.sourceSchemaVersion;
   const sessionConfiguration={...authentication.configuration,environment:'production' as const};
   const config=parseProductionSourceExportConfiguration(input);validateFinanceExportConnection(authentication.configuration.connectionString,{connectionString:config.connectionString},financeConnection);

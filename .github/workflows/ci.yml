@@ -141,6 +141,8 @@ jobs:
           node --conditions=react-server --test --test-concurrency=1 tests/integration/workspace-export140.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-payables-sources.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-supplier-candidate141.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/workspace-supplier141.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-document-custody.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-scheduled-capture.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-alert-dispatch.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/operator-source-export.test.mjs
@@ -307,10 +309,10 @@ jobs:
         env:
           CREST_BROWSER_JOB_TOTAL: ${{ strategy.job-total }}
         run: node scripts/run-browser-group.mjs ${{ matrix.suite }}
-      - name: Prove opening supplier evidence through genuine sign-in and phone layout
+      - name: Prove opening supplier and document evidence through genuine sign-in and phone layout
         if: matrix.suite == 'opening-worksheet'
         timeout-minutes: 8
-        run: node --conditions=react-server --test --test-reporter=tap --test-concurrency=1 tests/integration/opening-payables-http-auth.test.mjs
+        run: node --conditions=react-server --test --test-reporter=tap --test-concurrency=1 tests/integration/opening-payables-http-auth.test.mjs tests/integration/opening-document-http-auth.test.mjs
       - name: Preserve synthetic screenshots and exact group result
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9

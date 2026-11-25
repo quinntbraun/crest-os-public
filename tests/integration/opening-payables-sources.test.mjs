@@ -16,7 +16,7 @@ async function command(client,name,args){return(await client.query('SELECT crest
 async function transaction(client,run){await client.query('BEGIN');try{const result=await run();await client.query('COMMIT');return result;}catch(error){await client.query('ROLLBACK');throw error;}}
 test('held opening payables retain remaining obligations, audited history and private source evidence without posting',{timeout:180000},async()=>{
  const sandbox=await migrationSandbox();try{
-  const target=await sandbox.database(),admin=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(admin,target);await sandbox.apply(target);
+  const target=await sandbox.database(),admin=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(admin,target);await sandbox.apply(target,await sandbox.prefix(140));
   await sandbox.applyHeldSql(admin,await readFile(new URL('../../planning/proposals/20270207180000_opening_payables_sources.sql',import.meta.url),'utf8'));
   await sandbox.applyHeldSql(admin,await readFile(new URL('../../planning/proposals/20270208180000_opening_payables_export_history.sql',import.meta.url),'utf8'));
   await sandbox.applyHeldSql(admin,await readFile(new URL('../../planning/proposals/20270209180000_opening_journal_payables_context.sql',import.meta.url),'utf8'));
@@ -91,6 +91,6 @@ test('held opening payables retain remaining obligations, audited history and pr
   const historicAllocations=await run('read_fictional_opening_allocations_revision',[...auth(),allocatedAgain.receipt.allocationRevisionId]);assert.deepEqual(parseOpeningAllocationsHistorical(historicAllocations,owner.business,allocatedAgain.receipt.allocationRevisionId).receipt,allocatedAgain.receipt);assert.deepEqual(historicAllocations.supplierSchedule,revised.receipt);
   assert.deepEqual((await run('read_fictional_opening_payables_history',[...other.auth(),other.epoch,null,null,20])).entries,[]);assert.equal((await run('read_fictional_opening_payables_revision',[...other.auth(),other.epoch,revised.receipt.scheduleRevisionId])).schedule,null);assert.equal((await run('read_fictional_opening_allocations_revision',[...other.auth(),other.epoch,allocatedAgain.receipt.allocationRevisionId])).schedule,null);
   await assert.rejects(transaction(web,()=>command(web,'read_fictional_opening_payables_history',[...auth(),null,null,20])),{code:'42501'});await assert.rejects(run('read_fictional_opening_payables_history',[...auth(),null,randomUUID(),20]),{message:'OPENING_SOURCE_HISTORY_INPUT_REQUIRED'});
-  assert.deepEqual(await counts(),before);assert.equal(JSON.parse(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url),'utf8')).migrations.length,140);
+  assert.deepEqual(await counts(),before);assert.equal(JSON.parse(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url),'utf8')).migrations.length,141);
  }finally{await sandbox.close();}
 });

@@ -40,7 +40,7 @@ export function readCurrentBusinessCsv(csv:string,columns:readonly string[],esca
 
 export function formatCurrentBusinessCsv(capture:CurrentBusinessRows){
  const inventory=currentBusinessInventoryForProfile(capture.profile);require(inventory);
- require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2')&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===inventory.length);
+ require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2'||capture.profile==='crest.current-business-rows.v3'||capture.profile==='crest.current-business-rows.v4')&&capture.completePortableExport===false&&capture.completeBackup===false&&capture.sources.length===inventory.length);
  const files:Record<string,Uint8Array>={},dictionary:Record<string,unknown>={},escapeMap:Record<string,readonly Escape[]>={};let total=0,recordCount=0;
  for(const [index,source]of capture.sources.entries()){
   const expected=inventory[index]!;require(source.source===expected.source&&isDeepStrictEqual(source.columns,expected.columns));

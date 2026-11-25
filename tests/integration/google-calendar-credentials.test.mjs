@@ -64,7 +64,7 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134,135,136,137,1
     await installProviderSchema(admin,database);
     await sandbox.apply(database,await sandbox.prefix(registered||76));
     if(registered>=131){
-      const coverage=JSON.parse(await readFile(new URL(registered<138?'../support/registered'+registered+'-export-coverage.json':'../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+      const coverage=JSON.parse(await readFile(new URL(registered<138?'../support/registered'+registered+'-export-coverage.json':'../support/registered138-security-export-coverage.json',import.meta.url),'utf8'));
       const observed=(await admin.query("SELECT n.nspname||'.'||c.relname AS table,a.attname AS column FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind='r' AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2")).rows;
       const checked=verifyExportCoverage(coverage,observed,registered);assert.equal(checked.assurance,'schema_inventory_only');assert.equal(checked.completePortableExport,false);assert.equal(checked.completeBackup,false);
     }
@@ -467,7 +467,7 @@ for(const registered of [false,125,126,127,128,130,131,132,133,134,135,136,137,1
           const collected=await createCurrentBusinessSourceCollector(config)(signal),source=collected.forCurrentBusinessServer(),identitySource=collected.forCurrentBusinessIdentityServer(),sessionSource=collected.forCurrentBusinessSessionServer(),providerSource=collected.forCurrentBusinessProviderServer();
           assert.equal(providerSource!==undefined,registered>=135);if(providerSource){assert.equal(providerSource.sources.length,8);assert.equal(providerSource.businessSnapshotToken,source.snapshotToken);}
           assert.equal(source.sources.length,167);assert(source.recordCount>0);
-          const coverage=JSON.parse(await readFile(new URL(registered<138?'../support/registered'+registered+'-export-coverage.json':'../../planning/SECURITY_EXPORT_COVERAGE.json',import.meta.url),'utf8'));
+          const coverage=JSON.parse(await readFile(new URL(registered<138?'../support/registered'+registered+'-export-coverage.json':'../support/registered138-security-export-coverage.json',import.meta.url),'utf8'));
           assert.deepEqual(source.sources.map(item=>({table:item.source,required:item.columns})),coverage.tables.filter(item=>item.scope==='business').map(item=>({table:item.table,required:item.required})));
           assert.equal(identitySource.businessSnapshotToken,source.snapshotToken);assert.equal(identitySource.businessId,source.businessId);
           for(const item of identitySource.sources)assert.deepEqual(item.columns,coverage.tables.find(table=>table.table===item.source).required,'identity columns match the registered closed source inventory');

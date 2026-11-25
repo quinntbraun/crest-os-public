@@ -21,7 +21,7 @@ export function workbookColumn(index:number){
 export function formatCurrentBusinessWorkbook(capture:CurrentBusinessRows,binding:CurrentBusinessSourceBinding){
  const inventory=currentBusinessInventoryForProfile(capture.profile);require(inventory);
  require(binding&&typeof binding.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(binding.appReleaseId)&&currentBusinessBindingMatches(capture.profile,binding.sourceSchemaVersion));
- require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2')&&capture.sources.length===inventory.length);
+ require(capture.schemaVersion===1&&(capture.profile==='crest.current-business-rows.v1'||capture.profile==='crest.current-business-rows.v2'||capture.profile==='crest.current-business-rows.v3'||capture.profile==='crest.current-business-rows.v4')&&capture.sources.length===inventory.length);
  const sidecars:Sidecar[]=[],schemaRows:string[][]=[['Source','Column','PostgreSQL type','Primary key','CSV file']],coverageRows:string[][]=[['Source','Data rows','Workbook sheet','Coverage']];
  const dataSheets:Sheet[]=capture.sources.map((source,index)=>{
   const expected=inventory[index]!;require(source.source===expected.source&&isDeepStrictEqual(source.columns,expected.columns));

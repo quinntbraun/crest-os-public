@@ -700,6 +700,16 @@
       "version": "20270206183000",
       "file": "20270206183000_opening_funds_workspace_export.sql",
       "sha256": "365b1bc6fec419a131f757da79a44211ec42d92fed472a716ff299f96e583b75"
+    },
+    {
+      "version": "20270217183000",
+      "file": "20270217183000_fictional_opening_supplier_sources.sql",
+      "sha256": "ab087b772c825b2c99521941444df8f94ba31cd727b69a5d85e1d4a3b852c6e8"
+    },
+    {
+      "version": "20270218185000",
+      "file": "20270218185000_opening_document_workspace.sql",
+      "sha256": "dd77400ae479eee8777c4d0a8dfdb3eb15f6d458c9e171e32822c4581e143a7f"
     }
   ]
 }

@@ -6,15 +6,17 @@ import {readFile,writeFile,mkdir,copyFile,chmod,appendFile} from 'node:fs/promis
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {isDeepStrictEqual} from 'node:util';
+import {openingSupplier141Candidate} from './opening-supplier141-candidate.mjs';
 import {workspaceExport140Candidate} from './workspace-export140-candidate.mjs';
 import {openingFunds139Candidate} from './opening-funds139-candidate.mjs';
+import {openingDocument142Candidate} from './opening-document142-candidate.mjs';
 import {recoveryDistributionFixture} from './recovery-distribution-fixture.mjs';
 import {privateWorkspace} from './recovery-drill.mjs';
 import {hashRecoveryReleaseFile} from '../../src/tooling/recovery-release-files.ts';
 import {readRecoveryReleaseManifest} from '../../src/tooling/recovery-release-distribution.ts';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 export async function buildOpeningFunds139Image(logFile,sourceVersion=139){
- assert([139,140].includes(sourceVersion));
+ assert([139,140,141,142].includes(sourceVersion));
  const workspace=await privateWorkspace(),tag='crest-opening-funds'+sourceVersion+':'+randomUUID(),container='crest-funds'+sourceVersion+'-smoke-'+randomUUID();let launched=false;
  async function docker(args,{timeout=120000,record=false}={}){
   return new Promise((resolve,reject)=>{let stdout='',tail='',bytes=0,aborted=false;const child=spawn('docker',args,{stdio:['ignore','pipe','pipe'],windowsHide:true});const timer=setTimeout(()=>{aborted=true;child.kill('SIGTERM');},timeout);timer.unref();let recording=Promise.resolve();
@@ -22,7 +24,7 @@ export async function buildOpeningFunds139Image(logFile,sourceVersion=139){
   });
  }
  try{
-  const candidate=await(sourceVersion===140?workspaceExport140Candidate:openingFunds139Candidate)({root,async prefix(count){assert.equal(count,sourceVersion-1);const directory=join(workspace,'migration-candidate');await mkdir(join(directory,'supabase/migrations'),{recursive:true});const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));for(const row of registry.migrations.slice(0,count))await copyFile(join(root,'supabase/migrations',row.file),join(directory,'supabase/migrations',row.file));return directory;}});
+  const candidate=await(sourceVersion===142?openingDocument142Candidate:sourceVersion===141?openingSupplier141Candidate:sourceVersion===140?workspaceExport140Candidate:openingFunds139Candidate)({root,workspace,async prefix(count){assert.equal(count,sourceVersion-1);const directory=join(workspace,'migration-candidate');await mkdir(join(directory,'supabase/migrations'),{recursive:true});const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));for(const row of registry.migrations.slice(0,count))await copyFile(join(root,'supabase/migrations',row.file),join(directory,'supabase/migrations',row.file));await copyFile(join(root,'tests/support/registered'+count+'-migration-checksums.json'),join(directory,'supabase/migration-checksums.json'));return directory;}});
   const source=await recoveryDistributionFixture(workspace,candidate);assert.equal(source.manifest.buildIdentity.sourceSchemaVersion,sourceVersion);assert.equal(source.manifest.migrationRegistrySha256,candidate.registrySha256);const iidFile=join(workspace,'image-id.txt');await docker(['build','--pull=false','--progress=plain','--iidfile',iidFile,'--tag',tag,source.sourceRoot],{timeout:900000,record:true});const imageId=(await readFile(iidFile,'utf8')).trim();assert.match(imageId,/^sha256:[a-f0-9]{64}$/);
   const config=JSON.parse(await docker(['image','inspect',imageId]));assert.equal(config.length,1);assert.equal(config[0].Id,imageId);assert.equal(config[0].Config.User,'node');
   const probe="import {readFileSync} from 'node:fs';import {isDeepStrictEqual} from 'node:util';const app=await import('/app/server/application.mjs');const file=JSON.parse(readFileSync('/app/server/build-identity.json','utf8'));const compiled=app.getServerBuildIdentity();if(!isDeepStrictEqual(file,compiled))throw Error('IDENTITY_MISMATCH');console.log(JSON.stringify(compiled));";
@@ -32,8 +34,9 @@ export async function buildOpeningFunds139Image(logFile,sourceVersion=139){
   for(const path of ['bootstrap','login','session','logout']){const response=await fetch(origin+'/api/auth/'+path,{method:'POST',headers:{origin,'content-type':'application/json'},body:'{}'});assert.equal(response.status,503);assert.equal(response.headers.has('set-cookie'),false);assert.equal((await response.json()).error,'AUTHENTICATION_REQUEST_FAILED');}
   for(const path of ['settings','rename','operation']){const response=await fetch(origin+'/api/business/'+path,{method:'POST',body:'{}'});assert.equal(response.status,503);assert.equal((await response.json()).error,'BUSINESS_REQUEST_FAILED');}
   const imagePath=join(workspace,'candidate'+sourceVersion+'-application-image.tar');await docker(['save','--output',imagePath,imageId],{timeout:180000,record:true});await chmod(imagePath,0o600);const imageArchive={file:'crest-os-image.tar',...await hashRecoveryReleaseFile(imagePath,new AbortController().signal)};const manifest=readRecoveryReleaseManifest({...source.manifest,containerImageId:imageId,distributionDigest:'sha256:'+imageArchive.sha256,imageArchive});const {release:_release,...saved}=manifest;void _release;const manifestPath=join(workspace,'candidate'+sourceVersion+'-application-manifest.json');await writeFile(manifestPath,JSON.stringify(saved,null,2)+'\n',{flag:'wx',mode:0o600});
-  return{profile:sourceVersion===140?'crest.actual-candidate140-image-build.v1':'crest.actual-candidate139-image-build.v1',workspace,sourceRoot:source.sourceRoot,sourcePath:source.sourcePath,imagePath,manifestPath,imageId,tag,buildIdentity:actual,imageArchive,sourceArchive:manifest.sourceArchive,nonRoot:true,compiledIdentityVerified:true,closedStartupVerified:true,registeredSourceOnly:true,installed:false,independentHostVerified:false,completeBackup:false};
+  return{profile:sourceVersion===142?'crest.actual-registered142-image-build.v1':sourceVersion===141?'crest.actual-registered141-image-build.v1':sourceVersion===140?'crest.actual-candidate140-image-build.v1':'crest.actual-candidate139-image-build.v1',workspace,sourceRoot:source.sourceRoot,sourcePath:source.sourcePath,imagePath,manifestPath,imageId,tag,buildIdentity:actual,imageArchive,sourceArchive:manifest.sourceArchive,nonRoot:true,compiledIdentityVerified:true,closedStartupVerified:true,registeredSourceOnly:true,installed:false,independentHostVerified:false,completeBackup:false};
  }finally{if(launched)await docker(['container','rm','--force',container]);}
 }
 
 export function buildOpeningFunds140Image(logFile){return buildOpeningFunds139Image(logFile,140);}
+

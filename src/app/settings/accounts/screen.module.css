@@ -1,6 +1,12 @@
 .workspace {
   min-width: 0;
 }
+.openingDocumentActions { display:flex; flex-wrap:wrap; align-items:center; gap:.625rem; min-width:0; }
+.openingDocumentActions:empty { display:none; }
+.openingDocumentActions > button,.openingDocumentActions > a { min-height:44px; max-width:100%; overflow-wrap:anywhere; }
+.openingDocumentActions > a { display:inline-flex; align-items:center; padding:.5rem .75rem; }
+.openingSourceForm > fieldset { padding:0; border:0; background:transparent; }
+.openingSourceForm > fieldset > fieldset { padding:1rem 0; border:0; border-top:1px solid var(--line); border-radius:0; background:transparent; }
 
 .openingChoice { display:flex; align-items:flex-start; gap:.75rem; min-height:3rem; padding-block:.5rem; cursor:pointer; }
 .openingChoice input[type="checkbox"] { flex:0 0 1.25rem; width:1.25rem; height:1.25rem; margin:.15rem 0 0; accent-color:var(--black); }

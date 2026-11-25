@@ -22,7 +22,7 @@ export function OpeningPayablesSourceForm({initial,identityLocked,cutoverOn,busy
    normalizeOpeningPayablesEvidence({schemaVersion:1,bills:[bill],reason:'Review historical unpaid supplier bill'},cutoverOn);onSave(bill);
   }catch{onError('Check the bill, dates and supporting documents. Earlier payments and credits must leave a positive amount still owed.');}
  }
- return <form ref={form} onSubmit={submit} onChange={calculate}>
+ return <form ref={form} className={styles.openingSourceForm} onSubmit={submit} onChange={calculate}>
   <fieldset className={styles.openingGroup} disabled={busy}><legend>{initial?'Review saved supplier bill':'Add an unpaid supplier bill'}</legend>
    <label htmlFor="payable-vendor">Supplier</label><input id="payable-vendor" name="payable-vendor" required maxLength={200} defaultValue={initial?.vendor} readOnly={identityLocked}/>
    <label htmlFor="payable-reference">Original bill reference</label><input id="payable-reference" name="payable-reference" required maxLength={200} defaultValue={initial?.externalId} readOnly={identityLocked}/>

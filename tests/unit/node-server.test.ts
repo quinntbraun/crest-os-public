@@ -27,7 +27,7 @@ import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../.
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
 const origin='https://crest.example.com';
-it.each([117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141])('requires a reviewed supplier finance source when launching schema %i',sourceSchemaVersion=>{
+it.each([117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143])('requires a reviewed supplier finance source when launching schema %i',sourceSchemaVersion=>{
  const server=createBoundedNodeServer();
  const config:NodeConfiguration={origin,environment:'test',business:{businessId:'11111111-1111-4111-8111-111111111111'},
   authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never},
@@ -35,7 +35,7 @@ it.each([117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134
   syntheticPostedFinanceExport:{connectionString:'postgres://crest_export@127.0.0.1/crest_fixture',appReleaseId:'a'.repeat(40),sourceSchemaVersion}};
  try{
   const bind=()=>bindApplicationHandler(server,config,async()=>{});
-  if(sourceSchemaVersion===141){
+  if(sourceSchemaVersion===143){
    expect(bind).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
    expect(server.listenerCount('request')).toBe(0);
   }else{
@@ -43,6 +43,10 @@ it.each([117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134
    expect(server.listenerCount('request')).toBe(1);
   }
  }finally{server.close();}
+});
+it.each(['/api/business/opening-documents/status','/api/business/%6fpening-documents/status','/api/business/opening-documents%2Foriginal'])('keeps unconfigured opening document route private and away from Next: %s',async path=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn();
+ try{bindApplicationHandler(server,{origin:local,environment:'test'},pages);const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(503);expect(response.headers.get('cache-control')).toContain('no-store');expect(await response.json()).toEqual({error:'OPENING_DOCUMENT_REQUEST_UNCONFIRMED'});expect(pages).not.toHaveBeenCalled();}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });
 it('amendment preparation requires explicit synthetic CRM/commercial/original recovery composition',()=>{
  const base={origin,environment:'test',syntheticQuoteAmendments:true,customers:true,vehicles:true,operationResolution:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}},provider:{},tokens:{}}};

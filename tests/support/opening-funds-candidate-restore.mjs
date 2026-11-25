@@ -8,13 +8,14 @@ import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {connect,inventory,keyPair,normalizedSchema,postgresTool,privateWorkspace,recoveryCluster,roleDefinitions,run} from './recovery-drill.mjs';
 import {openingSupplier141Parts} from './opening-supplier141-candidate.mjs';
+import {openingDocument142Parts} from './opening-document142-candidate.mjs';
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 export async function exerciseOpeningFundsCandidateRestore(source,url,inspect,{schemaVersion=138}={}){
- assert([138,139,140,141].includes(schemaVersion));
+ assert([138,139,140,141,142].includes(schemaVersion));
  const root=fileURLToPath(new URL('../../',import.meta.url));
  const workspace=await privateWorkspace();let cluster,restored;const age=join(root,'.local/tools/recovery/age/age'+(process.platform==='win32'?'.exe':''));
  try{
-  const proposalPaths=schemaVersion===141?openingSupplier141Parts:['20270201180000_opening_journal_context.sql','20270202180000_opening_funds_sources.sql','20270203180000_opening_journal_funds_context.sql','20270204180000_opening_funds_export_history.sql','20270205180000_opening_funds_recovery_read.sql'].map(name=>'planning/proposals/'+name);
+  const proposalPaths=schemaVersion===142?openingDocument142Parts:schemaVersion===141?openingSupplier141Parts:['20270201180000_opening_journal_context.sql','20270202180000_opening_funds_sources.sql','20270203180000_opening_journal_funds_context.sql','20270204180000_opening_funds_export_history.sql','20270205180000_opening_funds_recovery_read.sql'].map(name=>'planning/proposals/'+name);
   const proposals=[];for(const path of proposalPaths){assert.match(path,/^planning\/proposals\/[0-9]{14}_[a-z0-9_]+\.sql$/);const bytes=await readFile(join(root,path));proposals.push({name:path.slice('planning/proposals/'.length),bytes:bytes.length,sha256:hash(bytes)});}
   const keys=await keyPair(workspace),wrong=await keyPair(workspace);let dump,rows,schema,roles,order,policies;
   await source.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');try{
@@ -43,6 +44,6 @@ export async function exerciseOpeningFundsCandidateRestore(source,url,inspect,{s
   assert.equal(hash(restoredSchema),hash(schema),JSON.stringify(recoverySchemaDifference(hash(schema),restoredSchema,{schemaVersion})));
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,schemaVersion);
   await inspect(restored);
-  return{profile:schemaVersion===141?'crest.held-opening-supplier-restore-rehearsal.v1':'crest.held-opening-funds-restore-rehearsal.v1',proposals,tableCount:rows.length,schemaSha256:hash(schema),dumpSha256:hash(dump),encryptedDumpBytes:cipher.length,rolesRecreated:roles.length,independentCluster:true,registered:false,completeBackup:false,productionReopenAccepted:false};
+  return{profile:schemaVersion===142?'crest.held-opening-document-restore-rehearsal.v1':schemaVersion===141?'crest.held-opening-supplier-restore-rehearsal.v1':'crest.held-opening-funds-restore-rehearsal.v1',proposals,tableCount:rows.length,schemaSha256:hash(schema),dumpSha256:hash(dump),encryptedDumpBytes:cipher.length,rolesRecreated:roles.length,independentCluster:true,registered:false,completeBackup:false,productionReopenAccepted:false};
  }finally{if(restored)await restored.end();if(cluster)await cluster.close();assert.equal(await realpath(workspace),workspace);await rm(workspace,{recursive:true,force:true,maxRetries:10,retryDelay:100});}
 }
