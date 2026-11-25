@@ -1,6 +1,6 @@
 import {it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
-import {readFlatJsonBody,readNestedJsonBody,readPrivateBytes} from '../../src/security/private-http.ts';
+import {readFlatJsonBody,readNestedJsonBody,readPrivateBytes,readOpeningEvidenceJsonBody} from '../../src/security/private-http.ts';
 const request=(text:string,headers:Record<string,string>={})=>new Request('https://crest.example.com/private',{method:'POST',headers,body:text});
 it('default8KiB and explicitly bounded larger bodies count exact UTF8 bytes',async()=>{
  const text=JSON.stringify({notes:'😀'.repeat(4000)}),bytes=Buffer.byteLength(text);
@@ -35,4 +35,12 @@ it('binary envelopes preserve raw byte order and apply the same Content-Length b
  await expect(readPrivateBytes(input(),signal,5)).rejects.toThrow('PRIVATE_HTTP_FAILED');
  await expect(readPrivateBytes(input({'content-length':'7'}),signal,8)).rejects.toThrow('PRIVATE_HTTP_FAILED');
  await expect(readPrivateBytes(input({'content-encoding':'gzip'}),signal,8)).rejects.toThrow('PRIVATE_HTTP_FAILED');
+});
+
+it('opening evidence has a fixed larger envelope while standard nested bodies stay closed',async()=>{
+ const body=JSON.stringify({draft:{reference:'x'.repeat(150000)}});
+ await expect(readNestedJsonBody(request(body),['draft'])).rejects.toThrow('PRIVATE_HTTP_FAILED');
+ expect(await readOpeningEvidenceJsonBody(request(body),['draft'])).toEqual(JSON.parse(body));
+ await expect(readOpeningEvidenceJsonBody(request(JSON.stringify({draft:'x'.repeat(1114112)})),['draft'])).rejects.toThrow('PRIVATE_HTTP_FAILED');
+ await expect(readOpeningEvidenceJsonBody(request('{"draft":{"reference":"a","reference":"b"}}'),['draft'])).rejects.toThrow('PRIVATE_HTTP_FAILED');
 });

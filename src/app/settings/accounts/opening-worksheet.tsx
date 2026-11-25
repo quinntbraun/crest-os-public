@@ -10,6 +10,7 @@ import {financeAccountReviewReason} from '../../../bookkeeping/finance-account-c
 import styles from './screen.module.css';
 import {DollarField,EvidenceFields,Note,amount,dollars,readEvidence,value} from './opening-worksheet-fields';
 import {OpeningReceivables} from './opening-receivables';
+import {OpeningPayables} from './opening-payables';
 import {OpeningFunds} from './opening-funds';
 
 type ControlKey=keyof typeof openingControls;
@@ -71,7 +72,7 @@ function readDraft(form:FormData,projection:OpeningProjection):OpeningDraft{
   equityBasis:value(form,'opening-equity'),banks:projection.banks.map(option=>readBank(form,option)),controls:Object.fromEntries(controls)});
 }
 
-export function OpeningWorksheet({businessId,arPreview,funds=false}:{businessId:string;arPreview:boolean;funds?:boolean}){
+export function OpeningWorksheet({businessId,arPreview,funds=false,payables=false}:{businessId:string;arPreview:boolean;funds?:boolean;payables?:boolean}){
  const [projection,setProjection]=useState<OpeningProjection|null>(null),[date,setDate]=useState('');
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[pending,setPending]=useState<OpeningReference|null>(null);
  const [mayClose,setMayClose]=useState(false),[reason,setReason]=useState('');
@@ -203,6 +204,7 @@ export function OpeningWorksheet({businessId,arPreview,funds=false}:{businessId:
      <button type="button" className="secondary" disabled={busy} onClick={download}>Download saved worksheet (JSON)</button>
      {arPreview&&!pending&&<OpeningReceivables key={latest.revision} worksheet={latest}/>}
      {funds&&!pending&&<OpeningFunds key={'funds-'+latest.revision} worksheet={latest}/>}
+     {payables&&!pending&&<OpeningPayables key={'payables-'+latest.revision} worksheet={latest}/>}
     </div>}
     <form onSubmit={event=>{event.preventDefault();load(date);}}>
      <label htmlFor="opening-cutover">Proposed local cutover date ({projection.timeZone})</label>

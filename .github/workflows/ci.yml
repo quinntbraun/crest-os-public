@@ -306,6 +306,10 @@ jobs:
         env:
           CREST_BROWSER_JOB_TOTAL: ${{ strategy.job-total }}
         run: node scripts/run-browser-group.mjs ${{ matrix.suite }}
+      - name: Prove opening supplier evidence through genuine sign-in and phone layout
+        if: matrix.suite == 'opening-worksheet'
+        timeout-minutes: 8
+        run: node --conditions=react-server --test --test-reporter=tap --test-concurrency=1 tests/integration/opening-payables-http-auth.test.mjs
       - name: Preserve synthetic screenshots and exact group result
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
@@ -313,6 +317,7 @@ jobs:
           name: settings-review-${{ matrix.suite }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             .local/ci-browser/${{ matrix.suite }}.json
+            .local/review/opening-suppliers-*.png
             .local/review/settings-*.png
             .local/review/workspace-*.png
             .local/review/home-*.png

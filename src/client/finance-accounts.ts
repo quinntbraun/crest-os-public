@@ -106,9 +106,11 @@ import {parseOpeningArInput,verifyOpeningArPreview} from '../bookkeeping/opening
 import type {OpeningArInput} from '../bookkeeping/opening-receivables-preview';
 import {parseOpeningArOperation,parseOpeningArSave,parseOpeningArStored} from '../bookkeeping/opening-receivables-schedule-contract';
 import {parseOpeningFundsOperation,parseOpeningFundsSave,parseOpeningFundsStored} from '../bookkeeping/opening-funds-schedule-contract';
+import {parseOpeningPayablesOperation,parseOpeningPayablesSave,parseOpeningPayablesStored} from '../bookkeeping/opening-payables-schedule-contract';
+import type {OpeningPayablesInput} from '../bookkeeping/opening-payables-contract';
 import type {OpeningFundsInput} from '../bookkeeping/opening-funds-contract';
 
-export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;mappingHistoryEvidence?:boolean;historyEvidence?:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;openingFunds?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;supplierPayableReports?:boolean;recordedIncomeStatement?:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;invoiceOutstanding?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
+export type FinanceAccountContext=Readonly<{businessId:string;recoveryEpoch:string|null;writeState:'ready'|'paused';binding:string;fixedMappings:boolean;mappingHistoryEvidence?:boolean;historyEvidence?:boolean;taxProfiles:boolean;categoryMappings:boolean;moneyChannels:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;openingFunds?:boolean;openingPayables?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;supplierPayableReports?:boolean;recordedIncomeStatement?:boolean;invoicePreparation:boolean;invoiceDrafts:boolean;invoiceIssueTaxReview:boolean;invoiceIssue?:boolean;invoiceOutstanding?:boolean;directReceipts?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean}>;
 const bindingPattern=/^[A-Za-z0-9_-]{43}$/;
 const knownFailure=['RECOVERY_REVIEW_REQUIRED','FINANCE_ACCOUNT_SIGN_IN_REQUIRED','FINANCE_ACCOUNT_SETUP_REQUIRED'] as const;
 const invoiceDraftPendingKey='crest.invoice-draft.pending-reference.v1';
@@ -181,6 +183,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   recordedIncomeStatement:response.headers.get('x-crest-recorded-income-statement')==='1',
   openingArPreview:response.headers.get('x-crest-opening-ar-preview')==='1',
   openingFunds:response.headers.get('x-crest-opening-funds')==='1',
+  openingPayables:response.headers.get('x-crest-opening-payables')==='1',
   invoicePreparation:response.headers.get('x-crest-invoice-preparation')==='1',
   invoiceDrafts:response.headers.get('x-crest-invoice-drafts')==='1',
   invoiceIssueTaxReview:response.headers.get('x-crest-invoice-issue-tax-review')==='1',
@@ -226,7 +229,7 @@ async function submitSupplierPosting(context:FinanceAccountContext,route:'suppli
 
 export const financeAccounts={
  async context(signal:AbortSignal,proof?:Proof):Promise<FinanceAccountContext>{
-  const {status,value,binding,fixedMappings,mappingHistoryEvidence,historyEvidence,taxProfiles,categoryMappings,moneyChannels,openingWorksheet,openingArPreview,openingFunds,statementStaging,statementMatchReview,statementMatchDrafts,supplierBillDrafts,supplierPayableReview,supplierPayablePosting,supplierOriginalUploads,supplierPayableReports,recordedIncomeStatement,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,invoiceOutstanding,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
+  const {status,value,binding,fixedMappings,mappingHistoryEvidence,historyEvidence,taxProfiles,categoryMappings,moneyChannels,openingWorksheet,openingArPreview,openingFunds,openingPayables,statementStaging,statementMatchReview,statementMatchDrafts,supplierBillDrafts,supplierPayableReview,supplierPayablePosting,supplierOriginalUploads,supplierPayableReports,recordedIncomeStatement,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,invoiceOutstanding,directReceipts,excessReceipts,excessReturns,tipReturns,collectionFailures,refundTransfers,directReceiptTips,refundTransferFees,collectionFailureRecredits,collectionFailureGroupedRecredits,collectionFailureTipReinstatements,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport}=await post('context',{},signal,undefined,proof);
   check(status===200&&binding&&bindingPattern.test(binding)&&exact(value,['businessId','recoveryEpoch','writeState'])
    &&customerUuid(value.businessId)&&(value.writeState==='ready'&&customerUuid(value.recoveryEpoch)
     ||value.writeState==='paused'&&value.recoveryEpoch===null));
@@ -244,6 +247,7 @@ export const financeAccounts={
    ...(moneyChannels&&supplierBillDrafts&&supplierPayableReview?{supplierPayableReview}:{}),
    ...(openingWorksheet&&openingArPreview?{openingArPreview}:{}),
    ...(moneyChannels&&openingWorksheet&&openingFunds?{openingFunds}:{}),
+   ...(moneyChannels&&openingWorksheet&&openingPayables?{openingPayables}:{}),
    ...(invoiceIssue?{invoiceIssue}:{}),...(invoiceIssue&&invoiceOutstanding?{invoiceOutstanding}:{}),...(directReceipts?{directReceipts}:{}),...(directReceipts&&excessReceipts?{excessReceipts}:{}),
    ...(directReceipts&&excessReceipts&&excessReturns?{excessReturns}:{}),
    ...(excessReturns&&tipReturns?{tipReturns}:{}),
@@ -405,6 +409,36 @@ export const financeAccounts={
    :await post('opening-worksheet-funds-retire',{...request,reason},signal,context.binding);
   check(status===200||status===409);
   return parseOpeningFundsOperation(value,context.businessId,reference.operationId);
+ },
+ async readOpeningPayablesSchedule(context:FinanceAccountContext,worksheetRevision:string,worksheetRevisionId:string,signal:AbortSignal){
+  check(context.openingPayables&&context.recoveryEpoch&&customerVersion(worksheetRevision)&&customerUuid(worksheetRevisionId));
+  const {status,value}=await post('opening-worksheet-payables-read',{reviewEpoch:context.recoveryEpoch,worksheetRevision},signal,context.binding);
+  check(status===200);
+  const saved=parseOpeningPayablesStored(value,context.businessId);check(saved.worksheetRevisionId===worksheetRevisionId);
+  return saved;
+ },
+ async saveOpeningPayablesSchedule(context:FinanceAccountContext,reference:OpeningReference,worksheetRevisionId:string,cutoverOn:string,
+  input:{worksheetRevision:string;expectedRevision:string;input:OpeningPayablesInput},signal:AbortSignal){
+  check(context.openingPayables&&context.recoveryEpoch===reference.recoveryEpoch&&customerUuid(worksheetRevisionId));
+  parseOpeningReference(reference);const draft=parseOpeningPayablesSave(input,cutoverOn);
+  const {status,value}=await post('opening-worksheet-payables-save',{reference,worksheetRevisionId,cutoverOn,draft},signal,context.binding);
+  if(status===409&&exact(value,['error'])&&typeof value.error==='string'){
+   if(value.error==='OPENING_WORKSHEET_REVISION_CONFLICT'||value.error==='OPENING_PAYABLES_REVISION_CONFLICT')return {state:'revision_conflict'} as const;
+   if(value.error.startsWith('OPENING_PAYABLES_'))return {state:'invalid'} as const;
+  }
+  check(status===200||status===409);
+  const parsed=parseOpeningPayablesOperation(value,context.businessId,reference.operationId);
+  if(parsed.state==='committed')check(parsed.receipt.worksheetRevisionId===worksheetRevisionId&&parsed.receipt.evidence.cutoverOn===cutoverOn
+   &&parsed.receipt.revision===String(BigInt(draft.expectedRevision)+1n));
+  return parsed;
+ },
+ async resolveOpeningPayablesSchedule(context:FinanceAccountContext,reference:OpeningReference,reason:string|null,signal:AbortSignal){
+  check(context.openingPayables&&context.recoveryEpoch&&(reason===null||financeAccountReviewReason(reason)));
+  parseOpeningReference(reference);const request={reference,reviewEpoch:context.recoveryEpoch};
+  const {status,value}=reason===null?await post('opening-worksheet-payables-lookup',request,signal,context.binding)
+   :await post('opening-worksheet-payables-retire',{...request,reason},signal,context.binding);
+  check(status===200||status===409);
+  return parseOpeningPayablesOperation(value,context.businessId,reference.operationId);
  },
  async readOpeningArSchedule(context:FinanceAccountContext,worksheetRevision:string,worksheetRevisionId:string,signal:AbortSignal){
   check(context.openingArPreview&&context.recoveryEpoch&&customerVersion(worksheetRevision)&&customerUuid(worksheetRevisionId));
