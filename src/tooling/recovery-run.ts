@@ -1,3 +1,4 @@
+import {recoverySourceProfileMatches} from './recovery-source-profile.ts';
 // One bounded business lease coordinates database, three stores, application
 // distribution and configuration. This candidate has no success marker/heartbeat
 // until offline material, provider/restore and full-control acceptance exist.
@@ -22,7 +23,7 @@ function compose(data:ReturnType<typeof createRecoveryDataArchive>,distribution:
  return async(input:Input,ports:Ports,signal:AbortSignal)=>{
   try{
    signal.throwIfAborted();const manifest=readRecoveryReleaseManifest(input.distribution.manifest),recipe=readRecoveryConfiguration(input.configuration.source,input.configuration.expected),expected=recipe.binding;
-   require(expected.businessId===input.businessId&&expected.appReleaseId===input.expectedAppReleaseId&&expected.migrationRegistrySha256===input.migrationRegistrySha256&&expected.sourceSchemaVersion===138&&manifest.release.appReleaseId===expected.appReleaseId&&manifest.release.migrationRegistrySha256===expected.migrationRegistrySha256);
+   require(expected.businessId===input.businessId&&expected.appReleaseId===input.expectedAppReleaseId&&expected.migrationRegistrySha256===input.migrationRegistrySha256&&recoverySourceProfileMatches(expected.sourceSchemaVersion,expected.migrationRegistrySha256)&&manifest.release.sourceSchemaVersion===expected.sourceSchemaVersion&&manifest.release.appReleaseId===expected.appReleaseId&&manifest.release.migrationRegistrySha256===expected.migrationRegistrySha256);
    const {release:_release,...buildManifest}=manifest;void _release;
    const request=Object.freeze({...input,database:Object.freeze({...input.database}),migrations:Object.freeze(input.migrations.map(item=>Object.freeze({...item}))),distribution:Object.freeze({...input.distribution,manifest:buildManifest}),configuration:Object.freeze({source:JSON.stringify(recipe),expected})});
    let completed:Readonly<{profile:'crest.verified-recovery-run-candidate.v1';pointId:string;snapshotId:string;manifest:Awaited<ReturnType<Ports['attempt']['publish']>>;manifestPlaintext:Readonly<{byteSize:number;sha256:string}>;completeBackup:false}>|undefined;

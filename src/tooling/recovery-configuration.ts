@@ -1,3 +1,4 @@
+import {recoverySourceProfileMatches} from './recovery-source-profile.ts';
 // Operator preparation and offline reconstruction only. The backup process
 // receives a secret-free recipe, never the live operator profile or private key.
 import {randomUUID,createHash} from 'node:crypto';
@@ -15,13 +16,13 @@ export class RecoveryConfigurationError extends Error{constructor(){super('RECOV
 function require(value:unknown):asserts value{if(!value)throw new RecoveryConfigurationError();}
 function exact(value:unknown,fields:string[]):asserts value is Record<string,unknown>{require(value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).sort().join(',')===[...fields].sort().join(','));}
 const uuid=(value:unknown):value is string=>typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value);
-type Binding=Readonly<{businessId:string;appReleaseId:string;migrationRegistrySha256:string;sourceSchemaVersion:138;referenceDirectoryId:string}>;
+type Binding=Readonly<{businessId:string;appReleaseId:string;migrationRegistrySha256:string;sourceSchemaVersion:138|139;referenceDirectoryId:string}>;
 type ReferenceBinding=Readonly<{path:string;kind:'secret'|'file';referenceId:string}>;
 type Reference=ReferenceBinding&Readonly<{valueSha256:string|null}>;
 const hash=(value:string)=>createHash('sha256').update(value,'utf8').digest('hex');
 const marker=(id:string)=>'crest-recovery-reference:'+id;
 const order=(a:Readonly<{path:string}>,b:Readonly<{path:string}>)=>a.path<b.path?-1:a.path>b.path?1:0;
-function binding(value:unknown):asserts value is Binding{exact(value,['businessId','appReleaseId','migrationRegistrySha256','sourceSchemaVersion','referenceDirectoryId']);require(uuid(value.businessId)&&uuid(value.referenceDirectoryId)&&typeof value.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(value.appReleaseId)&&typeof value.migrationRegistrySha256==='string'&&/^[a-f0-9]{64}$/.test(value.migrationRegistrySha256)&&value.sourceSchemaVersion===138);}
+function binding(value:unknown):asserts value is Binding{exact(value,['businessId','appReleaseId','migrationRegistrySha256','sourceSchemaVersion','referenceDirectoryId']);require(uuid(value.businessId)&&uuid(value.referenceDirectoryId)&&typeof value.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(value.appReleaseId)&&typeof value.migrationRegistrySha256==='string'&&/^[a-f0-9]{64}$/.test(value.migrationRegistrySha256)&&recoverySourceProfileMatches(value.sourceSchemaVersion,value.migrationRegistrySha256));}
 function member(root:unknown,path:string){let parent=root as Record<string,unknown>;const parts=path.slice(1).split('/');for(const name of parts.slice(0,-1)){require(parent&&typeof parent==='object'&&Object.hasOwn(parent,name));parent=parent[name] as Record<string,unknown>;}const name=parts.at(-1)!;require(parent&&typeof parent==='object'&&Object.hasOwn(parent,name));return{get:()=>parent[name],set:(value:string)=>{parent[name]=value;}};}
 function paths(value:unknown){
  require(value&&typeof value==='object'&&!Array.isArray(value));const profile=value as Record<string,unknown>,auth=profile.authentication as Record<string,unknown>;require(auth&&typeof auth==='object'&&Array.isArray(auth.tokenKeys)&&auth.tokenKeys.length>=1&&auth.tokenKeys.length<=8);

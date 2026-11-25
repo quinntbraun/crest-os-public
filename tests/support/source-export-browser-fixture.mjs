@@ -16,6 +16,8 @@ import {readFile,chmod,mkdir,writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import {join,win32} from 'node:path';
 import {Readable} from 'node:stream';
+import {request as httpsRequest} from 'node:https';
+import {openingFunds139Candidate} from './opening-funds139-candidate.mjs';
 import {URI,TOTP} from 'otpauth';
 import {migrationSandbox} from './migration-sandbox.mjs';
 import {syntheticLeadFollowUpsAvailable,syntheticLeadMatchReviewAvailable,syntheticRecordJobHistoryAvailable,syntheticCustomerProfileAvailable} from '../../scripts/synthetic-migrations.mjs';
@@ -23,7 +25,7 @@ import {installProviderSchema} from './provider-schema.mjs';
 import {startRealAuthService,authResult} from './real-auth-service.mjs';
 import {buildSourceExportBrowserFixture} from './source-export-browser-build.mjs';
 const signal=()=>new AbortController().signal,sha=value=>createHash('sha256').update(value).digest('hex'),release='a'.repeat(40);
-export async function sourceExportBrowserFixture({product=false,workspace=false,leadFollowUps=false,leadMatchReview=false,legacyContactMatches=false,legacyContactBatches=false,legacyContactEffects=false,legacyContactTargets=false,legacyContactDecisions=false,legacyContactApprovals=false,legacyContactApplications=false,automaticContactImport=false,legacyContactDownloads=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,expenseReceipts=false,scheduling=false,recordJobHistory=false,customerProfileFixture=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeMappingHistory=false,financeHistoryEvidence=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,invoiceOutstanding=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,calendarActivityBookings=0,calendarActivityOverlap=false,postedFinanceExport=false,photoFixture}={}){
+export async function sourceExportBrowserFixture({product=false,workspace=false,leadFollowUps=false,leadMatchReview=false,legacyContactMatches=false,legacyContactBatches=false,legacyContactEffects=false,legacyContactTargets=false,legacyContactDecisions=false,legacyContactApprovals=false,legacyContactApplications=false,automaticContactImport=false,legacyContactDownloads=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,expenseReceipts=false,scheduling=false,recordJobHistory=false,customerProfileFixture=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeMappingHistory=false,financeHistoryEvidence=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,openingFunds=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,invoiceOutstanding=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,calendarActivityBookings=0,calendarActivityOverlap=false,postedFinanceExport=false,photoFixture}={}){
  assert((typeof legacyContactApplications==='boolean'||legacyContactApplications==='background')&&(!legacyContactApplications||legacyContactApprovals));
  assert(typeof leadFollowUps==='boolean'&&(!leadFollowUps||product&&workspace));
  assert(typeof customerProfileFixture==='boolean'&&(!customerProfileFixture||recordJobHistory));
@@ -56,6 +58,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert.equal(typeof financeCategoryMappings,'boolean');assert(!financeCategoryMappings||financeAccounts&&financeMappings);
  assert.equal(typeof financeMoneyChannels,'boolean');assert(!financeMoneyChannels||financeAccounts);
  assert.equal(typeof openingWorksheet,'boolean');assert(!openingWorksheet||financeMoneyChannels&&!googleCalendar);
+ assert.equal(typeof openingFunds,'boolean');assert(!openingFunds||openingWorksheet&&!postedFinanceExport);
  assert(typeof statementStaging==='boolean'&&(!statementStaging||financeMoneyChannels&&postedFinanceExport&&!googleCalendar));
  assert.equal(typeof invoicePreparation,'boolean');assert(!invoicePreparation||financeAccounts&&jobCompletion);
  assert.equal(typeof invoiceIssueTaxReview,'boolean');assert(!invoiceIssueTaxReview||invoiceDrafts&&financeTaxProfiles);
@@ -249,6 +252,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     assert.equal((await sandbox.apply(target,await sandbox.prefix(115))).history.length,115);
    }
   }
+  if(openingFunds){const candidate=await openingFunds139Candidate(sandbox);assert.equal((await sandbox.apply(target,candidate.directory)).history.length,139);}
   const compiled=await buildSourceExportBrowserFixture(sandbox.workspace),runtime=await import(pathToFileURL(compiled.server).href);
   assert(typeof googleCalendar==='boolean'&&(!googleCalendar||product&&workspace&&!paidInvoiceCredits));
   assert(typeof googleCalendarAutomatic==='boolean'&&(!googleCalendarAutomatic||googleCalendar&&scheduling));
@@ -311,6 +315,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    const financeUrl=new URL(target);financeUrl.username=financeLogin;financeUrl.password=secret;
    financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,mappingHistoryEvidence:financeMappingHistory,historyEvidence:financeHistoryEvidence,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,invoiceOutstanding,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,...excessReceipts?{excessReceipts}:{},...excessReturnExport?{excessReturns:true}:{},...tipReturnExport?{tipReturns:true}:{},...collectionFailureExport?{collectionFailures:true}:{},...refundTransferExport?{refundTransfers:true}:{},...directReceiptTipExport?{directReceiptTips:true}:{},...refundTransferFeeExport?{refundTransferFees:true}:{},...collectionFailureRecreditExport?{collectionFailureRecredits:true}:{},...collectionFailureGroupedRecreditExport?{collectionFailureGroupedRecredits:true}:{},...restoredTips?{collectionFailureTipReinstatements:true}:{}};
    if(openingWorksheet)financeConfiguration.openingWorksheet=true;
+   if(openingFunds)financeConfiguration.openingFunds=true;
    if(statementStaging)financeConfiguration.statementStaging=true;
    if(statementMatchReview)financeConfiguration.statementMatchReview=true;
    if(statementMatchDrafts)financeConfiguration.statementMatchDrafts=true;
@@ -808,6 +813,20 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     }
    }finally{hash.fill(0);await finance.end();}
   }
-  return{origin,product,followUpLeads,dispatchContactImport,authorizePostedFinance,preparePayable,seedRetainedMappingHistory,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,calendarActivityJobIds,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),authRequestDiagnostics:()=>service.requestDiagnostics(),nextBrowserCodeAt:(Math.floor(seededCodeAt/(totp.period*1000))+1)*totp.period*1000,credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
+  // Only disposable genuine-session checks use this closure; no credential is
+  // returned, persisted in evidence or written to logs. TLS relaxation is scoped
+  // to this generated loopback fixture certificate and request.
+  async function openingFundsRequest(path,body,{anonymous=false,headers={}}={}){
+   assert(openingFunds&&path.startsWith('/api/')&&!path.includes('://'));
+   const bytes=Buffer.from(JSON.stringify(body));assert(bytes.length<=131072);
+   return await new Promise((resolve,reject)=>{
+    const outgoing=httpsRequest(new URL(path,origin),{method:'POST',rejectUnauthorized:false,
+     headers:{origin,'content-type':'application/json','content-length':bytes.length,...anonymous?{}:{cookie:'__Host-crest_session='+credential},...headers}},response=>{
+     const parts=[];let size=0;response.on('data',part=>{size+=part.length;if(size>2097152)response.destroy(Error('FIXTURE_RESPONSE_LIMIT'));else parts.push(part);});
+     response.on('error',reject);response.on('end',()=>{try{resolve({status:response.statusCode,headers:response.headers,value:JSON.parse(Buffer.concat(parts).toString('utf8'))});}catch(error){reject(error);}});
+    });outgoing.on('error',reject);outgoing.setTimeout(15000,()=>outgoing.destroy(Error('FIXTURE_REQUEST_TIMEOUT')));outgoing.end(bytes);
+   });
+  }
+  return{openingFundsRequest,origin,product,followUpLeads,dispatchContactImport,authorizePostedFinance,preparePayable,seedRetainedMappingHistory,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,calendarActivityJobIds,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),authRequestDiagnostics:()=>service.requestDiagnostics(),nextBrowserCodeAt:(Math.floor(seededCodeAt/(totp.period*1000))+1)*totp.period*1000,credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
  }catch(error){await close();throw error;}
 }

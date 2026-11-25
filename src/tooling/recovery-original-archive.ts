@@ -1,3 +1,4 @@
+import {recoverySourceProfileMatches} from './recovery-source-profile.ts';
 import {createHash,randomUUID} from 'node:crypto';
 import {unlink} from 'node:fs/promises';
 import type {captureRecoveryOriginalInventory,RecoveryOriginalObject} from './recovery-original-inventory.ts';
@@ -19,7 +20,7 @@ export async function captureRecoveryOriginalArchive(input:Readonly<{inventory:I
  try{
   signal.throwIfAborted();const inventory=input.inventory,state=ports.attempt.view();
   const until=Date.parse(input.retainUntil);require(Number.isFinite(until)&&new Date(until).toISOString()===input.retainUntil&&until>=Date.now()+7*86400000&&until<=Date.now()+500*86400000);
-  require(inventory?.profile==='crest.private-original-inventory.v1'&&Array.isArray(inventory.objects)&&inventory.objects.length<=100000&&!state.reviewRequired&&state.header.sourceSchemaVersion===138);
+  require(inventory?.profile==='crest.private-original-inventory.v1'&&Array.isArray(inventory.objects)&&inventory.objects.length<=100000&&!state.reviewRequired&&recoverySourceProfileMatches(state.header.sourceSchemaVersion,state.header.migrationRegistrySha256));
   // Copy and check the entire descriptor list before the first storage dispatch.
   const seen=new Set<string>(),objects=inventory.objects.map(value=>{
    const object=Object.freeze({...value}),identity=object.domain+':'+object.key;

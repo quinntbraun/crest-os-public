@@ -1,3 +1,4 @@
+import {recoverySourceProfileMatches} from './recovery-source-profile.ts';
 // A verified business-data component. Full recovery also requires the accepted
 // application/configuration/key kit, final point marker and independent restore.
 import pg from 'pg';
@@ -31,7 +32,7 @@ function compose(capture:ReturnType<typeof createRecoveryDatabaseBundle>,encrypt
   try{
    require(client instanceof pg.Client);const request=Object.freeze({...input,database:Object.freeze({...input.database}),migrations:Object.freeze(input.migrations.map(entry=>Object.freeze({...entry})))}),sources=Object.freeze({...ports.sources});
    return await withRecoveryBackupLease(client,request.businessId,external,async lease=>{
-    const header=ports.attempt.view().header;require(!ports.attempt.view().reviewRequired&&header.businessId===request.businessId&&header.appReleaseId===request.expectedAppReleaseId&&header.migrationRegistrySha256===request.migrationRegistrySha256&&header.sourceSchemaVersion===138&&request.migrations.length===138);
+    const header=ports.attempt.view().header;require(!ports.attempt.view().reviewRequired&&header.businessId===request.businessId&&header.appReleaseId===request.expectedAppReleaseId&&header.migrationRegistrySha256===request.migrationRegistrySha256&&recoverySourceProfileMatches(header.sourceSchemaVersion,header.migrationRegistrySha256)&&request.migrations.length===header.sourceSchemaVersion);
     require(Object.keys(sources).sort().join(',')===[...domains].sort().join(',')&&domains.every(domain=>sources[domain]?.domain===domain)&&new Set(domains.map(domain=>sources[domain])).size===3);
     const until=Date.parse(request.retainUntil);require(Number.isFinite(until)&&new Date(until).toISOString()===request.retainUntil&&until>=Date.parse(header.startedAt)+7*86400000&&until<=Date.now()+500*86400000);const dataRetainUntil=new Date(Math.max(until,Date.now()+8*86400000)).toISOString(),originalRetainUntil=new Date(Math.max(Date.parse(dataRetainUntil),Date.now()+401*86400000)).toISOString();await verifyRecoveryBackupReader(client,request.migrations);await lease.assertHeld();
     stage='snapshot';const captured=await lease.capture(snapshot=>capture({...request.database,snapshot},lease.signal)),bundle=captured.value.forRecoveryTools();require(bundle.database.snapshotId===captured.snapshot.id&&bundle.inventory.snapshotId===captured.snapshot.id&&bundle.originalInventory.snapshotId===captured.snapshot.id&&bundle.financialControls.snapshotId===captured.snapshot.id&&bundle.financialControls.journalBalanced===true);

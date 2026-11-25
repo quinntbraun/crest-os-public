@@ -3,7 +3,6 @@
 import {constants} from 'node:fs';
 import {open,lstat,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
-import {createHash} from 'node:crypto';
 import pg from 'pg';
 import {S3Client} from '@aws-sdk/client-s3';
 import {parseRecoveryJson} from './recovery-json.ts';
@@ -17,7 +16,7 @@ import {createR2RecoveryPrimaryStore} from './recovery-primary-store.ts';
 import {createRecoveryVault} from './recovery-vault.ts';
 import {createRecoveryMonitorAttempt} from './recovery-monitor.ts';
 import {createRecoveryCaptureController} from './recovery-capture-controller.ts';
-import {recoveryRoutineBaseline138} from './recovery-routine-baseline138.ts';
+import {readRecoveryCaptureRegistry} from './recovery-capture-registry.ts';
 
 type Profile=ReturnType<ReturnType<typeof readRecoveryCaptureProfile>['forRecoveryTools']>;
 type Stage='input'|'profile'|'journal'|'files'|'tools'|'attempt'|'connections'|'capture'|'cleanup';
@@ -43,10 +42,10 @@ export function createRecoveryCaptureCommand(dependencies:Dependencies){
    monitor=dependencies.makeMonitor(profile.monitorPingUrl,{runId:pointId,startedAt});
    stage='files';const rootCertificate=await readPrivateToolText(profile.rootCertificateFile,1048576,signal);require(rootCertificate.includes('-----BEGIN CERTIFICATE-----'));
    const distribution=readRecoveryReleaseManifest(parseRecoveryJson(await readPrivateToolText(profile.distribution.manifestFile,1048576,signal,false),1048576)),{release,...manifest}=distribution;
-   const registry=await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url));require(createHash('sha256').update(registry).digest('hex')===recoveryRoutineBaseline138.migrationRegistrySha256&&release.migrationRegistrySha256===recoveryRoutineBaseline138.migrationRegistrySha256);const parsed=parseRecoveryJson(registry.toString('utf8'),262144) as {migrations:{version:string;file:string}[]};require(Array.isArray(parsed.migrations)&&parsed.migrations.length===138);const migrations=parsed.migrations.map(row=>({version:row.version,name:row.file.slice(15,-4)}));
-   const expected={businessId:profile.businessId,appReleaseId:release.appReleaseId,migrationRegistrySha256:release.migrationRegistrySha256,sourceSchemaVersion:138 as const,referenceDirectoryId:profile.referenceDirectoryId},recipeSource=await readPrivateToolText(profile.recipeFile,262144,signal);readRecoveryConfiguration(recipeSource,expected);
+   const {sourceSchemaVersion,registrySha256,migrations}=readRecoveryCaptureRegistry(await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url)));require(release.migrationRegistrySha256===registrySha256&&release.sourceSchemaVersion===sourceSchemaVersion);
+   const expected={businessId:profile.businessId,appReleaseId:release.appReleaseId,migrationRegistrySha256:release.migrationRegistrySha256,sourceSchemaVersion,referenceDirectoryId:profile.referenceDirectoryId},recipeSource=await readPrivateToolText(profile.recipeFile,262144,signal);readRecoveryConfiguration(recipeSource,expected);
    stage='tools';const run=await dependencies.makeRun(profile.tools);signal.throwIfAborted();
-   stage='attempt';attempt=await dependencies.makeAttempt(profile.stateDirectory,{formatVersion:1,pointId,businessId:profile.businessId,startedAt,appReleaseId:release.appReleaseId,migrationRegistrySha256:release.migrationRegistrySha256,sourceSchemaVersion:138});
+   stage='attempt';attempt=await dependencies.makeAttempt(profile.stateDirectory,{formatVersion:1,pointId,businessId:profile.businessId,startedAt,appReleaseId:release.appReleaseId,migrationRegistrySha256:release.migrationRegistrySha256,sourceSchemaVersion});
    stage='connections';client=dependencies.makeClient({connectionString:profile.databaseUrl,options:'-c role=crest_backup_reader',connectionTimeoutMillis:5000,query_timeout:15000,statement_timeout:5000,ssl:{ca:rootCertificate,rejectUnauthorized:true}});require(client instanceof pg.Client);client.on('error',()=>{});
    const domains=['expense_receipt','supplier_document','condition_photo'] as const,sources={} as Record<typeof domains[number],ReturnType<typeof createR2RecoveryPrimaryStore>['store']>;
    for(const domain of domains){const handle=dependencies.makePrimary(profile.sources[domain],domain);closers.push(handle.close);sources[domain]=handle.store;}

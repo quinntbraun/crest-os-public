@@ -334,7 +334,7 @@ export function FinanceAccountsScreen(){
    </ul>}
    {context.invoiceIssue&&<InvoiceSetup businessId={context.businessId}/>}
    {context.statementStaging&&<StatementStaging key={context.businessId} context={context}/>}
-   {context.openingWorksheet&&<OpeningWorksheet businessId={context.businessId} arPreview={context.openingArPreview===true}/>}
+   {context.openingWorksheet&&<OpeningWorksheet businessId={context.businessId} arPreview={context.openingArPreview===true} funds={context.openingFunds===true}/>}
   </section>}
   {pending&&workspace&&<section className={styles.section} aria-label="Interrupted account save">
    <button type="button" disabled={busy} onClick={()=>void checkPending()}>Check save status</button>

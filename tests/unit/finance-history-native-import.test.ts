@@ -1,5 +1,11 @@
 import {execFileSync} from 'node:child_process';
 import {expect,it} from 'vitest';
+it('loads the genuine browser fixture under normal native Node conditions',()=>{
+ const output=execFileSync(process.execPath,['--input-type=module','-e',"await import('../../tests/support/source-export-browser-fixture.mjs');process.stdout.write('BROWSER_FIXTURE_NATIVE_IMPORT_OK');"],{
+  cwd:new URL('.',import.meta.url),encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:15000,env:{...process.env,NODE_OPTIONS:''},
+ });
+ expect(output).toBe('BROWSER_FIXTURE_NATIVE_IMPORT_OK');
+});
 
 for(const [path,names] of [
  ['src/bookkeeping/finance-history-recording.ts',['parseFinanceAccountHistoryEvidence','parseFinanceTaxHistoryEvidence','parseMoneyChannelHistoryEvidence']],

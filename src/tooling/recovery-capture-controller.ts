@@ -1,3 +1,4 @@
+import {recoverySourceProfileMatches} from './recovery-source-profile.ts';
 // Isolated capture composition. A staged run is never a completed backup, never
 // enters the complete-point catalog and never sends a success heartbeat.
 import {constants} from 'node:fs';
@@ -29,7 +30,7 @@ export function createRecoveryCaptureController(capture:Capture){
   try{
    const header=Object.freeze({...input.ports.attempt.view().header});identity=Object.freeze({pointId:header.pointId,startedAt:header.startedAt});
    require(process.platform==='linux'&&typeof capture==='function'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(header.pointId));
-   require(header.businessId===input.request.businessId&&header.appReleaseId===input.request.expectedAppReleaseId&&header.migrationRegistrySha256===input.request.migrationRegistrySha256&&header.sourceSchemaVersion===138&&!input.ports.attempt.view().reviewRequired&&input.ports.attempt.view().artifacts.length===0);
+   require(header.businessId===input.request.businessId&&header.appReleaseId===input.request.expectedAppReleaseId&&header.migrationRegistrySha256===input.request.migrationRegistrySha256&&recoverySourceProfileMatches(header.sourceSchemaVersion,header.migrationRegistrySha256)&&header.sourceSchemaVersion===input.request.migrations.length&&!input.ports.attempt.view().reviewRequired&&input.ports.attempt.view().artifacts.length===0);
    require(instant(header.startedAt)<=Date.now()&&input.monitor.view().runId===header.pointId&&input.monitor.view().phase==='fresh');
    require(typeof input.recordDirectory==='string'&&isAbsolute(input.recordDirectory));const parent=await lstat(input.recordDirectory);require(parent.isDirectory()&&!parent.isSymbolicLink()&&(parent.mode&0o077)===0&&parent.uid===process.getuid!());
    external.throwIfAborted();stage='journal';directory=join(input.recordDirectory,'run-'+header.pointId);await mkdir(directory,{mode:0o700});await syncDirectory(input.recordDirectory);

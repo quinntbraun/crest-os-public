@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "migrationCount": 138,
+  "migrationCount": 139,
   "tables": [
     {
       "table": "crest.businesses",
@@ -4078,6 +4078,55 @@
           "reason": "calendar_account_identifier"
         }
       ],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.opening_funds_origins",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "source_namespace",
+        "external_id",
+        "operation_id",
+        "recorded_by",
+        "recorded_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.opening_funds_items",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "origin_id",
+        "customer_id",
+        "operation_id",
+        "recorded_by",
+        "recorded_at"
+      ],
+      "excluded": [],
+      "partialEvidenceGroup": null
+    },
+    {
+      "table": "crest.opening_funds_schedule_revisions",
+      "scope": "business",
+      "required": [
+        "id",
+        "business_id",
+        "worksheet_revision_id",
+        "revision",
+        "prior_revision",
+        "operation_id",
+        "audit_event_id",
+        "recorded_by",
+        "recorded_at",
+        "evidence",
+        "evidence_sha256"
+      ],
+      "excluded": [],
       "partialEvidenceGroup": null
     }
   ]

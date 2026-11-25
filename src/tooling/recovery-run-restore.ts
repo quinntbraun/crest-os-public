@@ -1,3 +1,4 @@
+import {recoverySourceProfileMatches} from './recovery-source-profile.ts';
 // Offline recovery preparation: exact linked bytes, not SQL application/reopen.
 import {isDeepStrictEqual} from 'node:util';
 import {readFile,lstat,mkdtemp,rm,open} from 'node:fs/promises';
@@ -10,7 +11,7 @@ import {readRecoveryReleaseArchive} from './recovery-release-archive.ts';
 import {readRecoveryConfiguration} from './recovery-configuration.ts';
 import type {RecoveryVaultArtifact,createRecoveryVault} from './recovery-vault.ts';
 
-type Expected=Readonly<{pointId:string;businessId:string;appReleaseId:string;migrationRegistrySha256:string;sourceSchemaVersion:138;referenceDirectoryId:string}>;
+type Expected=Readonly<{pointId:string;businessId:string;appReleaseId:string;migrationRegistrySha256:string;sourceSchemaVersion:138|139;referenceDirectoryId:string}>;
 const preparedDatabases=new WeakMap<object,Readonly<{binding:Expected;snapshotId:string;database:Readonly<{path:string;byteSize:number;sha256:string}>;metadata:Readonly<{path:string;byteSize:number;sha256:string}>;inventory:Readonly<Record<string,unknown>>;originals:Readonly<Record<string,unknown>>;financial:Readonly<Record<string,unknown>>}>>();
 export type PreparedRecoveryObject=Readonly<{path:string;domain:'expense_receipt'|'supplier_document'|'condition_photo';key:string;byteSize:number;sha256:string;retention:'published'|'quarantine';contentType:string}>;
 const preparedObjects=new WeakMap<object,Readonly<{binding:Expected;objects:readonly PreparedRecoveryObject[]}>>();
@@ -28,11 +29,11 @@ const idPattern='[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}',o
 const sha=(value:unknown):value is string=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 function count(value:unknown,maximum=100000){require(typeof value==='number'&&Number.isSafeInteger(value)&&value>=0&&value<=maximum);return value;}
 function date(value:unknown){require(typeof value==='string'&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===value);return value;}
-function expected(value:Expected){row(value,['pointId','businessId','appReleaseId','migrationRegistrySha256','sourceSchemaVersion','referenceDirectoryId']);require(uuid(value.pointId)&&uuid(value.businessId)&&uuid(value.referenceDirectoryId)&&/^[a-f0-9]{40}$/.test(value.appReleaseId)&&sha(value.migrationRegistrySha256)&&value.sourceSchemaVersion===138);return Object.freeze({...value});}
+function expected(value:Expected){row(value,['pointId','businessId','appReleaseId','migrationRegistrySha256','sourceSchemaVersion','referenceDirectoryId']);require(uuid(value.pointId)&&uuid(value.businessId)&&uuid(value.referenceDirectoryId)&&/^[a-f0-9]{40}$/.test(value.appReleaseId)&&sha(value.migrationRegistrySha256)&&recoverySourceProfileMatches(value.sourceSchemaVersion,value.migrationRegistrySha256));return Object.freeze({...value});}
 function plaintext(value:unknown,maximum=8388608,minimum=1){const item=row(value,['byteSize','sha256']);require(count(item.byteSize,maximum)>=minimum&&sha(item.sha256));return Object.freeze({byteSize:item.byteSize as number,sha256:item.sha256});}
 function receipt(value:unknown,pointId:string,minimumRetention?:string){const item=row(value,['key','versionId','byteSize','sha256','retainUntil']);require(typeof item.key==='string'&&new RegExp(`^recovery/${pointId}/artifacts/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\.age$`).test(item.key)&&typeof item.versionId==='string'&&item.versionId.length>0&&item.versionId.length<=1024&&item.versionId!=='null'&&!/[\p{Cc}\s]/u.test(item.versionId)&&count(item.byteSize,1073741824)>=21&&sha(item.sha256));const until=date(item.retainUntil);require(!minimumRetention||Date.parse(until)>=Date.parse(minimumRetention));return Object.freeze({...item}) as RecoveryVaultArtifact;}
 function retention(value:unknown){const item=row(value,['requested','data','originals']);date(item.requested);date(item.data);date(item.originals);require(Date.parse(item.originals as string)>=Date.parse(item.data as string)&&Date.parse(item.data as string)>=Date.parse(item.requested as string));return item as Readonly<{requested:string;data:string;originals:string}>;}
-function header(value:unknown,target:Expected){const item=row(value,['formatVersion','pointId','businessId','startedAt','appReleaseId','migrationRegistrySha256','sourceSchemaVersion']);require(item.formatVersion===1&&item.pointId===target.pointId&&item.businessId===target.businessId&&item.appReleaseId===target.appReleaseId&&item.migrationRegistrySha256===target.migrationRegistrySha256&&item.sourceSchemaVersion===138);date(item.startedAt);return item;}
+function header(value:unknown,target:Expected){const item=row(value,['formatVersion','pointId','businessId','startedAt','appReleaseId','migrationRegistrySha256','sourceSchemaVersion']);require(item.formatVersion===1&&item.pointId===target.pointId&&item.businessId===target.businessId&&item.appReleaseId===target.appReleaseId&&item.migrationRegistrySha256===target.migrationRegistrySha256&&item.sourceSchemaVersion===target.sourceSchemaVersion);date(item.startedAt);return item;}
 function integerText(value:unknown){require(typeof value==='string'&&/^(?:0|[1-9][0-9]*)$/.test(value)&&value.length<=100);return BigInt(value);}
 
 export function readRecoveryRunCandidate(source:string,target:Expected){

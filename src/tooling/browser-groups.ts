@@ -11,7 +11,7 @@ export const browserGroups = Object.freeze({
   custody: group('dropoff-custody-product-browser','dropoff-policy-revision-browser','pickup-trip-product-browser','pickup-custody-photo-browser','pickup-worksite-product-browser'),
   'statement-staging': group('finance-statement-staging-browser'),
   'workspace-records': group('source-export-browser','source-export-product-browser','workspace-journey-browser','owner-expenses-product-browser','task-entry-layout-browser'),
-  'accounting-settings': group('finance-account-settings-browser','finance-mapping-settings-browser','finance-tax-profiles-browser','finance-expense-category-browser','finance-money-channel-browser'),
+  'accounting-settings': group('finance-account-settings-browser','finance-mapping-settings-browser','finance-tax-profiles-browser','finance-expense-category-browser','finance-money-channel-browser','opening-funds-http-auth'),
   records: group('finance-invoice-issue-product-browser','finance-expense-posting-browser','google-calendar-settings-product-browser')
 });
 export const recordBrowserGroupNames=Object.freeze(['workspace-records','accounting-settings','records']);

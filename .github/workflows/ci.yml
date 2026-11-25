@@ -137,6 +137,7 @@ jobs:
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-capture-command.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-capture-status.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-journal-context.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-funds-candidate139.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-scheduled-capture.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-alert-dispatch.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/operator-source-export.test.mjs

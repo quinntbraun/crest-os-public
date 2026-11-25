@@ -1,3 +1,4 @@
+import {recoverySourceProfileMatches} from './recovery-source-profile.ts';
 // Independent custody of both release archives and their exact build manifest.
 // This does not certify CI authorship, activate a release or include private keys.
 import {randomUUID} from 'node:crypto';
@@ -23,11 +24,11 @@ export function readRecoveryReleaseManifest(value:unknown){
   exact(value,['formatVersion','sourceCommit','workingTreeDirty','nodeVersion','packageManager','lockfileSha256','migrationRegistrySha256','canonicalMaintenanceSha256','toolchainSha256','compatibility','containerImageId','buildIdentity','distributionDigest','imageArchive','sourceArchive','productionActivation']);
   require(value.formatVersion===2&&commit(value.sourceCommit)&&value.workingTreeDirty===false&&value.nodeVersion==='24.22.0'&&value.packageManager==='npm@11.19.1');
   for(const field of ['lockfileSha256','migrationRegistrySha256','canonicalMaintenanceSha256','toolchainSha256'])require(sha(value[field]));
-  const c=value.compatibility;exact(c,['schemaVersion','appVersion','databaseMajor','schemaMinimum','schemaMaximum','reportVersion','commandVersion','productionActivation']);require(c.schemaVersion===1&&c.appVersion==='0.1.0'&&c.databaseMajor===17&&c.schemaMinimum===0&&c.schemaMaximum===138&&c.reportVersion===0&&c.commandVersion===1&&['blocked','ready'].includes(c.productionActivation as string));
-  const b=value.buildIdentity;exact(b,['schemaVersion','appReleaseId','sourceContentSha256','migrationRegistrySha256','sourceSchemaVersion']);require(b.schemaVersion===1&&commit(b.appReleaseId)&&sha(b.sourceContentSha256)&&b.appReleaseId===b.sourceContentSha256.slice(0,40)&&b.migrationRegistrySha256===value.migrationRegistrySha256&&b.sourceSchemaVersion===138);
+  const c=value.compatibility;exact(c,['schemaVersion','appVersion','databaseMajor','schemaMinimum','schemaMaximum','reportVersion','commandVersion','productionActivation']);require(c.schemaVersion===1&&c.appVersion==='0.1.0'&&c.databaseMajor===17&&c.schemaMinimum===0&&recoverySourceProfileMatches(c.schemaMaximum,value.migrationRegistrySha256)&&c.reportVersion===0&&c.commandVersion===1&&['blocked','ready'].includes(c.productionActivation as string));
+  const b=value.buildIdentity;exact(b,['schemaVersion','appReleaseId','sourceContentSha256','migrationRegistrySha256','sourceSchemaVersion']);require(b.schemaVersion===1&&commit(b.appReleaseId)&&sha(b.sourceContentSha256)&&b.appReleaseId===b.sourceContentSha256.slice(0,40)&&b.migrationRegistrySha256===value.migrationRegistrySha256&&recoverySourceProfileMatches(b.sourceSchemaVersion,b.migrationRegistrySha256)&&b.sourceSchemaVersion===c.schemaMaximum&&(b.sourceSchemaVersion!==139||value.productionActivation==='blocked'&&c.productionActivation==='blocked'));
   require(typeof value.containerImageId==='string'&&/^sha256:[a-f0-9]{64}$/.test(value.containerImageId)&&value.productionActivation==='blocked');
   const imageArchive=archive(value.imageArchive,'crest-os-image.tar'),sourceArchive=archive(value.sourceArchive,'crest-os-source.tar');require(value.distributionDigest==='sha256:'+imageArchive.sha256);
-  return Object.freeze({...value,compatibility:Object.freeze({...c}),buildIdentity:Object.freeze({...b}),imageArchive,sourceArchive,release:Object.freeze({sourceCommit:value.sourceCommit,appReleaseId:b.appReleaseId,migrationRegistrySha256:value.migrationRegistrySha256 as string,sourceSchemaVersion:138,containerImageId:value.containerImageId})});
+  return Object.freeze({...value,compatibility:Object.freeze({...c}),buildIdentity:Object.freeze({...b}),imageArchive,sourceArchive,release:Object.freeze({sourceCommit:value.sourceCommit,appReleaseId:b.appReleaseId,migrationRegistrySha256:value.migrationRegistrySha256 as string,sourceSchemaVersion:b.sourceSchemaVersion,containerImageId:value.containerImageId})});
  }catch{throw new RecoveryReleaseDistributionError();}
 }
 
@@ -37,7 +38,7 @@ function compose(encrypt:ReturnType<typeof createRecoveryReleaseFileEncryption>,
  return async(input:Input,ports:Ports,signal:AbortSignal)=>{
   try{
    signal.throwIfAborted();const request=Object.freeze({...input}),manifest=readRecoveryReleaseManifest(request.manifest),state=ports.attempt.view(),until=Date.parse(request.retainUntil);
-   require(!state.reviewRequired&&state.header.appReleaseId===manifest.release.appReleaseId&&state.header.migrationRegistrySha256===manifest.release.migrationRegistrySha256&&state.header.sourceSchemaVersion===138&&Number.isFinite(until)&&new Date(until).toISOString()===request.retainUntil&&until>=Date.now()+7*86400000&&until<=Date.now()+500*86400000&&request.sourcePath!==request.imagePath);
+   require(!state.reviewRequired&&state.header.appReleaseId===manifest.release.appReleaseId&&state.header.migrationRegistrySha256===manifest.release.migrationRegistrySha256&&state.header.sourceSchemaVersion===manifest.release.sourceSchemaVersion&&Number.isFinite(until)&&new Date(until).toISOString()===request.retainUntil&&until>=Date.now()+7*86400000&&until<=Date.now()+500*86400000&&request.sourcePath!==request.imagePath);
    // Verify both before the first dispatch. Each producer repeats its own full
    // plan and per-part checks to detect later changes; no plaintext parts exist.
    for(const [path,expected]of [[request.sourcePath,manifest.sourceArchive],[request.imagePath,manifest.imageArchive]] as const){const actual=await hashRecoveryReleaseFile(path,signal);require(actual.byteSize===expected.byteSize&&actual.sha256===expected.sha256);}

@@ -1,4 +1,9 @@
 import {it,expect,vi} from 'vitest';
+it('requires explicit worksheet prerequisites for opening deposit evidence',()=>{
+ expect(financeRuntimeFeatures(['moneyChannels','openingWorksheet','openingFunds'])).toMatchObject({openingFunds:true});
+ expect(()=>financeRuntimeFeatures(['openingFunds'])).toThrow('PRODUCTION_FINANCE_CONFIGURATION_REQUIRED');
+ expect(validateFinanceRuntimeFeatures({})).not.toHaveProperty('openingFunds');
+});
 vi.mock('server-only',()=>({}));
 import {financeRuntimeFeatureNames,financeRuntimeFeatures,validateFinanceRuntimeFeatures,validateFinanceRuntimeConnection,validateFinanceRuntimeDependencies} from '../../src/bookkeeping/finance-runtime-configuration';
 import {productionFinanceDatabase,financePreviewDatabase} from '../../src/security/session-database';

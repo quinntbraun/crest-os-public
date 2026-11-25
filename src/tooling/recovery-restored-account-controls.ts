@@ -7,9 +7,8 @@ import {verifiedRecoveryDatabaseComparison} from './recovery-restored-database.t
 import {recoveryDatabaseEndpoint} from './recovery-database-endpoint.ts';
 import {withRecoveryBackupLease} from './recovery-backup-lease.ts';
 import {captureRecoveryRoutineCatalog} from './recovery-routine-catalog.ts';
-import {recoveryRoutineBaseline138} from './recovery-routine-baseline138.ts';
+import {recoveryCanonicalSourceProfile} from './recovery-source-profile.ts';
 import {captureRecoverySchemaCatalog} from './recovery-schema-catalog.ts';
-import {recoverySchemaBaseline138} from './recovery-schema-baseline138.ts';
 import type {RecoveryBackupSnapshot} from './recovery-backup-lease.ts';
 type Stage='comparison'|'identity'|'snapshot'|'endpoint'|'migrations'|'roles'|'catalog'|'schema'|'event_state'|'postings'|'controls';
 export class RecoveryRestoredAccountControlsError extends Error{readonly stage:Stage;constructor(stage:Stage){super('RECOVERY_RESTORED_ACCOUNT_CONTROLS_REVIEW_REQUIRED');this.name='RecoveryRestoredAccountControlsError';this.stage=stage;}}
@@ -30,7 +29,7 @@ async function fingerprintPostedBusinesses(snapshot:RecoveryBackupSnapshot,busin
 export async function verifyRecoveryRestoredAccountControls(input:Readonly<{comparison:unknown;client:pg.Client}>,external:AbortSignal){
  let stage:Stage='comparison';const client=input.client,signal=AbortSignal.any([external,AbortSignal.timeout(900000)]);
  try{
-  signal.throwIfAborted();require(client instanceof pg.Client);const comparison=verifiedRecoveryDatabaseComparison(input.comparison),baseline=recoveryRoutineBaseline138;require(comparison.sourceSchemaVersion===baseline.sourceSchemaVersion&&comparison.migrationRegistrySha256===baseline.migrationRegistrySha256);
+  signal.throwIfAborted();require(client instanceof pg.Client);const comparison=verifiedRecoveryDatabaseComparison(input.comparison),sourceProfile=recoveryCanonicalSourceProfile(comparison.sourceSchemaVersion,comparison.migrationRegistrySha256),baseline=sourceProfile.routines;require(comparison.sourceSchemaVersion===baseline.sourceSchemaVersion&&comparison.migrationRegistrySha256===baseline.migrationRegistrySha256);
   stage='identity';await client.query("SET default_transaction_read_only='on'");await client.query("SET statement_timeout='5s'");
   const identity=(await client.query(`SELECT current_user=session_user
    AND EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=session_user AND r.rolcanlogin AND NOT(r.rolsuper OR r.rolinherit OR r.rolcreaterole OR r.rolcreatedb OR r.rolreplication OR r.rolbypassrls))
@@ -47,7 +46,7 @@ export async function verifyRecoveryRestoredAccountControls(input:Readonly<{comp
     stage='migrations';require(isDeepStrictEqual((await snapshot.query('SELECT version,name FROM supabase_migrations.schema_migrations ORDER BY version')).rows,comparison.migrations));
     stage='roles';require(isDeepStrictEqual((await snapshot.query("SELECT rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolbypassrls,rolconnlimit,rolconfig FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' AND NOT rolcanlogin ORDER BY oid")).rows,comparison.roles));
     stage='catalog';const catalog=await captureRecoveryRoutineCatalog(snapshot,lease.signal);require(catalog.profile===baseline.profile&&catalog.routineCount===baseline.routineCount&&catalog.sha256===baseline.sha256);
-    stage='schema';const schema=await captureRecoverySchemaCatalog(snapshot,lease.signal),schemaBaseline=recoverySchemaBaseline138;require(comparison.sourceSchemaVersion===schemaBaseline.sourceSchemaVersion&&comparison.migrationRegistrySha256===schemaBaseline.migrationRegistrySha256&&schema.profile===schemaBaseline.profile&&schema.objectCount===schemaBaseline.objectCount&&schema.sha256===schemaBaseline.sha256);
+    stage='schema';const schema=await captureRecoverySchemaCatalog(snapshot,lease.signal),schemaBaseline=sourceProfile.schema;require(comparison.sourceSchemaVersion===schemaBaseline.sourceSchemaVersion&&comparison.migrationRegistrySha256===schemaBaseline.migrationRegistrySha256&&schema.profile===schemaBaseline.profile&&schema.objectCount===schemaBaseline.objectCount&&schema.sha256===schemaBaseline.sha256);
     await snapshot.query('SET LOCAL ROLE crest_finance_account_owner');
     stage='event_state';require(isDeepStrictEqual(await fingerprintPostedBusinesses(snapshot,comparison.postedBusinesses,lease.signal),comparison.eventFingerprint));
     const checked=[];

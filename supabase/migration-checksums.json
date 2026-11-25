@@ -690,6 +690,11 @@
       "version": "20270131180000",
       "file": "20270131180000_recovery_backup_reader.sql",
       "sha256": "5751224fb82987c1e38546818c4f645c4149b6713cea9ab6827a86d57064fb28"
+    },
+    {
+      "version": "20270205183000",
+      "file": "20270205183000_fictional_opening_funds_sources.sql",
+      "sha256": "dc1f24a26ff12e0b599f779faf5d9c733c9f297b327fff40ca8031c9acfe9136"
     }
   ]
 }

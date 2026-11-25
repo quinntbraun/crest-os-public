@@ -1,3 +1,4 @@
+import {recoverySourceProfileMatches} from './recovery-source-profile.ts';
 import {randomUUID} from 'node:crypto';
 import {unlink} from 'node:fs/promises';
 import type {createRecoveryPrimaryStore} from './recovery-primary-store.ts';
@@ -16,7 +17,7 @@ function require(value:unknown):asserts value{if(!value)throw new RecoveryRetain
 // published attachment or a claimed database-snapshot fact.
 export async function captureRecoveryRetainedArchive(input:Readonly<{inventory:Inventory;workspace:string;recipient:string;retainUntil:string}>,ports:Readonly<{source:ReturnType<typeof createRecoveryPrimaryStore>;encrypt:ReturnType<typeof createRecoveryFileEncryption>;attempt:Pick<Attempt,'view'|'publish'>;vault:Pick<ReturnType<typeof createRecoveryVault>,'publishEncryptedFile'>}>,signal:AbortSignal){
  try{
-  signal.throwIfAborted();const state=ports.attempt.view(),until=Date.parse(input.retainUntil);require(!state.reviewRequired&&state.header.sourceSchemaVersion===138&&input.inventory.profile==='crest.private-original-inventory.v1'&&Number.isFinite(until)&&new Date(until).toISOString()===input.retainUntil&&until>=Date.now()+7*86400000&&until<=Date.now()+500*86400000);
+  signal.throwIfAborted();const state=ports.attempt.view(),until=Date.parse(input.retainUntil);require(!state.reviewRequired&&recoverySourceProfileMatches(state.header.sourceSchemaVersion,state.header.migrationRegistrySha256)&&input.inventory.profile==='crest.private-original-inventory.v1'&&Number.isFinite(until)&&new Date(until).toISOString()===input.retainUntil&&until>=Date.now()+7*86400000&&until<=Date.now()+500*86400000);
   const catalog=(await ports.source.listRetained(signal)).forRecoveryTools(),wanted=input.inventory.objects.filter(object=>object.domain===catalog.domain),expected=new Map(wanted.map(object=>[object.key,object])),available=new Set(catalog.objects.map(object=>object.key));
   require(expected.size===wanted.length);for(const key of expected.keys())require(available.has(key));
   const entries=[];

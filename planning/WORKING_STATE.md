@@ -2,6 +2,291 @@
 
 ## Current launch checkpoint, 2026-11-25
 
+Registered139 adoption native PASS2/2 on6cffbfc9229b4d9bd62b4c4864b0df985f3650c9,
+.local/schema139-adoption-bound/result.json, stable source/owned cleanup. Actual
+root139 and frozen138 registry identities both preserved; real registered139
+operator delivery192 sources/196 files and old138 operator delivery pass with
+neutral reconstruction/isolated encrypted restore. Original late old-root assertion
+failure retained. Combined with44/44 coordinated138/139 recovery and6/6 isolated
+Linux command-control cases onf310683, full9957 units/types/lint/migration checks.
+
+CI now explicitly runs the registered139 upgrade/export case and includes genuine
+opening-deposit HTTP/Chrome workflow exactly once in accounting-settings/browser
+command. The historical opening-context case stays on frozen138 before held SQL.
+New required browser count56; original files/screenshot requirements retained.
+Native normal-Node import review caught the new fixture metadata import pulling
+server-only export code into all browser tests. Unchanged column metadata is now
+data-only/frozen, reused by source formatter/candidate/inventory, and a real native
+Node regression passes without react-server conditions.33 affected units/fulltypes
+and complete browser partition pass. Hosted screenshot output is retained too.
+Fresh strict whole-source scan/publication104 still pending. No runner live; source
+changes are not installed. Actual use NOT READY; rough80% coding low confidence;
+context sufficient; $0 new spend. Prior public103a all3 workflows green.
+
+## Earlier checkpoint, 2026-11-25
+
+Registered138+139 coordinated recovery PASS44/44 onf310683391ad0296d6050dab2f2a4f84a113d7a3,
+.local/schema139-backup-compatibility/result.json, unchanged source/owned cleanup,
+zero skips. Both old/new database, original/quarantine objects, separate actual
+versioned source/config packages, retained controls/corruption/lease/image refusals
+pass. Windows journal seam/synthetic unloaded image remain scoped limits.
+Actual Linux command controls PASS6/6 on mountedf310683 source in network-none,
+read-only source/non-root container with temporary tmpfs: actual fsync/journal/
+failure-only monitoring/control composition, controlled PG/provider/tool ports.
+See .local/schema139-linux-command{.log,-result.json}; no encryption/provider/
+power-loss durability/off-host/full-backup acceptance inferred.
+
+Native adoption f310683 run reaches registered139 upgrade, metadata/196-file
+command, neutral reconstruction and encrypted restore; final assertion still
+expects root138 hash after intentional139 registration. Its original failure is
+retained in .local/schema139-adoption-native; frozen138 legacy operator case
+passes1/1 there. Final guard now requires actual registered139 root hash AND
+separately unchanged frozen138 hash. No product code, SQL/catalog pin or authority
+guard changed; fresh native rerun pending. Full9957 units/types/lint/migration
+checks already pass. No runner live at this checkpoint.
+
+Public103a main45601359118/expense45601359048/commercial45601359011 all independently
+observed completed/success on exact1c1284c1; PR178 remains open/draft/unmerged at
+that head. Source104 publication may proceed only after pending native check and
+fresh whole-source strict scan. Installation/real use remain blocked; context
+sufficient; rough80% coding low confidence; $0 new spend.
+
+## Earlier checkpoint, 2026-11-25
+
+Source139 adoption implemented, not installed: exact previously verified migration
+dc1f24a/registry1925b449 plus192-source coverage, blocked compatibility139 and
+separate139 routine/schema baselines. Original138 registry/coverage/compatibility
+frozen byte-for-byte and old fingerprint files unchanged. Registered139 named
+full-instance capture/formatter and CLI profile report catalogRegistered true;
+candidate functions retain their separate conservative profile. openingFunds is
+an explicit runtime feature requiring openingWorksheet/moneyChannels. Financial
+vocabulary109 retained; unknown140 refuses. Owner scoped business export139 is
+still deliberately closed pending its new source/reference path; complete flags
+remain false. Historical138 native fixtures and source packages explicitly pin
+the frozen138 release rather than leaking current139 files into old backups.
+See OPENING_FUNDS_SCHEMA139_ADOPTION.{md,json}.
+
+Types/migration verification/targeted lint pass. First full units9953pass/3fail:
+two future-schema sentinels now move from139 to140; the Windows restricted-file
+symlink case could not create its junction. No test skipped/guard weakened.
+Focused138 cases across4 files then pass outside the restricted file environment,
+including that unchanged symlink-refusal test and adoption checks. Final complete
+unit run passes9957 cases/480 files in17s; registered native139/legacy138/Linux
+command checks pending.
+No source-frozen runner live at this checkpoint; root139 pending publication;
+installed laptop unchanged. NOT READY; rough80% coding low confidence; context
+sufficient; $0 new spending. Public103a exact head still held while live.
+
+## Earlier checkpoint, 2026-11-25
+
+Command-bridge native PASS1/1 on95ed927f13849499b5616a15c0dfbc93ac7fcafa,
+.local/opening-funds139-command-bridge-longpaths/result.json; source stable/owned
+cleanup. Actual139 operator command loaded from separately committed139 source
+delivers196 files/192 sources with exact registry/routine/schema manifest pins,
+candidate/unregistered/incomplete flags and legacy-mode refusal. Actual populated
+138 upgrade, column reconstruction, restricted inventory/catalog drift refusal
+and encrypted separate-cluster recovery also pass. The original6870c1d long-init
+failure remains; one-command Git longpaths fixed only the owned temporary repo.
+17 profile/registry/inventory units, full types and targeted lint pass. No local
+runner live. This is not actual Linux production capture-command/provider/offhost
+acceptance. Root registry/installation138 and blocked activation unchanged.
+Next formal139 migration/runtime/export/recovery release adoption preserving138
+baselines, then all remaining opening approvals/posting/security/provider/launch
+requirements. Rough80% coding low confidence; NOT READY; context sufficient;$0.
+
+## Earlier checkpoint, 2026-11-25
+
+Command-bridge native6870c1d verifies the corrected full manifest fingerprints
+then stops preparing its separately committed source: this longer owned Windows
+workspace exceeds Git init's template-path limit before local core.longpaths can
+be set. Original .local/opening-funds139-command-bridge failure retained. Temporary
+repo initialization now supplies core.longpaths=true on that one Git command,
+then retains the existing local setting; no global config/guard changes. Retry
+pending; no operator-command delivery or recovery acceptance claimed yet.
+
+## Earlier checkpoint, 2026-11-25
+
+Release bridge in progress: fixed139 instance-export manifest incorrectly carrying
+the138 schema fingerprint (capture itself already checked139). Native regression
+now asserts every canonical fingerprint and exercises the real instance operator
+command from separately committed139 source. Shared fixed-pair registry reader
+now supplies source version/migrations to capture/export commands; exact138/139
+hash pairs only, no arbitrary numeric range. Capture compares release/schema/
+recipe/attempt versions;139 export requires explicit full-instance request and
+reports192 sources/candidate flags, legacy mode refuses. Root138 registry and
+production activation unchanged.17 focused profile/registry/inventory units,
+full types and targeted lint pass; new native command run pending.
+
+## Earlier checkpoint, 2026-11-25
+
+Opening-deposit genuine-MFA/HTTP/PG and real Chrome screen run PASS1/1 on
+53bc550871330ea16aae9a95e461ec554f5c1484, stable source/owned cleanup:
+.local/opening-funds139-ui-auth-built/{result.json,test.log,deposits-390.png,deposits-1440.png}.
+Actual current production Next+server build also passes on that exact source,
+.local/opening-funds139-ui-build/result.json. Source fixture compiled current code;
+root production client rebuilt before browser acceptance. Native original failures
+remain in -ui-auth and -ui-auth-rollback; no assertion, auth fence or timeout relaxed.
+The authenticated flow verifies customer creation, worksheet/unknown bank controls,
+deposit conservation/save/replay/stale409/operation conflict/read/lookup/absent
+retirement/revision2, then actual phone-width revision3 edit preserving receipt
+identity and unknown refundability. No financial event/journal/period count changes;
+revoked original device cannot read.390/1440 have no horizontal overflow or
+serious/critical scoped Axe findings. Phone screenshot visually inspected.
+Chrome viewport is not a physical iPhone/WebKit or full-app acceptance claim.
+88 focused unit/native-import cases pass; types/targeted lint pass. No local runner
+live. Next coherent139 schema/runtime/export/recovery command/release adoption,
+then remaining full opening controls/approval/posting and security/provider/offhost
+launch gates. Root registry and installed release remain unchanged; NOT READY.
+Rough80% coding, low confidence; context sufficient; $0 new spend.
+
+## Earlier checkpoint, 2026-11-25
+
+Corrected genuine139 run034031e (.local/opening-funds139-ui-auth-rollback) now
+passes its HTTP save/replay/stale revision/conflict/read/original lookup/retirement/
+revision2/no-posting assertions, then the browser cannot find the new deposit
+disclosure in the old root production Next bundle. The fixture compiles current
+server code but intentionally serves the existing production client build.
+Need rebuild actual current application before rerunning browser acceptance;
+do not infer a screen pass from HTTP checks. Failure/source/owned cleanup retained.
+
+## Earlier checkpoint, 2026-11-25
+
+First genuine139 HTTP run at7855725 (.local/opening-funds139-ui-auth/result.json)
+reached actual create/read/save/replay, then correctly rolled back stale schedule
+but returned503 instead of409 because the restricted database boundary did not
+yet allowlist the new exact refusal. Original failure retained; no runner live.
+New opening-funds domain markers now cross only on matching SQLSTATE after an
+acknowledged command rollback; unknown/audit/private failures remain generic.
+Native regression/browser continuation still pending on the corrected source.
+
+## Earlier checkpoint, 2026-11-25
+
+Opening customer-deposit screen now connected beneath the saved opening worksheet
+when the explicit openingFunds capability is present. Supports retained receipt
+identity, multiple customer allocations, historical reductions, unknown/evidenced
+refund ceilings, draft review/revision saves, downloads and original-attempt
+lookup/retirement. Only opaque operation/epoch references enter sessionStorage;
+draft/source details clear on hide/page transitions. The production runtime feature
+register remains unchanged/default closed; the disposable fixture alone upgrades
+to the exact139 candidate and enables the screen. New native genuine-MFA/HTTP/PG
+and Chrome390/1440-width workflow added; execution pending at this checkpoint.
+Full types/targeted lint pass. System Chrome is available for the isolated check.
+Next execute the focused authentic screen flow, fix actual failures, then coherent
+schema/runtime/release adoption and all remaining launch requirements below.
+
+## Earlier checkpoint, 2026-11-25
+
+Actual candidate139 application image built from source d05dd042826b1a400313f2368fbf427037fb1cf7;
+compiled/file identity matched, non-root/closed default startup verified.
+Image sha256:13444d320d74cb36c66639ac40f538f3c4697dfe75e0ebf23c918f77da2985c0.
+Four age-encrypted image recovery/identity cases pass on e54d40a7788c851051e2a9507bf46e841c2dc258,
+.local/opening-funds139-image-recovery/{result.json,test.log}; stable source,
+owned cleanup. Same Docker host/disk vault fixture, not actual cloud retention,
+independent-host recovery, installation or complete-backup acceptance. Wrapper
+scope text inherited database boilerplate; actual four TAP cases define scope.
+
+Opening-funds browser-safe input/receipt contract and authenticated HTTP/client
+read/save/lookup/retire actions now implemented. Shared normalizer preserves exact
+cents and original server verifier; no Node imports in actual browser bundle.
+HTTP uses existing fresh session/CSRF/origin/binding/admission/financial transaction
+fences, exact original operation and receipt checks, explicit openingFunds flag
+default false/dependent on openingWorksheet. Runtime feature registration and
+actual owner screen are NOT yet connected. Existing private HTTP 128KiB cap stays;
+no global request-limit increase. 85 focused units/7 files pass including adjacent
+HTTP/client checks; full types and targeted lint run separately. These use mocked
+HTTP authority/DB seams and do not replace native genuine-session acceptance.
+Root installation/registry138 and production feature configuration unchanged.
+
+Public103a 1c1284c1 latest21 prerequisite jobs pass; Foundation139176379967
+authoritatively observed in_progress. Keep public head/title/body fixed.
+Next genuine139 HTTP integration, owner screen and coherent schema/runtime/release
+adoption, then all remaining opening/posting/security/provider/offhost/launch gates.
+Rough80% V1 coding, low confidence; actual use NOT READY; context sufficient;
+$0 new spending; owner account-access answer still pending.
+
+## Earlier checkpoint, 2026-11-25
+
+Candidate139 coordinated backup/recovery now passes22/22 native onc528a6c,
+.local/opening-funds139-coordinated-bound/result.json; source stable/owned cleanup,
+no skipped cases. Populated originals and5 posted events plus saved opening
+funds use actual139 coordinator upgrade, restricted capture, six published/two
+quarantined object custody, separately committed139 source package/configuration
+and fresh-process database/object/financial/account-control restoration. All
+changed-image/lost-lease/corrupt/missing/range/journal refusal cases pass. Image
+fixture is synthetic/unloaded; Windows journal seam is not Linux durability.
+Original longpath and138-recipe mismatch failures retained; local Git config and
+fixture binding fixed without weakening guards. Automatic review rejected one
+wrong-directory launch; correct scope verified and test safely completed. No
+local runner live. Root registry/installation138 unchanged; candidate unregistered.
+Next actual139 application/image and runtime/schema registration/release/owner
+screen, plus security/reopen/offhost/key/provider/completebackup catalog gates and
+all remaining full P27/launch scope. Public103a1c1284c1 stays fixed/live, latest18
+main prerequisites passed/no failures;3 groups pending. Rough80% coding low
+confidence;realuseNOTREADY;context sufficient;$0new spend;owner answer pending.
+
+## Earlier checkpoint, 2026-11-25
+
+Recovery components now carry explicit138/candidate139 source-version binding,
+with exact139 registry/catalog pins and blocked candidate release identity.
+Configuration/archive/original/retained/run/restore/database-finance-controls
+paths reject foreign versions/hashes; default production command/root registry/
+actual release compatibility remain138. Original baseline hashes unchanged.
+Native1/1 on43c82bc .local/opening-funds139-recovery-profile/result.json passes
+restricted139 original-file inventory(empty/no pending) and financial controls
+(no posted events/balanced), catalog match plus existing upgrade/export and
+age-encrypted second-cluster recovery. Source stable/cleanup; not populated
+original-store/full coordinated vault/config/image or production reopen proof.
+21 focused units/fulltypes/targetlint/plain-Node profile import pass. Identical
+catalog constants extracted data-only later; no local runner remains.
+Next full139 command/release/artifact/coordinated-capture-restore acceptance,
+formal registration/runtime/owner-screen and full remaining P27/launch scope.
+Public103a1c1284c1 remains fixed with main45601359118 live; latest12prerequisite
+successes/no failures. RealuseNOTREADY;rough80% coding low confidence;context
+sufficient;$0new spending;owner account-access answer pending.
+
+## Earlier checkpoint, 2026-11-25
+
+Full-instance139 candidate export passes native1/1 ona3af373,
+.local/opening-funds139-instance-export/result.json, source stable/owned cleanup.
+Exact candidate registry/migration +1283 routine/15610 schema-object pins are
+retained separately;138 baselines unchanged. Named restricted producer requires
+139 version/name and catalog fingerprints, exact192-table inventory/columns/
+keys and declared FK snapshot checks. Named formatter outputs196 files with
+candidate139/unregistered/incomplete flags. Every source column reconstructs
+in neutral SQL;3 new source tables contain real fictional saved rows. Unexpected
+function definition/COST refuses at catalog;138 producer/formatter remains189
+sources/version138 before upgrade and cannot mislabel139. Existing139 upgrade,
+coverage/source/context and encrypted second-cluster recovery pass in same case.
+Full types/targetlint pass; no local runner. Next encrypted capture/restore139
+profile integration/frozen138 compatibility and registered source/runtime/
+owner-screen path, then all remaining P27 and full launch scope. Public103a
+1c1284c1 head/title/body held fixed while workflows run. RealuseNOTREADY;
+rough80% coding low confidence;context sufficient;$0newspend;owner answer pending.
+
+## Earlier checkpoint, 2026-11-25
+
+Fresh public103a1c1284c1ac163aaccd677ab47a92492456efeab6 is published from
+localc08a0af/tree6e447dde, sole public parent3dafa24a. Strict whole-source scan
+3041 files/43457125 bytes has0 findings, empty ignore/default rules/inline allows
+disabled. Metadata verified before nonforce expected-head CAS. Actual rawcommit,
+ref/PR/base/draft and merge1bf5f4bd exact tree/ordered parents[ea06,1c1284]
+independently verified. Three actual exact-head pull_request workflows started:
+main45601359118, expense45601359048, commercial45601359011. HOLD public head/
+title/body until terminal. Publication proof .local/design-publication/
+design103a-publication-proof.json. No full acceptance or installed change.
+
+103a includes the real upstream response-buffering fix for the102a Chromium
+navigation/body race and the versioned139 candidate/portable/encrypted recovery
+work, still unregistered. Local139 coordinator+preserved-data/source/recovery
+acceptance remains scoped to180f2519. Root registry138/historical baselines stay
+unchanged. Next strict reviewed139 routine/schema/catalog profile pins and
+complete instance export/backup/restore profile integration/frozen138compatibility,
+then root registration/runtime/owner-screen work and remaining full P27/launch
+scope. No local runner live. RealuseNOTREADY;rough80% coding low confidence;
+context sufficient;$0newspend; owner account answer pending.
+
+## Earlier checkpoint, 2026-11-25
+
 Public102a workspace-records139142141497 FAILED59/60: Chromium directory
 first-save feedback helper raced response-body retrieval against navigation.
 All20 other main prerequisites passed. Foundation139158268303 was last observed

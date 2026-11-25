@@ -1,0 +1,28 @@
+import {randomUUID} from 'node:crypto';
+import {it,expect,vi} from 'vitest';
+vi.mock('server-only',()=>({}));
+import {recoverySourceProfileMatches,recoveryCanonicalSourceProfile} from '../../src/tooling/recovery-source-profile.ts';
+import {openingFunds139SourceProfile as candidate} from '../../src/tooling/opening-funds139-source-profile.ts';
+import {recoveryRoutineBaseline138} from '../../src/tooling/recovery-routine-baseline138.ts';
+import {recoveryConfigurationFixture} from '../support/recovery-configuration-fixture.ts';
+import {prepareRecoveryConfiguration,readRecoveryConfiguration,reconstructRecoveryConfiguration} from '../../src/tooling/recovery-configuration.ts';
+import {readRecoveryRunCandidate} from '../../src/tooling/recovery-run-restore.ts';
+import {readRecoveryReleaseManifest} from '../../src/tooling/recovery-release-distribution.ts';
+it('preserves138 parsing while139 requires its exact reviewed registry, excluding future versions',()=>{
+ expect(recoverySourceProfileMatches(138,'b'.repeat(64))).toBe(true);expect(recoverySourceProfileMatches(139,candidate.migrationRegistrySha256)).toBe(true);for(const version of [0,137,140,999,'139'])expect(recoverySourceProfileMatches(version,candidate.migrationRegistrySha256)).toBe(false);expect(recoverySourceProfileMatches(139,'b'.repeat(64))).toBe(false);
+});
+it('canonical comparison requires the actual138 baseline or separately registered139 fingerprints',()=>{
+ expect(recoveryCanonicalSourceProfile(138,recoveryRoutineBaseline138.migrationRegistrySha256).routines).toBe(recoveryRoutineBaseline138);expect(()=>recoveryCanonicalSourceProfile(138,'b'.repeat(64))).toThrow();const profile=recoveryCanonicalSourceProfile(139,candidate.migrationRegistrySha256);expect(profile.registered).toBe(true);expect(profile.routines.sha256).toBe(candidate.routineSha256);expect(profile.schema.sha256).toBe(candidate.schemaSha256);
+});
+it('prepares and reconstructs a139 configuration recipe without declaring external material verified',async()=>{
+ const f=recoveryConfigurationFixture(),binding={...f.target,sourceSchemaVersion:139 as const,migrationRegistrySha256:candidate.migrationRegistrySha256};const recipe=prepareRecoveryConfiguration({profileSource:f.profileSource,binding,references:f.references}).forRecoveryTools(),source=JSON.stringify(recipe);expect(readRecoveryConfiguration(source,binding).binding.sourceSchemaVersion).toBe(139);const result=await reconstructRecoveryConfiguration({source,expected:binding},async reference=>f.material.get(reference.referenceId)! ,new AbortController().signal);expect(JSON.parse(result.forRecoveryTools().profileSource)).toEqual(f.profile);expect(recipe.externalMaterialAvailabilityVerified).toBe(false);
+});
+it('refuses a139 recipe with an unknown registry or another expected source version',()=>{
+ const f=recoveryConfigurationFixture(),binding={...f.target,sourceSchemaVersion:139 as const};expect(()=>prepareRecoveryConfiguration({profileSource:f.profileSource,binding,references:f.references})).toThrow();expect(()=>readRecoveryConfiguration(f.source,{...f.target,sourceSchemaVersion:139,migrationRegistrySha256:candidate.migrationRegistrySha256})).toThrow();
+});
+it('reads139 recovery candidates with exact binding while retaining incomplete backup status',()=>{
+ const expected={pointId:randomUUID(),businessId:randomUUID(),appReleaseId:'a'.repeat(40),sourceSchemaVersion:139 as const,migrationRegistrySha256:candidate.migrationRegistrySha256,referenceDirectoryId:randomUUID()},value={profile:'crest.verified-recovery-run-candidate.v1',pointId:expected.pointId,snapshotId:'00000003-00000001-1',manifest:{key:'recovery/'+expected.pointId+'/artifacts/'+randomUUID()+'.age',versionId:'synthetic',byteSize:100,sha256:'c'.repeat(64),retainUntil:new Date(Date.now()+400*86400000).toISOString()},manifestPlaintext:{byteSize:100,sha256:'d'.repeat(64)},completeBackup:false};expect(readRecoveryRunCandidate(JSON.stringify(value),expected).binding.sourceSchemaVersion).toBe(139);expect(()=>readRecoveryRunCandidate(JSON.stringify(value),{...expected,migrationRegistrySha256:'b'.repeat(64)})).toThrow();
+});
+function release(){const digest='a'.repeat(64),registry:string=candidate.migrationRegistrySha256;return{formatVersion:2,sourceCommit:'c'.repeat(40),workingTreeDirty:false,nodeVersion:'24.22.0',packageManager:'npm@11.19.1',lockfileSha256:digest,migrationRegistrySha256:registry,canonicalMaintenanceSha256:digest,toolchainSha256:digest,compatibility:{schemaVersion:1,appVersion:'0.1.0',databaseMajor:17,schemaMinimum:0,schemaMaximum:139,reportVersion:0,commandVersion:1,productionActivation:'blocked'},containerImageId:'sha256:'+digest,buildIdentity:{schemaVersion:1,appReleaseId:digest.slice(0,40),sourceContentSha256:digest,migrationRegistrySha256:registry,sourceSchemaVersion:139},distributionDigest:'sha256:'+digest,imageArchive:{file:'crest-os-image.tar',byteSize:100,sha256:digest},sourceArchive:{file:'crest-os-source.tar',byteSize:100,sha256:digest},productionActivation:'blocked'};}
+it('requires consistent139 release compatibility and identity before distribution',()=>{expect(readRecoveryReleaseManifest(release()).release.sourceSchemaVersion).toBe(139);const value=release();value.compatibility.schemaMaximum=138;expect(()=>readRecoveryReleaseManifest(value)).toThrow();});
+it('rejects an unknown139 release registry and any candidate production-activation claim',()=>{const unknown=release();unknown.migrationRegistrySha256='b'.repeat(64);unknown.buildIdentity.migrationRegistrySha256=unknown.migrationRegistrySha256;expect(()=>readRecoveryReleaseManifest(unknown)).toThrow();const active=release();active.compatibility.productionActivation='ready';expect(()=>readRecoveryReleaseManifest(active)).toThrow();});

@@ -3,11 +3,12 @@
 import {isLiveRecoveryBackupSnapshot} from './recovery-backup-lease.ts';
 import type {RecoveryBackupSnapshot} from './recovery-backup-lease.ts';
 import {instanceSourceInventory138} from './instance-source-inventory138.ts';
+import {openingFunds139SourceInventory} from './opening-funds139-source-profile.ts';
 export type InstanceSourceForeignKey=Readonly<{source:string;name:string;columns:readonly string[];target:string;targetColumns:readonly string[];match:'simple'|'full';constraintValidated:boolean;verification:'snapshot_no_orphans'|'excluded_column'|'external_source'}>;
-export async function captureInstanceSourceReferences(snapshot:RecoveryBackupSnapshot,signal:AbortSignal){
+export async function captureInstanceSourceReferences(snapshot:RecoveryBackupSnapshot,signal:AbortSignal,candidate=false){
  function require(value:unknown):asserts value{if(!value)throw Error('INSTANCE_SOURCE_REFERENCES_REVIEW_REQUIRED');}
  require(isLiveRecoveryBackupSnapshot(snapshot)&&snapshot.databaseRole==='crest_backup_reader');signal.throwIfAborted();
- const inventory=new Map(instanceSourceInventory138.map(source=>[source.source,source])),quote=(value:string)=>'"'+value.replaceAll('"','""')+'"',relation=(value:string)=>value.split('.').map(quote).join('.');
+ const inventory=new Map((candidate?openingFunds139SourceInventory:instanceSourceInventory138).map(source=>[source.source,source])),quote=(value:string)=>'"'+value.replaceAll('"','""')+'"',relation=(value:string)=>value.split('.').map(quote).join('.');
  const definitions=(await snapshot.query(`SELECT n.nspname||'.'||c.relname AS source,f.conname AS name,
   ARRAY(SELECT a.attname::text FROM unnest(f.conkey) WITH ORDINALITY k(num,pos) JOIN pg_catalog.pg_attribute a ON a.attrelid=f.conrelid AND a.attnum=k.num ORDER BY k.pos) AS local_columns,
   pn.nspname||'.'||p.relname AS target,

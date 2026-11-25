@@ -13,7 +13,7 @@ async function transaction(client,callback,isolation='READ COMMITTED'){await cli
 test('held opening context binds actual saved source/account snapshots behind existing authority and finance fences',{timeout:240000},async()=>{
  const sandbox=await migrationSandbox();
  try{
-  const target=await sandbox.database(),admin=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(admin,target);const applied=await sandbox.apply(target);assert.equal(applied.history.length,138);
+  const target=await sandbox.database(),admin=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(admin,target);const applied=await sandbox.apply(target,await sandbox.prefix(138));assert.equal(applied.history.length,138);
   const held=await readFile(new URL('../../planning/proposals/20270201180000_opening_journal_context.sql',import.meta.url),'utf8');await sandbox.applyHeldSql(admin,held);
   const web=await sandbox.connect(target),finance=await sandbox.connect(target);await web.query('SET ROLE crest_web');await finance.query('SET ROLE crest_finance_preview');
   const bootstrap=(await admin.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;

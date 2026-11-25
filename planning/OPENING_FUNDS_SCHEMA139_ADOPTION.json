@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 139,
+  "registeredSourceOnly": true,
+  "reason": "Adopt the reviewed nonposting opening customer-deposit evidence, source export and restricted recovery readers into a versioned release.",
+  "migration": {
+    "version": "20270205183000",
+    "file": "supabase/migrations/20270205183000_fictional_opening_funds_sources.sql",
+    "sha256": "dc1f24a26ff12e0b599f779faf5d9c733c9f297b327fff40ca8031c9acfe9136",
+    "registrySha256": "1925b449bd75ebe9dd3a9a01b55f7eb0f33f993a88dfca5b96b55b4fbc0f7a7a"
+  },
+  "previousRegistry": {
+    "file": "tests/support/registered138-migration-checksums.json",
+    "sha256": "9d4864f71e8641a6972b4a5db4b1e47bf58f3917ebab34f27e1802226d72236a"
+  },
+  "previousCoverage": {
+    "file": "tests/support/registered138-security-export-coverage.json",
+    "sha256": "3d3ec4f5371c4c5c81e181a6217fd3838c3ccee59887f69e4181439aafa846df"
+  },
+  "previousCompatibility": {
+    "file": "tests/support/registered138-compatibility.json",
+    "sha256": "e446b552084ccc9a0e0a6d233228a0c6c35ee83a88fb7a7efce5ff021d67d9f9"
+  },
+  "sourceCount": 192,
+  "ownerDatabaseApplied": false,
+  "productionDatabaseApplied": false,
+  "productionActivation": "blocked",
+  "openingBalancesApproved": false,
+  "openingJournalPosted": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "requiredAcceptance": [
+    "Actual registered139 upgrade with preserved138 rows and no pending migrations",
+    "Registered139 full-instance operator capture/delivery and exact routine/schema pins",
+    "Frozen138 source and recovery compatibility without baseline regeneration",
+    "Exact-source genuine-session phone/desktop flow and hosted release gates",
+    "Actual Linux capture command and real provider/retention/offline-key/off-host/reopen acceptance"
+  ],
+  "remainingLaunch": [
+    "Complete opening source classes, control reconciliation, approval and posting",
+    "Complete owner business export/reference closure",
+    "Production access, account configuration and finance facts",
+    "Independent recoverable backups and verified device access"
+  ]
+}
