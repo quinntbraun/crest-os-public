@@ -22,14 +22,24 @@ it('previews only evidenced bank and opening receivable sources with equal debit
  ]);
  expect([preview.totalDebitCents,preview.totalCreditCents]).toEqual(['29555','29555']);
  expect(preview.blockers).toContain('Verify customer funds held.');
+ expect(preview.warnings).toEqual([]);
 });
 
 it('lists an overdraft and a contradictory receivables classification for review',()=>{
  const preview=previewOpeningPosting({...opening,banks:[{label:'Checking',accountCode:'1000',bookCents:'-1'}],
   controls:{...opening.controls,receivables:zero}},schedule);
- expect(preview.lines).toEqual([]);
- expect(preview.blockers).toContain('Checking has a negative book balance that needs classification before posting.');
+ expect(preview.lines).toEqual([
+  {accountCode:'1000',label:'Checking',debitCents:'0',creditCents:'1'},
+  {accountCode:'3000',label:'Provisional opening equity',debitCents:'1',creditCents:'0'},
+ ]);
+ expect(preview.warnings).toEqual(['Checking has a negative balance. It remains on this account; review any borrowing agreement separately.']);
  expect(preview.blockers).toContain('The saved receivables schedule conflicts with the worksheet’s receivables classification.');
+});
+it('keeps gross positive and negative account positions when the opening net is zero',()=>{
+ const preview=previewOpeningPosting({...opening,banks:[{label:'Checking',accountCode:'1000',bookCents:'12500'},{label:'Dedicated wallet',accountCode:'1030',bookCents:'-12500'}]},null);
+ expect(preview.lines.map(line=>[line.accountCode,line.debitCents,line.creditCents])).toEqual([['1000','12500','0'],['1030','0','12500']]);
+ expect(preview.totalDebitCents).toBe('12500');expect(preview.totalCreditCents).toBe('12500');
+ expect(preview.warnings).toHaveLength(1);expect(preview.blockers).toContain('Verify customer funds held.');
 });
 
 it('refuses to mix a schedule with another worksheet or cutover date',()=>{

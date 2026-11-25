@@ -32,6 +32,7 @@ type HistoryView={
 };
 const empty:HistoryView={entries:[],next:null,status:'idle'};
 const entryKey=(entry:ReviewHistoryEntry)=>entry.source+':'+entry.id;
+const historyTime=(value:string)=>new Date(value).toLocaleString();
 
 export function ReviewMessageHistory({businessId,scope}:{
  businessId:string;
@@ -98,12 +99,19 @@ export function ReviewMessageHistory({businessId,scope}:{
    {view.status==='loading'&&<p role="status">Loading saved message history…</p>}
    {view.status==='ready'&&!view.entries.length&&<p>No review messages or requests recorded yet.</p>}
    {view.status==='unavailable'&&<p role="alert">Couldn’t load saved message history.</p>}
-   {view.entries.length>0&&<ol>
-    {view.entries.map(entry=><li key={entryKey(entry)} className="completion-text">
-     <strong>{labels[entry.kind]}</strong> · <time dateTime={entry.effectiveAt}>{new Date(entry.effectiveAt).toLocaleString()}</time>
-     {entry.channel&&<span> · {entry.channel==='text'?'Text':'Email'}</span>}
+   {view.entries.length>0&&<ol className="review-history-events" role="list" aria-label="Saved review-message events">
+    {view.entries.map(entry=><li key={entryKey(entry)} className="review-history-entry">
+     <div className="review-history-heading"><strong>{labels[entry.kind]}</strong>
+      {entry.channel&&<span>{entry.channel==='text'?'Text':'Email'}</span>}
+     </div>
+     <p className="review-history-time">Event time <time dateTime={entry.effectiveAt} title={entry.effectiveAt}>{historyTime(entry.effectiveAt)}</time></p>
+     {historyTime(entry.recordedAt)!==historyTime(entry.effectiveAt)&&<p className="review-history-time">Recorded <time dateTime={entry.recordedAt} title={entry.recordedAt}>{historyTime(entry.recordedAt)}</time></p>}
      {entry.suppression&&<p>{suppressed[entry.suppression]}</p>}
-     {entry.reason&&<p>{entry.reason}</p>}
+     {entry.reason&&<p className="completion-text">{entry.reason}</p>}
+     <details className="review-history-evidence"><summary>Exact event times</summary><dl>
+      <div><dt>Event time</dt><dd><time dateTime={entry.effectiveAt}>{entry.effectiveAt}</time></dd></div>
+      <div><dt>Recorded time</dt><dd><time dateTime={entry.recordedAt}>{entry.recordedAt}</time></dd></div>
+     </dl></details>
      {scope.kind==='customer'&&<p><a href={'/schedule/work/complete?job='+entry.jobId}>Open job completion</a></p>}
     </li>)}
    </ol>}

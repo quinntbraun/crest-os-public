@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../../security/production-capabilities.ts';
 import {createHash} from 'node:crypto';
 import {createTrustedTransport} from '../../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../../security/trusted-transport.ts';
@@ -13,10 +15,11 @@ import {createExpenseDirectory,ExpenseDirectoryError} from './expense-directory.
 import {expenseCheck,expenseId,parseExpenseSave,parseExpenseOriginal} from './expense-contract.ts';
 const payloadKeys=['paidOn','amountCents','currency','category','description','vendor','paymentMethod','reference','notes','voided','changeReason'] as const;
 const fields={context:[],history:['afterExpenseId','afterRevision'],operation:['operationId','recoveryEpoch','expenseId','expectedRevision'],save:['recoveryEpoch','operationId','expenseId','expectedRevision',...payloadKeys]} as const;
-type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;productionCapabilities?:ProductionCapabilities};
 export function expenseFailureResponse(status:400|404|405|503=400){const response=privateJsonResponse({error:'EXPENSE_REQUEST_FAILED'},status);if(status===405)response.headers.set('Allow','POST');return response;}
 // Disabled until registered source/recovery/receipt integration is independently accepted.
 export function createExpenseHttp(config:Config,provider:Parameters<typeof createExpenseDirectory>[1],tokens:Parameters<typeof createExpenseDirectory>[2],enabled=false){
+ expenseCheck(!enabled||config.environment!=='production'||productionCapability(config,'expenses'));
  expenseCheck(expenseId(config.businessId)&&typeof enabled==='boolean');const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createExpenseDirectory(config,provider,tokens):undefined,context=enabled?createBusinessSettingsContextReader(config,provider,tokens):undefined;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>)=>{let submitted=false;try{
   const signal=AbortSignal.any([request.signal,AbortSignal.timeout(40000)]);resolve(request,peer);const url=new URL(request.url),prefix='/api/business/expenses/',route=url.pathname.slice(prefix.length) as keyof typeof fields;

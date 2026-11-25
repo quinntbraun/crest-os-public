@@ -9,27 +9,31 @@ import {parseExportPartBinding} from './export-part-crypto.ts';
 import {parseExportPartIntent} from '../files/export-part-store.ts';
 import type {BusinessSourceCapture,BusinessSourceJournalCapture} from './business-foundation-collector.ts';
 import type {ExportPartIntent,createEncryptedExportPartStore} from '../files/export-part-store.ts';
+import type {CurrentBusinessSourceCapture} from './business-foundation-collector.ts';
+import {formatCurrentBusinessPortableSource} from './current-business-portable-source.ts';
+import {formatCurrentSourceLogicalFiles} from './current-source-logical-files.ts';
+import {readCurrentSourceLogicalFiles} from '../client/current-source-logical-files.ts';
 
-type Profile='crest.business-source-bundle.v1'|'crest.business-source-journal-bundle.v1';
+type Profile='crest.business-source-bundle.v1'|'crest.business-source-journal-bundle.v1'|'crest.current-business-source-bundle.v1';
 export type SourceExportClaim<P extends Profile='crest.business-source-bundle.v1'>=Readonly<{
  formatVersion:1;profile:P;businessId:string;actorId:string;
  exportJobId:string;recoveryEpoch:string;leaseId:string;
 }>;
 type File=Readonly<{partId:string;fileName:string;contentType:'text/csv; charset=utf-8'|'application/json'|'text/plain; charset=utf-8';bytes:number;sha256:string}>;
-export type SourceExportPlan<P extends Profile='crest.business-source-bundle.v1',S extends 42|43=42>=Readonly<{
+export type SourceExportPlan<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134|135|136|137|138|140|141|142=42>=Readonly<{
  formatVersion:1;claim:SourceExportClaim<P>;generationId:string;observedAt:string;appReleaseId:string;sourceSchemaVersion:S;
- manifestSha256:string;parts:readonly File[];totalBytes:number;referenceClosureComplete:false;completePortableExport:false;completeBackup:false;
+ manifestSha256:string;parts:readonly File[];totalBytes:number;originals?:import('./source-export-original-index.ts').ExportOriginalIndex;referenceClosureComplete:false;completePortableExport:false;completeBackup:false;
 }>;
-type SnapshotRequest<P extends Profile='crest.business-source-bundle.v1',S extends 42|43=42>=Readonly<{plan:SourceExportPlan<P,S>;planSha256:string}>;
+type SnapshotRequest<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134|135|136|137|138|140|141|142=42>=Readonly<{plan:SourceExportPlan<P,S>;planSha256:string}>;
 export type SourceExportPartRequest<P extends Profile='crest.business-source-bundle.v1'>=Readonly<{claim:SourceExportClaim<P>;generationId:string;planSha256:string;partId:string;intent:ExportPartIntent}>;
-export type SourceExportReadyRequest<P extends Profile='crest.business-source-bundle.v1',S extends 42|43=42>=SnapshotRequest<P,S>&Readonly<{parts:readonly SourceExportPartRequest<P>[]} >;
+export type SourceExportReadyRequest<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134|135|136|137|138|140|141|142=42>=SnapshotRequest<P,S>&Readonly<{parts:readonly SourceExportPartRequest<P>[]} >;
 type Stage='authorize'|'snapshot'|'intent'|'verified'|'ready';
 export type SourceExportAck=Readonly<{formatVersion:1;stage:Stage;requestSha256:string}>;
 // Trusted server composition only. The fixed database composition MUST
 // validate frozen job/lease/profile, fresh provider/session/owner membership,
 // recovery authority and expiry on EVERY method; acknowledge committed state
 // only. These callback receipts/hashes are not authentication capabilities.
-export type SourceExportJobPort<P extends Profile='crest.business-source-bundle.v1',S extends 42|43=42>=Readonly<{
+export type SourceExportJobPort<P extends Profile='crest.business-source-bundle.v1',S extends 42|43|134|135|136|137|138|140|141|142=42>=Readonly<{
  authorize:(request:SourceExportClaim<P>,signal:AbortSignal)=>Promise<SourceExportAck>;
  snapshot:(request:SnapshotRequest<P,S>,signal:AbortSignal)=>Promise<SourceExportAck>;
  intent:(request:SourceExportPartRequest<P>,signal:AbortSignal)=>Promise<SourceExportAck>;
@@ -78,7 +82,29 @@ export function createBusinessSourceJournalExportWorker(config:Configuration,col
 }
 type Formatted=ReturnType<ReturnType<typeof formatBusinessSourceBundle>['forServer']>;
 type PhysicalFile=Readonly<{fileName:string;contentType:File['contentType'];bytes:Buffer}>;
-function createWorker<C,P extends Profile,S extends 42|43>(config:Configuration,collector:(signal:AbortSignal)=>Promise<C>,store:Store,jobs:SourceExportJobPort<P,S>,profile:P,schema:S,format:(captured:C)=>Promise<Formatted>,verify:(root:Buffer,files:readonly PhysicalFile[],captured:C)=>Readonly<{generationId:string;observedAt:unknown}>){
+export type CurrentSourceExportJobPort=SourceExportJobPort<'crest.current-business-source-bundle.v1',134|135|136|137|138|140|141|142>;
+export type CurrentSourceExportClaim=SourceExportClaim<'crest.current-business-source-bundle.v1'>;
+export function createCurrentBusinessExportWorker(config:Configuration&Readonly<{sourceSchemaVersion?:134|135|136|137|138|140|141|142}>,collector:(signal:AbortSignal)=>Promise<CurrentBusinessSourceCapture>,store:Store,jobs:CurrentSourceExportJobPort){
+ require(config!==null&&typeof config==='object');const {sourceSchemaVersion:requestedSchema,...settings}=config;
+ const schema=requestedSchema??138;require(schema===134||schema===135||schema===136||schema===137||schema===138||schema===140||(schema===141||schema===142));const fixed=Object.freeze({...settings});let originalIndex:import('./source-export-original-index.ts').ExportOriginalIndex|undefined;let originals:readonly Readonly<{name:string;bytes:Uint8Array}>[]|undefined,active=false;
+ const worker=createWorker(fixed,collector,store,jobs,'crest.current-business-source-bundle.v1',schema,
+  async(captured,signal)=>{
+   const provider=captured.forCurrentBusinessProviderServer?.();require(schema===134||provider);
+   const source=captured.forCurrentBusinessServer(),formatted=formatCurrentBusinessPortableSource(source,{appReleaseId:fixed.appReleaseId,sourceSchemaVersion:schema},captured.forCurrentBusinessIdentityServer(),captured.forCurrentBusinessSessionServer(),schema>=135?provider:undefined);
+   originalIndex=formatted.originalIndex;
+   originals=Object.entries({...formatted.files,'current_business_source_manifest.json':Buffer.from(formatted.manifest)}).map(([name,bytes])=>({name,bytes}));
+   return formatCurrentSourceLogicalFiles(originals,{businessId:fixed.businessId,generationId:randomUUID(),appReleaseId:fixed.appReleaseId,sourceSchemaVersion:schema},source.observedAt.replace(/Z$/,'+00:00'),signal);
+  },async(root,files,captured,signal)=>{
+   const header:unknown=JSON.parse(root.toString('utf8'));require(header!==null&&typeof header==='object'&&'generationId' in header&&typeof header.generationId==='string');
+   const binding={businessId:fixed.businessId,generationId:header.generationId,appReleaseId:fixed.appReleaseId,sourceSchemaVersion:schema};
+   const decoded=await readCurrentSourceLogicalFiles(root.toString('utf8'),files.map(file=>({name:file.fileName,bytes:file.bytes})),binding,signal);
+   try{require(originals&&decoded.length===originals.length&&decoded.every((file,index)=>file.name===originals![index]!.name&&Buffer.from(file.bytes).equals(originals![index]!.bytes)));}
+   finally{for(const file of decoded)file.bytes.fill(0);}
+   return {generationId:binding.generationId,observedAt:captured.forCurrentBusinessServer().observedAt.replace(/Z$/,'+00:00')};
+  },()=>{require(originalIndex);return originalIndex;});
+ return Object.freeze({async run(input:unknown,signal:AbortSignal){require(!active);active=true;try{return await worker.run(input,signal);}finally{for(const file of originals??[])file.bytes.fill(0);originals=undefined;originalIndex=undefined;active=false;}}});
+}
+function createWorker<C,P extends Profile,S extends 42|43|134|135|136|137|138|140|141|142>(config:Configuration,collector:(signal:AbortSignal)=>Promise<C>,store:Store,jobs:SourceExportJobPort<P,S>,profile:P,schema:S,format:(captured:C,signal:AbortSignal)=>Promise<Formatted>,verify:(root:Buffer,files:readonly PhysicalFile[],captured:C,signal:AbortSignal)=>Readonly<{generationId:string;observedAt:unknown}>|Promise<Readonly<{generationId:string;observedAt:unknown}>>,originalIndex?:()=>import('./source-export-original-index.ts').ExportOriginalIndex){
  require(config!==null&&typeof config==='object'&&store!==null&&typeof store==='object'&&jobs!==null&&typeof jobs==='object');
  require(exact(config,config.timeoutMs===undefined?['businessId','appReleaseId']:['businessId','appReleaseId','timeoutMs'])&&typeof config.businessId==='string'&&uuid.test(config.businessId)&&typeof config.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(config.appReleaseId));
  const {businessId,appReleaseId}=config,timeoutMs=config.timeoutMs??900000;
@@ -97,17 +123,18 @@ function createWorker<C,P extends Profile,S extends 42|43>(config:Configuration,
   try{
    const current=claim(input,businessId,profile),signal=AbortSignal.any([external,AbortSignal.timeout(timeoutMs)]),deadline=performance.now()+timeoutMs;
    await acknowledge('authorize',current,()=>port.authorize(current,signal),signal,deadline);
-   const captured=await bounded(()=>collector(signal),signal,deadline),value=await bounded(()=>format(captured),signal,deadline);
+   const captured=await bounded(()=>collector(signal),signal,deadline),value=await bounded(()=>format(captured,signal),signal,deadline);
    require(!signal.aborted);
    const root=Buffer.from(value.manifest),files=[...value.parts].sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0).map(p=>({fileName:p.name,contentType:p.contentType,bytes:Buffer.from(p.content)}));
    plaintext.push(root,...files.map(p=>p.bytes));
    files.push({fileName:'source_manifest.json',contentType:'application/json',bytes:root});
    // Independent decode/source comparison succeeds before any ledger snapshot
    // publication, key preparation or object write. All outputs share capture.
-   const checked=verify(root,files.slice(0,-1),captured);
+   const checked=await bounded(()=>Promise.resolve(verify(root,files.slice(0,-1),captured,signal)),signal,deadline);
    require(!signal.aborted&&typeof checked.observedAt==='string'&&files.length<=1024&&files.reduce((n,f)=>n+f.bytes.length,0)<=67108864);
    const parts=Object.freeze(files.map(file=>Object.freeze({partId:randomUUID(),fileName:file.fileName,contentType:file.contentType,bytes:file.bytes.length,sha256:sha(file.bytes)})));
-   const plan:SourceExportPlan<P,S>=Object.freeze({formatVersion:1,claim:current,generationId:checked.generationId,observedAt:checked.observedAt,appReleaseId,sourceSchemaVersion:schema,manifestSha256:sha(root),parts,totalBytes:files.reduce((n,f)=>n+f.bytes.length,0),referenceClosureComplete:false,completePortableExport:false,completeBackup:false});
+   require(schema!==136&&schema!==137&&schema!==138&&schema!==140&&(schema!==141&&schema!==142)||originalIndex);
+   const plan:SourceExportPlan<P,S>=Object.freeze({...((schema===136||schema===137||schema===138||schema===140||(schema===141||schema===142))?{originals:originalIndex!()}: {}),formatVersion:1,claim:current,generationId:checked.generationId,observedAt:checked.observedAt,appReleaseId,sourceSchemaVersion:schema,manifestSha256:sha(root),parts,totalBytes:files.reduce((n,f)=>n+f.bytes.length,0),referenceClosureComplete:false,completePortableExport:false,completeBackup:false});
    const snapshot=Object.freeze({plan,planSha256:jsonSha(plan)});
    await acknowledge('snapshot',snapshot,()=>port.snapshot(snapshot,signal),signal,deadline);
    const receipts:SourceExportPartRequest<P>[]=[];

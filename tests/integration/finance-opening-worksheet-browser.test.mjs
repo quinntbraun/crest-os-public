@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {reviewRecoveryActionPriority,financePriorityFacts} from '../support/recovery-action-priority.mjs';
 import {mkdir,readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
@@ -7,6 +8,7 @@ import {strFromU8,unzipSync} from 'fflate';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
+import {reviewFinancialRecovery} from '../support/financial-recovery-layout.mjs';
 
 for(const engine of [chromium,webkit]){
  test(`${engine.name()} genuine owner saves and recovers a fictional opening worksheet`,{timeout:240000},async()=>{
@@ -40,7 +42,7 @@ for(const engine of [chromium,webkit]){
 
    const load=async()=>{
     await page.goto(fixture.origin+'/settings/accounts');
-    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+    await page.getByRole('button',{name:'Setup',exact:true}).click();
     await page.getByText('Opening worksheet',{exact:true}).click();
     const worksheet=page.getByRole('region',{name:'Fictional opening worksheet'});
     await worksheet.getByRole('button',{name:'Load opening worksheet'}).click();
@@ -89,6 +91,7 @@ for(const engine of [chromium,webkit]){
    assert.deepEqual(Object.keys(retained).sort(),['operationId','recoveryEpoch']);
 
    const reopened=await load();
+   await reviewFinancialRecovery(page,fixture,engine.name(),'worksheet',reopened);
    await reopened.getByRole('button',{name:'Check original worksheet save'}).click();
    await expect(reopened.getByRole('status')).toHaveText('The original worksheet save was confirmed.');
    await expect(reopened.getByRole('heading',{name:'Saved revision 1'})).toBeVisible();
@@ -131,7 +134,9 @@ for(const engine of [chromium,webkit]){
     const opening=await load();
     await opening.getByText('Preview customer balances owed',{exact:true}).click();
     const ar=opening.getByRole('region',{name:'Opening receivables preview'});
+    let receivableEntry=0;
     async function enterReceivable(){
+     receivableEntry++;
      await ar.getByLabel('Customer name, phone or email').fill('Fictional opening receivable');
      await ar.getByRole('button',{name:'Find customers',exact:true}).click();
      await ar.getByRole('button',{name:'Use Fictional opening receivable customer',exact:true}).click();
@@ -151,6 +156,8 @@ for(const engine of [chromium,webkit]){
      await adjustment.getByLabel('Document reference').fill('Fictional prior receipt');
      await adjustment.getByLabel('Document SHA-256 checksum').fill('5'.repeat(64));
      await ar.getByRole('button',{name:'Add receivable to preview'}).click();
+     await expect(ar.getByRole('button',{name:'Add receivable to preview'})).toHaveCount(0);
+     await reviewRecoveryActionPriority(page,ar,ar.getByRole('button',{name:'Review opening receivables'}),()=>financePriorityFacts(fixture,'opening'),'opening-receivables-review-'+receivableEntry+'-'+engine.name());
      await ar.getByRole('button',{name:'Review opening receivables'}).click();
      await expect(ar.getByText('Total remaining · $125.50 USD')).toBeVisible();
      await expect(ar.getByText('Some original tax details are unknown.')).toBeVisible();
@@ -158,6 +165,8 @@ for(const engine of [chromium,webkit]){
     await ar.getByRole('button',{name:'Load saved receivables'}).click();
     await expect(ar.getByRole('status')).toHaveText('No receivables schedule saved for this worksheet.');
     await enterReceivable();
+    await expect(ar.getByRole('button',{name:'Review opening receivables'})).toHaveClass('secondary');
+    await reviewRecoveryActionPriority(page,ar,ar.getByRole('button',{name:'Save receivables schedule'}),()=>financePriorityFacts(fixture,'opening'),'opening-receivables-save-'+engine.name());
     for(const width of [360,390,768,1440]){
      await page.setViewportSize({width,height:900});
      assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
@@ -183,6 +192,7 @@ for(const engine of [chromium,webkit]){
     const arReopened=await load();
     await arReopened.getByText('Preview customer balances owed',{exact:true}).click();
     await ar.getByRole('button',{name:'Load saved receivables'}).click();
+    await reviewFinancialRecovery(page,fixture,engine.name(),'receivables',ar);
     await ar.getByRole('button',{name:'Check original receivables save'}).click();
     await expect(ar.getByRole('status')).toHaveText('The original receivables save was confirmed.');
     await expect(ar.getByText('Saved receivables revision 1 · $125.50 USD')).toBeVisible();

@@ -52,7 +52,7 @@ export function LeadVehiclePanel({businessId,leadId,disabled,onLock}:{businessId
   const lookup=view.matchReview&&changed&&(vin?.trim()||plate?.trim()||year!==null&&make?.trim()&&model?.trim())?async(proof:Proof,signal:AbortSignal)=>{
    const matches=await leadMatchReview.vehicle(businessId,{vehicleId:draft.vehicleId,vin:vin||null,plate:plate||null,year,make:make||null,model:model||null},proof,signal);
    return {rows:matches?.vehicles.map(row=>({id:row.id,label:row.label,kind:'Vehicle' as const,detail:row.archived?'Archived':undefined,
-    reasons:[...row.vin?['Same VIN']:[],...row.plate?['Same plate text']:[],...row.description?['Same year, make and model']:[]]}))??[],more:!!matches?.hasMore};
+    matches:{vin:row.vin,plate:row.plate,description:row.description}}))??[],more:!!matches?.hasMore};
   }:null;
   void review.run({lookup,stillCurrent:()=>current.current===controller&&controller.view().draft===draft&&controller.view().canSave,save:()=>void action('save')});
  }
@@ -83,7 +83,11 @@ export function LeadVehiclePanel({businessId,leadId,disabled,onLock}:{businessId
      <NullableText name="lead-vehicle-condition" label="Reported condition" limit={4000} multiline value={view.draft.conditionNotes} disabled={writeDisabled} change={value=>edit('conditionNotes',value)}/>
      <label className="trust"><input type="checkbox" checked={view.draft.archived} onChange={event=>{if(view.draft)current.current?.edit({...view.draft,archived:event.target.checked,archiveReason:event.target.checked?view.draft.archiveReason??'':null});}}/>Archive vehicle report</label>
      {view.draft.archived&&<><label htmlFor="lead-vehicle-archive">Vehicle report archive reason</label><textarea id="lead-vehicle-archive" required maxLength={2000} value={view.draft.archiveReason??''} onChange={event=>edit('archiveReason',event.target.value)}/><p className="field-help">{[...(view.draft.archiveReason??'')].length}/1,000 characters.</p></>}
-    </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}{review.active&&<LeadMatchNotice review={review.active} canSave={canSave} retry={reviewAndSave} edit={()=>{review.dismiss();document.getElementById('lead-vehicle-vin')?.focus();}} save={saveAsEntered}/>}
+    </fieldset>{view.draftIssue&&<p className="field-help">{view.draftIssue}</p>}{review.active&&<LeadMatchNotice review={review.active} fields={[
+     ...(view.draft.reportedVehicle.vin?.trim()?['vin' as const]:[]),
+     ...(view.draft.reportedVehicle.plate?.trim()?['plate' as const]:[]),
+     ...(view.draft.reportedVehicle.year!==null&&view.draft.reportedVehicle.make?.trim()&&view.draft.reportedVehicle.model?.trim()?['description' as const]:[]),
+    ]} canSave={canSave} retry={reviewAndSave} edit={()=>{review.dismiss();document.getElementById('lead-vehicle-vin')?.focus();}} save={saveAsEntered}/>}
     {(!review.active||review.active.state==='checking')&&<button type="submit" disabled={!canSave||!!review.active}>Save vehicle report</button>}</form>
     <button type="button" className="secondary" disabled={view.busy||disabled} onClick={()=>void action('load')}>Discard vehicle draft and reload</button>
    </>}

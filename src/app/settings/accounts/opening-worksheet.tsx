@@ -10,6 +10,8 @@ import {financeAccountReviewReason} from '../../../bookkeeping/finance-account-c
 import styles from './screen.module.css';
 import {DollarField,EvidenceFields,Note,amount,dollars,readEvidence,value} from './opening-worksheet-fields';
 import {OpeningReceivables} from './opening-receivables';
+import {OpeningPayables} from './opening-payables';
+import {OpeningFunds} from './opening-funds';
 
 type ControlKey=keyof typeof openingControls;
 const pendingKey=(businessId:string)=>'crest.opening-worksheet.original.v1.'+businessId;
@@ -70,7 +72,7 @@ function readDraft(form:FormData,projection:OpeningProjection):OpeningDraft{
   equityBasis:value(form,'opening-equity'),banks:projection.banks.map(option=>readBank(form,option)),controls:Object.fromEntries(controls)});
 }
 
-export function OpeningWorksheet({businessId,arPreview}:{businessId:string;arPreview:boolean}){
+export function OpeningWorksheet({businessId,arPreview,funds=false,payables=false}:{businessId:string;arPreview:boolean;funds?:boolean;payables?:boolean}){
  const [projection,setProjection]=useState<OpeningProjection|null>(null),[date,setDate]=useState('');
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[pending,setPending]=useState<OpeningReference|null>(null);
  const [mayClose,setMayClose]=useState(false),[reason,setReason]=useState('');
@@ -184,7 +186,7 @@ export function OpeningWorksheet({businessId,arPreview}:{businessId:string;arPre
    <button type="button" className="secondary" disabled={busy||!!pending} onClick={()=>load(null)}>Load opening worksheet</button>
    <p role="status">{message}</p>
    {pending&&<div className={styles.openingGroup}>
-    <button type="button" className="secondary" disabled={busy} onClick={()=>inspect(null)}>Check original worksheet save</button>
+    <button type="button" disabled={busy} onClick={()=>inspect(null)}>Check original worksheet save</button>
     {mayClose&&<form onSubmit={event=>{event.preventDefault();if(financeAccountReviewReason(reason.trim()))inspect(reason.trim());}}>
      <label htmlFor="opening-close-reason">Reason for closing this save</label>
      <input id="opening-close-reason" required maxLength={1000} value={reason} onChange={event=>setReason(event.target.value)}/>
@@ -201,6 +203,8 @@ export function OpeningWorksheet({businessId,arPreview}:{businessId:string;arPre
      </dl>
      <button type="button" className="secondary" disabled={busy} onClick={download}>Download saved worksheet (JSON)</button>
      {arPreview&&!pending&&<OpeningReceivables key={latest.revision} worksheet={latest}/>}
+     {funds&&!pending&&<OpeningFunds key={'funds-'+latest.revision} worksheet={latest}/>}
+     {payables&&!pending&&<OpeningPayables key={'payables-'+latest.revision} worksheet={latest}/>}
     </div>}
     <form onSubmit={event=>{event.preventDefault();load(date);}}>
      <label htmlFor="opening-cutover">Proposed local cutover date ({projection.timeZone})</label>

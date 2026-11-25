@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {SignInLink} from '../../sign-in-link';
 
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {clearPendingDirectReceipt,downloadFinanceHistory,financeAccounts,readPendingDirectReceipt,
@@ -69,6 +71,7 @@ export function DirectReceipt({businessId,customerId,invoiceId}: {businessId:str
   const [busy,setBusy]=useState(false);
   const [canWrite,setCanWrite]=useState(false);
   const [message,setMessage]=useState('');
+  const [signedOut,setSignedOut]=useState(false);
   const [tipMessage,setTipMessage]=useState('');
   const request=useRef<AbortController|null>(null);
   const status=useRef<HTMLParagraphElement>(null);
@@ -89,14 +92,14 @@ export function DirectReceipt({businessId,customerId,invoiceId}: {businessId:str
     setTipAmount('');setTipJurisdiction('');setTipConfirmation('');setTipOptions(null);setTipMessage('');
   },[]);
 
-  const suspend=useCallback(()=>{
-    request.current?.abort();request.current=null;
+  const clearPrivate=useCallback(()=>{
     setDate('');setOptions(null);setChannel('');setAllocations({});setConfirmation('');
     setReceived('');setFundsMapping('');
     setAllowTips(false);resetTip();
     setReferenceId('');setNamespace('');setDistinctReason('');setRetireReason('');setReceipt(null);
-    setPending(false);setAbsent(false);setBusy(false);setCanWrite(false);setMessage('');
+    setPending(false);setAbsent(false);setBusy(false);setCanWrite(false);setMessage('');setSignedOut(false);
   },[resetTip]);
+  const suspend=useCallback(()=>{request.current?.abort();request.current=null;clearPrivate();},[clearPrivate]);
   useEffect(()=>{
     const hidden=()=>{if(document.visibilityState==='hidden')suspend();};
     document.addEventListener('visibilitychange',hidden);
@@ -112,17 +115,23 @@ export function DirectReceipt({businessId,customerId,invoiceId}: {businessId:str
     if(request.current)return;
     const controller=new AbortController();
     const announce=reviewingTip?setTipMessage:setMessage;
+    let accessDenied=false;
     request.current=controller;setBusy(true);announce(reviewingTip?'Checking saved tip settings…':'Checking saved payment details…');
     try{
       const context=await financeAccounts.context(controller.signal);
       if(controller.signal.aborted)return;
-      if(!context.directReceipts||context.businessId!==businessId){announce('Payments are unavailable for this workspace.');return;}
+      if(!context.directReceipts||context.businessId!==businessId){clearPrivate();setMessage('Payments are unavailable for this workspace.');return;}
+      setSignedOut(false);
       setCanWrite(context.writeState==='ready');
       await action(context,controller.signal);
-    }catch{if(!controller.signal.aborted)announce(failure);}
+    }catch(error){if(!controller.signal.aborted){
+      if(error instanceof AuthenticationError&&error.kind==='denied'){
+        accessDenied=true;clearPrivate();setSignedOut(true);setMessage('Sign in again to review payments.');
+      }else announce(failure);
+    }}
     finally{
       if(request.current===controller){
-        request.current=null;setBusy(false);(reviewingTip?tipStatus:status).current?.focus();
+        request.current=null;setBusy(false);(reviewingTip&&!accessDenied?tipStatus:status).current?.focus();
       }
     }
   }
@@ -250,6 +259,7 @@ export function DirectReceipt({businessId,customerId,invoiceId}: {businessId:str
         {pending?'Check original payment':'Load saved balances'}
       </button>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<nav className="actions" aria-label="Payment access recovery"><SignInLink className="primary-action" returnTo="customers">Sign in again</SignInLink><a className="record-return-link" href="/save-review">Review interrupted saves</a></nav>}
       {pending&&absent&&<form onSubmit={event=>{event.preventDefault();if(retireReason.trim())resolve(retireReason.trim());}}>
         <label>Reason for closing the attempt<input required maxLength={1000} value={retireReason}
           onChange={event=>setRetireReason(event.target.value)} disabled={busy}/></label>

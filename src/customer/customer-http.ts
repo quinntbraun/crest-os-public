@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../security/production-capabilities.ts';
 import {createHash} from 'node:crypto';
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
@@ -16,11 +18,12 @@ import {createBusinessSettingsContextReader} from '../security/business-settings
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
 import {createCustomerDirectory,CustomerDirectoryError} from './customer-directory.ts';
 import {parseCustomerDraft,customerUuid,customerVersion,requireCustomer} from './customer-contract.ts';
+import {customerProfileFields,parseCustomerProfileRequest} from './customer-profile-contract.ts';
 
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;recordJobHistory?:boolean};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;recordJobHistory?:boolean;customerProfile?:boolean;productionCapabilities?:ProductionCapabilities};
 const prefix='/api/business/customers/';
 const draftKeys=['displayName','phone','email','contactPreference','outreachOptOut','notes','customerSince','archived','archiveReason'] as const;
-const fields={'legacy-matches':['kind','hints'],context:[],list:['search','afterId','includeArchived','pageSize'],history:['customerId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','customerId','expectedVersion',...draftKeys]} as const;
+const fields={'legacy-matches':['kind','hints'],context:[],list:['search','afterId','includeArchived','pageSize'],history:['customerId','afterVersion','pageSize'],profile:customerProfileFields,operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','customerId','expectedVersion',...draftKeys]} as const;
 type Route=keyof typeof fields;
 export function customerFailureResponse(status:400|404|405|503=400):Response{
   const response=privateJsonResponse({error:'CUSTOMER_REQUEST_FAILED'},status);if(status===405)response.headers.set('Allow','POST');return response;
@@ -30,7 +33,7 @@ export function customerFailureResponse(status:400|404|405|503=400):Response{
 export function createCustomerHttp(config:Configuration,provider:Parameters<typeof createCustomerDirectory>[1],tokens:Parameters<typeof createCustomerDirectory>[2],reviewHistoryEnabled=false,maintenanceEnabled=false,legacyBatchesEnabled=false,legacyEffectsEnabled=false,legacyTargetsEnabled=false,legacyDecisionsEnabled=false,legacyApprovalsEnabled=false,legacyApplicationsEnabled:boolean|'background'=false,legacyDownloadsEnabled=false){
   if(!customerUuid(config.businessId)||typeof reviewHistoryEnabled!=='boolean'||typeof maintenanceEnabled!=='boolean'||typeof legacyBatchesEnabled!=='boolean'||typeof legacyEffectsEnabled!=='boolean'||legacyEffectsEnabled&&!legacyBatchesEnabled||typeof legacyTargetsEnabled!=='boolean'||legacyTargetsEnabled&&!legacyEffectsEnabled||typeof legacyDecisionsEnabled!=='boolean'||legacyDecisionsEnabled&&!legacyTargetsEnabled||typeof legacyApprovalsEnabled!=='boolean'||legacyApprovalsEnabled&&!legacyDecisionsEnabled||(typeof legacyApplicationsEnabled!=='boolean'&&legacyApplicationsEnabled!=='background')||legacyApplicationsEnabled&&!legacyApprovalsEnabled||
     typeof legacyDownloadsEnabled!=='boolean'||legacyDownloadsEnabled&&legacyApplicationsEnabled!=='background'||
-    (reviewHistoryEnabled||maintenanceEnabled||legacyBatchesEnabled)&&config.environment!=='test')throw new Error('CUSTOMER_HTTP_CONFIGURATION_REQUIRED');
+    legacyBatchesEnabled&&config.environment!=='test'||config.environment==='production'&&(config.customerProfile===true&&(!productionCapability(config,'customerProfiles')||config.recordJobHistory!==true)||reviewHistoryEnabled&&!productionCapability(config,'reviewHistory')||maintenanceEnabled&&!productionCapability(config,'maintenanceFollowUp')||config.recordJobHistory===true&&!productionCapability(config,'recordJobHistory')))throw new Error('CUSTOMER_HTTP_CONFIGURATION_REQUIRED');
   const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
   const csvCsrf=legacyBatchesEnabled?createLegacyCsvCsrfVerifier(config):undefined;
   const directory=createCustomerDirectory(config,provider,tokens),context=createBusinessSettingsContextReader(config,provider,tokens);
@@ -47,6 +50,7 @@ export function createCustomerHttp(config:Configuration,provider:Parameters<type
         (candidate!==legacyContactDownloadRoute||download!==undefined)&&
         (candidate!=='legacy-batches/identity'&&candidate!=='legacy-batches/application'&&candidate!=='legacy-batches/apply'||legacyApplicationsEnabled));
       if(url.search||url.hash||!url.pathname.startsWith(prefix)||!batchRoute&&!Object.hasOwn(fields,route))return customerFailureResponse(404);
+      if(route==='profile'&&config.customerProfile!==true)return customerFailureResponse(404);
       if(request.method!=='POST')return customerFailureResponse(405);
       if(batchRoute!=='legacy-batches/stage')protect.requireOrigin(request);
       const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;if(!cookie)throw new Error();
@@ -71,6 +75,7 @@ export function createCustomerHttp(config:Configuration,provider:Parameters<type
       if(route==='operation')requireCustomer(customerUuid(input.operationId));
       if(route==='list')requireCustomer(typeof input.search==='string'&&[...input.search].length<=200&&(input.afterId===null||customerUuid(input.afterId))&&typeof input.includeArchived==='boolean'&&Number.isSafeInteger(input.pageSize)&&Number(input.pageSize)>=1&&Number(input.pageSize)<=50);
       if(route==='history')requireCustomer(customerUuid(input.customerId)&&customerVersion(input.afterVersion,true)&&Number.isSafeInteger(input.pageSize)&&Number(input.pageSize)>=1&&Number(input.pageSize)<=20);
+      const profile=route==='profile'?parseCustomerProfileRequest(input):null;
       const sessionId=await csrf(bounded,cookie,signal);workStarted=true;
       if(!await admit(cookie,'ordinary',signal)){const response=privateJsonResponse({error:'CUSTOMER_REQUEST_LIMITED'},429);response.headers.set('Retry-After','60');return response;}
       if(signal.aborted)throw new Error();let result:object;
@@ -82,6 +87,7 @@ export function createCustomerHttp(config:Configuration,provider:Parameters<type
         const response=privateJsonResponse({schemaVersion:value.schemaVersion,businessId:value.businessId,writeState:value.writeState,recoveryEpoch:value.recoveryEpoch});
         response.headers.set('X-Crest-Edit-Binding',createHash('sha256').update('crest.customer.edit.v1\0').update(businessId).update('\0').update(sessionId).digest('base64url'));
         if(config.recordJobHistory===true)response.headers.set('X-Crest-Record-Job-History','1');
+        if(config.customerProfile===true)response.headers.set('X-Crest-Customer-Profile','1');
         if(reviewHistoryEnabled)response.headers.set('X-Crest-Review-History','1');
         if(legacyBatchesEnabled)response.headers.set('X-Crest-Legacy-Contact-Batches','1');
         if(legacyEffectsEnabled)response.headers.set('X-Crest-Legacy-Contact-Effects','1');
@@ -101,6 +107,7 @@ export function createCustomerHttp(config:Configuration,provider:Parameters<type
       if(route==='legacy-matches')result=(await directory.legacyMatches(cookie,businessId,input,signal)).forServer();
       else if(route==='operation')result=(await directory.lookup(cookie,{businessId,operationId:input.operationId as string},signal)).forServer();
       else if(route==='history')result=(await directory.history(cookie,{businessId,customerId:input.customerId as string,afterVersion:input.afterVersion as string,pageSize:input.pageSize as number},signal)).forServer();
+      else if(profile)result=(await directory.profile(cookie,businessId,profile,signal)).forServer();
       else result=(await directory.list(cookie,{businessId,search:input.search as string,afterId:input.afterId as string|null,includeArchived:input.includeArchived as boolean,pageSize:input.pageSize as number},signal)).forServer();
       if(signal.aborted)throw new Error();return privateJsonResponse(result);
     }catch(error){

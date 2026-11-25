@@ -1,14 +1,16 @@
 import { authentication } from './authentication';
-import { exactCustomerObject as exact, customerUuid as uuid } from '../customer/customer-contract';
+import { exactCustomerObject as exact, customerUuid as uuid,customerVersion as version } from '../customer/customer-contract';
 import { binding } from './business-settings';
 import type { CalendarDisclosure } from '../operations/google-calendar-projection';
 import { parseGoogleCalendarJobStatus } from '../operations/google-calendar-job-status';
+import {parseCalendarConnectionSummary,parseCalendarDisconnectStatus} from '../operations/google-calendar-disconnect-contract';
 
 export type CalendarConsentContext = Readonly<{ destinationId: string; credentialId: string; recoveryEpoch: string }>;
 export type CalendarConsentReference = CalendarConsentContext & Readonly<{ reviewId: string }>;
-export type CalendarConsentReceipt = Readonly<{ state: 'active'; consentId: string; generation: '1' }>;
+export type CalendarConsentReceipt = Readonly<{ state: 'active'; consentId: string; generation: string }>;
 export type CalendarConsentStatus = CalendarConsentReceipt | Readonly<{ state: 'absent' | 'changed' }>;
 export type CalendarSetupState =
+  | Readonly<{state:'authorization_pending';attemptId:string;context:null}>
   | Readonly<{ state: 'ready' | 'active' | 'review'; context: null }>
   | Readonly<{ state: 'staged' | 'active'; context: CalendarConsentContext }>;
 
@@ -41,9 +43,10 @@ function matchingContext(a: CalendarConsentContext, b: CalendarConsentContext) {
 export function googleCalendarConsentReferenceStore(context: CalendarConsentContext,
   storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>) {
   const pinned = contextFields(context);
-  const key = 'crest.calendar-consent.pending.v1';
-  function read() {
-    const raw = storage.getItem(key);
+  const legacyKey = 'crest.calendar-consent.pending.v1';
+  const key='crest.calendar-consent.pending.v2:'+pinned.destinationId+':'+pinned.credentialId+':'+pinned.recoveryEpoch;
+  function readKey(selectedKey:string,scoped:boolean) {
+    const raw = storage.getItem(selectedKey);
     if (raw === null) return null;
     requireConsent(raw.length <= 256);
     const value: unknown = JSON.parse(raw);
@@ -51,9 +54,10 @@ export function googleCalendarConsentReferenceStore(context: CalendarConsentCont
       uuid(value.recoveryEpoch) && uuid(value.reviewId));
     const reference = referenceFields({ destinationId: value.destinationId, credentialId: value.credentialId,
       recoveryEpoch: value.recoveryEpoch, reviewId: value.reviewId });
-    requireConsent(matchingContext(reference, pinned));
+    if(!matchingContext(reference,pinned)){requireConsent(!scoped);return null;}
     return reference;
   }
+  function read(){return readKey(key,true)??readKey(legacyKey,false);}
   function matches(value: CalendarConsentReference) {
     const current = read();
     return !!current && matchingContext(current, value) && current.reviewId === value.reviewId;
@@ -68,6 +72,8 @@ export function googleCalendarConsentReferenceStore(context: CalendarConsentCont
     },
     clear(value: CalendarConsentReference) {
       requireConsent(matches(value));
+      const legacy=readKey(legacyKey,false);
+      if(legacy&&legacy.reviewId===value.reviewId)storage.removeItem(legacyKey);
       storage.removeItem(key);
       requireConsent(read() === null);
     },
@@ -131,11 +137,11 @@ function previewResult(value: unknown, context: CalendarConsentContext, selected
 function receipt(value: unknown, reference: CalendarConsentReference): CalendarConsentReceipt {
   requireConsent(exact(value, ['schemaVersion', 'state', 'destinationId', 'consentId', 'generation']) &&
     value.schemaVersion === 1 && value.state === 'active' && value.destinationId === reference.destinationId &&
-    uuid(value.consentId) && value.generation === '1');
+    uuid(value.consentId) && version(value.generation));
   return { state: 'active', consentId: value.consentId, generation: value.generation };
 }
 
-async function post(route: 'consent/preview' | 'consent/confirm' | 'consent/status' | 'setup-state' | 'stage-fictional' | 'job-status',
+async function post(route: 'consent/preview' | 'consent/confirm' | 'consent/status' | 'setup-state' | 'stage-fictional' | 'job-status' | 'connection-info' | 'start-authorization' | 'connection-status' | 'disconnect' | 'disconnect-status' | 'revoke' | 'abandon-authorization' | 'reconnect-info' | 'start-reconnect',
   body: object, external: AbortSignal): Promise<unknown> {
   const signal = AbortSignal.any([external, AbortSignal.timeout(40000)]);
   signal.throwIfAborted();
@@ -210,10 +216,58 @@ export async function readSyntheticCalendarSetup(recoveryEpoch: string, signal: 
   requireConsent(uuid(recoveryEpoch));
   const value = stage ? await post('stage-fictional', { recoveryEpoch, confirmed: true }, signal)
     : await post('setup-state', { recoveryEpoch }, signal);
+  if(exact(value,['schemaVersion','state','attemptId'])&&value.schemaVersion===1&&value.state==='authorization_pending'&&uuid(value.attemptId))return {state:'authorization_pending',attemptId:value.attemptId,context:null};
   if (exact(value, ['schemaVersion', 'state']) && value.schemaVersion === 1 &&
     (value.state === 'ready' || value.state === 'review' || value.state === 'active')) return { state: value.state, context: null };
   requireConsent(exact(value, ['schemaVersion', 'state', ...contextKeys]) && value.schemaVersion === 1 &&
     (value.state === 'staged' || value.state === 'active') && uuid(value.destinationId) && uuid(value.credentialId) &&
     value.recoveryEpoch === recoveryEpoch);
   return { state: value.state, context: { destinationId: value.destinationId, credentialId: value.credentialId, recoveryEpoch } };
+}
+export type CalendarConnectionInfo=Readonly<{mode:'production';googleOwner:string}>;
+export async function abandonGoogleCalendarAuthorization(recoveryEpoch:string,attemptId:string,operationId:string,signal:AbortSignal){
+ requireConsent(uuid(recoveryEpoch)&&uuid(attemptId)&&uuid(operationId));const value=await post('abandon-authorization',{recoveryEpoch,attemptId,operationId,confirmed:true},signal);
+ requireConsent(exact(value,['schemaVersion','state','attemptId'])&&value.schemaVersion===1&&value.state==='abandoned'&&value.attemptId===attemptId);
+}
+export async function readCalendarConnectionInfo(recoveryEpoch:string,signal:AbortSignal):Promise<CalendarConnectionInfo>{
+ requireConsent(uuid(recoveryEpoch));const value=await post('connection-info',{recoveryEpoch},signal);
+ requireConsent(exact(value,['schemaVersion','mode','googleOwner'])&&value.schemaVersion===1&&value.mode==='production'&&visibleText(value.googleOwner,254)&&/^[^\s@]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$/.test(value.googleOwner));
+ return Object.freeze({mode:'production',googleOwner:value.googleOwner});
+}
+export async function beginGoogleCalendarConnection(recoveryEpoch:string,googleOwner:string,signal:AbortSignal){
+ requireConsent(uuid(recoveryEpoch)&&visibleText(googleOwner,254));const value=await post('start-authorization',{recoveryEpoch,googleOwner,confirmed:true},signal);
+ signal.throwIfAborted();return checkedGoogleAuthorization(value,googleOwner);
+}
+function checkedGoogleAuthorization(value:unknown,googleOwner:string){
+ requireConsent(exact(value,['authorizationUrl'])&&typeof value.authorizationUrl==='string'&&value.authorizationUrl.length<=8192);
+ const url=new URL(value.authorizationUrl),parameters=url.searchParams,keys=[...parameters.keys()],allowed=['client_id','redirect_uri','response_type','scope','access_type','include_granted_scopes','state','code_challenge','code_challenge_method','login_hint','nonce','prompt'];
+ requireConsent(url.origin==='https://accounts.google.com'&&url.pathname==='/o/oauth2/v2/auth'&&!url.username&&!url.password&&!url.hash&&keys.length===allowed.length&&new Set(keys).size===keys.length&&keys.every(key=>allowed.includes(key)));
+ requireConsent(parameters.get('redirect_uri')===globalThis.location?.origin+'/api/google-calendar/callback'&&parameters.get('response_type')==='code'&&parameters.get('scope')==='https://www.googleapis.com/auth/calendar.app.created openid'&&parameters.get('access_type')==='offline'&&parameters.get('include_granted_scopes')==='false'&&parameters.get('code_challenge_method')==='S256'&&parameters.get('login_hint')===googleOwner&&parameters.get('prompt')==='consent'&&/^[A-Za-z0-9_-]{43}$/.test(parameters.get('nonce')??''));
+ requireConsent(/^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/.test(parameters.get('client_id')??'')&&uuid((parameters.get('state')??'').split('.')[0])&&/^[a-f0-9-]{36}\.[A-Za-z0-9_-]{43}$/.test(parameters.get('state')??'')&&/^[A-Za-z0-9_-]{43}$/.test(parameters.get('code_challenge')??''));
+ return url.href;
+}
+export type GoogleCalendarReconnectInfo=Readonly<{state:'unavailable'}>|Readonly<{state:'ready';destinationId:string;generation:string;googleOwner:string}>;
+export async function readGoogleCalendarReconnect(recoveryEpoch:string,signal:AbortSignal):Promise<GoogleCalendarReconnectInfo>{
+ requireConsent(uuid(recoveryEpoch));const value=await post('reconnect-info',{recoveryEpoch},signal);
+ if(exact(value,['schemaVersion','state'])&&value.schemaVersion===1&&value.state==='unavailable')return {state:'unavailable'};
+ requireConsent(exact(value,['schemaVersion','state','destinationId','generation','googleOwner'])&&value.schemaVersion===1&&value.state==='ready'&&uuid(value.destinationId)&&version(value.generation)&&visibleText(value.googleOwner,254));
+ return {state:'ready',destinationId:value.destinationId,generation:value.generation,googleOwner:value.googleOwner};
+}
+export async function beginGoogleCalendarReconnect(recoveryEpoch:string,info:Extract<GoogleCalendarReconnectInfo,{state:'ready'}>,signal:AbortSignal){
+ requireConsent(uuid(recoveryEpoch)&&uuid(info.destinationId)&&version(info.generation)&&visibleText(info.googleOwner,254));
+ const value=await post('start-reconnect',{recoveryEpoch,destinationId:info.destinationId,generation:info.generation,googleOwner:info.googleOwner,confirmed:true},signal);signal.throwIfAborted();return checkedGoogleAuthorization(value,info.googleOwner);
+}
+
+export async function readGoogleCalendarConnection(recoveryEpoch:string,signal:AbortSignal){
+ requireConsent(uuid(recoveryEpoch));return parseCalendarConnectionSummary(await post('connection-status',{recoveryEpoch},signal));
+}
+export async function disconnectGoogleCalendar(input:Readonly<{recoveryEpoch:string;destinationId:string;generation:string;operationId:string}>,signal:AbortSignal){
+ requireConsent(uuid(input.recoveryEpoch)&&uuid(input.destinationId)&&uuid(input.operationId));
+ const value=await post('disconnect',{...input,confirmed:true},signal);
+ requireConsent(value&&typeof value==='object'&&'disconnectId' in value&&uuid(value.disconnectId));
+ return parseCalendarDisconnectStatus(value,value.disconnectId);
+}
+export async function readGoogleCalendarDisconnect(recoveryEpoch:string,destinationId:string,disconnectId:string,signal:AbortSignal,revoke=false){
+ requireConsent(uuid(recoveryEpoch)&&uuid(destinationId)&&uuid(disconnectId));
+ return parseCalendarDisconnectStatus(await post(revoke?'revoke':'disconnect-status',{recoveryEpoch,destinationId,disconnectId},signal),disconnectId);
 }

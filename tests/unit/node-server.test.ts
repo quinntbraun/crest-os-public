@@ -1,4 +1,6 @@
 import {request as httpRequest} from 'node:http';
+import type {AddressInfo} from 'node:net';
+import {workspaceRuntimeMode} from '../../src/server/workspace-runtime-mode';
 import {describe,it,expect,vi} from 'vitest';
 vi.mock('server-only',()=>({}));
 vi.mock('../../src/commercial/quote-amendment-http.ts',async importOriginal=>({...await importOriginal<typeof import('../../src/commercial/quote-amendment-http.ts')>(),createQuoteAmendmentHttp:()=>flow.quoteAmendments}));
@@ -25,7 +27,7 @@ import {createBoundedNodeServer,bindApplicationHandler,requestTarget} from '../.
 import type {NodeConfiguration} from '../../src/server/node-server.ts';
 
 const origin='https://crest.example.com';
-it.each([117,118,119,120,121])('requires a reviewed supplier finance source when launching schema %i',sourceSchemaVersion=>{
+it.each([117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143])('requires a reviewed supplier finance source when launching schema %i',sourceSchemaVersion=>{
  const server=createBoundedNodeServer();
  const config:NodeConfiguration={origin,environment:'test',business:{businessId:'11111111-1111-4111-8111-111111111111'},
   authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never},
@@ -33,7 +35,7 @@ it.each([117,118,119,120,121])('requires a reviewed supplier finance source when
   syntheticPostedFinanceExport:{connectionString:'postgres://crest_export@127.0.0.1/crest_fixture',appReleaseId:'a'.repeat(40),sourceSchemaVersion}};
  try{
   const bind=()=>bindApplicationHandler(server,config,async()=>{});
-  if(sourceSchemaVersion===121){
+  if(sourceSchemaVersion===143){
    expect(bind).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
    expect(server.listenerCount('request')).toBe(0);
   }else{
@@ -41,6 +43,10 @@ it.each([117,118,119,120,121])('requires a reviewed supplier finance source when
    expect(server.listenerCount('request')).toBe(1);
   }
  }finally{server.close();}
+});
+it.each(['/api/business/opening-documents/status','/api/business/%6fpening-documents/status','/api/business/opening-documents%2Foriginal'])('keeps unconfigured opening document route private and away from Next: %s',async path=>{
+ const server=createBoundedNodeServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error();const local='http://127.0.0.1:'+address.port,pages=vi.fn();
+ try{bindApplicationHandler(server,{origin:local,environment:'test'},pages);const response=await fetch(local+path,{method:'POST',body:'{}'});expect(response.status).toBe(503);expect(response.headers.get('cache-control')).toContain('no-store');expect(await response.json()).toEqual({error:'OPENING_DOCUMENT_REQUEST_UNCONFIRMED'});expect(pages).not.toHaveBeenCalled();}finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });
 it('amendment preparation requires explicit synthetic CRM/commercial/original recovery composition',()=>{
  const base={origin,environment:'test',syntheticQuoteAmendments:true,customers:true,vehicles:true,operationResolution:true,syntheticQuotes:true,syntheticQuoteReview:true,syntheticQuoteCommercial:true,business:{businessId:'synthetic'},authentication:{configuration:{ingress:{kind:'direct'}},provider:{},tokens:{}}};
@@ -64,6 +70,11 @@ it.each([undefined,false,true])('review routes remain separate from draft activa
  bindApplicationHandler(server,{origin:local,environment:'test',syntheticQuotes:true,...enabled===undefined?{}:{syntheticQuoteReview:enabled},business:{businessId:'explicit-synthetic'},authentication:{configuration:{ingress:{kind:'direct'}} as never,provider:{} as never,tokens:{} as never}},pages);
  try{const draft=await fetch(local+'/api/business/quotes/list',{method:'POST',body:'{}'});expect(draft.status).toBe(200);await draft.text();const review=await fetch(local+'/api/business/quotes/review/read',{method:'POST',body:'{}'});expect(review.status).toBe(enabled?200:404);expect(review.headers.get('cache-control')).toContain('no-store');await review.text();expect(flow.quotes).toHaveBeenCalledTimes(1);expect(flow.quoteReview).toHaveBeenCalledTimes(enabled?1:0);expect(pages).not.toHaveBeenCalled();}
  finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+});
+it('production catalog composition rejects test mode, invalid flags and missing trusted dependencies',()=>{
+ for(const config of [{origin,environment:'test',catalog:true},{origin,environment:'production',catalog:'yes'},{origin,environment:'production',catalog:true},{origin,environment:'production',catalog:true,business:{businessId:'synthetic'}}]){
+  const server=createBoundedNodeServer();expect(()=>bindApplicationHandler(server,config as NodeConfiguration,async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');expect(server.listenerCount('request')).toBe(0);server.close();
+ }
 });
 it('catalog construction cannot be enabled in production or without genuine authentication and business configuration',()=>{
   for(const config of [{origin,environment:'production',syntheticCatalog:true},{origin,environment:'test',syntheticCatalog:true},{origin,environment:'test',syntheticCatalog:'yes'},{origin,environment:'test',syntheticCatalog:true,business:{businessId:'synthetic'}}]){
@@ -116,6 +127,12 @@ describe('Node hosting boundary',()=>{
     }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));flow.originalOperations.mockReset();}
   });
   it.each(['/api/business','/api/business/settings','/api/%62usiness/rename','/%61pi/business/operation','/api%2fbusiness/settings'])('reserves the business namespace including encoded aliases: %s',path=>expect(requestTarget(path,origin).business).toBe(true));
+  it.each(['/api/google-calendar/callback','/api/%67oogle-calendar/callback','/api/google-calendar/unknown'])('reserves the Google callback namespace: %s',path=>expect(requestTarget(path,origin).business).toBe(true));
+  it('cleans an unconfigured callback on the actual Node listener without routing its code to Next',async()=>{
+    const server=createBoundedNodeServer(),pages=vi.fn(async()=>{});bindApplicationHandler(server,{origin,environment:'test'},pages);await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
+    try{const local='http://127.0.0.1:'+(server.address() as AddressInfo).port,response=await fetch(local+'/api/google-calendar/callback?code=fixture-only-code&state=fixture-only-state',{redirect:'manual'});expect(response.status).toBe(303);expect(response.headers.get('location')).toBe('/settings/google-calendar');expect(response.headers.get('referrer-policy')).toBe('no-referrer');expect(await response.text()).toBe('');expect(pages).not.toHaveBeenCalled();}
+    finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
+  });
   it('requires explicit authentication composition before enabling a business target',()=>{
     expect(()=>bindApplicationHandler(createBoundedNodeServer(),{origin,environment:'test',business:{businessId:'untrusted'}},async()=>{})).toThrow('APPLICATION_SERVER_CONFIGURATION_REQUIRED');
   });
@@ -304,4 +321,15 @@ it('requires synthetic field controls before enabling job completion',()=>{
   expect(server.listenerCount('request')).toBe(0);
   server.close();
  }
+});
+it('keeps the document mode server-owned even when a browser supplies a production header',async()=>{
+ const server=createBoundedNodeServer();
+ await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const address=server.address();if(!address||typeof address==='string')throw new Error('TEST_LISTENER_REQUIRED');
+ const local='http://127.0.0.1:'+address.port;
+ bindApplicationHandler(server,{origin:local,environment:'test'},async(_request,response)=>{await Promise.resolve();response.end(workspaceRuntimeMode());});
+ try{
+  const response=await fetch(local+'/',{headers:{'x-crest-workspace-mode':'production','x-crest-runtime-mode':'production'}});
+  expect(response.status).toBe(200);expect(await response.text()).toBe('test');expect(workspaceRuntimeMode()).toBe('test');
+ }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });

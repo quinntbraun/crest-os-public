@@ -2,6 +2,8 @@ import 'server-only';
 import {customerUuid as uuid,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {custodyPhotoDispatcherDatabase,sessionDatabase} from '../security/session-database.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from '../security/production-capabilities.ts';
 import {createSessionLifecycle} from '../security/session-lifecycle.ts';
 import {sessionCredentialHash} from '../security/session-credential.ts';
 import {DropoffPhotoError,parsePhotoReservation} from './dropoff-photo-workflow.ts';
@@ -23,17 +25,20 @@ type Tokens=Parameters<typeof createSessionLifecycle>[2];
 type Reservation=DropoffPhotoScope&Readonly<{epoch:string;caseId:string;handoff:1|2;contentType:string;byteSize:number}>;
 import type {PickupPhotoBinding} from './pickup-custody-contract.ts';
 
-function authorized(config:SessionDatabaseConfiguration,provider:Provider,tokens:Tokens,database:Database){
- if(config.environment!=='test')throw new DropoffPhotoError();
+type Config=SessionDatabaseConfiguration&ProductionCapabilityConfiguration;
+function authorized(config:Config,provider:Provider,tokens:Tokens,database:Database){
+ if(config.environment!=='test'&&!productionCapability(config,'dropoffPhotos'))throw new DropoffPhotoError();
+ const productionBusiness=config.environment==='production'?config.businessId:undefined;
  const sessions=createSessionLifecycle(config,provider,tokens);
  return async(kind:keyof typeof commands,credential:string,scope:DropoffPhotoScope,args:unknown[],signal:AbortSignal)=>{
-  if(!uuid(scope.businessId)||!uuid(scope.jobVehicleId)||!uuid(scope.photoId))throw new DropoffPhotoError();
+  const subject=Object.freeze({...scope}),pinnedArgs=[...args];
+  if(!uuid(subject.businessId)||!uuid(subject.jobVehicleId)||!uuid(subject.photoId)||productionBusiness!==undefined&&subject.businessId!==productionBusiness)throw new DropoffPhotoError();
   const bounded=AbortSignal.any([signal,AbortSignal.timeout(35000)]),digest=sessionCredentialHash(credential);
   try{
    const verified=await sessions.verify(credential,bounded,'background');
    bounded.throwIfAborted();
    const parameters=[digest,verified.sessionId,verified.actorId,verified.provider.issuer,verified.provider.subject,
-    verified.provider.sessionId,new Date(verified.provider.expiresAt),scope.businessId,...args];
+    verified.provider.sessionId,new Date(verified.provider.expiresAt),subject.businessId,...pinnedArgs];
    const result=kind==='read'?await database(commands[kind],parameters,bounded):
     await database.commandTransaction(query=>query(commands[kind],parameters),bounded);
    bounded.throwIfAborted();
@@ -52,9 +57,10 @@ function photoAccess(query:ReturnType<typeof authorized>){
   }
  };
 }
-export function createDropoffPhotoDirectory(config:SessionDatabaseConfiguration,provider:Provider,tokens:Tokens){
+export function createDropoffPhotoDirectory(config:Config,provider:Provider,tokens:Tokens){
  const query=authorized(config,provider,tokens,sessionDatabase(config));
  return Object.freeze({...photoAccess(query),async reserve(credential:string,input:Reservation,signal:AbortSignal,pickup?:PickupPhotoBinding){
+  if(config.environment==='production'&&pickup&&!productionCapability(config,'collectionId'in pickup?'pickupRelease':'pickupPhotos'))throw new DropoffPhotoError();
   const scope=Object.freeze({...input});
   if(!uuid(scope.epoch)||!uuid(scope.caseId))throw new DropoffPhotoError();
   const target=[scope.epoch,scope.photoId,scope.jobVehicleId,scope.caseId];
@@ -81,12 +87,12 @@ export function createDropoffPhotoDirectory(config:SessionDatabaseConfiguration,
 
 // The isolated worker composes this with its own login. The application
 // server's separate directory has no publication method or worker login.
-export function createDropoffPhotoDispatcherDirectory(config:SessionDatabaseConfiguration,provider:Provider,
+export function createDropoffPhotoDispatcherDirectory(config:Config,provider:Provider,
  tokens:Tokens,worker:SessionDatabaseConfiguration):DropoffPhotoDispatchAuthority{
- if(worker.environment!=='test'||config.environment!=='test')throw new DropoffPhotoError();
+ if(worker.environment!==config.environment||config.environment==='production'&&!productionCapability(config,'dropoffPhotos'))throw new DropoffPhotoError();
  const webUrl=new URL(config.connectionString),workerUrl=new URL(worker.connectionString);
- if(webUrl.host!==workerUrl.host||webUrl.pathname!==workerUrl.pathname||webUrl.username===workerUrl.username)throw new DropoffPhotoError();
- const query=authorized(config,provider,tokens,custodyPhotoDispatcherDatabase(worker));
+ if(webUrl.host!==workerUrl.host||webUrl.pathname!==workerUrl.pathname||decodeURIComponent(webUrl.username)===decodeURIComponent(workerUrl.username))throw new DropoffPhotoError();
+ const query=authorized(config,provider,tokens,custodyPhotoDispatcherDatabase({...worker,...config.businessId?{businessId:config.businessId}:{},...config.productionCapabilities?{productionCapabilities:config.productionCapabilities}:{}}));
  const publish:DropoffPhotoDispatchAuthority['publish']=(credential,scope,epoch,metadata,signal)=>
   query('publish',credential,scope,[epoch,scope.photoId,metadata],signal);
  return Object.freeze({...photoAccess(query),publish});

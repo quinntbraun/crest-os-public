@@ -16,14 +16,21 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await page.getByRole('button',{name:'Add customer',exact:true}).click();await page.getByLabel('Customer name',{exact:true}).fill(label);await page.getByLabel('Phone value',{exact:true}).fill('+1 (555) 555-0123 ext 42');
   await page.getByText('Notes and more customer details',{exact:true}).click();await page.getByLabel('Notes',{exact:true}).fill(notes);
   await page.getByRole('button',{name:'Save customer',exact:true}).click();await page.getByRole('button',{name:'Load current customers',exact:true}).click();await page.getByRole('button',{name:label,exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Edit customer',exact:true})).toBeFocused();await page.getByText(/^Version 1 ·/).click();await expect(page.locator('dd').filter({hasText:notes})).toBeVisible();
-  for(const width of [360,390,768,1440]){
+  await expect(page.getByRole('heading',{name:'Edit customer',exact:true})).toBeFocused();
+  await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'History',exact:true}).press('Enter');
+  const history=page.getByRole('region',{name:'Customer history',exact:true});
+  await expect(history.getByRole('heading',{name:'Retained history',exact:true})).toBeVisible();
+  await history.getByText(/^Version 1 ·/).click();await expect(history.locator('dd').filter({hasText:notes})).toBeVisible();
+  for(const width of [360,390,768,1024,1440]){
    await page.setViewportSize({width,height:900});await page.evaluate(()=>document.fonts.ready);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+   for(const value of await history.locator('.customer-values dd').all()){
+    const box=await value.boundingBox();assert(box&&box.width>=80,'Retained history values keep readable width.');
+   }
    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
    await page.screenshot({path:'.local/review/long-content/customer-'+name+'-'+width+'.png',fullPage:true});
   }
-  await page.reload();await page.getByRole('button',{name:label,exact:true}).click();await page.getByText('Notes and more customer details',{exact:true}).click();await expect(page.getByLabel('Notes',{exact:true})).toHaveValue(notes);await expect(page.getByLabel('Phone value',{exact:true})).toHaveValue('+1 (555) 555-0123 ext 42');
+  const refreshed=await page.reload();assert.equal(refreshed.status(),200);await expect(page.getByRole('region',{name:'Customer history',exact:true}).getByRole('heading',{name:'Retained history',exact:true})).toBeVisible();await page.getByRole('button',{name:'← Back to customers',exact:true}).click();await page.getByRole('button',{name:label,exact:true}).click();await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Overview',exact:true}).click();await page.getByText('Notes and more customer details',{exact:true}).click();await expect(page.getByLabel('Notes',{exact:true})).toHaveValue(notes);await expect(page.getByLabel('Phone value',{exact:true})).toHaveValue('+1 (555) 555-0123 ext 42');
   await context.close();
  }finally{try{await browser?.close();}finally{await app.close();}}
 });

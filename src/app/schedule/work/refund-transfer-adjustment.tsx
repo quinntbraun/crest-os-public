@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {FinancialAccessRecovery} from '../../financial-access-recovery';
 
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {financeAccountReviewReason} from '../../../bookkeeping/finance-account-contract';
@@ -55,6 +57,7 @@ export function RefundTransferAdjustment({businessId,customerId}:{businessId:str
   const [closeReason,setCloseReason]=useState('');
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [signedOut,setSignedOut]=useState(false);
   const active=useRef<AbortController|null>(null),status=useRef<HTMLParagraphElement>(null);
   const feeStatus=useRef<HTMLParagraphElement>(null);
   const [feeMessage,setFeeMessage]=useState('');
@@ -75,10 +78,11 @@ export function RefundTransferAdjustment({businessId,customerId}:{businessId:str
   const resetDraft=useCallback(()=>{
     setOptions(null);setPriorId('');setChoices({});setForm(empty);setFeeMapping(null);setFeeMessage('');setAllowFees(false);setReceipt(null);
   },[]);
-  const suspend=useCallback(()=>{
-    active.current?.abort();active.current=null;
+  const clearPrivate=useCallback(()=>{
     setDate('');setKind('');resetDraft();setPending(false);setCanClose(false);setCloseReason('');setBusy(false);setMessage('');
+  setSignedOut(false);
   },[resetDraft]);
+  const suspend=useCallback(()=>{active.current?.abort();active.current=null;clearPrivate();},[clearPrivate]);
   useEffect(()=>{
     const visibility=()=>{if(document.visibilityState==='hidden')suspend();else checkPending();};
     const restored=(event:PageTransitionEvent)=>{if(event.persisted){suspend();checkPending();}};
@@ -96,13 +100,15 @@ export function RefundTransferAdjustment({businessId,customerId}:{businessId:str
     const current=new AbortController(),{signal}=current;
     const announce=feeReview?setFeeMessage:setMessage;
     active.current=current;setBusy(true);announce(working);
+    let focusMain=false;
     try{
       const context=await financeAccounts.context(signal);
       if(signal.aborted)return;
-      if(!context.refundTransfers||context.businessId!==businessId){announce('Refund transfer review is unavailable.');return;}
+      if(!context.refundTransfers||context.businessId!==businessId){clearPrivate();focusMain=true;setMessage('Refund transfer review is unavailable.');return;}
+      setSignedOut(false);
       await work(context,signal);
-    }catch{if(!signal.aborted)announce(failure);}
-    finally{if(active.current===current){active.current=null;setBusy(false);(feeReview?feeStatus:status).current?.focus();}}
+    }catch(error){if(!signal.aborted){if(error instanceof AuthenticationError&&error.kind==='denied'){focusMain=true;clearPrivate();setSignedOut(true);setMessage('Sign in again to review refund transfers.');}else{announce(failure);}}}
+    finally{if(active.current===current){active.current=null;setBusy(false);(feeReview&&!focusMain?feeStatus:status).current?.focus();}}
   }
   function load(){
     if(!kind)return;
@@ -201,7 +207,8 @@ export function RefundTransferAdjustment({businessId,customerId}:{businessId:str
     <section aria-label={title} aria-busy={busy}>
       <p className="field-help">Use this when your bank or wallet returns a refund to you, or when a second refund attempt settles.</p>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
-      {pending?<button type="button" className="secondary" disabled={busy} onClick={()=>recover()}>Check original refund transfer</button>
+      {signedOut&&<FinancialAccessRecovery returnTo="schedule" label="Refund transfer access recovery"/>}
+      {pending?<button type="button" disabled={busy} onClick={()=>recover()}>Check original refund transfer</button>
         :<form onSubmit={event=>{event.preventDefault();load();}}>
           <label>What happened?<select required disabled={busy} value={kind} onChange={event=>{
             setKind(event.target.value as RefundTransferKind|'');resetDraft();

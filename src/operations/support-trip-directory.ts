@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from '../security/production-capabilities.ts';
 import {customerUuid,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {sessionDatabase} from '../security/session-database.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
@@ -26,12 +28,13 @@ const mileageSql='SELECT crest_commands.read_support_trip_mileage('+authorizatio
 const saveSql='SELECT crest_commands.record_support_trip('+authorization+',$9::uuid,$10::uuid,1,$11::uuid,$12::uuid,$13::jsonb) AS result';
 const originalSql='SELECT crest_commands.lookup_scheduling_original('+authorization+',$9::jsonb) AS result';
 
-export function createSupportTripDirectory(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,
+export function createSupportTripDirectory(config:SessionDatabaseConfiguration&ProductionCapabilityConfiguration,provider:ReturnType<typeof createProviderBoundary>,
  tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
- if(config.environment!=='test')throw new SupportTripDirectoryError('SUPPORT_TRIP_CONFIGURATION_REQUIRED');
+ if(config.environment!=='test'&&!productionCapability(config,'supportTrips'))throw new SupportTripDirectoryError('SUPPORT_TRIP_CONFIGURATION_REQUIRED');
  const database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
  async function authorized<T>(credential:string,businessId:string,signal:AbortSignal,
   work:(args:unknown[],actorId:string,bounded:AbortSignal)=>Promise<T>){
+  if(config.environment==='production'&&!productionCapability({...config,businessId},'supportTrips'))throw new SupportTripDirectoryError('SUPPORT_TRIP_REQUEST_FAILED');
   const bounded=AbortSignal.any([signal,AbortSignal.timeout(35000)]);
   bounded.throwIfAborted();
   const hash=sessionCredentialHash(credential);

@@ -22,13 +22,17 @@ for(const [name,engine,width] of [['chromium',chromium,1280],['webkit',webkit,36
   const previous=process.env.CREST_TEST_DATABASE_URL;
   const cluster=previous===undefined?await recoveryCluster():null;
   if(cluster)process.env.CREST_TEST_DATABASE_URL=cluster.testDatabaseUrl;
-  let fixture,browser;
+  let fixture,browser;const observed=[];
   try{
    fixture=await sourceExportBrowserFixture({product:true,workspace:true,leadMatchReview:true});
    browser=await engine.launch();
    const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width,height:860}});
    const page=await context.newPage();
    page.setDefaultTimeout(12000);
+   const diagnosticPaths=new Set(['/api/auth/session','/api/business/leads/context','/api/business/leads/save','/api/business/leads/vehicle-context','/api/business/leads/vehicle-review','/api/business/leads/vehicle-save']);
+   const retain=event=>{observed.push(event);if(observed.length>48)observed.shift();};
+   page.on('response',response=>{try{const path=new URL(response.url()).pathname;if(diagnosticPaths.has(path))retain({path,status:response.status()});}catch{/* Disposed unrelated response. */}});
+   page.on('requestfailed',request=>{try{const path=new URL(request.url()).pathname;if(diagnosticPaths.has(path))retain({path,transportFailed:true});}catch{/* Disposed unrelated request. */}});
    await page.goto(fixture.origin+'/sign-in');
    const credentials=fixture.credentials();
    await page.getByLabel('Email',{exact:true}).fill(credentials.email);
@@ -61,17 +65,26 @@ for(const [name,engine,width] of [['chromium',chromium,1280],['webkit',webkit,36
    const heading=editor.getByRole('heading',{name:'Possible matches',exact:true});
    const card=editor.getByRole('region',{name:'Possible matches',exact:true});
    await expect(heading).toBeFocused();
-   await expect(card.getByRole('listitem').filter({hasText:'Fictional Riley Household'})).toContainText('Same phone');
-   await expect(card.getByRole('listitem').filter({hasText:'Fictional earlier inquiry'})).toContainText('Same email');
+   const customerMatch=card.getByRole('listitem').filter({hasText:'Fictional Riley Household'});
+   const leadMatch=card.getByRole('listitem').filter({hasText:'Fictional earlier inquiry'});
+   await expect(customerMatch.getByRole('row',{name:'Phone Entered Same phone',exact:true})).toBeVisible();
+   await expect(leadMatch.getByRole('row',{name:'Email Entered Same email',exact:true})).toBeVisible();
+   await customerMatch.getByRole('button',{name:'Jump to first unconfirmed field',exact:true}).press('Enter');
+   await expect(customerMatch.getByRole('row',{name:'Email Entered Unconfirmed',exact:true})).toBeFocused();
    await expect(card).not.toContainText(phone);
    await expect(card).not.toContainText(email);
    const {client,business}=fixture;
    const count=async()=>Number((await client.query('SELECT count(*) FROM crest.leads WHERE business_id=$1',[business])).rows[0].count);
    assert.equal(await count(),1);
-   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-   assert.deepEqual((await new AxeBuilder({page}).include('.lead-match-notice').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
    const evidence=process.env.CREST_LEAD_MATCH_SCREENSHOTS;
-   if(evidence){await mkdir(evidence,{recursive:true});await card.screenshot({path:evidence+'/'+name+'-contact.png',animations:'disabled'});}
+   if(evidence)await mkdir(evidence,{recursive:true});
+   for(const viewport of [320,390,768,1440]){
+    await page.setViewportSize({width:viewport,height:860});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    assert.deepEqual((await new AxeBuilder({page}).include('.lead-match-notice').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);
+    if(evidence)await card.screenshot({path:evidence+'/'+name+'-contact-'+viewport+'.png',animations:'disabled'});
+   }
+   await page.setViewportSize({width,height:860});
 
    await card.getByRole('button',{name:'Edit details',exact:true}).click();
    await expect(editor.getByLabel('Phone value',{exact:true})).toBeFocused();
@@ -110,8 +123,9 @@ for(const [name,engine,width] of [['chromium',chromium,1280],['webkit',webkit,36
    await report.getByRole('button',{name:'Save vehicle report',exact:true}).click();
    const vehicleReview=report.getByRole('region',{name:'Possible matches',exact:true});
    await expect(vehicleReview).toContainText(wagon.label);
-   await expect(vehicleReview).toContainText('Same plate text');
-   await expect(vehicleReview).toContainText('Same year, make and model');
+   await expect(vehicleReview.getByRole('row',{name:'Plate Entered Same plate text',exact:true})).toBeVisible();
+   await expect(vehicleReview.getByRole('row',{name:'Year, make and model Entered Same year, make and model',exact:true})).toBeVisible();
+   await expect(vehicleReview.getByRole('button',{name:'Jump to first unconfirmed field',exact:true})).toHaveCount(0);
    assert.equal((await client.query('SELECT count(*) FROM crest.lead_vehicles WHERE business_id=$1',[business])).rows[0].count,'0');
    if(evidence)await vehicleReview.screenshot({path:evidence+'/'+name+'-vehicle.png',animations:'disabled'});
    const vehicleWrite=page.waitForRequest(request=>request.url().endsWith(leadApi+'vehicle-save'));
@@ -147,7 +161,7 @@ for(const [name,engine,width] of [['chromium',chromium,1280],['webkit',webkit,36
    await report.getByRole('button',{name:'Save vehicle report',exact:true}).click();
    await expect(panel.getByRole('status',{name:'Lead vehicle editor status',exact:true})).toContainText('Vehicle report saved');
    assert.deepEqual(reviewRequests,[]);
-  }finally{
+  }catch(error){console.error('LEAD_MATCH_BROWSER_DIAGNOSTIC '+JSON.stringify({events:observed,provider:fixture?.authDiagnostics?.()??[]}));throw error;}finally{
    await browser?.close();
    await fixture?.close();
    if(previous===undefined)delete process.env.CREST_TEST_DATABASE_URL;

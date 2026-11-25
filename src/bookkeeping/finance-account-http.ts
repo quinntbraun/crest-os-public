@@ -1,13 +1,21 @@
+import {parseFinanceAccountHistoryEvidence,parseFinanceTaxHistoryEvidence,parseMoneyChannelHistoryEvidence} from './finance-history-recording.ts';
 import 'server-only';
+import {parseOpeningSourceCursor,parseOpeningSourceHistory,parseOpeningPayablesHistorical,parseOpeningAllocationsHistorical} from './opening-source-history-contract.ts';
+import {parseOpeningAllocationsStored,parseOpeningAllocationsOperation,parseOpeningAllocationsSave} from './opening-allocations-schedule-contract.ts';
+import {prepareOpeningPayablesAllocations} from './opening-payables-allocation.ts';
+import {openingPayablesDraftFromEvidence} from './opening-payables-schedule-contract.ts';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {customerDate,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {readBrowserCookies} from '../security/browser-http.ts';
 import {createBusinessSettingsContextReader} from '../security/business-settings-context.ts';
-import {privateJsonResponse,readNestedJsonBody} from '../security/private-http.ts';
+import {privateJsonResponse,readNestedJsonBody,readOpeningEvidenceJsonBody} from '../security/private-http.ts';
 import {createRequestProtection} from '../security/request-protection.ts';
 import {sessionCredentialHash} from '../security/session-credential.ts';
-import {financePreviewDatabase} from '../security/session-database.ts';
+import {financePreviewDatabase,productionFinanceDatabase} from '../security/session-database.ts';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../security/production-capabilities.ts';
+import {validateFinanceRuntimeConnection} from './finance-runtime-configuration.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
 import {createSessionLifecycle} from '../security/session-lifecycle.ts';
 import {createSessionRequestAdmission} from '../security/session-request-admission.ts';
@@ -19,7 +27,7 @@ import {
  parseFinanceAccountReceipt,parseFinanceAccountReference,parseFinanceAccountResolution,requireFinanceAccount as check,
 } from './finance-account-contract.ts';
 import {
- expenseCategoryMappingPurpose,fixedFinanceMappingPurpose,parseExpenseCategoryMappingAccounts,parseFinanceMappingApproval,parseFinanceMappingAt,parseFinanceMappingEditor,parseFinanceMappingHistory,
+ expenseCategoryMappingPurpose,fixedFinanceMappingPurpose,parseExpenseCategoryMappingAccounts,parseFinanceMappingApproval,parseFinanceMappingAt,parseFinanceMappingEditor,parseFinanceMappingHistory,parseFinanceMappingHistoryEvidence,
  parseFinanceMappingOperation,parseFinanceMappingReference,
 } from './finance-mapping-contract.ts';
 import type {FinanceMappingPurpose} from './finance-mapping-contract.ts';
@@ -34,6 +42,7 @@ import {
  parseMoneyChannelHistory,parseMoneyChannelOperation,parseMoneyChannelPage,parseMoneyChannelReference,
 } from './finance-money-channel-contract.ts';
 
+import {parseInvoiceOutstanding} from './invoice-outstanding-contract.ts';
 import {parseInvoicePreparation} from './invoice-preparation-contract.ts';
 import {parseInvoiceDraftInput,parseInvoiceDraftOperation,parseInvoiceDraftPage,parseInvoiceDraftRead,parseInvoiceDraftReference} from './invoice-draft-contract.ts';
 
@@ -87,7 +96,7 @@ import {allocationUnapplicationMatchesInput,parseAllocationUnapplicationInput,pa
  parseAllocationUnapplicationReference,parseAllocationUnapplicationResult,parseInvoicePaymentAllocations} from './allocation-unapplication-contract.ts';
 import {collectionFailureRecreditMatchesInput, collectionFailureRecreditRefusal, parseCollectionFailureRecreditList, parseCollectionFailureRecreditInput, parseCollectionFailureRecreditOptions,
  parseCollectionFailureRecreditReference, parseCollectionFailureRecreditResult} from './collection-failure-recredit-contract.ts';
-import {groupedRecreditMatchesInput, parseGroupedRecreditInput, parseGroupedRecreditOptions,
+import {groupedRecreditMatchesInput, parseGroupedRecreditInput, groupedRecreditOptionsForCapability,
  parseGroupedRecreditReference, parseGroupedRecreditResult} from './collection-failure-grouped-recredit-contract.ts';
 import {parseStatementDraft,parseStatementReference,parseStatementResult} from './statement-staging-contract.ts';
 import {parseStatementMatchSnapshot} from './statement-match-review.ts';
@@ -105,6 +114,10 @@ import {parseOpeningDraft,parseOpeningProjection,parseOpeningReference,parseOpen
 import {parseRecordedIncomeStatement,parseRecordedIncomeStatementV2} from './recorded-income-statement.ts';
 import {parseOpeningArInput,previewOpeningReceivables,requireOpeningAr} from './opening-receivables-preview.ts';
 import {parseOpeningArOperation,parseOpeningArSave,parseOpeningArStored} from './opening-receivables-schedule-contract.ts';
+import {parseOpeningFundsOperation,parseOpeningFundsSave,parseOpeningFundsStored} from './opening-funds-schedule-contract.ts';
+import {parseOpeningPayablesOperation,parseOpeningPayablesSave,parseOpeningPayablesStored} from './opening-payables-schedule-contract.ts';
+import {normalizeOpeningPayablesEvidence} from './opening-payables-contract.ts';
+import {normalizeOpeningFundsEvidence} from './opening-funds-contract.ts';
 
 export const financeAccountPrefix='/api/business/finance-accounts/';
 const fields={context:[],list:['afterCode','includeArchived'],history:['accountId','afterVersion'],
@@ -149,6 +162,22 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'supplier-bill-draft-review':['billId','revision'],
  'opening-worksheet-read':['reviewEpoch','requestedOn'],
  'recorded-income-statement':['fromOn','throughOn'],
+ 'opening-worksheet-funds-read':['reviewEpoch','worksheetRevision'],
+ 'opening-worksheet-funds-save':['reference','worksheetRevisionId','cutoverOn','draft'],
+ 'opening-worksheet-funds-lookup':['reference','reviewEpoch'],
+ 'opening-worksheet-funds-retire':['reference','reviewEpoch','reason'],
+ 'opening-worksheet-payables-read':['reviewEpoch','worksheetRevision'],
+ 'opening-worksheet-payables-save':['reference','worksheetRevisionId','cutoverOn','draft'],
+ 'opening-worksheet-payables-lookup':['reference','reviewEpoch'],
+ 'opening-worksheet-payables-retire':['reference','reviewEpoch','reason'],
+ 'opening-worksheet-allocations-read':['reviewEpoch','worksheetRevision'],
+ 'opening-worksheet-allocations-save':['reference','worksheetRevisionId','cutoverOn','draft'],
+ 'opening-worksheet-allocations-lookup':['reference','reviewEpoch'],
+ 'opening-worksheet-allocations-retire':['reference','reviewEpoch','reason'],
+ 'opening-worksheet-payables-history':['reviewEpoch','cursor'],
+ 'opening-worksheet-payables-revision':['reviewEpoch','revisionId'],
+ 'opening-worksheet-allocations-history':['reviewEpoch','cursor'],
+ 'opening-worksheet-allocations-revision':['reviewEpoch','revisionId'],
  'opening-worksheet-ar-preview':['reviewEpoch','preview'],
  'opening-worksheet-ar-read':['reviewEpoch','worksheetRevision'],
  'opening-worksheet-ar-save':['reference','worksheetRevisionId','draft'],
@@ -157,6 +186,7 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'opening-worksheet-save':['reference','expectedRevision','draft'],
  'opening-worksheet-lookup':['reviewEpoch','reference'],
  'opening-worksheet-retire':['reviewEpoch','reference','reason'],
+ 'invoice-outstanding':['customerId','invoiceId'],
  'receipt-options':['customerId','actualOn'],
  'receipt-tip-options':['customerId','actualOn','jurisdiction'],
  'receipt-tip-record':['reference','customerId','channelId','channelVersion','actualOn','grossCents','confirmation','distinctReason',
@@ -242,7 +272,7 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'invoice-draft-lookup':['operationId','recoveryEpoch','draftId','jobId','expectedRevision'],
  'invoice-draft-save':['reference','draft'], 'invoice-draft-retire':['reference','reviewEpoch','reason']} as const;
 const authority='$1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid';
-type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;productionCapabilities?:ProductionCapabilities};
 
 export function financeAccountFailure(status:400|404|405|503=400){
  const response=privateJsonResponse({error:'FINANCE_ACCOUNT_REQUEST_FAILED'},status);
@@ -251,10 +281,13 @@ export function financeAccountFailure(status:400|404|405|503=400){
 }
 
 export function createFinanceAccountHttp(config:Config,connectionString:string,
- provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false,collectionFailureGroupedRecredits=false,collectionFailureTipReinstatements=false,openingWorksheet=false,openingArPreview=false,statementStaging=false,statementMatchReview=false,statementMatchDrafts=false,supplierBillDrafts=false,supplierPayableReview=false,supplierPayablePosting=false,supplierOriginalUploads=false,recordedIncomeStatement=false}:Readonly<{
-  fixedMappings?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;recordedIncomeStatement?:boolean;
+ provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],{fixedMappings=false,mappingHistoryEvidence=false,historyEvidence=false,taxProfiles=false,categoryMappings=false,moneyChannels=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,invoiceOutstanding=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,receivableAging=false,customerFundsReport=false,excessReceipts=false,excessReturns=false,tipReturns=false,collectionFailures=false,refundTransfers=false,directReceiptTips=false,refundTransferFees=false,collectionFailureRecredits=false,collectionFailureGroupedRecredits=false,collectionFailureTipReinstatements=false,openingWorksheet=false,openingArPreview=false,openingFunds=false,openingPayables=false,statementStaging=false,statementMatchReview=false,statementMatchDrafts=false,supplierBillDrafts=false,supplierPayableReview=false,supplierPayablePosting=false,supplierOriginalUploads=false,recordedIncomeStatement=false}:Readonly<{
+  fixedMappings?:boolean;mappingHistoryEvidence?:boolean;historyEvidence?:boolean;taxProfiles?:boolean;categoryMappings?:boolean;moneyChannels?:boolean;invoicePreparation?:boolean;invoiceDrafts?:boolean;invoiceIssueTaxReview?:boolean;invoiceIssue?:boolean;invoiceOutstanding?:boolean;directReceipts?:boolean;sameDayExpenses?:boolean;trialBalance?:boolean;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;receivableAging?:boolean;customerFundsReport?:boolean;excessReceipts?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;directReceiptTips?:boolean;refundTransferFees?:boolean;collectionFailureRecredits?:boolean;collectionFailureGroupedRecredits?:boolean;collectionFailureTipReinstatements?:boolean;openingWorksheet?:boolean;openingArPreview?:boolean;openingFunds?:boolean;openingPayables?:boolean;statementStaging?:boolean;statementMatchReview?:boolean;statementMatchDrafts?:boolean;supplierBillDrafts?:boolean;supplierPayableReview?:boolean;supplierPayablePosting?:boolean;supplierOriginalUploads?:boolean;recordedIncomeStatement?:boolean;
  }>={}){
- check(config.environment==='test'&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
+ check((config.environment==='test'||productionCapability(config,'finance'))&&customerUuid(config.businessId)&&(!categoryMappings||fixedMappings)&&(!invoiceDrafts||invoicePreparation)&&(!invoiceIssueTaxReview||invoiceDrafts&&taxProfiles)&&(!invoiceIssue||invoiceIssueTaxReview&&fixedMappings)&&(!directReceipts||invoiceIssue&&moneyChannels));
+ check(typeof historyEvidence==='boolean');
+ check(typeof mappingHistoryEvidence==='boolean'&&(!mappingHistoryEvidence||fixedMappings));
+ check(typeof invoiceOutstanding==='boolean'&&(!invoiceOutstanding||invoiceIssue));
  check((!sameDayExpenses||directReceipts&&categoryMappings)&&(!trialBalance||sameDayExpenses));
  check(!paymentCorrections||trialBalance);
  check(!fundApplications||paymentCorrections);
@@ -282,10 +315,13 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
  check(typeof openingWorksheet==='boolean'&&(!openingWorksheet||moneyChannels));
  check(typeof recordedIncomeStatement==='boolean'&&(!recordedIncomeStatement||trialBalance&&refundTransfers));
  check(typeof openingArPreview==='boolean'&&(!openingArPreview||openingWorksheet));
+ check(typeof openingFunds==='boolean'&&(!openingFunds||openingWorksheet));
+ check(typeof openingPayables==='boolean'&&(!openingPayables||openingWorksheet&&config.environment==='test'));
  const ownerDb=new URL(config.connectionString),financeDb=new URL(connectionString);
+ if(config.environment==='production')validateFinanceRuntimeConnection(config.connectionString,connectionString);
  check(ownerDb.hostname===financeDb.hostname&&ownerDb.port===financeDb.port
   &&ownerDb.pathname===financeDb.pathname&&ownerDb.username!==financeDb.username);
- const database=financePreviewDatabase({connectionString,environment:'test'});
+ const database=config.environment==='production'?productionFinanceDatabase({...config,connectionString}):financePreviewDatabase({connectionString,environment:'test'});
  const transport=createTrustedTransport(config),protect=createRequestProtection(config);
  const csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
  const sessions=createSessionLifecycle(config,provider,tokens),context=createBusinessSettingsContextReader(config,provider,tokens);
@@ -300,6 +336,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    const url=new URL(request.url),route=url.pathname.slice(financeAccountPrefix.length) as keyof typeof fields;
    if(url.search||url.hash||!url.pathname.startsWith(financeAccountPrefix)||!Object.hasOwn(fields,route))return financeAccountFailure(404);
    if(!fixedMappings&&route.startsWith('mapping-')||!taxProfiles&&route.startsWith('tax-')||!moneyChannels&&route.startsWith('channel-')||!invoicePreparation&&route==='invoice-preparation'||!invoiceDrafts&&route.startsWith('invoice-draft-'))return financeAccountFailure(404);
+   if(route==='invoice-outstanding'&&!invoiceOutstanding)return financeAccountFailure(404);
    if(route==='invoice-issue-tax-review'&&!invoiceIssueTaxReview)return financeAccountFailure(404);
    if(route.startsWith('invoice-issue-')&&route!=='invoice-issue-tax-review'&&!invoiceIssue)return financeAccountFailure(404);
    if(route.startsWith('invoice-setup-')&&!invoiceIssue)return financeAccountFailure(404);
@@ -313,6 +350,9 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route==='recorded-income-statement'&&!recordedIncomeStatement&&!supplierPayablePosting)return financeAccountFailure(404);
    if(route.startsWith('opening-worksheet-')&&!openingWorksheet)return financeAccountFailure(404);
    if(route.startsWith('opening-worksheet-ar-')&&!openingArPreview)return financeAccountFailure(404);
+   if(route.startsWith('opening-worksheet-funds-')&&!openingFunds)return financeAccountFailure(404);
+   if(route.startsWith('opening-worksheet-payables-')&&!openingPayables)return financeAccountFailure(404);
+   if(route.startsWith('opening-worksheet-allocations-')&&!openingPayables)return financeAccountFailure(404);
    if(route.startsWith('receipt-')&&!directReceipts)return financeAccountFailure(404);
    if(route.startsWith('receipt-tip-')&&!directReceiptTips)return financeAccountFailure(404);
    if(route.startsWith('payment-correction-')&&!paymentCorrections)return financeAccountFailure(404);
@@ -336,7 +376,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    protect.requireOrigin(request);
    const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;
    check(cookie);
-   const input=await readNestedJsonBody(bounded,fields[route],route.startsWith('invoice-issue-')?131072:route==='supplier-bill-draft-save'||route==='statement-match-draft-save'||route==='statement-staging-save'||route==='opening-worksheet-save'||route==='opening-worksheet-ar-preview'||route==='opening-worksheet-ar-save'||route==='receipt-record'||route==='receipt-tip-record'||route==='expense-post-submit'||route==='collection-failure-submit'||route==='refund-transfer-submit'||route==='refund-transfer-fee-submit'||route==='grouped-payment-recredit-submit'?49152:8192,
+   const input=(route==='opening-worksheet-payables-save'||route==='opening-worksheet-allocations-save')?await readOpeningEvidenceJsonBody(bounded,fields[route]):await readNestedJsonBody(bounded,fields[route],route==='opening-worksheet-funds-save'?131072:route.startsWith('invoice-issue-')?131072:route==='supplier-bill-draft-save'||route==='statement-match-draft-save'||route==='statement-staging-save'||route==='opening-worksheet-save'||route==='opening-worksheet-ar-preview'||route==='opening-worksheet-ar-save'||route==='receipt-record'||route==='receipt-tip-record'||route==='expense-post-submit'||route==='collection-failure-submit'||route==='refund-transfer-submit'||route==='refund-transfer-fee-submit'||route==='grouped-payment-recredit-submit'?49152:8192,
     excessReceipts&&route==='receipt-record'?'fundsMappingId':undefined);
    const sessionId=await csrf(bounded,cookie,signal);
    const binding=createHash('sha256').update('crest.finance.account.edit.v1\0').update(businessId).update('\0')
@@ -351,6 +391,8 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     const response=privateJsonResponse({businessId,recoveryEpoch:c.recoveryEpoch,writeState:c.writeState});
     response.headers.set('X-Crest-Edit-Binding',binding);
     if(fixedMappings)response.headers.set('X-Crest-Finance-Fixed-Mappings','1');
+    if(mappingHistoryEvidence)response.headers.set('X-Crest-Finance-Mapping-History-Evidence','1');
+    if(historyEvidence)response.headers.set('X-Crest-Finance-History-Evidence','1');
     if(taxProfiles)response.headers.set('X-Crest-Finance-Tax-Profiles','1');
     if(categoryMappings)response.headers.set('X-Crest-Finance-Category-Mappings','1');
     if(moneyChannels)response.headers.set('X-Crest-Finance-Money-Channels','1');
@@ -367,10 +409,13 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     }
     if(recordedIncomeStatement||supplierPayablePosting)response.headers.set('X-Crest-Recorded-Income-Statement','1');
     if(openingArPreview)response.headers.set('X-Crest-Opening-AR-Preview','1');
+    if(openingFunds)response.headers.set('X-Crest-Opening-Funds','1');
+    if(openingPayables)response.headers.set('X-Crest-Opening-Payables','1');
     if(invoicePreparation)response.headers.set('X-Crest-Invoice-Preparation','1');
     if(invoiceDrafts)response.headers.set('X-Crest-Invoice-Drafts','1');
     if(invoiceIssueTaxReview)response.headers.set('X-Crest-Invoice-Issue-Tax-Review','1');
     if(invoiceIssue)response.headers.set('X-Crest-Invoice-Issue','1');
+    if(invoiceOutstanding)response.headers.set('X-Crest-Invoice-Outstanding','1');
     if(directReceipts)response.headers.set('X-Crest-Direct-Receipts','1');
     if(excessReceipts)response.headers.set('X-Crest-Excess-Receipts','1');
     if(excessReturns)response.headers.set('X-Crest-Excess-Returns','1');
@@ -569,6 +614,147 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
      customerUuid(boundary.worksheetRevisionId)&&customerDate(boundary.cutoverOn));
     return privateJsonResponse(previewOpeningReceivables(preview,boundary.cutoverOn));
    }
+   if(route==='opening-worksheet-funds-read'){
+    check(customerUuid(input.reviewEpoch)&&customerVersion(input.worksheetRevision));
+    const value=await database('SELECT crest_commands.read_fictional_opening_funds_schedule('+authority+',$9::uuid,$10::bigint) AS result',
+     [...args,input.reviewEpoch,input.worksheetRevision],signal);
+    parseOpeningFundsStored(value,businessId);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='opening-worksheet-funds-save'||route==='opening-worksheet-funds-lookup'||route==='opening-worksheet-funds-retire'){
+    const reference=parseOpeningReference(input.reference);
+    const parseResult=(value:unknown)=>{
+     try{return parseOpeningFundsOperation(value,businessId,reference.operationId);}
+     catch{throw Error('FINANCE_ACCOUNT_RESPONSE_INVALID');}
+    };
+    if(route==='opening-worksheet-funds-lookup'){
+     check(customerUuid(input.reviewEpoch));
+     const value=await database('SELECT crest_commands.lookup_fictional_opening_funds_save('+authority+',$9::uuid,$10::uuid,$11::uuid) AS result',
+      [...args,input.reviewEpoch,reference.operationId,reference.recoveryEpoch],signal);
+     return privateJsonResponse(value as object,parseResult(value).state==='conflict'?409:200);
+    }
+    if(route==='opening-worksheet-funds-retire'){
+     check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+     const result=await database.commandTransaction(async query=>{
+      submitted=true;
+      const value=await query('SELECT crest_commands.retire_fictional_opening_funds_save('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::text) AS result',
+       [...args,input.reviewEpoch,reference.operationId,reference.recoveryEpoch,input.reason]);
+      const {state}=parseResult(value);check(state==='conflict'||state==='retired'||state==='committed');
+      return {value:value as object,state};
+     },signal);
+     return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+    }
+    check(customerDate(input.cutoverOn)&&customerUuid(input.worksheetRevisionId));
+    const {worksheetRevision,expectedRevision,input:draft}=parseOpeningFundsSave(input.draft,input.cutoverOn);
+    const expected=normalizeOpeningFundsEvidence(draft,input.cutoverOn);
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.save_fictional_opening_funds_schedule('+authority+
+      ',$9::uuid,$10::uuid,$11::bigint,$12::bigint,$13::jsonb,$14::text) AS result',
+      [...args,reference.recoveryEpoch,reference.operationId,worksheetRevision,expectedRevision,JSON.stringify(draft.roots),draft.reason]);
+     const parsed=parseResult(value);
+     check(parsed.state==='conflict'||parsed.state==='retired'||parsed.state==='committed'
+      &&parsed.receipt.worksheetRevisionId===input.worksheetRevisionId&&parsed.receipt.recordedBy===verified.actorId
+      &&parsed.receipt.revision===String(BigInt(expectedRevision)+1n)&&isDeepStrictEqual(parsed.receipt.evidence,expected));
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
+   if(route==='opening-worksheet-payables-history'||route==='opening-worksheet-allocations-history'){
+    check(customerUuid(input.reviewEpoch));const cursor=parseOpeningSourceCursor(input.cursor),kind=route==='opening-worksheet-payables-history'?'payables':'allocations';
+    const value=await database('SELECT crest_commands.read_fictional_opening_'+kind+'_history('+authority+',$9::uuid,$10::timestamptz,$11::uuid,20) AS result',[...args,input.reviewEpoch,cursor?.recordedAt??null,cursor?.id??null],signal);
+    parseOpeningSourceHistory(value,businessId,kind);return privateJsonResponse(value as object);
+   }
+   if(route==='opening-worksheet-payables-revision'||route==='opening-worksheet-allocations-revision'){
+    check(customerUuid(input.reviewEpoch)&&customerUuid(input.revisionId));const kind=route==='opening-worksheet-payables-revision'?'payables':'allocations';
+    const value=await database('SELECT crest_commands.read_fictional_opening_'+kind+'_revision('+authority+',$9::uuid,$10::uuid) AS result',[...args,input.reviewEpoch,input.revisionId],signal);
+    if(kind==='payables')parseOpeningPayablesHistorical(value,businessId,input.revisionId);else parseOpeningAllocationsHistorical(value,businessId,input.revisionId);return privateJsonResponse(value as object);
+   }
+   if(route==='opening-worksheet-payables-read'){
+    check(customerUuid(input.reviewEpoch)&&customerVersion(input.worksheetRevision));
+    const value=await database('SELECT crest_commands.read_fictional_opening_payables_schedule('+authority+',$9::uuid,$10::bigint) AS result',
+     [...args,input.reviewEpoch,input.worksheetRevision],signal);
+    parseOpeningPayablesStored(value,businessId);
+    return privateJsonResponse(value as object);
+   }
+   if(route==='opening-worksheet-allocations-read'){
+    check(customerUuid(input.reviewEpoch)&&customerVersion(input.worksheetRevision));
+    const value=await database('SELECT crest_commands.read_fictional_opening_allocations_schedule_v2('+authority+',$9::uuid,$10::bigint) AS result',[...args,input.reviewEpoch,input.worksheetRevision],signal);
+    parseOpeningAllocationsStored(value,businessId);return privateJsonResponse(value as object);
+   }
+   if(route==='opening-worksheet-allocations-save'||route==='opening-worksheet-allocations-lookup'||route==='opening-worksheet-allocations-retire'){
+    const reference=parseOpeningReference(input.reference);
+    const parseResult=(value:unknown)=>{try{return parseOpeningAllocationsOperation(value,businessId,reference.operationId);}catch{throw Error('FINANCE_ACCOUNT_RESPONSE_INVALID');}};
+    if(route==='opening-worksheet-allocations-lookup'){
+     check(customerUuid(input.reviewEpoch));
+     const value=await database('SELECT crest_commands.lookup_fictional_opening_allocations_save_v2('+authority+',$9::uuid,$10::uuid,$11::uuid) AS result',[...args,input.reviewEpoch,reference.operationId,reference.recoveryEpoch],signal);
+     return privateJsonResponse(value as object,parseResult(value).state==='conflict'?409:200);
+    }
+    if(route==='opening-worksheet-allocations-retire'){
+     check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+     const result=await database.commandTransaction(async query=>{
+      submitted=true;
+      const value=await query('SELECT crest_commands.retire_fictional_opening_allocations_save_v2('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::text) AS result',[...args,input.reviewEpoch,reference.operationId,reference.recoveryEpoch,input.reason]);
+      const {state}=parseResult(value);check(state==='conflict'||state==='retired'||state==='committed');return {value:value as object,state};
+     },signal);return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+    }
+    check(customerDate(input.cutoverOn)&&customerUuid(input.worksheetRevisionId)&&exact(input.draft,['worksheetRevision','payablesRevision','expectedRevision','input'])&&customerVersion(input.draft.worksheetRevision));
+    const draftInput=input.draft;
+    const result=await database.commandTransaction(async query=>{
+     const originalValue=await query('SELECT crest_commands.lookup_fictional_opening_allocations_save_v2('+authority+',$9::uuid,$10::uuid,$11::uuid) AS result',[...args,reference.recoveryEpoch,reference.operationId,reference.recoveryEpoch]);
+     const original=parseResult(originalValue);
+     if(original.state==='retired'||original.state==='conflict')return {value:originalValue as object,state:original.state};
+     const parent=original.state==='committed'?original.supplierSchedule:parseOpeningPayablesStored(await query('SELECT crest_commands.read_fictional_opening_payables_schedule('+authority+',$9::uuid,$10::bigint) AS result',[...args,reference.recoveryEpoch,draftInput.worksheetRevision]),businessId).schedule;
+     if(!parent||parent.revision!==draftInput.payablesRevision)throw Error('OPENING_PAYABLES_REVISION_CONFLICT');
+     check(parent.worksheetRevisionId===input.worksheetRevisionId&&parent.evidence.cutoverOn===input.cutoverOn);
+     const {worksheetRevision,payablesRevision,expectedRevision,input:draft}=parseOpeningAllocationsSave(draftInput,parent);
+     const expected=prepareOpeningPayablesAllocations(openingPayablesDraftFromEvidence(parent.evidence),parent.evidence.cutoverOn,draft);
+     submitted=true;
+     const value=await query('SELECT crest_commands.save_fictional_opening_allocations_schedule_v2('+authority+',$9::uuid,$10::uuid,$11::bigint,$12::bigint,$13::bigint,$14::jsonb,$15::text) AS result',[...args,reference.recoveryEpoch,reference.operationId,worksheetRevision,payablesRevision,expectedRevision,JSON.stringify(draft.roots),draft.reason]);
+     const parsed=parseResult(value);
+     check(parsed.state==='conflict'||parsed.state==='retired'||parsed.state==='committed'&&parsed.receipt.worksheetRevisionId===input.worksheetRevisionId&&parsed.receipt.payablesRevision===payablesRevision&&parsed.receipt.recordedBy===verified.actorId&&parsed.receipt.revision===String(BigInt(expectedRevision)+1n)&&isDeepStrictEqual(parsed.receipt.evidence,expected));
+     return {value:value as object,state:parsed.state};
+    },signal);return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
+   if(route==='opening-worksheet-payables-save'||route==='opening-worksheet-payables-lookup'||route==='opening-worksheet-payables-retire'){
+    const reference=parseOpeningReference(input.reference);
+    const parseResult=(value:unknown)=>{
+     try{return parseOpeningPayablesOperation(value,businessId,reference.operationId);}
+     catch{throw Error('FINANCE_ACCOUNT_RESPONSE_INVALID');}
+    };
+    if(route==='opening-worksheet-payables-lookup'){
+     check(customerUuid(input.reviewEpoch));
+     const value=await database('SELECT crest_commands.lookup_fictional_opening_payables_save('+authority+',$9::uuid,$10::uuid,$11::uuid) AS result',
+      [...args,input.reviewEpoch,reference.operationId,reference.recoveryEpoch],signal);
+     return privateJsonResponse(value as object,parseResult(value).state==='conflict'?409:200);
+    }
+    if(route==='opening-worksheet-payables-retire'){
+     check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+     const result=await database.commandTransaction(async query=>{
+      submitted=true;
+      const value=await query('SELECT crest_commands.retire_fictional_opening_payables_save('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::text) AS result',
+       [...args,input.reviewEpoch,reference.operationId,reference.recoveryEpoch,input.reason]);
+      const {state}=parseResult(value);check(state==='conflict'||state==='retired'||state==='committed');
+      return {value:value as object,state};
+     },signal);
+     return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+    }
+    check(customerDate(input.cutoverOn)&&customerUuid(input.worksheetRevisionId));
+    const {worksheetRevision,expectedRevision,input:draft}=parseOpeningPayablesSave(input.draft,input.cutoverOn);
+    const expected=normalizeOpeningPayablesEvidence(draft,input.cutoverOn);
+    const result=await database.commandTransaction(async query=>{
+     submitted=true;
+     const value=await query('SELECT crest_commands.save_fictional_opening_payables_schedule('+authority+
+      ',$9::uuid,$10::uuid,$11::bigint,$12::bigint,$13::jsonb,$14::text) AS result',
+      [...args,reference.recoveryEpoch,reference.operationId,worksheetRevision,expectedRevision,JSON.stringify(draft.bills),draft.reason]);
+     const parsed=parseResult(value);
+     check(parsed.state==='conflict'||parsed.state==='retired'||parsed.state==='committed'
+      &&parsed.receipt.worksheetRevisionId===input.worksheetRevisionId&&parsed.receipt.recordedBy===verified.actorId
+      &&parsed.receipt.revision===String(BigInt(expectedRevision)+1n)&&isDeepStrictEqual(parsed.receipt.evidence,expected));
+     return {value:value as object,state:parsed.state};
+    },signal);
+    return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+   }
    if(route==='opening-worksheet-ar-read'){
     check(customerUuid(input.reviewEpoch)&&customerVersion(input.worksheetRevision));
     const value=await database('SELECT crest_commands.read_fictional_opening_ar_schedule('+authority+',$9::uuid,$10::bigint) AS result',
@@ -722,8 +908,8 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     check(customerUuid(customerId)&&customerUuid(failureId)&&customerDate(actualOn));
     const value=await database('SELECT crest_commands.read_fictional_collection_failure_recredit_options('+authority+
      ',$9::uuid,$10::uuid,$11::date) AS result',[...args,customerId,failureId,actualOn],signal);
-    parseGroupedRecreditOptions(value,businessId,customerId,failureId,actualOn,collectionFailureTipReinstatements);
-    return privateJsonResponse(value as object);
+    const response=groupedRecreditOptionsForCapability(value,businessId,customerId,failureId,actualOn,collectionFailureTipReinstatements);
+    return privateJsonResponse(response as object);
    }
    if(route==='grouped-payment-recredit-lookup'||route==='grouped-payment-recredit-retire'){
     const reference=parseGroupedRecreditReference(route==='grouped-payment-recredit-lookup'?input:input.reference);
@@ -1318,6 +1504,13 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     },signal);
     return privateJsonResponse(result.value,result.state==='conflict'?409:200);
    }
+   if(route==='invoice-outstanding'){
+    check(customerUuid(input.customerId)&&customerUuid(input.invoiceId));
+    const value=await database('SELECT crest_commands.read_fictional_invoice_outstanding('+authority+',$9::uuid,$10::uuid) AS result',
+     [...args,input.customerId,input.invoiceId],signal);
+    parseInvoiceOutstanding(value,businessId,input.customerId,input.invoiceId);
+    return privateJsonResponse(value as object);
+   }
    if(route==='receipt-options'){
     check(customerUuid(input.customerId)&&(input.actualOn===null||customerDate(input.actualOn)));
     const command=excessReceipts?'read_direct_fictional_receipt_funds_options':'read_direct_fictional_receipt_options';
@@ -1558,9 +1751,11 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='channel-history'){
     check(customerUuid(input.channelId)&&(input.beforeVersion===null||customerVersion(input.beforeVersion)));
-    const value=await database('SELECT crest_commands.read_money_channel_history('+authority+',$9::uuid,$10::bigint,25) AS result',
+    const reader=historyEvidence?'read_money_channel_history_evidence':'read_money_channel_history';
+    const value=await database('SELECT crest_commands.'+reader+'('+authority+',$9::uuid,$10::bigint,25) AS result',
      [...args,input.channelId,input.beforeVersion],signal);
-    parseMoneyChannelHistory(value,businessId,input.channelId,input.beforeVersion);
+    if(historyEvidence)parseMoneyChannelHistoryEvidence(value,businessId,input.channelId,input.beforeVersion);
+    else parseMoneyChannelHistory(value,businessId,input.channelId,input.beforeVersion);
     return privateJsonResponse(value as object);
    }
    if(route==='channel-accounts'){
@@ -1606,9 +1801,11 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route==='tax-history'){
     const scope=parseFinanceTaxScope({jurisdiction:input.jurisdiction,applicability:input.applicability,serviceId:input.serviceId});
     check(input.beforeVersion===null||customerVersion(input.beforeVersion));
-    const value=await database('SELECT crest_commands.read_finance_tax_profile_history('+authority+',$9::text,$10::text,$11::uuid,$12::bigint,25) AS result',
+    const reader=historyEvidence?'read_finance_tax_profile_history_evidence':'read_finance_tax_profile_history';
+    const value=await database('SELECT crest_commands.'+reader+'('+authority+',$9::text,$10::text,$11::uuid,$12::bigint,25) AS result',
      [...args,scope.jurisdiction,scope.applicability,scope.serviceId,input.beforeVersion],signal);
-    parseFinanceTaxHistory(value,businessId,scope,input.beforeVersion);
+    if(historyEvidence)parseFinanceTaxHistoryEvidence(value,businessId,scope,input.beforeVersion);
+    else parseFinanceTaxHistory(value,businessId,scope,input.beforeVersion);
     return privateJsonResponse(value as object);
    }
    if(route==='tax-preview'){
@@ -1673,9 +1870,11 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='mapping-history'){
     check(mappingPurpose(input.purpose)&&(input.beforeVersion===null||customerVersion(input.beforeVersion)));
-    const value=await database('SELECT crest_commands.read_fixed_finance_mapping_history('+authority+',$9::text,$10::bigint,25) AS result',
+    const reader=mappingHistoryEvidence?'read_finance_mapping_history_evidence':'read_fixed_finance_mapping_history';
+    const value=await database('SELECT crest_commands.'+reader+'('+authority+',$9::text,$10::bigint,25) AS result',
      [...args,input.purpose,input.beforeVersion],signal);
-    parseFinanceMappingHistory(value,businessId,input.purpose,input.beforeVersion);
+    if(mappingHistoryEvidence)parseFinanceMappingHistoryEvidence(value,businessId,input.purpose,input.beforeVersion);
+    else parseFinanceMappingHistory(value,businessId,input.purpose,input.beforeVersion);
     return privateJsonResponse(value as object);
    }
    if(route==='mapping-editor'){
@@ -1729,9 +1928,11 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    }
    if(route==='history'){
     check(customerUuid(input.accountId)&&customerVersion(input.afterVersion,true));
-    const value=await database('SELECT crest_commands.read_finance_account_history('+authority+',$9::uuid,$10::bigint,25) AS result',
+    const reader=historyEvidence?'read_finance_account_history_evidence':'read_finance_account_history';
+    const value=await database('SELECT crest_commands.'+reader+'('+authority+',$9::uuid,$10::bigint,25) AS result',
      [...args,input.accountId,input.afterVersion],signal);
-    parseFinanceAccountHistory(value,businessId,input.accountId,input.afterVersion);
+    if(historyEvidence)parseFinanceAccountHistoryEvidence(value,businessId,input.accountId,input.afterVersion);
+    else parseFinanceAccountHistory(value,businessId,input.accountId,input.afterVersion);
     return privateJsonResponse(value as object);
    }
    const reference=parseFinanceAccountReference(route==='operation'?input:input.reference);
@@ -1783,6 +1984,12 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     'OPENING_RECEIVABLES_EVIDENCE_REQUIRED','OPENING_RECEIVABLES_CUSTOMER_REQUIRED',
     'OPENING_AR_EVIDENCE_REQUIRED','OPENING_AR_DATE_REQUIRED','OPENING_AR_AMOUNT_REQUIRED','OPENING_AR_DUPLICATE_EVIDENCE',
     'OPENING_AR_BALANCE_REQUIRED','OPENING_AR_REVISION_CONFLICT',
+    'OPENING_ALLOCATIONS_EVIDENCE_REQUIRED','OPENING_ALLOCATIONS_REVISION_CONFLICT','OPENING_ALLOCATIONS_ORIGIN_IDENTITY_CONFLICT','OPENING_PAYABLES_ALLOCATION_REVIEW_REQUIRED',
+    'OPENING_PAYABLES_EVIDENCE_REQUIRED','OPENING_PAYABLES_DATE_REQUIRED','OPENING_PAYABLES_AMOUNT_REQUIRED','OPENING_PAYABLES_DUPLICATE_ORIGIN','OPENING_PAYABLES_REVISION_CONFLICT','OPENING_PAYABLES_ORIGIN_IDENTITY_CONFLICT',
+    'OPENING_FUNDS_EVIDENCE_REQUIRED','OPENING_FUNDS_DATE_REQUIRED','OPENING_FUNDS_AMOUNT_REQUIRED',
+    'OPENING_FUNDS_DUPLICATE_ORIGIN','OPENING_FUNDS_DUPLICATE_REDUCTION','OPENING_FUNDS_DUPLICATE_ITEM',
+    'OPENING_FUNDS_CUSTOMER_REQUIRED','OPENING_FUNDS_REFUND_CEILING_REQUIRED','OPENING_FUNDS_BALANCE_REQUIRED',
+    'OPENING_FUNDS_REVISION_CONFLICT','OPENING_FUNDS_ORIGIN_IDENTITY_CONFLICT','OPENING_FUNDS_ITEM_IDENTITY_CONFLICT',
     'FINANCE_MAPPING_VERSION_CONFLICT','FINANCE_MAPPING_EFFECTIVE_ORDER_REQUIRED','FINANCE_MAPPING_ACCOUNT_REQUIRED',
     'FINANCE_MAPPING_CLOSURE_REQUIRED','FINANCE_TAX_VERSION_CONFLICT','FINANCE_TAX_EFFECTIVE_ORDER_REQUIRED',
     'FINANCE_CHANNEL_VERSION_CONFLICT','FINANCE_CHANNEL_EFFECTIVE_ORDER_REQUIRED','FINANCE_CHANNEL_ACCOUNT_REQUIRED',

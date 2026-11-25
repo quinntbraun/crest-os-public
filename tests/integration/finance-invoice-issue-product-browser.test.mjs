@@ -10,9 +10,15 @@ import {unzipSync,strFromU8} from 'fflate';
 import {parseInvoiceCreditReference} from '../../src/bookkeeping/invoice-credit-contract.ts';
 import {verifyFinanceSourceExport} from '../../src/tooling/verify-finance-source-export.ts';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {reviewAccountingReportWorkspace} from '../support/accounting-report-workspace.mjs';
+import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
+import {captureDuringAction} from '../support/quote-browser-response.mjs';
+import {reviewPaymentAccessRecovery} from '../support/payment-access-recovery.mjs';
 
 const directReceipts=true;
+const invoiceOutstanding=true;
 const paymentCorrections=process.env.CREST_TEST_PAYMENT_CORRECTIONS==='1';
+const inspectInvoiceAccess=process.env.CREST_TEST_INVOICE_ACCESS_RECOVERY==='1'||!paymentCorrections;
 const fundApplications=process.env.CREST_TEST_FUND_APPLICATIONS==='1';
 const heldTips=process.env.CREST_TEST_HELD_TIPS==='1';
 const invoiceCredits=process.env.CREST_TEST_INVOICE_CREDITS==='1';
@@ -32,15 +38,16 @@ const refundTransferFeeExport=process.env.CREST_TEST_REFUND_TRANSFER_FEE_EXPORT=
 const collectionFailureRecreditExport=process.env.CREST_TEST_COLLECTION_FAILURE_RECREDIT_EXPORT==='1';
 const collectionFailureGroupedRecreditExport=process.env.CREST_TEST_COLLECTION_FAILURE_GROUPED_RECREDIT_EXPORT==='1';
 const postedFinanceSchemaVersion=collectionFailureGroupedRecreditExport?100:collectionFailureRecreditExport?99:refundTransferFeeExport?98:directReceiptTipExport?97:refundTransferExport?96:collectionFailureExport?95:tipReturnExport?94:excessReturnExport?93:applyReceiptFunds?92:excessReceipts?91:customerFundsReport?90:89;
-for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async()=>{
+for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine taxable and exempt invoice with owner setup',async t=>{
  const fixture=await sourceExportBrowserFixture({product:true,workspace:true,catalog:true,quotes:true,quoteReview:true,
   quoteCommercial:true,scheduling:true,amendments:true,amendmentAcceptance:true,fieldSessions:true,jobCompletion:true,reviewOutcome:true,reviewHistory:true,
-  financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,
+  financeAccounts:true,financeMappings:true,financeTaxProfiles:true,invoicePreparation:true,invoiceDrafts:true,invoiceIssueTaxReview:true,invoiceIssue:true,invoiceOutstanding,
   financeMoneyChannels:directReceipts,directReceipts,...paymentCorrections?{
    expenses:true,financeCategoryMappings:true,sameDayExpenses:true,trialBalance:true,paymentCorrections:true,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,postedFinanceExport,
   }:{}});
  let browser;
  const financeResponses=[];
+ const failedReads=[];
  const businessDate=async()=>(await fixture.client.query(
   'SELECT (statement_timestamp() AT TIME ZONE timezone)::date::text AS today FROM crest.businesses WHERE id=$1',
   [fixture.business])).rows[0].today;
@@ -52,6 +59,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    const path=new URL(response.url()).pathname;
    if(path.startsWith('/api/business/finance-accounts/')||path==='/api/auth/session'||path==='/api/business/scheduling/workspace'){
     financeResponses.push([path,response.status()]);
+    if(response.status()>=400){
+     // Read immediately while the response handle exists; retain fixed error
+     // categories only, never request bodies, identifiers or provider details.
+     const failure={path,status:response.status(),category:'body_pending'};failedReads.push(failure);
+     void response.json().then(value=>{failure.category=typeof value?.error==='string'&&/^[A-Z_]{1,80}$/.test(value.error)?value.error:'unclassified';})
+      .catch(()=>{failure.category='body_unavailable';});
+    }
    }
   });
   page.setDefaultTimeout(20000);
@@ -83,9 +97,10 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   assert.equal(booked.value.state,'committed');
   await page.goto(fixture.origin+job);
   const drafts=page.getByRole('region',{name:'Invoice drafts',exact:true});
+  const openOriginalDraft=drafts.getByRole('list',{name:'Saved drafts',exact:true}).getByRole('listitem').filter({hasText:'2 completed portions'}).getByRole('button',{name:'Open invoice draft',exact:true});
   const draftStatus=drafts.locator(':scope > [role="status"]');
-  await page.getByRole('button',{name:'Record work status…',exact:true}).click();
-  await page.getByLabel('What is happening?',{exact:true}).selectOption('direct_arrive');
+  await page.getByRole('button',{name:'Record departure…',exact:true}).click();
+  await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?',{exact:true}).fill('Synthetic arrival without travel.');
   await page.getByRole('button',{name:'Start work without recorded travel',exact:true}).click();
   await expect(status).toContainText('Work status saved.');
@@ -97,8 +112,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await page.getByLabel('Walkthrough outcome',{exact:true}).selectOption('done');
   await page.getByRole('button',{name:'End job',exact:true}).click();
   await expect(status).toHaveText('Job completion saved.');
+  const invoiceAccessFacts=async()=>{const rows={};for(const table of ['crest.invoices','crest.journal_entries','crest_private.audit_events'])rows[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM '+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;return JSON.stringify(rows);};
+  const invoiceAccess=options=>reviewPaymentAccessRecovery({page,engine:name,jobId:booking.jobId,facts:invoiceAccessFacts,allowRead:allowInvoiceReadWindow,auditSelector:'html',saveReview:false,...options});
+  if(inspectInvoiceAccess){
+   const preparation=page.getByRole('region',{name:'Invoice preparation',exact:true});
+   await preparation.getByRole('button',{name:'Load completed work',exact:true}).click();
+   await expect(preparation.getByRole('status')).toHaveText('Completed work loaded.');
+   await invoiceAccess({region:preparation,task:'invoice-preparation',loadLabel:'Reload completed work',privateTarget:preparation.getByRole('list',{name:'Completed portions',exact:true}),message:'Sign in again to review completed work.',ready:'Completed work loaded.',reload:()=>preparation.getByRole('button',{name:'Load completed work',exact:true}).click()});
+  }
     await page.goto(fixture.origin+'/settings/accounts');
-    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+    await page.getByRole('button',{name:'Setup',exact:true}).click();
     await page.getByText('Invoice numbering and periods',{exact:true}).click();
     const setup=page.getByRole('region',{name:'Fictional invoice setup',exact:true});
     await setup.getByRole('button',{name:'Load invoice setup',exact:true}).click();
@@ -124,6 +147,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
   await drafts.getByRole('button',{name:'Save invoice draft',exact:true}).click();
   await expect(draftStatus).toHaveText('Invoice draft saved.');
   const saved=drafts.getByRole('region',{name:'Saved draft',exact:true});
+  if(inspectInvoiceAccess)await invoiceAccess({region:drafts,task:'invoice-drafts',loadLabel:'Load saved drafts',privateTarget:saved,message:'Sign in again to review invoice drafts.',ready:'Saved invoice draft loaded.',reload:async()=>{await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');await openOriginalDraft.click();}});
   await mkdir('.local/review',{recursive:true});
     const expand=saved.getByText('Review invoice tax',{exact:true});
     await expand.click();
@@ -153,6 +177,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
     const jurisdiction=tax.getByLabel('Jurisdiction for portion 1',{exact:true});
     await expect(tax.locator('datalist option')).toHaveCount(4);
     await expect(tax.locator('datalist option').first()).toHaveAttribute('value','Fictional district');
+    if(inspectInvoiceAccess)await invoiceAccess({region:tax,task:'invoice-tax',loadLabel:'Check invoice tax',privateTarget:jurisdiction,message:'Sign in again to review invoice tax.',ready:'Some completed portions need tax information.'});
     await jurisdiction.fill('Fictional district');
     await tax.getByLabel('Jurisdiction for portion 2',{exact:true}).fill('Fictional exempt district');
     await page.route('**/api/business/finance-accounts/'+'invoice-issue-prepare',route=>route.abort(),{times:1});
@@ -169,6 +194,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await evidence.getByRole('button',{name:'Load saved evidence',exact:true}).click();
      assert.equal((await evidenceRead).status(),200,JSON.stringify(financeResponses.slice(-12)));
      await expect(evidence.getByRole('status')).toHaveText('No evidence saved for this portion.');
+     if(inspectInvoiceAccess){
+      await evidence.getByLabel('Evidence reference',{exact:true}).fill('Unsaved fictional evidence');
+      await evidence.getByLabel('Reason for approval',{exact:true}).fill('Unsaved fictional review');
+      await invoiceAccess({region:evidence,task:'invoice-exemption',loadLabel:'Load saved evidence',privateTarget:evidence.getByLabel('Evidence reference',{exact:true}),message:'Sign in again to review exemption evidence.',ready:'No evidence saved for this portion.'});
+      await expect(evidence.getByLabel('Evidence reference',{exact:true})).toHaveValue('');
+      await expect(evidence.getByLabel('Reason for approval',{exact:true})).toHaveValue('');
+     }
      await evidence.getByLabel('Evidence reference',{exact:true}).fill('Fictional exemption record 1');
      await evidence.getByLabel('Reason for approval',{exact:true}).fill('Reviewed the fictional customer and transaction');
      const evidenceApproval=page.waitForResponse(response=>response.url().endsWith('/invoice-issue-exemption-approve'));
@@ -186,6 +218,11 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      const mapping=tax.getByRole('region',{name:'Tax payable mapping for Fictional district',exact:true});
      await mapping.getByRole('button',{name:'Load saved mapping',exact:true}).click();
      await expect(mapping).toContainText('2100 · Fictional sales tax payable');
+     if(inspectInvoiceAccess){
+      await mapping.getByLabel('Reason for approval',{exact:true}).fill('Unsaved fictional mapping review');
+      await invoiceAccess({region:mapping,task:'invoice-mapping',loadLabel:'Load saved mapping',privateTarget:mapping.getByLabel('Effective date',{exact:true}),message:'Sign in again to review tax payable settings.',ready:'Saved mapping loaded.'});
+      await expect(mapping.getByLabel('Reason for approval',{exact:true})).toHaveValue('');
+     }
      await mapping.getByLabel('Reason for approval',{exact:true}).fill('Fictional jurisdiction reviewed');
      await mapping.getByRole('button',{name:'Approve mapping',exact:true}).click();
      await expect(mapping.getByRole('status')).toHaveText('Mapping approved. Check invoice tax again.');
@@ -204,6 +241,24 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await tax.getByRole('button',{name:'Issue invoice',exact:true}).press('Enter');
      await expect(tax.getByRole('status')).toHaveText('The issue outcome is uncertain. Check the original before attempting another issue.');
      assert.deepEqual(issueResponse,{status:200,state:'committed'},'Only a committed issue response should be discarded.');
+     if(inspectInvoiceAccess){
+      const original=await page.evaluate(()=>sessionStorage.getItem('crest.invoice-issue.pending-reference.v1'));assert(original);
+      const cookies=await context.cookies(),before=await invoiceAccessFacts(),observations=[];
+      try{
+       await context.clearCookies();const denied=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/auth/session'&&r.status()===400);
+       await tax.getByRole('button',{name:'Check original issue',exact:true}).click();await denied;
+       await expect(tax.getByRole('status')).toHaveText('Sign in again to review invoice tax.');await expect(tax.getByRole('status')).toBeFocused();
+       await expect(tax.getByLabel('Jurisdiction for portion 1',{exact:true})).toHaveCount(0);
+       assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.invoice-issue.pending-reference.v1'))===original,true,'Keep the exact original issued-invoice reference');
+       const signIn=tax.getByRole('link',{name:'Sign in again',exact:true});await expect(signIn).toHaveAttribute('href','/sign-in?returnTo=schedule&job='+booking.jobId);
+       for(const width of [390,1440]){await page.setViewportSize({width,height:900});await signIn.scrollIntoViewIfNeeded();await signIn.focus();
+        assert(await signIn.evaluate(node=>{const r=node.getBoundingClientRect();return r.height>=44&&document.activeElement===node&&node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}));
+        assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(v=>v.id),[]);
+        const capture='.local/review/finance-payment-denied-invoice-pending-'+name+'-'+width+'.png';await page.screenshot({path:capture,animations:'disabled'});observations.push({width,capture});}
+       assert.equal(await invoiceAccessFacts()===before,true,'Checking the original while denied changes no financial or audit facts');assert.equal(submitCount,1);
+      }finally{await context.addCookies(cookies);await page.setViewportSize({width:390,height:844});}
+      await writeFile('.local/review/finance-payment-denied-invoice-pending-'+name+'.json',JSON.stringify({observations,actualSessionDenial:true,nonemptyOriginalReferencePreserved:true,noSecondIssueSubmitted:true,reloadVerified:false,originalJourneyVerifiesReceiptAfterThisStage:true},null,2)+'\n');
+     }
      // This test combines two interrupted issue journeys. Keep the same sign-in
      // for the saved operation reference and respect the ordinary request window.
      await allowInvoiceReadWindow();
@@ -212,14 +267,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      await draftDisclosure.click();
      await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
      await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-     await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+     await openOriginalDraft.click();
      await expect(draftStatus).toHaveText('Saved invoice draft loaded.');
      await expand.click();
      await allowInvoiceReadWindow();
      await check.press('Enter');
      const invoice=saved.getByRole('region',{name:'Issued invoice',exact:true});
      await expect(invoice.getByRole('heading',{name:'Invoice TEST-1'})).toBeVisible();
-     await expect(invoice.getByRole('status')).toHaveText('Issued invoice loaded.');
+     await expect(invoice.locator(':scope > [role="status"]')).toHaveText('Issued invoice loaded.');
      await expect(invoice).toContainText('Included tax');
      assert.equal(submitCount,1);
      await expect(saved.getByRole('button',{name:'Edit draft',exact:true})).toHaveCount(0);
@@ -228,18 +283,111 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      const receipt=await retrieving;
      assert.equal(receipt.suggestedFilename(),'crest-invoice-TEST-1.csv');
      assert.match(await readFile(await receipt.path(),'utf8'),/"TEST-1","Synthetic lifecycle customer"/);
-     await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+     await openOriginalDraft.click();
      await expect(draftStatus).toHaveText('Issued invoice loaded.');
      await expect(invoice.getByRole('heading',{name:'Invoice TEST-1'})).toBeVisible();
      await expect(saved.getByRole('button',{name:'Edit draft',exact:true})).toHaveCount(0);
-     for(const width of [360,390,768,1440]){
+     const document=invoice.getByRole('article',{name:'Invoice TEST-1',exact:true});
+     await expect(document.getByText('Issued · USD',{exact:true})).toBeVisible();await expect(document.getByText('Original total',{exact:true})).toBeVisible();
+     const draftEvidence=saved.locator('details.invoice-draft-evidence');await expect(draftEvidence).toHaveCount(1);assert.equal(await draftEvidence.evaluate(element=>element.open),false);
+     await expect(drafts.getByRole('button',{name:'Load saved drafts',exact:true})).toBeEnabled();
+     const financialFacts=async()=>{const result={};for(const table of ['invoices','journal_entries','journal_lines'])result[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.'+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;result.audit=(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows;return result;};
+     const outstanding=invoice.getByRole('region',{name:'Invoice outstanding balance',exact:true});
+     async function checkOutstanding(cents){
+      await allowInvoiceReadWindow();
+      await outstanding.getByRole('button',{name:/^Check balance(?: again)?$/}).press('Enter');
+      await expect(outstanding.getByRole('status')).toHaveText('Balance checked. Check again after payments or adjustments.');
+      await expect(outstanding.locator('strong')).toHaveText(new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(cents)/100));
+      await expect(outstanding.locator('.invoice-outstanding-value > span')).toHaveText(cents==='0'?'Nothing due':'Outstanding');
+      await expect(outstanding.locator('.invoice-outstanding-checked')).toContainText('Through ');
+      await expect(outstanding.locator('.invoice-outstanding-checked')).toContainText('Checked ');
+     }
+     if(invoiceOutstanding){
+      const beforeBalance=await financialFacts();
+      await expect(outstanding).toContainText('Outstanding not checked');await expect(outstanding.locator('strong')).toHaveCount(0);
+      await checkOutstanding('25000');assert.deepEqual(await financialFacts(),beforeBalance);
+      const changedInvoice=async route=>{const response=await route.fetch();const value=await response.json();await route.fulfill({response,json:{...value,invoiceNumber:'CHANGED-1'}});};
+      await page.route('**/api/business/finance-accounts/invoice-outstanding',changedInvoice);
+      try{await outstanding.getByRole('button',{name:'Check balance again',exact:true}).click();
+       await expect(outstanding.getByRole('status')).toHaveText('The balance could not be verified. Try checking again.');
+       await expect(outstanding.locator('strong')).toHaveCount(0);
+      }finally{await page.unroute('**/api/business/finance-accounts/invoice-outstanding',changedInvoice);}
+      await checkOutstanding('25000');
+      for(const width of [360,390,768,1440,1920]){
+       await page.setViewportSize({width,height:900});await outstanding.scrollIntoViewIfNeeded();
+       if(width===1440){
+        await page.evaluate(async()=>{await document.fonts.ready;});
+        const fonts=await page.evaluate(()=>({faces:[...document.fonts].filter(face=>face.family.includes('IBM Plex')).map(face=>({family:face.family,weight:face.weight,status:face.status}))}));
+        if(name==='chromium'){
+         const session=await context.newCDPSession(page);
+         try{await session.send('DOM.enable');await session.send('CSS.enable');const {root}=await session.send('DOM.getDocument');fonts.platform=[];
+          for(const selector of ['.issued-invoice-heading h4','.invoice-outstanding-value > strong','.invoice-outstanding > button']){
+           const {nodeId}=await session.send('DOM.querySelector',{nodeId:root.nodeId,selector});assert(nodeId);
+           const result=await session.send('CSS.getPlatformFontsForNode',{nodeId});fonts.platform.push({selector,fonts:result.fonts.map(font=>({family:font.familyName,name:font.postScriptName,custom:font.isCustomFont,glyphs:font.glyphCount}))});
+          }
+         }finally{await session.detach();}
+        }
+        await writeFile('.local/review/invoice-outstanding-fonts-'+name+'.json',JSON.stringify(fonts,null,2)+'\n');
+        assert(fonts.faces.length>=2&&fonts.faces.every(face=>face.status==='loaded'));
+        if(fonts.platform)assert(fonts.platform.every(row=>row.fonts.length&&row.fonts.every(font=>font.custom&&/^IBMPlexSans/.test(font.name))),'Invoice heading, amount and action use the bundled workspace font.');
+       }
+       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+       assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(issue=>issue.id),[]);
+       await page.screenshot({path:'.local/review/invoice-outstanding-unpaid-'+name+'-'+width+'.png'});
+      }
+      await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
+      await expect(outstanding).toHaveCount(0);
+      await allowInvoiceReadWindow();await page.reload();await draftDisclosure.click();
+      await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+      await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');await openOriginalDraft.click();
+      await expect(draftStatus).toHaveText('Issued invoice loaded.');await expect(outstanding).toContainText('Outstanding not checked');
+      await checkOutstanding('25000');
+     }
+     const beforeInvoiceNavigation=await financialFacts();let navigationRequests=0;const trackInvoiceNavigation=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))navigationRequests++;};page.on('request',trackInvoiceNavigation);
+     try{
+      await draftEvidence.locator(':scope > summary').press('Enter');await expect(draftEvidence.getByRole('button',{name:'Download draft (CSV)',exact:true})).toBeVisible();
+      await draftEvidence.screenshot({path:'.local/review/finance-issued-draft-history-'+name+'-390.png'});
+      await draftEvidence.locator(':scope > summary').press('Enter');
+      await invoice.getByRole('navigation',{name:'Invoice actions',exact:true}).getByRole('link',{name:'Payments',exact:true}).press('Enter');
+      await expect(invoice.getByRole('heading',{name:'Payments',exact:true})).toBeFocused();
+      assert.equal(navigationRequests,0);assert.deepEqual(await financialFacts(),beforeInvoiceNavigation);
+     }finally{page.off('request',trackInvoiceNavigation);}
+     for(const width of [360,390,768,1100,1440]){
       await page.setViewportSize({width,height:900});
       await invoice.evaluate(element=>element.scrollIntoView({block:'center'}));
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-      const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+      const audit=await new AxeBuilder({page}).analyze();
       assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
       await page.screenshot({path:'.local/review/finance-invoice-issue-product-'+name+'-'+width+'.png'});
+      await document.screenshot({path:'.local/review/finance-issued-document-'+name+'-'+width+'.png'});
      }
+     // Starting another draft must not attach the previously opened issued document.
+     // Empty drafts are nonposting; compare the actual posted records across the save.
+     const postedBeforeNewDraft=await financialFacts();delete postedBeforeNewDraft.audit;
+     await allowInvoiceReadWindow();
+     await drafts.getByRole('button',{name:'New invoice draft',exact:true}).click();
+     await drafts.getByRole('button',{name:'Save invoice draft',exact:true}).click();
+     await expect(draftStatus).toHaveText('Invoice draft saved.');
+     await expect(drafts.getByRole('button',{name:'Load saved drafts',exact:true})).toBeEnabled();
+     await expect(saved.getByRole('region',{name:'Issued invoice',exact:true})).toHaveCount(0);
+     await expect(saved.getByText('No completed portions saved yet.',{exact:true})).toBeVisible();
+     await expect(saved.getByRole('button',{name:'Edit draft',exact:true})).toBeVisible();
+     for(const width of [390,1440]){
+      await page.setViewportSize({width,height:900});
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(issue=>issue.id),[]);
+      await saved.screenshot({path:'.local/review/finance-new-empty-draft-'+name+'-'+width+'.png'});
+     }
+     const postedAfterNewDraft=await financialFacts();delete postedAfterNewDraft.audit;
+     assert.deepEqual(postedAfterNewDraft,postedBeforeNewDraft);
+     await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
+     await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
+     await drafts.getByRole('list',{name:'Saved drafts',exact:true}).getByRole('listitem')
+      .filter({hasText:'2 completed portions'}).getByRole('button',{name:'Open invoice draft',exact:true}).click();
+     await expect(draftStatus).toHaveText('Issued invoice loaded.');
+     await expect(document).toBeVisible();
+     const postedAfterReopen=await financialFacts();delete postedAfterReopen.audit;
+     assert.deepEqual(postedAfterReopen,postedBeforeNewDraft);
      if(directReceipts){
       await page.setViewportSize({width:390,height:844});
       if(paymentCorrections){
@@ -254,6 +402,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
       await allowInvoiceReadWindow();
       await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
       await expect(payments.getByRole('status')).toHaveText('Saved balances loaded.');
+      await reviewPaymentAccessRecovery({page,region:payments,engine:name,task:'receipt',loadLabel:'Load saved balances',privateLabel:'Money received in',message:'Sign in again to review payments.',ready:'Saved balances loaded.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
       await expect(payments.getByLabel('Money received in')).toHaveValue(/^[a-f0-9-]{36}$/);
       await payments.getByLabel(/Invoice TEST-1/).fill('100.00');
       await payments.getByLabel('How you verified the payment').fill('Fictional credited payment verified');
@@ -264,7 +413,20 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
       await expect(payments.getByRole('status')).toContainText('could not be confirmed');
       const pending=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('crest.direct-receipt.pending-reference.v1')??'null'));
       assert.deepEqual(Object.keys(pending.reference).sort(),['operationId','paymentId','recoveryEpoch']);
-      await payments.getByRole('button',{name:'Check original payment',exact:true}).press('Enter');
+      const pendingBytes=await page.evaluate(()=>sessionStorage.getItem('crest.direct-receipt.pending-reference.v1'));
+      const pendingCookies=await context.cookies(),pendingFacts=await financialFacts();
+      await allowInvoiceReadWindow();
+      try{
+       await context.clearCookies();
+       await payments.getByRole('button',{name:'Check original payment',exact:true}).press('Enter');
+       await expect(payments.getByRole('status')).toHaveText('Sign in again to review payments.');
+       await expect(payments.getByLabel('Money received in')).toHaveCount(0);
+       await expect(payments.getByRole('button',{name:'Download payment (CSV)',exact:true})).toHaveCount(0);
+       assert.equal(await page.evaluate(()=>sessionStorage.getItem('crest.direct-receipt.pending-reference.v1'))===pendingBytes,true,'The original payment reference must be kept');
+       assert.deepEqual(await financialFacts(),pendingFacts);
+      }finally{await context.addCookies(pendingCookies);}
+      await allowInvoiceReadWindow();
+      await payments.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
       await expect(payments.getByRole('status')).toHaveText('The original payment was saved.');
       await expect(payments).toContainText('$100.00');
       const paymentDownload=page.waitForEvent('download');
@@ -276,6 +438,22 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
       await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
       await expect(payments.getByLabel(/Invoice TEST-1/)).toBeVisible();
       await expect(payments).toContainText('$150.00 due');
+      if(invoiceOutstanding){
+       await expect(outstanding.locator('strong')).toHaveCount(0);
+       await checkOutstanding('15000');
+       const beforeFailedRead=await financialFacts();
+       const failedBalance=route=>route.abort('failed');await page.route('**/api/business/finance-accounts/invoice-outstanding',failedBalance);
+       try{await outstanding.getByRole('button',{name:'Check balance again',exact:true}).click();
+        await expect(outstanding.getByRole('status')).toHaveText('The balance could not be verified. Try checking again.');
+        await expect(outstanding.locator('strong')).toHaveCount(0);
+       }finally{await page.unroute('**/api/business/finance-accounts/invoice-outstanding',failedBalance);}
+       assert.deepEqual(await financialFacts(),beforeFailedRead);await checkOutstanding('15000');
+       for(const width of [360,390,768,1440,1920]){await page.setViewportSize({width,height:900});await outstanding.scrollIntoViewIfNeeded();
+        assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+        assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(issue=>issue.id),[]);
+        await page.screenshot({path:'.local/review/invoice-outstanding-partial-'+name+'-'+width+'.png'});
+       }
+      }
       for(const width of [360,390,768,1440]){
        await page.setViewportSize({width,height:900});
        await payments.evaluate(element=>element.scrollIntoView({block:'center'}));
@@ -283,6 +461,23 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
        assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
        await page.screenshot({path:'.local/review/finance-direct-receipt-'+name+'-'+width+'.png'});
+      }
+      if(invoiceOutstanding&&!paymentCorrections&&!applyReceiptFunds){
+       await allowInvoiceReadWindow();
+       await payments.getByLabel(/Invoice TEST-1/).fill('150.00');
+       await payments.getByLabel('How you verified the payment').fill('Fictional final settlement verified');
+       await payments.getByRole('button',{name:'Record payment',exact:true}).press('Enter');
+       await expect(payments.getByRole('status')).toHaveText('Payment recorded.');
+       await expect(outstanding.locator('strong')).toHaveCount(0);await checkOutstanding('0');
+       await expect(outstanding).not.toContainText('Paid');
+       for(const width of [360,390,768,1440,1920]){await page.setViewportSize({width,height:900});await outstanding.scrollIntoViewIfNeeded();
+        assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+        assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(issue=>issue.id),[]);
+        await page.screenshot({path:'.local/review/invoice-outstanding-nothing-due-'+name+'-'+width+'.png'});
+       }
+       await context.clearCookies();await outstanding.getByRole('button',{name:'Check balance again',exact:true}).press('Enter');
+       await expect(outstanding.getByRole('link',{name:'Sign in again',exact:true})).toBeVisible();
+       await expect(outstanding.locator('strong')).toHaveCount(0);
       }
       if(applyReceiptFunds){
        await allowInvoiceReadWindow();
@@ -329,7 +524,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await page.reload();
        await draftDisclosure.click();
        await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).press('Enter');
-       await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).press('Enter');
+       await openOriginalDraft.press('Enter');
        await expect(draftStatus).toHaveText('Issued invoice loaded.');
        await invoice.getByText('Record a fictional payment',{exact:true}).press('Enter');
        await payments.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
@@ -343,17 +538,42 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        const correction=invoice.getByRole('region',{name:'Correct an applied payment',exact:true});
        await correction.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
        await expect(correction.getByRole('status')).toHaveText('Saved payments loaded.');
+       await reviewPaymentAccessRecovery({page,region:correction,engine:name,task:'correction',loadLabel:'Load applied payments',privateLabel:'Applied payment',message:'Sign in again to review payment corrections.',ready:'Saved payments loaded.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
        await correction.getByRole('button',{name:'Review correction',exact:true}).press('Enter');
        await expect(correction).toContainText('$100.00');
        await correction.getByLabel('Amount to move',{exact:true}).fill('25.00');
        await correction.getByLabel('Reason for correcting payment',{exact:true}).fill('Fictional amount held for another invoice');
-       for(const width of [360,390,768,1440]){
+       await expect(correction.getByRole('button',{name:'Load applied payments',exact:true})).toBeEnabled();
+       const comparison=correction.getByRole('region',{name:'Payment correction preview',exact:true});
+       const comparisonValue=label=>comparison.locator('dl > div').filter({has:page.getByText(label,{exact:true})}).locator('dd');
+       await expect(comparisonValue('Applied before')).toHaveText('$100.00');
+       await expect(comparisonValue('Applied after')).toHaveText('$75.00');
+       await expect(comparisonValue('Move to customer funds')).toHaveText('$25.00');
+       await expect(comparisonValue('Invoice balance increase')).toHaveText('$25.00');
+       await expect(comparison.locator('time')).toHaveCount(2);
+       for(const date of await comparison.locator('time').all()){
+        const value=await date.getAttribute('datetime');assert.match(value,/^\d{4}-\d{2}-\d{2}$/);
+        await expect(date).toHaveText(new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(value+'T12:00:00Z')));
+       }
+       const beforeCorrectionPreview=await financialFacts();let correctionPreviewRequests=0;
+       const trackCorrectionPreview=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))correctionPreviewRequests++;};page.on('request',trackCorrectionPreview);
+       try{
+        await correction.getByLabel('Amount to move',{exact:true}).fill('100.01');await expect(comparison).toHaveCount(0);
+        await correction.getByLabel('Amount to move',{exact:true}).fill('25.01');await expect(comparisonValue('Applied after')).toHaveText('$74.99');
+        await correction.getByLabel('Amount to move',{exact:true}).fill('25.00');await expect(comparisonValue('Applied after')).toHaveText('$75.00');
+        await comparison.getByText('Payment references',{exact:true}).press('Enter');
+        await expect(comparison.locator('details dd')).toHaveCount(2);await expect(comparison.locator('details dd').first()).toHaveText(/^[a-f0-9-]{36}$/);
+        await comparison.getByText('Payment references',{exact:true}).press('Enter');
+        assert.equal(correctionPreviewRequests,0);assert.deepEqual(await financialFacts(),beforeCorrectionPreview);
+       }finally{page.off('request',trackCorrectionPreview);}
+       for(const width of [360,390,768,1100,1440]){
         await page.setViewportSize({width,height:900});
         await correction.getByRole('button',{name:'Move to customer funds',exact:true}).scrollIntoViewIfNeeded();
         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-        const audit=await new AxeBuilder({page}).include('.direct-receipt').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+        const audit=await new AxeBuilder({page}).analyze();
         assert.deepEqual(audit.violations.map(issue=>issue.id),[]);
         await page.screenshot({path:'.local/review/finance-payment-correction-'+name+'-'+width+'.png'});
+        await comparison.screenshot({path:'.local/review/finance-payment-correction-preview-'+name+'-'+width+'.png'});
        }
        let committedResponse=false;
        await page.route('**/api/business/finance-accounts/payment-correction-submit',async route=>{
@@ -372,7 +592,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await draftDisclosure.click();
        await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
        await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-       await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+       await openOriginalDraft.click();
        await expect(draftStatus).toHaveText('Issued invoice loaded.');
        await invoice.getByText('Correct an applied payment',{exact:true}).press('Enter');
        await correction.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
@@ -385,12 +605,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        await invoice.getByText('Record a fictional payment',{exact:true}).click();
        await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
        await expect(payments).toContainText('$175.00 due');
+       if(invoiceOutstanding)await checkOutstanding('17500');
        if(fundApplications){
         await allowInvoiceReadWindow();
         await invoice.getByText('Apply customer funds',{exact:true}).press('Enter');
         const funds=invoice.getByRole('region',{name:'Apply customer funds',exact:true});
         await funds.getByRole('button',{name:'Load available funds',exact:true}).press('Enter');
         await expect(funds.getByRole('status')).toHaveText('Review the amount before applying funds.');
+        await reviewPaymentAccessRecovery({page,region:funds,engine:name,task:'funds',loadLabel:'Load available funds',privateLabel:'Held funds',message:'Sign in again to review customer funds.',ready:'Review the amount before applying funds.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
         await expect(funds).toContainText('Maximum to apply · $25.00');
         await funds.getByLabel('Amount to apply',{exact:true}).fill('15.00');
         await funds.getByLabel('Reason for applying funds',{exact:true}).fill('Fictional customer approved use on this invoice');
@@ -415,9 +637,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        if(customerFundsReport){
         await allowInvoiceReadWindow();
         await page.goto(fixture.origin+'/settings/accounts');
-        await page.getByRole('button',{name:'Load accounts',exact:true}).press('Enter');
+        await page.getByRole('group',{name:'Choose a report',exact:true}).getByRole('button',{name:'Customer funds',exact:true}).press('Enter');
         const disclosure=page.getByText(refundTransferExport?'Available customer funds':'Customer funds held',{exact:true});
-        await disclosure.press('Enter');
         const report=page.getByRole('region',{name:'Customer funds held',exact:true});
         const reportDate=report.getByLabel('Through date (optional)');
         const load=report.getByRole('button',{name:'Load customer funds',exact:true});
@@ -428,8 +649,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await page.route('**/api/business/finance-accounts/customer-funds-report',route=>route.abort(),{times:1});
         await load.press('Enter');
         await expect(report.getByRole('status')).toContainText('Crest could not verify customer funds.');
-        await load.press('Enter');
+        const {status:fundsStatus,body:fundsMetadata}=await captureDuringAction(page,'/api/business/finance-accounts/customer-funds-report',()=>load.press('Enter'),{timeoutMs:20000});
+        assert.equal(fundsStatus,200);
         await expect(report.getByRole('status')).toHaveText('Customer funds matched the ledger.');
+        await reviewAccountingReportWorkspace(page,report,{label:'funds-'+name,values:[['Total held','$10.00']]});
+        await expect(report.locator('time[title]')).toHaveAttribute('datetime',fundsMetadata.observedAt);
+        await expect(report).toContainText(fundsMetadata.timeZone);
+        await expect(report.getByText('Posted customer funds',{exact:true})).toBeVisible();
         await report.getByText('Held funds by customer (1 of 1 entries)',{exact:true}).press('Enter');
         await expect(report.getByText('$10.00',{exact:true})).toHaveCount(2);
         const download=page.waitForEvent('download');
@@ -451,7 +677,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await page.goto(fixture.origin+job);
         await draftDisclosure.click();
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
-        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await openOriginalDraft.click();
         await expect(draftStatus).toHaveText('Issued invoice loaded.');
        }
        if(heldTips){
@@ -460,6 +686,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const tip=invoice.getByRole('region',{name:'Record a tip from held funds',exact:true});
         await tip.getByRole('button',{name:'Load held funds',exact:true}).press('Enter');
         await expect(tip.getByRole('status')).toContainText('Choose the jurisdiction');
+        await reviewPaymentAccessRecovery({page,region:tip,engine:name,task:'held-tip',loadLabel:'Load held funds',privateTarget:tip.getByRole('combobox',{name:'Tip jurisdiction',exact:true}),message:'Sign in again to review held tips.',ready:/Choose the jurisdiction/,jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
         await tip.getByLabel('Tip jurisdiction',{exact:true}).selectOption('Fictional tip district');
         await tip.getByRole('button',{name:'Load reviewed tax treatment',exact:true}).press('Enter');
         await expect(tip.getByRole('status')).toContainText('Enter the amount');
@@ -494,7 +721,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await draftDisclosure.click();
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
         await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await openOriginalDraft.click();
         await expect(draftStatus).toHaveText('Issued invoice loaded.');
         await invoice.getByText('Record a tip from held funds',{exact:true}).press('Enter');
         await tip.getByRole('button',{name:'Load held funds',exact:true}).press('Enter');
@@ -514,6 +741,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          await returnPanel.getByRole('button',{name:'Load eligible tips',exact:true}).press('Enter');
          assert.equal((await optionsResponse).status(),200);
          await expect(returnPanel.getByRole('status')).toHaveText('Choose the original tip and match the settled amount to your account record.');
+         await reviewPaymentAccessRecovery({page,region:returnPanel,engine:name,task:'tip-return',loadLabel:'Load eligible tips',privateTarget:returnPanel.getByRole('combobox',{name:'Original tip',exact:true}),message:'Sign in again to review tip returns.',ready:'Choose the original tip and match the settled amount to your account record.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow,reload:async()=>{await returnPanel.getByLabel('Settlement date',{exact:true}).fill(actualOn);await returnPanel.getByRole('button',{name:'Load eligible tips',exact:true}).press('Enter');}});
          const originalTip=JSON.parse(stored).reference.tipRealizationId;
          const original=returnPanel.getByRole('combobox',{name:'Original tip',exact:true});
          await expect(original.locator('option').nth(1)).toContainText('$5.50 available');
@@ -558,7 +786,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          await draftDisclosure.click();
          await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
          await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-         await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+         await openOriginalDraft.click();
          await expect(draftStatus).toHaveText('Issued invoice loaded.');
          await invoice.getByText(returnTitle,{exact:true}).press('Enter');
          await returnPanel.getByRole('button',{name:'Check original return',exact:true}).press('Enter');
@@ -583,6 +811,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await credit.getByRole('button',{name:'Load credit options',exact:true}).press('Enter');
         await expect(credit.getByRole('status')).toContainText('Review the credit');
         await expect(credit).toContainText('Maximum credit · $160.00');
+        await reviewPaymentAccessRecovery({page,region:credit,engine:name,task:'invoice-credit',loadLabel:'Load credit options',privateLabel:'Credit amount (USD)',message:'Sign in again to review invoice credits.',ready:/Review the credit/,jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
         const amount=credit.getByLabel('Credit amount (USD)',{exact:true});
         const save=credit.getByRole('button',{name:'Save invoice credit',exact:true});
         await amount.fill('160.01');
@@ -627,7 +856,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
         await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
         await allowInvoiceReadWindow();
-        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await openOriginalDraft.click();
         await expect(draftStatus).toHaveText('Issued invoice loaded.');
         await invoice.getByText('Credit an invoice line',{exact:true}).press('Enter');
         await allowInvoiceReadWindow();
@@ -641,24 +870,45 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await invoice.getByText('Record a fictional payment',{exact:true}).click();
         await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
         await expect(payments).toContainText('$149.00 due');
+        if(invoiceOutstanding)await checkOutstanding('14900');
        }
        if(paidInvoiceCredits){
         if(receivableAging){
          await allowInvoiceReadWindow();
          await page.setViewportSize({width:390,height:900});
          await page.goto(fixture.origin+'/settings/accounts');
-         await page.getByRole('button',{name:'Load accounts',exact:true}).press('Enter');
-         await page.getByText('Outstanding invoices by due date',{exact:true}).press('Enter');
+         await page.getByRole('group',{name:'Choose a report',exact:true}).getByRole('button',{name:'Receivables',exact:true}).press('Enter');
          const aging=page.getByRole('region',{name:'Outstanding invoices by due date',exact:true});
-         await aging.getByRole('button',{name:'Load outstanding invoices',exact:true}).press('Enter');
+         const {status:agingStatus,body:agingMetadata}=await captureDuringAction(page,'/api/business/finance-accounts/receivable-aging',()=>aging.getByRole('button',{name:'Load outstanding invoices',exact:true}).press('Enter'),{timeoutMs:20000});
+         assert.equal(agingStatus,200);
          await expect(aging.getByRole('status')).toHaveText('Outstanding invoices loaded.');
+         await reviewAccountingReportWorkspace(page,aging,{label:'receivables-'+name,values:[['Total outstanding','$149.00']]});
+         const agingDownload=page.waitForEvent('download');await aging.getByRole('button',{name:'Download listed invoices (CSV)',exact:true}).press('Enter');const agingCsv=await readFile(await(await agingDownload).path(),'utf8');assert(agingCsv.includes(agingMetadata.observedAt)&&agingCsv.includes('opening receivables and legacy balances excluded')&&agingCsv.includes('14900'));
+         await expect(aging.locator('time[title]')).toHaveAttribute('datetime',agingMetadata.observedAt);
+         await expect(aging).toContainText(agingMetadata.timeZone);
+         await expect(aging.getByText('Posted invoices',{exact:true})).toBeVisible();
          await aging.getByText('Invoice details (1 of 1)',{exact:true}).press('Enter');
          await expect(aging).toContainText('Invoice TEST-1');
          await expect(aging).toContainText('$149.00');
-         for(const width of [360,390,768,1440]){
+         const invoiceRow=aging.locator('ul > li').first();
+         await expect(invoiceRow).toContainText(agingMetadata.rows[0].customerName);
+         await expect(invoiceRow.locator('time')).toHaveAttribute('datetime',agingMetadata.rows[0].dueOn);
+         await expect(invoiceRow).toContainText(agingMetadata.rows[0].daysOverdue===0?'Current':agingMetadata.rows[0].daysOverdue+' days overdue');
+         for(const width of [360,390,768,1100,1440]){
           await page.setViewportSize({width,height:900});
           await aging.getByText('Invoice TEST-1',{exact:true}).scrollIntoViewIfNeeded();
+          await page.evaluate(async()=>{await document.fonts.ready;});
+          const bucketTops=await aging.locator('dl[aria-label="Outstanding by age"] > div').evaluateAll(items=>items.map(item=>Math.round(item.getBoundingClientRect().top)));
+          assert.equal(bucketTops.length,5);const bucketRows=new Set(bucketTops).size;
+          assert(bucketRows<=(width>=1100?1:3),'Age buckets stay in one wide row or at most three compact phone rows.');
+          if(width>=1100){
+           const input=await aging.getByLabel('Through date (optional)',{exact:true}).boundingBox(),loadButton=aging.getByRole('button',{name:'Load outstanding invoices',exact:true}),load=await loadButton.boundingBox();
+           assert(input&&load&&Math.abs(input.y+input.height-load.y-load.height)<=2,'Date and load action align in the wide report.');
+           const lines=await loadButton.evaluate(element=>{const range=document.createRange();range.selectNodeContents(element);return new Set([...range.getClientRects()].map(rect=>Math.round(rect.top))).size;});
+           assert.equal(lines,1,'The wide report load label stays on one readable line.');
+          }
           assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+          assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
           await page.screenshot({path:'.local/review/finance-receivable-aging-populated-'+name+'-'+width+'.png'});
          }
          await allowInvoiceReadWindow();
@@ -666,7 +916,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          await draftDisclosure.click();
          await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
          await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-         await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+         await openOriginalDraft.click();
          await expect(draftStatus).toHaveText('Issued invoice loaded.');
         }
         await allowInvoiceReadWindow();
@@ -674,6 +924,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         const credit=invoice.getByRole('region',{name:'Credit a paid or partly paid invoice',exact:true});
         await credit.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
         await expect(credit.getByRole('status')).toContainText('Choose the payment');
+        await reviewPaymentAccessRecovery({page,region:credit,engine:name,task:'paid-credit',loadLabel:'Load applied payments',privateTarget:credit.getByRole('button',{name:'Review credit and payment',exact:true}),message:'Sign in again to review paid invoice credits.',ready:'Choose the payment to use for the credit.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
         const choice=credit.getByLabel('Payment',{exact:true});
         if(await choice.count())await choice.selectOption({label:(await choice.locator('option').nth(1).textContent()).trim()});
         await allowInvoiceReadWindow();
@@ -716,7 +967,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await draftDisclosure.click();
         await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
         await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-        await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+        await openOriginalDraft.click();
         await expect(draftStatus).toHaveText('Issued invoice loaded.');
         await invoice.getByText('Credit a paid or partly paid invoice',{exact:true}).press('Enter');
         await credit.getByRole('button',{name:'Load applied payments',exact:true}).press('Enter');
@@ -730,12 +981,21 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
         await payments.getByRole('button',{name:'Load saved balances',exact:true}).click();
         await expect(payments.getByRole('status')).toHaveText('This customer has no outstanding invoices for that date.');
         await expect(payments).not.toContainText('TEST-1 ·');
+        if(invoiceOutstanding){
+         await checkOutstanding('0');await expect(outstanding).not.toContainText('Paid');
+         for(const width of [360,390,768,1440,1920]){await page.setViewportSize({width,height:900});await outstanding.scrollIntoViewIfNeeded();
+          assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+          assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(issue=>issue.id),[]);
+          await page.screenshot({path:'.local/review/invoice-outstanding-credited-'+name+'-'+width+'.png'});
+         }
+        }
         if(serviceRefunds){
          await allowInvoiceReadWindow();
          await invoice.getByText('Record a settled refund',{exact:true}).press('Enter');
          const refund=invoice.getByRole('region',{name:'Record a settled refund',exact:true});
          await refund.getByRole('button',{name:'Load available credits',exact:true}).press('Enter');
          await expect(refund.getByRole('status')).toHaveText('Enter the date the refund settled.');
+         await reviewPaymentAccessRecovery({page,region:refund,engine:name,task:'service-refund',loadLabel:'Load available credits',privateLabel:'Settlement date',message:'Sign in again to review service refunds.',ready:'Enter the date the refund settled.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
          const date=await businessDate();
          await refund.getByLabel('Settlement date',{exact:true}).fill(date);
          await refund.getByRole('button',{name:'Review refund',exact:true}).press('Enter');
@@ -773,14 +1033,15 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
          const refundDownload=page.waitForEvent('download');
          await refund.getByRole('button',{name:'Download refund record (CSV)',exact:true}).click();
          assert.match(await readFile(await (await refundDownload).path(),'utf8'),/"500","Fictional bank debit settled","Fictional service refund confirmed"/);
+         if(invoiceOutstanding)await checkOutstanding('0');
         }
        }
        await page.goto(fixture.origin+'/settings/accounts');
-       await page.getByRole('button',{name:'Load accounts',exact:true}).click();
-       await page.getByText('Fictional trial balance',{exact:true}).click();
        const report=page.getByRole('region',{name:'Fictional trial balance',exact:true});
        await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
        await expect(report.getByRole('status')).toHaveText('Posted balances loaded.');
+       await report.getByText('Journal entries',{exact:true}).click();
+       await reviewPaymentAccessRecovery({page,region:report,recoveryRegion:page.getByRole('region',{name:'Account settings',exact:true}),engine:name,task:'journal',loadLabel:'Load journal entries',privateTarget:report.locator('table').first(),message:'Sign in again to review accounting records.',ready:'Posted balances loaded.',facts:financialFacts,allowRead:allowInvoiceReadWindow,expectedSignIn:'/sign-in?returnTo=accounting&view=reports',auditSelector:'html',reload:async()=>{await page.reload();await report.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');}});
        await expect(report).toContainText(heldTips?'Customer funds and tax payable match the ledger':'Customer funds held match the ledger');
        await report.getByText('Journal entries',{exact:true}).click();
        await report.getByRole('button',{name:'Load journal entries',exact:true}).press('Enter');
@@ -795,7 +1056,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
        }
        if(receivableAging){
         await allowInvoiceReadWindow();
-        await page.getByText('Outstanding invoices by due date',{exact:true}).press('Enter');
+        await page.getByRole('group',{name:'Choose a report',exact:true}).getByRole('button',{name:'Receivables',exact:true}).press('Enter');
         const aging=page.getByRole('region',{name:'Outstanding invoices by due date',exact:true});
         const load=aging.getByRole('button',{name:'Load outstanding invoices',exact:true});
         await page.route('**/api/business/finance-accounts/receivable-aging',route=>route.abort(),{times:1});
@@ -898,7 +1159,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           await draftDisclosure.click();
           await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
           await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-          await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+          await openOriginalDraft.click();
           await expect(draftStatus).toHaveText('Issued invoice loaded.');
           await invoice.getByText('Record a fictional payment',{exact:true}).press('Enter');
          }
@@ -996,6 +1257,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           await allowInvoiceReadWindow();
           await openReturn(committed.actualOn);
           await expect(returnPanel.getByRole('status')).toHaveText('Choose the original payment and match the settled amount to your account record.');
+          await reviewPaymentAccessRecovery({page,region:returnPanel,engine:name,task:'excess-return',loadLabel:'Load eligible payments',privateTarget:returnPanel.getByRole('combobox',{name:'Original payment',exact:true}),message:'Sign in again to review unused payment returns.',ready:'Choose the original payment and match the settled amount to your account record.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow,reload:async()=>{await returnPanel.getByLabel('Settlement date',{exact:true}).fill(committed.actualOn);await returnPanel.getByRole('button',{name:'Load eligible payments',exact:true}).press('Enter');}});
           const payment=returnPanel.getByRole('combobox',{name:'Original payment',exact:true});
           await expect(payment.locator('option')).toHaveCount(2);
           await expect(payment.locator('option').nth(1)).toContainText('$12.34 available');
@@ -1066,6 +1328,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await panel.getByRole('button',{name:'Load customer payments',exact:true}).press('Enter');
            const payment=panel.getByRole('combobox',{name:'Original payment',exact:true});
            await expect(payment).toBeVisible();
+           await reviewPaymentAccessRecovery({page,region:panel,engine:name,task:'collection-failure',loadLabel:'Load customer payments',privateTarget:payment,message:'Sign in again to review failed payments.',ready:'Choose the original payment.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow});
            await payment.selectOption(committed.paymentId);
            const label=await payment.evaluate(select=>select.selectedOptions[0]?.textContent);
            assert(label?.includes('$12.34')&&label.includes(committed.paymentId.slice(-8)));
@@ -1121,7 +1384,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await draftDisclosure.click();
            await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
            await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-           await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+           await openOriginalDraft.click();
            await expect(draftStatus).toHaveText('Issued invoice loaded.');
            await invoice.getByText(title,{exact:true}).press('Enter');
            await panel.getByRole('button',{name:'Check original adjustment',exact:true}).press('Enter');
@@ -1137,11 +1400,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            const title='Review a returned refund';
            const transfer=invoice.getByRole('region',{name:title,exact:true});
            await invoice.getByText(title,{exact:true}).press('Enter');
+           let transferAccessReviewed=false;
            async function prepareTransfer(kind,eventId,amount,transaction){
             await transfer.getByRole('combobox',{name:'What happened?',exact:true}).selectOption(kind);
             await transfer.getByLabel('Settlement date',{exact:true}).fill(committed.actualOn);
             await transfer.getByRole('button',{name:'Load prior transfers',exact:true}).press('Enter');
             await expect(transfer.locator(':scope > [role="status"]')).toContainText('Choose the prior transfer');
+            if(!transferAccessReviewed){
+             await reviewPaymentAccessRecovery({page,region:transfer,engine:name,task:'refund-transfer',loadLabel:'Load prior transfers',privateTarget:transfer.getByRole('combobox',{name:'Prior transfer',exact:true}),message:'Sign in again to review refund transfers.',ready:/Choose the prior transfer/,jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow,reload:async()=>{await transfer.getByRole('combobox',{name:'What happened?',exact:true}).selectOption(kind);await transfer.getByLabel('Settlement date',{exact:true}).fill(committed.actualOn);await transfer.getByRole('button',{name:'Load prior transfers',exact:true}).press('Enter');}});
+             transferAccessReviewed=true;
+            }
             await transfer.getByRole('combobox',{name:'Prior transfer',exact:true}).selectOption(eventId);
             await transfer.getByText('$1.00 available',{exact:true}).press('Enter');
             await transfer.getByLabel('Amount to record (USD)',{exact:true}).fill(amount);
@@ -1195,7 +1463,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await draftDisclosure.click();
            await drafts.getByRole('button',{name:'Load saved drafts',exact:true}).click();
            await expect(draftStatus).toHaveText('Saved invoice drafts loaded.');
-           await drafts.getByRole('button',{name:'Open invoice draft',exact:true}).click();
+           await openOriginalDraft.click();
            await expect(draftStatus).toHaveText('Issued invoice loaded.');
            await invoice.getByText(title,{exact:true}).press('Enter');
            await transfer.getByRole('button',{name:'Check original refund transfer',exact:true}).press('Enter');
@@ -1229,7 +1497,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
             const reload=page.getByRole('button',{name:'Load current customers',exact:true});
             await expect(entries.or(reload).first()).toBeVisible();
             if(!await entries.isVisible())await reload.press('Enter');
-            await entries.press('Enter');
+            await entries.press('Enter');await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Payments',exact:true}).click();
             const restore=page.getByRole('region',{name:'Restore a failed payment',exact:true});
             await page.locator('summary').filter({hasText:'Restore a failed payment'}).press('Enter');
             await expect(restore).toBeVisible();
@@ -1239,6 +1507,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            await restore.getByRole('button',{name:'Load failed payments',exact:true}).press('Enter');
            const status=restore.locator(':scope > [role="status"]');
            await expect(status).toHaveText('Choose the failed payment that the provider credited back.');
+           await reviewPaymentAccessRecovery({page,region:restore,engine:name,task:collectionFailureGroupedRecreditExport?'grouped-recredit':'legacy-recredit',loadLabel:'Load failed payments',privateTarget:restore.getByRole('combobox',{name:'Failed payment',exact:true}),message:collectionFailureGroupedRecreditExport?'Sign in again to review grouped recovered payments.':'Sign in again to review recovered payments.',ready:'Choose the failed payment that the provider credited back.',jobId,facts:financialFacts,allowRead:allowInvoiceReadWindow,expectedSignIn:'/sign-in?returnTo=customers&customer='+adjustment.customerId+'&view=payments'});
            await restore.getByRole('combobox',{name:'Failed payment',exact:true}).selectOption(adjustment.collectionFailureId);
            await restore.getByLabel('Date the deposit cleared',{exact:true}).fill(committed.actualOn);
            await allowInvoiceReadWindow();
@@ -1311,7 +1580,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
             .locator(':scope > [role="status"]')).toContainText('Customer saved');
            await page.getByRole('button',{name:'Load current customers',exact:true}).press('Enter');
            await allowInvoiceReadWindow();
-           await page.getByRole('button',{name:customerName,exact:true}).press('Enter');
+           await page.getByRole('button',{name:customerName,exact:true}).press('Enter');await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Payments',exact:true}).click();
            const customerPayment=page.getByRole('region',{name:'Record a fictional payment',exact:true});
            await page.getByText('Record a fictional payment',{exact:true}).press('Enter');
            await customerPayment.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
@@ -1355,7 +1624,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
            assert.equal(storedTip.customerId,directTip.customerId);
            await allowInvoiceReadWindow();
            await page.reload();
-           await page.getByRole('button',{name:customerName,exact:true}).press('Enter');
+           await page.getByRole('button',{name:customerName,exact:true}).press('Enter');await page.getByRole('navigation',{name:'Customer record sections',exact:true}).getByRole('button',{name:'Payments',exact:true}).click();
            await page.getByText('Record a fictional payment',{exact:true}).press('Enter');
            await customerPayment.getByRole('button',{name:'Load saved balances',exact:true}).press('Enter');
            await expect(paymentStatus).toHaveText('The original payment was saved.');
@@ -1367,14 +1636,14 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
           }
           await allowInvoiceReadWindow();
           await page.goto(fixture.origin+'/settings/accounts');
-          await page.getByRole('button',{name:'Load accounts',exact:true}).click();
-          await page.getByText(refundTransferExport?'Available customer funds':'Customer funds held',{exact:true}).press('Enter');
+          const reportPicker=page.getByRole('group',{name:'Choose a report',exact:true});
+          await reportPicker.getByRole('button',{name:'Customer funds',exact:true}).press('Enter');
           const heldReport=page.getByRole('region',{name:'Customer funds held',exact:true});
           await heldReport.getByRole('button',{name:'Load customer funds',exact:true}).press('Enter');
           await expect(heldReport.getByRole('status')).toHaveText('Customer funds matched the ledger.');
           await heldReport.getByText(/^Held funds by customer/).press('Enter');
           await expect(heldReport.getByText(collectionFailureExport?'$11.09':'$11.34',{exact:true}).first()).toBeVisible();
-          await page.getByText('Fictional trial balance',{exact:true}).press('Enter');
+          await reportPicker.getByRole('button',{name:'Ledger',exact:true}).press('Enter');
           const trial=page.getByRole('region',{name:'Fictional trial balance',exact:true});
           await trial.getByRole('button',{name:'Load trial balance',exact:true}).press('Enter');
           await expect(trial.getByRole('status')).toHaveText('Posted balances loaded.');
@@ -1501,6 +1770,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
      }
     }
  }catch(error){
+  t.diagnostic(JSON.stringify({failedReads:failedReads.slice(-15),session:await sessionAdmissionDiagnostic(fixture)}));
   if(error instanceof Error)throw new Error(error.message+'\nRecent finance responses '+JSON.stringify(financeResponses.slice(-15)),{cause:error});
   throw error;
  }finally{

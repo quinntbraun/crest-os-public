@@ -174,7 +174,7 @@ export function OpeningReceivables({worksheet}:{worksheet:OpeningReceipt}){
    <p role="status">{message}</p>
    <button type="button" className="secondary" disabled={busy||!!pending} onClick={loadSaved}>Load saved receivables</button>
    {pending&&<div className={styles.openingGroup}>
-    <button type="button" className="secondary" disabled={busy} onClick={()=>inspect(null)}>Check original receivables save</button>
+    <button type="button" disabled={busy} onClick={()=>inspect(null)}>Check original receivables save</button>
     {mayClose&&<form onSubmit={event=>{event.preventDefault();if(financeAccountReviewReason(closeReason.trim()))inspect(closeReason.trim());}}>
      <label htmlFor="ar-close-reason">Reason for closing this receivables save</label>
      <input id="ar-close-reason" required maxLength={1000} value={closeReason} onChange={event=>setCloseReason(event.target.value)}/>
@@ -185,6 +185,7 @@ export function OpeningReceivables({worksheet}:{worksheet:OpeningReceipt}){
    {posting&&<details>
     <summary>Preview opening entry from saved evidence</summary>
     <p>This preview uses the saved bank and receivables evidence. Posting requires verified controls, approved account mappings, and cutover approval.</p>
+    {posting.warnings.length>0&&<ul aria-label="Negative account balances">{posting.warnings.map(warning=><li key={warning}>{warning}</li>)}</ul>}
     {posting.blockers.length>0&&<ul>{posting.blockers.map(blocker=><li key={blocker}>{blocker}</li>)}</ul>}
     {posting.lines.length>0&&<dl>
      {posting.lines.map(line=><div key={line.accountCode}>
@@ -238,7 +239,7 @@ export function OpeningReceivables({worksheet}:{worksheet:OpeningReceipt}){
      </fieldset>)}
      <button type="button" className="secondary" disabled={reductions.length>=20}
       onClick={()=>setReductions([...reductions,'ar-adjustment-'+crypto.randomUUID()])}>Add prior payment or credit</button>
-     <button type="submit" disabled={lines.length>=20}>Add receivable to preview</button>
+     <button type="submit" className={lines.length>0?'secondary':undefined} disabled={lines.length>=20}>Add receivable to preview</button>
     </fieldset>
    </form>}
    {lines.length>0&&<>
@@ -248,7 +249,7 @@ export function OpeningReceivables({worksheet}:{worksheet:OpeningReceipt}){
       setLines(lines.filter((_,position)=>position!==index));setPreview(null);
      }}>Remove receivable {index+1}</button>
     </li>)}</ul>
-    <button type="button" disabled={busy} onClick={review}>Review opening receivables</button>
+    <button type="button" className={preview&&saved!==undefined?'secondary':undefined} disabled={busy} onClick={review}>Review opening receivables</button>
    </>}
    {preview&&<div><h3>Opening receivables preview</h3>
     <p>Total remaining · ${dollars(preview.totals.remainingCents)} USD</p>

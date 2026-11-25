@@ -1,4 +1,4 @@
-// Disposable Linux-only real Auth/SQL/SigV4/JWE/TLS fixture. It serves compiled
+// Disposable real Auth/SQL/SigV4/JWE/TLS fixture. It serves compiled
 // actual React controls, or an explicit actual Next test application. No hosted
 // provider or production activation. The default retains the compiled-control fixture.
 import assert from 'node:assert/strict';
@@ -14,18 +14,21 @@ import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import {browserTestTls} from './browser-test-tls.mjs';
 import {readFile,chmod,mkdir,writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
-import {join} from 'node:path';
+import {join,win32} from 'node:path';
 import {Readable} from 'node:stream';
+import {request as httpsRequest} from 'node:https';
+import {openingFunds139Candidate} from './opening-funds139-candidate.mjs';
 import {URI,TOTP} from 'otpauth';
 import {migrationSandbox} from './migration-sandbox.mjs';
-import {syntheticLeadFollowUpsAvailable,syntheticLeadMatchReviewAvailable,syntheticRecordJobHistoryAvailable} from '../../scripts/synthetic-migrations.mjs';
+import {syntheticLeadFollowUpsAvailable,syntheticLeadMatchReviewAvailable,syntheticRecordJobHistoryAvailable,syntheticCustomerProfileAvailable} from '../../scripts/synthetic-migrations.mjs';
 import {installProviderSchema} from './provider-schema.mjs';
 import {startRealAuthService,authResult} from './real-auth-service.mjs';
 import {buildSourceExportBrowserFixture} from './source-export-browser-build.mjs';
 const signal=()=>new AbortController().signal,sha=value=>createHash('sha256').update(value).digest('hex'),release='a'.repeat(40);
-export async function sourceExportBrowserFixture({product=false,workspace=false,leadFollowUps=false,leadMatchReview=false,legacyContactMatches=false,legacyContactBatches=false,legacyContactEffects=false,legacyContactTargets=false,legacyContactDecisions=false,legacyContactApprovals=false,legacyContactApplications=false,automaticContactImport=false,legacyContactDownloads=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,scheduling=false,recordJobHistory=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,postedFinanceExport=false,photoFixture}={}){
+export async function sourceExportBrowserFixture({product=false,workspace=false,leadFollowUps=false,leadMatchReview=false,legacyContactMatches=false,legacyContactBatches=false,legacyContactEffects=false,legacyContactTargets=false,legacyContactDecisions=false,legacyContactApprovals=false,legacyContactApplications=false,automaticContactImport=false,legacyContactDownloads=false,catalog=false,quotes=false,quoteReview=false,quoteCommercial=false,appointmentHolds=false,expenses=false,expenseReceipts=false,scheduling=false,recordJobHistory=false,customerProfileFixture=false,bookingConflictReview=false,additionalSchedulingAgreement=false,combinedSchedulingAgreements=false,amendments=false,amendmentAcceptance=false,fieldSessions=false,jobCompletion=false,jobMileage=false,supportTrips=false,unfulfilledCancellation=false,workTime=false,workBoundary=false,workStart=false,workEnd=false,mobileDeparture=false,reviewOutcome=false,reviewHistory=false,maintenanceFollowUp=false,dropoffCustody=false,dropoffPolicyRevision=false,pickupTrips=false,pickupCollection=false,pickupPolicy=false,pickupPhotos=false,pickupReturnWorkflow=false,financeAccounts=false,financeMappings=false,financeMappingHistory=false,financeHistoryEvidence=false,financeTaxProfiles=false,financeCategoryMappings=false,financeMoneyChannels=false,openingWorksheet=false,openingFunds=false,openingPayables=false,statementStaging=false,invoicePreparation=false,invoiceDrafts=false,invoiceIssueTaxReview=false,invoiceIssue=false,invoiceOutstanding=false,directReceipts=false,sameDayExpenses=false,trialBalance=false,paymentCorrections=false,fundApplications=false,heldTips=false,invoiceCredits=false,paidInvoiceCredits=false,serviceRefunds=false,googleCalendar=false,googleCalendarAutomatic=false,calendarActivityBookings=0,calendarActivityOverlap=false,postedFinanceExport=false,photoFixture}={}){
  assert((typeof legacyContactApplications==='boolean'||legacyContactApplications==='background')&&(!legacyContactApplications||legacyContactApprovals));
  assert(typeof leadFollowUps==='boolean'&&(!leadFollowUps||product&&workspace));
+ assert(typeof customerProfileFixture==='boolean'&&(!customerProfileFixture||recordJobHistory));
  assert(typeof recordJobHistory==='boolean'&&(!recordJobHistory||product&&workspace&&scheduling));
  assert(typeof leadMatchReview==='boolean'&&(!leadMatchReview||product&&workspace));
  assert(typeof legacyContactDownloads==='boolean'&&(!legacyContactDownloads||product&&legacyContactApplications==='background'));
@@ -45,17 +48,23 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert.equal(typeof bookingConflictReview,'boolean');assert(!bookingConflictReview||scheduling,'conflict reads require the registered scheduling fixture');
  assert.equal(typeof scheduling,'boolean');assert(!scheduling||product&&workspace&&quotes&&quoteReview&&quoteCommercial,'scheduling requires the genuine accepted-quote product server');
  assert.equal(typeof expenses,'boolean');assert(!expenses||product&&workspace,'expenses require the genuine workspace product server');
+ assert(!expenseReceipts||expenses,'receipt uploads require the authenticated Expenses workspace');
  assert.equal(typeof appointmentHolds,'boolean');assert(!appointmentHolds||product&&workspace,'appointment proposals require the actual workspace product server');
  assert.equal(typeof financeAccounts,'boolean');assert(!financeAccounts||product&&workspace);
  assert.equal(typeof financeMappings,'boolean');assert(!financeMappings||financeAccounts);
+ assert.equal(typeof financeHistoryEvidence,'boolean');assert(!financeHistoryEvidence||financeAccounts);
+ assert.equal(typeof financeMappingHistory,'boolean');assert(!financeMappingHistory||financeMappings);
  assert.equal(typeof financeTaxProfiles,'boolean');assert(!financeTaxProfiles||financeAccounts&&catalog);
  assert.equal(typeof financeCategoryMappings,'boolean');assert(!financeCategoryMappings||financeAccounts&&financeMappings);
  assert.equal(typeof financeMoneyChannels,'boolean');assert(!financeMoneyChannels||financeAccounts);
  assert.equal(typeof openingWorksheet,'boolean');assert(!openingWorksheet||financeMoneyChannels&&!googleCalendar);
+ assert.equal(typeof openingFunds,'boolean');assert(!openingFunds||openingWorksheet&&!postedFinanceExport);
+ assert.equal(typeof openingPayables,'boolean');assert(!openingPayables||openingWorksheet&&!postedFinanceExport);
  assert(typeof statementStaging==='boolean'&&(!statementStaging||financeMoneyChannels&&postedFinanceExport&&!googleCalendar));
  assert.equal(typeof invoicePreparation,'boolean');assert(!invoicePreparation||financeAccounts&&jobCompletion);
  assert.equal(typeof invoiceIssueTaxReview,'boolean');assert(!invoiceIssueTaxReview||invoiceDrafts&&financeTaxProfiles);
  assert.equal(typeof invoiceIssue,'boolean');assert(!invoiceIssue||invoiceIssueTaxReview&&financeMappings);
+ assert(typeof invoiceOutstanding==='boolean'&&(!invoiceOutstanding||invoiceIssue));
  assert(typeof directReceipts==='boolean'&&(!directReceipts||invoiceIssue&&financeMoneyChannels));
  assert(typeof sameDayExpenses==='boolean'&&(!sameDayExpenses||directReceipts&&expenses&&financeCategoryMappings));
  assert(typeof trialBalance==='boolean'&&(!trialBalance||sameDayExpenses));
@@ -78,6 +87,13 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  const supplierBillDrafts=statementMatchDrafts&&process.env.CREST_TEST_SUPPLIER_BILL_DRAFTS==='1';
  const supplierPayableReview=supplierBillDrafts&&process.env.CREST_TEST_SUPPLIER_PAYABLE_REVIEW==='1';
  const supplierPayablePosting=supplierPayableReview&&process.env.CREST_TEST_SUPPLIER_PAYABLE_POSTING==='1';
+ if(supplierPayablePosting&&process.env.CREST_SUPPLIER_DOCUMENT_IMAGE_ID){
+  assert(/^sha256:[a-f0-9]{64}$/.test(process.env.CREST_SUPPLIER_DOCUMENT_IMAGE_ID),'SYNTHETIC_SUPPLIER_IMAGE_REQUIRED');
+  if(process.platform==='win32'){
+   const executable=process.env.CREST_TEST_DOCKER_EXECUTABLE;
+   assert(typeof executable==='string'&&/^[A-Za-z]:[\\/]/.test(executable)&&win32.basename(executable).toLowerCase()==='docker.exe'&&!/\p{Cc}/u.test(executable),'SYNTHETIC_SUPPLIER_DOCKER_PATH_REQUIRED');
+  }
+ }
  const openingArPreview=openingWorksheet&&process.env.CREST_TEST_OPENING_AR_PREVIEW==='1';
  assert(!openingArPreview||postedFinanceExport);
  const recordedIncomeStatement=process.env.CREST_TEST_RECORDED_INCOME_STATEMENT==='1';
@@ -106,8 +122,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
  assert.equal(typeof quoteCommercial,'boolean');assert(!quoteCommercial||product&&workspace&&quotes&&quoteReview,'quote commercial journeys require the actual workspace, quotes and review product server');
  assert(["linux","win32"].includes(process.platform),"supported disposable TLS/Auth browser fixture required");process.env.NODE_ENV='production';
  assert(!photoFixture||dropoffCustody&&Buffer.isBuffer(photoFixture));
- let sandbox,client,service,login,contactWorkerLogin,contactWorkerConnection,owned=false,server,h,app,photoStorage,photoLogin,financeLogin,calendarLogin,calendarWorkerLogin,postedFinanceLogin,supplierStorage,supplierDocuments,supplierWorkerLogin;
- async function close(){try{if(app){await app.close();app=undefined;server=undefined;}else if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));server=undefined;}}finally{try{await h?.close();h=undefined;}finally{try{await service?.close();service=undefined;}finally{try{if(photoStorage)await photoStorage.close();supplierDocuments?.close();if(supplierStorage)await supplierStorage.close();if(supplierWorkerLogin)await sandbox.admin.query('DROP ROLE '+supplierWorkerLogin);if(contactWorkerLogin)await sandbox.admin.query('DROP ROLE IF EXISTS '+contactWorkerLogin);if(photoLogin)await sandbox.admin.query('DROP ROLE '+photoLogin);if(calendarLogin)await sandbox.admin.query('DROP ROLE '+calendarLogin);if(calendarWorkerLogin)await sandbox.admin.query('DROP ROLE '+calendarWorkerLogin);if(financeLogin)await sandbox.admin.query('DROP ROLE '+financeLogin);if(postedFinanceLogin)await sandbox.admin.query('DROP ROLE '+postedFinanceLogin);if(owned){await sandbox.admin.query('DROP ROLE '+login);owned=false;}}finally{await sandbox?.close();sandbox=undefined;}}}}}
+ let sandbox,client,service,login,contactWorkerLogin,contactWorkerConnection,owned=false,server,h,app,photoStorage,photoLogin,financeLogin,calendarLogin,calendarWorkerLogin,postedFinanceLogin,expenseReceiptStorage,expenseReceiptDocuments,supplierStorage,supplierDocuments,supplierWorkerLogin;
+ async function close(){try{if(app){await app.close();app=undefined;server=undefined;}else if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));server=undefined;}}finally{try{await h?.close();h=undefined;}finally{try{await service?.close();service=undefined;}finally{try{if(photoStorage)await photoStorage.close();expenseReceiptDocuments?.close();if(expenseReceiptStorage)await expenseReceiptStorage.close();supplierDocuments?.close();if(supplierStorage)await supplierStorage.close();if(supplierWorkerLogin)await sandbox.admin.query('DROP ROLE '+supplierWorkerLogin);if(contactWorkerLogin)await sandbox.admin.query('DROP ROLE IF EXISTS '+contactWorkerLogin);if(photoLogin)await sandbox.admin.query('DROP ROLE '+photoLogin);if(calendarLogin)await sandbox.admin.query('DROP ROLE '+calendarLogin);if(calendarWorkerLogin)await sandbox.admin.query('DROP ROLE '+calendarWorkerLogin);if(financeLogin)await sandbox.admin.query('DROP ROLE '+financeLogin);if(postedFinanceLogin)await sandbox.admin.query('DROP ROLE '+postedFinanceLogin);if(owned){await sandbox.admin.query('DROP ROLE '+login);owned=false;}}finally{await sandbox?.close();sandbox=undefined;}}}}}
  try{
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);const previous=await sandbox.apply(target,await sandbox.prefix(42)),registered=await sandbox.apply(target,await sandbox.prefix(43));assert.equal(registered.history.length,43);assert.deepEqual(registered.history.slice(0,42),previous.history);
   if(catalog){const adopted=await sandbox.apply(target,await sandbox.prefix(44));assert.equal(adopted.history.length,44);assert.deepEqual(adopted.history.slice(0,43),registered.history);}
@@ -237,9 +253,12 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     assert.equal((await sandbox.apply(target,await sandbox.prefix(115))).history.length,115);
    }
   }
+  if(openingFunds){const candidate=await openingFunds139Candidate(sandbox);assert.equal((await sandbox.apply(target,candidate.directory)).history.length,139);}
+  if(openingPayables)assert.equal((await sandbox.apply(target,await sandbox.prefix(141))).history.length,141);
   const compiled=await buildSourceExportBrowserFixture(sandbox.workspace),runtime=await import(pathToFileURL(compiled.server).href);
   assert(typeof googleCalendar==='boolean'&&(!googleCalendar||product&&workspace&&!paidInvoiceCredits));
   assert(typeof googleCalendarAutomatic==='boolean'&&(!googleCalendarAutomatic||googleCalendar&&scheduling));
+  assert(Number.isInteger(calendarActivityBookings)&&calendarActivityBookings>=0&&calendarActivityBookings<=6&&(!calendarActivityBookings||googleCalendar&&scheduling));
   assert(typeof postedFinanceExport==='boolean'&&(!postedFinanceExport||product&&(serviceRefunds||statementStaging)&&!googleCalendar));
   let calendarConfiguration;
   if(googleCalendar){
@@ -274,12 +293,15 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    assert.equal(await syntheticLeadMatchReviewAvailable(target),true);
   }
   const recordJobBaseline=recordJobHistory?await sandbox.apply(target,await sandbox.prefix(119)):null;
+  let customerProfile=false;
   if(recordJobBaseline){
    assert.equal(recordJobBaseline.history.length,119);
    assert.equal(await syntheticRecordJobHistoryAvailable(target),false);
   }
+  if(financeMappingHistory)assert.equal((await sandbox.apply(target,await sandbox.prefix(123))).history.length,123);
+  if(financeHistoryEvidence)assert.equal((await sandbox.apply(target,await sandbox.prefix(124))).history.length,124);
   login='crest_export_browser_'+randomBytes(8).toString('hex');const secret=randomBytes(32).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");owned=true;await sandbox.admin.query('GRANT crest_web TO '+login);const url=new URL(target);url.username=login;url.password=secret;const config={connectionString:url.toString(),environment:'test'};
-  service=await startRealAuthService(target,{diagnostic:amendmentAcceptance});const email='synthetic-browser-export-'+randomUUID()+'@example.com',password=randomBytes(32).toString('base64url'),user=authResult(await service.admin.admin.createUser({email,password,email_confirm:true}),'export_browser_user').user;assert(user?.id);
+  service=await startRealAuthService(target,{diagnostic:amendmentAcceptance||quotes||fieldSessions||expenses||financeMappings||financeTaxProfiles||legacyContactBatches||legacyContactApplications});const email='synthetic-browser-export-'+randomUUID()+'@example.com',password=randomBytes(32).toString('base64url'),user=authResult(await service.admin.admin.createUser({email,password,email_confirm:true}),'export_browser_user').user;assert(user?.id);
   const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password}),'export_browser_enrollment');const factor=authResult(await sdk.mfa.enroll({factorType:'totp',friendlyName:'Synthetic export browser MFA'}),'export_browser_factor'),totp=URI.parse(factor.totp.uri);assert(totp instanceof TOTP);authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'export_browser_mfa');
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;let actor,business,epoch;
   await client.query('BEGIN');try{
@@ -293,8 +315,10 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    await sandbox.admin.query('CREATE ROLE '+candidate+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+secret+"'");
    financeLogin=candidate;await sandbox.admin.query('GRANT crest_finance_preview TO '+financeLogin);
    const financeUrl=new URL(target);financeUrl.username=financeLogin;financeUrl.password=secret;
-   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,...excessReceipts?{excessReceipts}:{},...excessReturnExport?{excessReturns:true}:{},...tipReturnExport?{tipReturns:true}:{},...collectionFailureExport?{collectionFailures:true}:{},...refundTransferExport?{refundTransfers:true}:{},...directReceiptTipExport?{directReceiptTips:true}:{},...refundTransferFeeExport?{refundTransferFees:true}:{},...collectionFailureRecreditExport?{collectionFailureRecredits:true}:{},...collectionFailureGroupedRecreditExport?{collectionFailureGroupedRecredits:true}:{},...restoredTips?{collectionFailureTipReinstatements:true}:{}};
+   financeConfiguration={connectionString:financeUrl.href,fixedMappings:financeMappings,mappingHistoryEvidence:financeMappingHistory,historyEvidence:financeHistoryEvidence,taxProfiles:financeTaxProfiles,categoryMappings:financeCategoryMappings,moneyChannels:financeMoneyChannels,invoicePreparation,invoiceDrafts,invoiceIssueTaxReview,invoiceIssue,invoiceOutstanding,directReceipts,sameDayExpenses,trialBalance,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,receivableAging,customerFundsReport,...excessReceipts?{excessReceipts}:{},...excessReturnExport?{excessReturns:true}:{},...tipReturnExport?{tipReturns:true}:{},...collectionFailureExport?{collectionFailures:true}:{},...refundTransferExport?{refundTransfers:true}:{},...directReceiptTipExport?{directReceiptTips:true}:{},...refundTransferFeeExport?{refundTransferFees:true}:{},...collectionFailureRecreditExport?{collectionFailureRecredits:true}:{},...collectionFailureGroupedRecreditExport?{collectionFailureGroupedRecredits:true}:{},...restoredTips?{collectionFailureTipReinstatements:true}:{}};
    if(openingWorksheet)financeConfiguration.openingWorksheet=true;
+   if(openingFunds)financeConfiguration.openingFunds=true;
+   if(openingPayables)financeConfiguration.openingPayables=true;
    if(statementStaging)financeConfiguration.statementStaging=true;
    if(statementMatchReview)financeConfiguration.statementMatchReview=true;
    if(statementMatchDrafts)financeConfiguration.statementMatchDrafts=true;
@@ -513,6 +537,8 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
       'Fictional exemption policy','Fictional exempt profile approval'])).rows[0].result.state,'committed');
    }finally{seedHash.fill(0);await finance.end();}
   }
+  assert(typeof calendarActivityOverlap==='boolean'&&(!calendarActivityOverlap||calendarActivityBookings===6));
+  const calendarActivityJobIds=[];
   let bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,fieldVehicleId;
   if(scheduling){
    const web=await sandbox.connect(url.toString()),seedHash=runtime.sessionCredentialHash(credential);
@@ -525,7 +551,29 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
      assert.equal(saved.state,'committed');
      return (await client.query('SELECT id FROM crest.service_versions WHERE (business_id,service_id)=($1,$2)',[business,serviceId])).rows[0].id;
     }
-   }:{});bookingRequest=confirmedBookingRequest(parent);bookingFamilyId=parent.familyId;if(fieldSessions){fieldVehicleId=randomUUID();const payload={label:'Synthetic field equipment rig',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'business_rig',notes:null,archived:false,archiveReason:null};assert.equal((await web.query('SELECT crest_commands.save_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',[...parent.auth(),epoch,randomUUID(),fieldVehicleId,payload])).rows[0].result.state,'committed');}if(additionalSchedulingAgreement||combinedSchedulingAgreements){const other=await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch},combinedSchedulingAgreements?{customerId:parent.customer}:{});additionalBookingRequest=confirmedBookingRequest(other);additionalBookingFamilyId=other.familyId;}}
+   }:{});bookingRequest=confirmedBookingRequest(parent);bookingFamilyId=parent.familyId;
+   // Optional dense Calendar fixture: real retained parents and protected native
+   // booking commands. No browser login or provider-delivery claim is made here.
+   for(let index=0;index<calendarActivityBookings;index++){
+    const owner=index===0?parent:await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch});
+    const request=index===0?bookingRequest:confirmedBookingRequest(owner);
+    const workspace=(await web.query('SELECT crest_commands.read_booking_workspace($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid) AS result',owner.auth())).rows[0].result;
+    request.expectedModeSequence=workspace.modeVersion?.sequence??'0';
+    const start=new Date(Date.parse(bookingRequest.payload.appointment.start_at)+(calendarActivityOverlap&&index===1?30*60000:index*2*3600000)).toISOString().replace('.123Z','.123456Z');
+    const end=new Date(Date.parse(start)+3600000).toISOString().replace('.123Z','.123456Z');
+    request.payload.appointment={...request.payload.appointment,start_at:start,end_at:end,local_start:start.slice(0,-1),local_end:end.slice(0,-1)};
+    if(calendarActivityOverlap){
+     // Explicit synthetic override only after the real protected slot review.
+     const review=(await web.query('SELECT crest_commands.review_booking_slot($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::timestamptz,$12::timestamptz,$13::integer,$14::integer) AS result',[...owner.auth(),actor,null,start,end,0,0])).rows[0].result;
+     assert(Array.isArray(review.conflictingAppointmentIds)&&typeof review.unknownTravel==='boolean');
+     if(index===1)assert.equal(review.conflictingAppointmentIds.length,1);
+     request.payload.conflictReview={expectedAppointmentIds:review.conflictingAppointmentIds,expectedUnknownTravel:review.unknownTravel,overrideReason:review.conflictingAppointmentIds.length?'Explicit synthetic owner override for populated planner visual review.':null};
+     request.payload.appointment.unknown_travel_reviewed=review.unknownTravel;
+    }
+    const result=(await web.query('SELECT crest_commands.book_job($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::uuid,$11::integer,$12::uuid,$13::bigint,$14::jsonb) AS result',[...owner.auth(),epoch,request.operationId,request.schemaVersion,request.jobId,request.expectedModeSequence,request.payload])).rows[0].result;
+    assert.equal(result.state,'committed',JSON.stringify({index,result}));calendarActivityJobIds.push(request.jobId);
+   }
+   if(fieldSessions){fieldVehicleId=randomUUID();const payload={label:'Synthetic field equipment rig',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'business_rig',notes:null,archived:false,archiveReason:null};assert.equal((await web.query('SELECT crest_commands.save_vehicle($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,$11,0,$12) AS result',[...parent.auth(),epoch,randomUUID(),fieldVehicleId,payload])).rows[0].result.state,'committed');}if(additionalSchedulingAgreement||combinedSchedulingAgreements){const other=await createConfirmedBookingFixture({client,web,bootstrap})({hash:seedHash,session:principal.sessionId,actor,issuer:service.issuer,subject:user.id,provider:principal.provider.sessionId,deadline:new Date(principal.provider.expiresAt),business,epoch},combinedSchedulingAgreements?{customerId:parent.customer}:{});additionalBookingRequest=confirmedBookingRequest(other);additionalBookingFamilyId=other.familyId;}}
    finally{seedHash.fill(0);await web.end();}
   }
   let photoRuntime;
@@ -549,6 +597,39 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    }};
    photoRuntime={objects:photoStorage.store,stagingOrigin:photoStorage.origin,
     dispatch:runtime.createDropoffPhotoDispatch(authority,photoStorage.store,validator)};
+  }
+  let expenseReceiptRuntime;
+  if(expenseReceipts){
+   const imageId=process.env.CREST_EXPENSE_RECEIPT_IMAGE_ID;
+   const workspaceId=randomBytes(8).toString('hex');
+   expenseReceiptStorage=await runtime.custodyPhotoObjects(imageId?{bucket:'crest-fictional-receipts-'+workspaceId}:{});
+   if(imageId){
+    const directory=join(sandbox.workspace,'expense-receipts');
+    const profile=()=>({version:1,workspaceId,origin:expenseReceiptStorage.origin,bucket:expenseReceiptStorage.bucket,
+     credentials:{accessKeyId:randomBytes(16).toString('hex'),secretAccessKey:randomBytes(32).toString('hex')}});
+    expenseReceiptStorage.objects.set('originals/_crest_store_identity',{bytes:Buffer.from('crest synthetic storage '+workspaceId),type:'application/octet-stream'});
+    await mkdir(directory,{mode:0o700});
+    await writeFile(join(directory,'web.json'),JSON.stringify(profile()),{mode:0o600,flag:'wx'});
+    await writeFile(join(directory,'worker.json'),JSON.stringify({environment:'test',documentKind:'expense-receipt',businessId:business,storage:profile(),
+     decoder:{imageId,dockerExecutable:process.env.CREST_TEST_DOCKER_EXECUTABLE},
+     authentication:{...authentication,loginKey:authentication.loginKey.toString('base64url'),
+      keys:authentication.keys.map(({id,key})=>({id,key:key.toString('base64url')}))}}),{mode:0o600,flag:'wx'});
+    const {openSyntheticExpenseReceipts}=await import('../../scripts/synthetic-expense-receipts.mjs');
+    const workspace={id:workspaceId,businessId:business};
+    await assert.rejects(openSyntheticExpenseReceipts(sandbox.workspace,workspace,48));
+    await assert.rejects(openSyntheticExpenseReceipts(sandbox.workspace,workspace,122));
+    await assert.rejects(openSyntheticExpenseReceipts(sandbox.workspace,{...workspace,id:'0'.repeat(16)},49));
+    const schema=Number((await client.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n);
+    expenseReceiptDocuments=await openSyntheticExpenseReceipts(sandbox.workspace,workspace,schema);
+    expenseReceiptRuntime=expenseReceiptDocuments.runtime;
+   }else{
+    const objects=expenseReceiptStorage.receipts;
+    const directory=runtime.createReceiptDirectory(config,auth.provider,auth.tokens);
+    const validator={async validate(bytes,type){return runtime.validateImage(bytes,type);}};
+    const workflow=runtime.createReceiptWorkflow(directory,objects,validator);
+    expenseReceiptRuntime={objects,stagingOrigin:expenseReceiptStorage.origin,
+     async dispatch(...args){await workflow.prepareAndPublish(...args);}};
+   }
   }
   let supplierOriginalRuntime,originalFile,originalMimeType;
   if(supplierPayablePosting){
@@ -591,7 +672,16 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   }
   const claim={formatVersion:1,profile:'crest.business-source-journal-bundle.v1',businessId:business,actorId:actor,exportJobId:jobId,recoveryEpoch:epoch,leaseId},observedAt=(await client.query("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"+00:00\"') AS value")).rows[0].value,bytes=[product?Buffer.alloc(20000,97):Buffer.from('example'),Buffer.from('{"x":123}')];
   const plan={formatVersion:1,claim,generationId:randomUUID(),observedAt,appReleaseId:release,sourceSchemaVersion:43,manifestSha256:sha(bytes[1]),parts:[{partId:randomUUID(),fileName:'example.csv',contentType:'text/csv; charset=utf-8',bytes:bytes[0].length,sha256:sha(bytes[0])},{partId:randomUUID(),fileName:'source_manifest.json',contentType:'application/json',bytes:9,sha256:sha(bytes[1])}],totalBytes:bytes.reduce((n,value)=>n+value.length,0),referenceClosureComplete:false,completePortableExport:false,completeBackup:false},planSha256=sha(JSON.stringify(plan)),journal=runtime.createSourceExportDatabaseJournal(config,auth.provider,auth.tokens,job,operation),parts=[];
-  const stage=async(name,raw)=>{assert.deepEqual(await journal[name](credential,raw,signal()),{formatVersion:1,stage:name,requestSha256:sha(raw)});};h=await runtime.custodyFixture(async()=>{});
+  const stage=async(name,raw)=>{
+   try{assert.deepEqual(await journal[name](credential,raw,signal()),{formatVersion:1,stage:name,requestSha256:sha(raw)});}
+   catch(error){
+    try{console.error((workTime?'WORK_TIME_FIXTURE_JOURNAL_DIAGNOSTIC ':'SOURCE_EXPORT_FIXTURE_JOURNAL_DIAGNOSTIC ')+JSON.stringify({
+     stage:['snapshot','intent','verified','ready'].includes(name)?name:'other',provider:service.diagnostics(),
+     requests:service.requestDiagnostics(),notSubmitted:error?.message==='SOURCE_EXPORT_JOURNAL_NOT_SUBMITTED',
+    }));}catch{/* Failure-only classified diagnostics must preserve the original error. */}
+    throw error;
+   }
+  };h=await runtime.custodyFixture(async()=>{});
   await stage('snapshot',JSON.stringify({plan,planSha256}));for(const [i,p]of plan.parts.entries()){
    const binding={businessId:business,actorId:actor,exportJobId:jobId,generationId:plan.generationId,recoveryEpoch:epoch,partId:p.partId,fileName:p.fileName,contentType:p.contentType},prepared=await h.store.prepare(bytes[i],binding,signal()),payload={claim,generationId:plan.generationId,planSha256,partId:p.partId,intent:prepared.intentForServer()},raw=JSON.stringify(payload);await stage('intent',raw);const intent=await h.store.writeCandidate(prepared,signal());await h.store.verifyCandidate(intent,binding,signal());await stage('verified',raw);parts.push(payload);
   }
@@ -609,8 +699,22 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
   if(recordJobBaseline){
    const documents=async()=> (await client.query(`SELECT jsonb_build_object(
     'customers',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.id) FROM crest.customers c WHERE c.business_id=$1),
-    'vehicles',(SELECT jsonb_agg(to_jsonb(v) ORDER BY v.id) FROM crest.vehicles v WHERE v.business_id=$1)
+    'vehicles',(SELECT jsonb_agg(to_jsonb(v) ORDER BY v.id) FROM crest.vehicles v WHERE v.business_id=$1),
+    'links',(SELECT jsonb_agg(to_jsonb(r) ORDER BY r.id) FROM crest.customer_vehicles r WHERE r.business_id=$1)
    ) AS rows`,[business])).rows[0].rows;
+   if(customerProfileFixture){
+    const web=await sandbox.connect(url.toString()),seedHash=runtime.sessionCredentialHash(credential);
+    try{
+     await web.query('SET ROLE crest_web');
+     const session=await lifecycle.verify(credential,signal(),'background',true);
+     const association={action:'open',associationId:randomUUID(),customerId:bookingRequest.payload.customerId,
+      vehicleId:bookingRequest.payload.vehicles[0].vehicleId,effectiveAt:new Date(Date.now()-10000).toISOString().replace(/\.(\d{3})Z$/,'.$1000Z'),
+      relationship:'owner',isBilling:true,evidence:null,reason:null,nextAssociationId:null};
+     const saved=await web.query('SELECT crest_commands.change_vehicle_association($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,1,0,$11) AS result',
+      [seedHash,session.sessionId,actor,service.issuer,user.id,session.provider.sessionId,new Date(session.provider.expiresAt),business,epoch,randomUUID(),association]);
+     assert.equal(saved.rows[0].result.state,'committed');
+    }finally{seedHash.fill(0);await web.end();}
+   }
    const before=await documents();
    assert(before.customers?.length&&before.vehicles?.length);
    const upgraded=await sandbox.apply(target,await sandbox.prefix(120));
@@ -619,7 +723,17 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    assert.deepEqual(upgraded.history.slice(0,119),recordJobBaseline.history);
    assert.deepEqual(await documents(),before);
    assert.equal(await syntheticRecordJobHistoryAvailable(target),true);
+   assert.equal(await syntheticCustomerProfileAvailable(target),false);
+   if(customerProfileFixture){
+    const profileUpgrade=await sandbox.apply(target,await sandbox.prefix(121));
+    assert.deepEqual(profileUpgrade.history.slice(0,120),upgraded.history);
+    assert.equal(profileUpgrade.history.at(-1).version,'20270114180000');
+    assert.deepEqual(await documents(),before);
+    customerProfile=await syntheticCustomerProfileAvailable(target);
+    assert.equal(customerProfile,true);
+   }
   }
+  if(invoiceOutstanding){const upgraded=await sandbox.apply(target,await sandbox.prefix(122));assert.equal(upgraded.history.length,122);}
   await chmod(sandbox.workspace,0o700);const tls=await browserTestTls();server=runtime.createBoundedNodeServer(tls);await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});const origin='https://127.0.0.1:'+server.address().port,requests=[];
   if(product){
    const port=server.address().port;await new Promise(resolve=>server.close(resolve));server=undefined;
@@ -630,7 +744,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
     await client.query('INSERT INTO crest_private.google_calendar_credential_key VALUES(true,$1)',[identity.credentialKeyId]);
     if(calendarWorkerLogin)await client.query('INSERT INTO crest_private.google_calendar_worker_principals(business_id,principal) VALUES($1,$2)',[business,calendarWorkerLogin]);
    }
-   app=await runtime.createCrestApplication({origin,environment:'test',tls,authentication:auth,business:{businessId:business},customers:true,syntheticLegacyContactBatches:legacyContactBatches,syntheticLegacyContactEffects:legacyContactEffects,syntheticLegacyContactTargets:legacyContactTargets,syntheticLegacyContactDecisions:legacyContactDecisions,syntheticLegacyContactApprovals:legacyContactApprovals,syntheticLegacyContactApplications:legacyContactApplications,syntheticLegacyContactDownloads:legacyContactDownloads,...automaticContactImport?{syntheticLegacyContactImportWorker:{connectionString:contactWorkerConnection}}:{},...workspace?{vehicles:true,associations:true,leads:true,leadFollowUps,leadMatchReview,leadConversions:true,operationResolution:true}:{},...catalog?{syntheticCatalog:true,operationResolution:true}:{sourceExports:{appReleaseId:release,store:h.store}},...quotes?{syntheticQuotes:true,operationResolution:true}:{},...quoteReview?{syntheticQuoteReview:true}:{},...quoteCommercial?{syntheticQuoteCommercial:true,operationResolution:true}:{},...appointmentHolds?{syntheticAppointmentHolds:true,operationResolution:true}:{},...expenses?{syntheticExpenses:true,operationResolution:true}:{},...calendarConfiguration?{syntheticGoogleCalendar:calendarConfiguration}:{},...postedFinanceConfiguration?{syntheticPostedFinanceExport:postedFinanceConfiguration}:{},...financeConfiguration?{syntheticFinanceAccounts:financeConfiguration}:{},...scheduling?{syntheticScheduling:true,syntheticRecordJobHistory:recordJobHistory}:{},...amendments?{syntheticQuoteAmendments:true}:{},...amendmentAcceptance?{syntheticQuoteAmendmentAcceptance:true}:{},...fieldSessions?{syntheticFieldSessions:true}:{},...jobCompletion?{syntheticJobCompletion:true}:{},...jobMileage?{syntheticJobMileage:true}:{},...supportTrips?{syntheticSupportTrips:true}:{},...unfulfilledCancellation?{syntheticUnfulfilledCancellation:true}:{},...workTime?{syntheticWorkTime:true}:{},...workBoundary?{syntheticWorkBoundary:true}:{},...workStart?{syntheticWorkStart:true}:{},...workEnd?{syntheticWorkEnd:true}:{},...mobileDeparture?{syntheticMobileDeparture:true}:{},...reviewOutcome?{syntheticReviewOutcome:true}:{},...reviewHistory?{syntheticReviewHistory:true}:{},...maintenanceFollowUp?{syntheticMaintenanceFollowUp:true}:{},...dropoffCustody?{syntheticDropoffCustody:true}:{},...dropoffPolicyRevision?{syntheticDropoffPolicyRevision:true}:{},...pickupTrips?{syntheticPickupTrips:true}:{},...pickupCollection?{syntheticPickupCollection:true}:{},...pickupPolicy?{syntheticPickupPolicy:true}:{},...pickupPhotos?{syntheticPickupPhotos:true}:{},...pickupReturnWorkflow?{syntheticPickupWork:true,syntheticPickupRelease:true,syntheticPickupReturnFailure:true}:{},...photoRuntime?{syntheticDropoffPhotos:photoRuntime}:{},...supplierOriginalRuntime?{syntheticSupplierOriginals:supplierOriginalRuntime}:{}});server=app.server;
+   app=await runtime.createCrestApplication({origin,environment:'test',tls,authentication:auth,business:{businessId:business},customers:true,syntheticLegacyContactBatches:legacyContactBatches,syntheticLegacyContactEffects:legacyContactEffects,syntheticLegacyContactTargets:legacyContactTargets,syntheticLegacyContactDecisions:legacyContactDecisions,syntheticLegacyContactApprovals:legacyContactApprovals,syntheticLegacyContactApplications:legacyContactApplications,syntheticLegacyContactDownloads:legacyContactDownloads,...automaticContactImport?{syntheticLegacyContactImportWorker:{connectionString:contactWorkerConnection}}:{},...workspace?{vehicles:true,associations:true,leads:true,leadFollowUps,leadMatchReview,leadConversions:true,operationResolution:true}:{},...catalog?{syntheticCatalog:true,operationResolution:true}:{sourceExports:{appReleaseId:release,store:h.store}},...quotes?{syntheticQuotes:true,operationResolution:true}:{},...quoteReview?{syntheticQuoteReview:true}:{},...quoteCommercial?{syntheticQuoteCommercial:true,operationResolution:true}:{},...appointmentHolds?{syntheticAppointmentHolds:true,operationResolution:true}:{},...expenses?{syntheticExpenses:true,operationResolution:true}:{},...expenseReceiptRuntime?{syntheticExpenseReceipts:expenseReceiptRuntime}:{},...calendarConfiguration?{syntheticGoogleCalendar:calendarConfiguration}:{},...postedFinanceConfiguration?{syntheticPostedFinanceExport:postedFinanceConfiguration}:{},...financeConfiguration?{syntheticFinanceAccounts:financeConfiguration}:{},...scheduling?{syntheticScheduling:true,syntheticRecordJobHistory:recordJobHistory,syntheticCustomerProfile:customerProfile}:{},...amendments?{syntheticQuoteAmendments:true}:{},...amendmentAcceptance?{syntheticQuoteAmendmentAcceptance:true}:{},...fieldSessions?{syntheticFieldSessions:true}:{},...jobCompletion?{syntheticJobCompletion:true}:{},...jobMileage?{syntheticJobMileage:true}:{},...supportTrips?{syntheticSupportTrips:true}:{},...unfulfilledCancellation?{syntheticUnfulfilledCancellation:true}:{},...workTime?{syntheticWorkTime:true}:{},...workBoundary?{syntheticWorkBoundary:true}:{},...workStart?{syntheticWorkStart:true}:{},...workEnd?{syntheticWorkEnd:true}:{},...mobileDeparture?{syntheticMobileDeparture:true}:{},...reviewOutcome?{syntheticReviewOutcome:true}:{},...reviewHistory?{syntheticReviewHistory:true}:{},...maintenanceFollowUp?{syntheticMaintenanceFollowUp:true}:{},...dropoffCustody?{syntheticDropoffCustody:true}:{},...dropoffPolicyRevision?{syntheticDropoffPolicyRevision:true}:{},...pickupTrips?{syntheticPickupTrips:true}:{},...pickupCollection?{syntheticPickupCollection:true}:{},...pickupPolicy?{syntheticPickupPolicy:true}:{},...pickupPhotos?{syntheticPickupPhotos:true}:{},...pickupReturnWorkflow?{syntheticPickupWork:true,syntheticPickupRelease:true,syntheticPickupReturnFailure:true}:{},...photoRuntime?{syntheticDropoffPhotos:photoRuntime}:{},...supplierOriginalRuntime?{syntheticSupplierOriginals:supplierOriginalRuntime}:{}});server=app.server;
    server.prependListener('request',incoming=>requests.push({path:new URL(incoming.url,origin).pathname,method:incoming.method}));
    await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
 
@@ -686,6 +800,36 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    const dispatch=runtime.createLegacyContactImportDispatcher({environment:'test',connectionString:contactWorkerConnection});
    return dispatch(AbortSignal.timeout(10000));
   }
-  return{origin,product,followUpLeads,dispatchContactImport,authorizePostedFinance,preparePayable,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),nextBrowserCodeAt:(Math.floor(seededCodeAt/(totp.period*1000))+1)*totp.period*1000,credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
+  async function seedRetainedMappingHistory(){
+   assert(financeMappings&&!financeCategoryMappings&&!invoiceIssue);
+   const checked=await lifecycle.verify(credential,signal(),'background',true),hash=runtime.sessionCredentialHash(credential);
+   const finance=await sandbox.connect(financeConfiguration.connectionString);
+   try{
+    await finance.query('SET ROLE crest_finance_preview');
+    const account=(await client.query("SELECT id FROM crest.accounts WHERE business_id=$1 AND code='4000'",[business])).rows[0];assert(account);
+    const args=[hash,checked.sessionId,actor,service.issuer,user.id,checked.provider.sessionId,new Date(checked.provider.expiresAt),business,epoch];
+    for(let index=0;index<24;index++){
+     const version=7+index,day='2027-01-'+String(index+2).padStart(2,'0');
+     const result=(await finance.query('SELECT crest_commands.approve_fixed_finance_mapping($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) AS result',
+      [...args,randomUUID(),'service_revenue',String(version-1),account.id,day,'Fictional retained approval '+version])).rows[0].result;
+     assert.equal(result.state,'committed');assert.equal(result.receipt.version,String(version));
+    }
+   }finally{hash.fill(0);await finance.end();}
+  }
+  // Only disposable genuine-session checks use this closure; no credential is
+  // returned, persisted in evidence or written to logs. TLS relaxation is scoped
+  // to this generated loopback fixture certificate and request.
+  async function openingFundsRequest(path,body,{anonymous=false,headers={}}={}){
+   assert((openingFunds||openingPayables)&&path.startsWith('/api/')&&!path.includes('://'));
+   const bytes=Buffer.from(JSON.stringify(body));assert(bytes.length<=(openingPayables?1114112:131072));
+   return await new Promise((resolve,reject)=>{
+    const outgoing=httpsRequest(new URL(path,origin),{method:'POST',rejectUnauthorized:false,
+     headers:{origin,'content-type':'application/json','content-length':bytes.length,...anonymous?{}:{cookie:'__Host-crest_session='+credential},...headers}},response=>{
+     const parts=[];let size=0;response.on('data',part=>{size+=part.length;if(size>2097152)response.destroy(Error('FIXTURE_RESPONSE_LIMIT'));else parts.push(part);});
+     response.on('error',reject);response.on('end',()=>{try{resolve({status:response.statusCode,headers:response.headers,value:JSON.parse(Buffer.concat(parts).toString('utf8'))});}catch(error){reject(error);}});
+    });outgoing.on('error',reject);outgoing.setTimeout(15000,()=>outgoing.destroy(Error('FIXTURE_REQUEST_TIMEOUT')));outgoing.end(bytes);
+   });
+  }
+  return{openingFundsRequest,openingPayablesRequest:openingFundsRequest,origin,product,followUpLeads,dispatchContactImport,authorizePostedFinance,preparePayable,seedRetainedMappingHistory,originalFile,originalMimeType,fieldVehicleId,bookingRequest,bookingFamilyId,additionalBookingRequest,additionalBookingFamilyId,calendarActivityJobIds,workspace:sandbox.workspace,business,actor,jobId,plan,bytes,client,requests,storage:h,photoStorage,setupGets,facts,authDiagnostics:()=>service.diagnostics(),authRequestDiagnostics:()=>service.requestDiagnostics(),nextBrowserCodeAt:(Math.floor(seededCodeAt/(totp.period*1000))+1)*totp.period*1000,credentials:()=>({email,password,code:totp.generate(),trusted:false}),close};
  }catch(error){await close();throw error;}
 }

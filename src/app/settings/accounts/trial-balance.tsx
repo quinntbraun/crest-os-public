@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {FinancialAccessRecovery} from '../../financial-access-recovery';
 
 import {useEffect,useRef,useState} from 'react';
 import {expenseDollars} from '../../../bookkeeping/expenses/expense-contract';
@@ -15,6 +17,8 @@ import type {parseFictionalJournalV16,parseFictionalTrialBalanceV11} from '../..
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
 import {RecordedBalanceSheet} from './recorded-balance-sheet';
 import styles from './screen.module.css';
+import {FinancialReportHeader} from './financial-report-header';
+import {ReportReadingSummary} from './report-reading-summary';
 
 type Balance=Awaited<ReturnType<typeof financeAccounts.readTrialBalance>>|FictionalTrialBalanceV2|FictionalTrialBalanceV3|FictionalTrialBalanceV4|FictionalTrialBalanceV5|FictionalTrialBalanceV6|FictionalTrialBalanceV7|FictionalTrialBalanceV8|FictionalTrialBalanceV9|FictionalTrialBalanceV10|ReturnType<typeof parseFictionalTrialBalanceV11>;
 type Journal=Awaited<ReturnType<typeof financeAccounts.readPostedJournal>>|FictionalJournalV2|FictionalJournalV3|FictionalJournalV4|FictionalJournalV5|FictionalJournalV6|FictionalJournalV7|FictionalJournalV8|FictionalJournalV9|FictionalJournalV10;
@@ -77,14 +81,18 @@ function receiptTipReference({template,purpose,paymentId,tipRealizationId}:{
     ?{paymentId,tipRealizationId,includedTax:purpose==='tip_tax'}:null;
 }
 
-export function TrialBalance({businessId}:{businessId:string}){
-  const [through,setThrough]=useState('');
+export function TrialBalance({businessId,initialThrough='',onThroughChange,onAccessDenied}:{businessId:string;
+  initialThrough?:string;onThroughChange?:(value:string)=>void;onAccessDenied?:()=>void}){
+  const [through,setThrough]=useState(initialThrough);
   const [balance,setBalance]=useState<Balance|null>(null);
   const [journal,setJournal]=useState<Journal|null>(null);
   const [account,setAccount]=useState('');
   const [journalMessage,setJournalMessage]=useState('');
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [signedOut,setSignedOut]=useState(false);
+  const feedback=useRef<HTMLParagraphElement>(null);
+  useEffect(()=>{if(signedOut)feedback.current?.focus();},[signedOut]);
   const active=useRef<AbortController|null>(null);
   const journalDetails=useRef<HTMLDetailsElement>(null);
   const journalAccount=useRef<HTMLSelectElement>(null);
@@ -96,7 +104,7 @@ export function TrialBalance({businessId}:{businessId:string}){
   }
   function clear(){
     active.current?.abort();active.current=null;
-    setThrough('');setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setBusy(false);setMessage('');
+    setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setBusy(false);setMessage('');setSignedOut(false);
   }
   useEffect(()=>{
     const hidden=()=>{if(document.visibilityState==='hidden')clear();};
@@ -112,7 +120,7 @@ export function TrialBalance({businessId}:{businessId:string}){
     if(active.current)return;
     const controller=new AbortController();active.current=controller;
     const {signal}=controller;
-    setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setBusy(true);setMessage('Checking the posted ledger…');
+    setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setBusy(true);setSignedOut(false);setMessage('Checking the posted ledger…');
     try{
       const context=await financeAccounts.context(signal);
       if(signal.aborted)return;
@@ -121,7 +129,11 @@ export function TrialBalance({businessId}:{businessId:string}){
       if(signal.aborted)return;
       setBalance(result);
       setMessage(result.postedEventCount==='0'?'No supported entries have been posted through this date.':'Posted balances loaded.');
-    }catch{if(!signal.aborted)setMessage('Crest could not load a verified trial balance. Check the date and connection, then try again.');}
+    }catch(error){if(!signal.aborted){
+      const denied=error instanceof AuthenticationError&&error.kind==='denied';setSignedOut(denied);
+      if(denied)onAccessDenied?.();
+      setMessage(denied?'Sign in again to review accounting balances.':'Crest could not load a verified trial balance. Check the date and connection, then try again.');
+    }}
     finally{if(active.current===controller){active.current=null;setBusy(false);}}
   }
   async function loadJournal(next=false){
@@ -148,7 +160,12 @@ export function TrialBalance({businessId}:{businessId:string}){
       }
       setJournal(result);
       setJournalMessage(result.rows.length?'Journal page loaded.':'No posted lines for this account and date.');
-    }catch{if(!signal.aborted)setJournalMessage('Crest could not load the journal page. Check your connection and load it again.');}
+    }catch(error){if(!signal.aborted){
+      if(error instanceof AuthenticationError&&error.kind==='denied'){
+        onAccessDenied?.();
+        setBalance(null);setJournal(null);setAccount('');setJournalMessage('');setSignedOut(true);setMessage('Sign in again to review accounting balances.');
+      }else setJournalMessage('Crest could not load the journal page. Check your connection and load it again.');
+    }}
     finally{if(active.current===controller){active.current=null;setBusy(false);}}
   }
   function download(){
@@ -243,20 +260,25 @@ export function TrialBalance({businessId}:{businessId:string}){
       }),
     ]);
   }
-  return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
+  return <details className="review-card" open onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
     <summary>Fictional trial balance</summary>
-    <section className="trial-balance" aria-label="Fictional trial balance">
-      <p>Review posted balances by account. Opening balances and bank reconciliation are still pending.</p>
+    <section className="trial-balance" aria-label="Fictional trial balance" aria-busy={busy}>
+      {!balance&&<p>Review posted balances by account. Opening balances and bank reconciliation are still pending.</p>}
+      <ReportReadingSummary snapshot={balance} loading={busy&&!balance}>{balance&&<FinancialReportHeader period={<>Trial balance · Through <time dateTime={balance.throughOn}>{balance.throughOn}</time></>}
+          timeZone={balance.timeZone} observedAt={balance.observedAt} scopeLabel="Coverage incomplete"
+          coverage="Recorded posted balances only. Opening balances and bank reconciliation are still pending."
+          details={<>{balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}<dl className={styles.reportKeyFigures}><div><dt>Debit balances</dt><dd>{usd(balance.totals.debitBalanceCents)}</dd></div><div><dt>Credit balances</dt><dd>{usd(balance.totals.creditBalanceCents)}</dd></div></dl></>}
+          action={<button type="button" className="secondary" onClick={download}>Download trial balance CSV</button>}/>}</ReportReadingSummary>
       <form onSubmit={event=>{event.preventDefault();void load();}}>
         <label>Through date (optional)<input type="date" value={through} disabled={busy}
-          onChange={event=>{setThrough(event.target.value);setBalance(null);setJournal(null);setJournalMessage('');setMessage('');}}/></label>
+          onChange={event=>{setThrough(event.target.value);onThroughChange?.(event.target.value);setBalance(null);setJournal(null);setJournalMessage('');setMessage('');}}/></label>
         <p className="field-help">Leave blank for today in the workspace time zone.</p>
         <button type="submit" className="secondary" disabled={busy}>Load trial balance</button>
       </form>
-      <p role="status">{message}</p>
+      <p ref={feedback} tabIndex={-1} role="status">{message}</p>
+      {signedOut&&<FinancialAccessRecovery returnTo="accounting" label="Accounting report access recovery"/>}
       {balance&&<>
-        <p>Through <time dateTime={balance.throughOn}>{balance.throughOn}</time> · USD · {balance.timeZone}</p>
-        {balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart} · {balance.postedEventCount} posted {balance.postedEventCount==='1'?'event':'events'}</p>}
+
         {hasPaymentCorrections(balance)&&<p className="field-help">{reportVersion(balance)===11
           ?'Supplier payables, customer funds and tax payable match the ledger through this date.'
           :reportVersion(balance)===10
@@ -289,7 +311,6 @@ export function TrialBalance({businessId}:{businessId:string}){
           <tfoot><tr><th scope="row">Total</th><td>{usd(balance.totals.debitBalanceCents)}</td>
             <td>{usd(balance.totals.creditBalanceCents)}</td></tr></tfoot>
         </table></div>}
-        <button type="button" className="secondary" onClick={download}>Download trial balance CSV</button>
         <RecordedBalanceSheet balance={balance} journalBusy={busy} selectJournalAccount={selectJournalAccount}/>
         {'refundDue' in balance&&<details className="review-card">
           <summary>Refunds still due · {usd(balance.refundDue.totalCents)}</summary>

@@ -1,15 +1,33 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {authentication,AuthenticationError} from '../../client/authentication';
 import {createExpenseClient} from '../../client/expenses';
+import {createReceiptClient} from '../../client/expense-receipts';
 import {financeAccounts} from '../../client/finance-accounts';
 import type {FinanceAccountContext} from '../../client/finance-accounts';
-import {ExpenseEditor} from './expense-editor';
-import {SupplierBillDrafts} from './supplier-bill-drafts';
-import {SupplierPayableRegister} from './supplier-payables';
-export function ExpensesScreen(){
+import {ExpenseEditor,ExpenseRecordPlaceholder} from './expense-editor';
+import type {ExpensePane} from './expense-editor';
+import {SupplierWorkspace} from './supplier-workspace';
+import {expenseNavigationHref,readExpenseNavigation} from '../../client/expense-navigation';
+export function ExpensesScreen({initialPane='purchases',initialPayablesThrough=''}:{initialPane?:ExpensePane;initialPayablesThrough?:string}){
  const client=useMemo(()=>createExpenseClient(authentication.session),[]),active=useRef<AbortController|null>(null),[phase,setPhase]=useState<'checking'|'ready'|'signed-out'|'unavailable'>('checking');
+ const receiptService=useMemo(()=>createReceiptClient(authentication.session,false,{
+  getItem:key=>sessionStorage.getItem(key),setItem:(key,value)=>sessionStorage.setItem(key,value),removeItem:key=>sessionStorage.removeItem(key),
+ }),[]);
  const [financeContext,setFinanceContext]=useState<FinanceAccountContext|null>(null);
+ const [pane,setPane]=useState<ExpensePane>(initialPane);
+ const [payablesThrough,setPayablesThrough]=useState(()=>readExpenseNavigation({view:'suppliers',payablesThrough:initialPayablesThrough}).payablesThrough);
+ function choosePane(next:ExpensePane){
+  setPane(next);window.history.replaceState(null,'',expenseNavigationHref(next,payablesThrough));
+ }
+ function changePayablesThrough(value:string){const next=readExpenseNavigation({view:'suppliers',payablesThrough:value}).payablesThrough;setPayablesThrough(next);window.history.replaceState(null,'',expenseNavigationHref(pane,next));}
+ const accessStatus=useRef<HTMLParagraphElement>(null);
+ useEffect(()=>{if(phase==='signed-out')accessStatus.current?.focus();},[phase]);
+ const accessDenied=useCallback(()=>{
+  active.current?.abort();active.current=null;setFinanceContext(null);setPhase('signed-out');
+ },[]);
  const checkAccess=useCallback(()=>{
   active.current?.abort();const controller=new AbortController();active.current=controller;
   void authentication.session(controller.signal).then(async proof=>{
@@ -24,16 +42,32 @@ export function ExpensesScreen(){
   document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',clear);window.addEventListener('pageshow',restored);
   return()=>{active.current?.abort();active.current=null;document.removeEventListener('visibilitychange',hidden);window.removeEventListener('pagehide',clear);window.removeEventListener('pageshow',restored);};
  },[checkAccess]);
- if(phase==='checking')return <p role="status">Checking expense access…</p>;
- if(phase==='signed-out')return <><p role="status">Sign in to view expenses.</p><a className="primary-action" href="/sign-in">Sign in to view expenses</a></>;
- if(phase==='unavailable')return <><p role="status">Expense access needs to be checked before private records are shown.</p><button type="button" onClick={()=>{setPhase('checking');checkAccess();}}>Check expense access</button><a href="/sign-in">Check sign-in</a></>;
+ if(phase==='checking')return <>
+  <div className="expense-workbench-navigation expense-placeholder-controls" aria-hidden="true">
+   <span className="workspace-skeleton"/><span className="workspace-skeleton"/>
+  </div>
+  <div className="expense-workbench-toolbar expense-placeholder-controls" aria-hidden="true">
+   <span className="workspace-skeleton"/><span className="workspace-skeleton"/>
+  </div>
+  <p className="expense-workbench-status" role="status">Checking expense access…</p>
+  <div className="expense-records"><h2>Saved expenses</h2><ExpenseRecordPlaceholder/></div>
+ </>;
+ if(phase==='signed-out')return <><p ref={accessStatus} tabIndex={-1} role="status">Sign in to view expenses.</p><SignInLink className="primary-action" returnTo="expenses" context={{...(pane==='purchases'?{}:{view:pane}),...(payablesThrough?{payablesThrough}:{})}}>Sign in to view expenses</SignInLink></>;
+ if(phase==='unavailable')return <><p role="status">Expense access needs to be checked before private records are shown.</p><button type="button" onClick={()=>{setPhase('checking');checkAccess();}}>Check expense access</button><SignInLink returnTo="expenses">Check sign-in</SignInLink></>;
  const sameDayExpenses=financeContext?.sameDayExpenses===true;
+ const suppliers=financeContext?.supplierBillDrafts||financeContext?.supplierPayableReview;
+ const activePane=pane==='suppliers'&&!suppliers?'purchases':pane;
  return <>
-  <p>Record paid purchases and keep their corrections and history.</p>
-  <p className="field-help">{sameDayExpenses?'Review a saved purchase to post it to the fictional ledger.':'Receipt attachments and full accounting are still in development for this test build.'}</p>
-  {financeContext?.supplierBillDrafts&&<SupplierBillDrafts context={financeContext}/>}
-  {financeContext?.supplierPayableReview&&<SupplierPayableRegister context={financeContext}/>}
-  <ExpenseEditor client={client} embedded sameDayExpenses={sameDayExpenses}/>
-  <nav aria-label="Expense workspace navigation"><a href="/save-review?kind=bookkeeping.expense.save">Review an interrupted expense</a><a href="/sign-in">Check sign-in</a></nav>
+  <nav className="expense-workbench-navigation" aria-label="Expense views">
+   <button type="button" className="secondary" aria-pressed={activePane==='purchases'} onClick={()=>choosePane('purchases')}>Purchases</button>
+   {suppliers&&<button type="button" className="secondary" aria-pressed={activePane==='suppliers'} onClick={()=>choosePane('suppliers')}>Suppliers</button>}
+   <button type="button" className="secondary" aria-pressed={activePane==='exports'} onClick={()=>choosePane('exports')}>Exports</button>
+  </nav>
+  <ExpenseEditor client={client} receiptService={receiptService} embedded sameDayExpenses={sameDayExpenses} pane={activePane} onAccessDenied={accessDenied}/>
+  {suppliers&&<div className="expense-supplier-panel" hidden={activePane!=='suppliers'}>
+   <h2>Supplier bills and payables</h2>
+   {financeContext&&<SupplierWorkspace key={financeContext.businessId+':'+financeContext.binding} context={financeContext} onAccessDenied={accessDenied} throughOn={payablesThrough} onThroughOnChange={changePayablesThrough}/>}
+  </div>}
+  <nav aria-label="Expense workspace navigation"><a href="/save-review?kind=bookkeeping.expense.save">Review an interrupted expense</a><SignInLink returnTo="expenses">Check sign-in</SignInLink></nav>
  </>;
 }

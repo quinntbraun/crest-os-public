@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities,ProductionCapability} from '../security/production-capabilities.ts';
 import {createHash} from 'node:crypto';
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
@@ -48,7 +50,7 @@ import {dropoffCustodyKind,dropoffPolicyKind,dropoffPolicyRevisionKind,parseDrop
 import {maintenanceFollowUpKind,parseMaintenanceFollowUpSave,parseMaintenanceFollowUpListQuery,
  parseMaintenanceFollowUpHistoryQuery} from './maintenance-follow-up-contract.ts';
 
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;recordJobHistory?:boolean};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;recordJobHistory?:boolean;productionCapabilities?:ProductionCapabilities};
 const prefix='/api/business/scheduling/';
 const fields={'record-jobs':recordJobHistoryFields,'mileage-trips':['jobId','afterDepartedAt','afterLegId','pageSize'],
  'support-trips':['afterDepartedAt','afterLegId','pageSize'],
@@ -94,10 +96,10 @@ type Route=keyof typeof fields;
 const mutation=(route:Route)=>['mode-save','book','cancel','reschedule','field-save','complete','mileage-save','support-trip-save','pickup-trip-save','pickup-collection-save','pickup-release-save','pickup-return-failure-save','pickup-policy-save','interrupt','cancel-unfulfilled','work-boundary-save','work-start-save','work-end-save','mobile-departure-save','review-outcome-save','maintenance-save','custody-save','custody-policy-save','custody-policy-revise'].includes(route);
 function failed(status:400|404|405|503){const r=privateJsonResponse({error:'SCHEDULING_REQUEST_FAILED'},status);if(status===405)r.headers.set('Allow','POST');return r;}
 export function schedulingFailureResponse(status:400|404|405|503=400){return failed(status);}
-// Synthetic construction only. Ordinary application composition stays closed
-// until coordinated migration/source/recovery and browser release acceptance.
+// Construction stays closed by default. Production scheduling requires a
+// business-scoped capability from accepted trusted release composition.
 export function createSchedulingHttp(config:Configuration,provider:Parameters<typeof createBookingDirectory>[1],tokens:Parameters<typeof createBookingDirectory>[2],enabled=false,amendedEnabled=false,fieldEnabled=false,completionEnabled=false,mileageEnabled=false,supportTripsEnabled=false,unfulfilledCancellationEnabled=false,workTimeEnabled=false,workBoundaryEnabled=false,workStartEnabled=false,workEndEnabled=false,mobileDepartureEnabled=false,reviewOutcomeEnabled=false,reviewHistoryEnabled=false,maintenanceEnabled=false,custodyEnabled=false,policyRevisionEnabled=false,pickupTripsEnabled=false,pickupCollectionEnabled=false,pickupPolicyEnabled=false,pickupPhotosEnabled=false,pickupWorkEnabled=false,pickupReleaseEnabled=false,pickupReturnFailureEnabled=false,invoicePreparationEnabled=false,invoiceDraftsEnabled=false,googleCalendarEnabled=false){
- if(typeof googleCalendarEnabled!=='boolean'||googleCalendarEnabled&&config.environment!=='test')throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
+ if(typeof googleCalendarEnabled!=='boolean'||googleCalendarEnabled&&config.environment!=='test'&&!productionCapability(config,'googleCalendar'))throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof pickupReturnFailureEnabled!=='boolean'||pickupReturnFailureEnabled&&!pickupReleaseEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof pickupReleaseEnabled!=='boolean'||pickupReleaseEnabled&&(!pickupWorkEnabled||!pickupPhotosEnabled))throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof pickupPhotosEnabled!=='boolean'||pickupPhotosEnabled&&!pickupPolicyEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
@@ -120,7 +122,11 @@ export function createSchedulingHttp(config:Configuration,provider:Parameters<ty
  if(typeof custodyEnabled!=='boolean'||custodyEnabled&&!fieldEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof policyRevisionEnabled!=='boolean'||policyRevisionEnabled&&!custodyEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
  if(typeof maintenanceEnabled!=='boolean'||maintenanceEnabled&&!completionEnabled)throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
- if(!customerUuid(config.businessId)||typeof enabled!=='boolean'||typeof amendedEnabled!=='boolean'||amendedEnabled&&!enabled||enabled&&config.environment!=='test')throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
+ if(!customerUuid(config.businessId)||typeof enabled!=='boolean'||typeof amendedEnabled!=='boolean'||amendedEnabled&&!enabled||enabled&&config.environment!=='test'&&!productionCapability(config,'scheduling'))throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
+ if(config.environment==='production'){
+  const adopted:readonly (readonly [boolean,ProductionCapability])[]=[[amendedEnabled,'quoteAmendmentAcceptance'],[fieldEnabled,'fieldSessions'],[completionEnabled,'jobCompletion'],[mileageEnabled,'jobMileage'],[supportTripsEnabled,'supportTrips'],[unfulfilledCancellationEnabled,'unfulfilledCancellation'],[workTimeEnabled,'workTime'],[workBoundaryEnabled,'workBoundary'],[workStartEnabled,'workStart'],[workEndEnabled,'workEnd'],[mobileDepartureEnabled,'mobileDeparture'],[reviewOutcomeEnabled,'reviewOutcome'],[reviewHistoryEnabled,'reviewHistory'],[maintenanceEnabled,'maintenanceFollowUp'],[custodyEnabled,'dropoffCustody'],[policyRevisionEnabled,'dropoffPolicyRevision'],[config.recordJobHistory===true,'recordJobHistory'],[pickupTripsEnabled,'pickupTrips'],[pickupCollectionEnabled,'pickupCollection'],[pickupPolicyEnabled,'pickupPolicy'],[pickupPhotosEnabled,'pickupPhotos'],[pickupWorkEnabled,'pickupWork'],[pickupReleaseEnabled,'pickupRelease'],[pickupReturnFailureEnabled,'pickupReturnFailure']];
+  if(adopted.some(([selected,capability])=>selected&&!productionCapability(config,capability))||(invoicePreparationEnabled||invoiceDraftsEnabled)&&!productionCapability(config,'finance'))throw Error('SCHEDULING_HTTP_CONFIGURATION_REQUIRED');
+ }
  const resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createBookingDirectory(config,provider,tokens,amendedEnabled):undefined,modes=enabled?createFulfillmentModeDirectory(config,provider,tokens):undefined,context=enabled?createBusinessSettingsContextReader(config,provider,tokens):undefined,businessId=config.businessId,fieldDirectory=fieldEnabled?createFieldDirectory(config,provider,tokens):undefined;
  const completion=completionEnabled?createCompletionDirectory(config,provider,tokens):undefined;
  const mileage=mileageEnabled?createMileageDirectory(config,provider,tokens):undefined;

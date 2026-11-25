@@ -10,6 +10,8 @@ import {createSessionCsrfVerifier,createPrivateFileCsrfVerifier} from '../../sec
 import {createSessionRequestAdmission} from '../../security/session-request-admission.ts';
 import type {createSessionLifecycle} from '../../security/session-lifecycle.ts';
 import type {SessionDatabaseConfiguration} from '../../security/session-database.ts';
+import {productionCapability} from '../../security/production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from '../../security/production-capabilities.ts';
 import {createTrustedTransport} from '../../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../../security/trusted-transport.ts';
 import {privateJsonResponse,readFlatJsonBody} from '../../security/private-http.ts';
@@ -19,25 +21,28 @@ import {createSupplierOriginalDirectory} from './supplier-bill-original-director
 import type {createSupplierOriginalDispatcher} from './supplier-bill-original-directory.ts';
 
 export const supplierOriginalPrefix='/api/business/supplier-original/';
-type Config=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
-export type SyntheticSupplierOriginalRuntime=Readonly<{
+type Config=SessionDatabaseConfiguration&ProductionCapabilityConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+export type SupplierOriginalRuntime=Readonly<{
  objects:ReturnType<typeof createReceiptObjectStore>;
  stagingOrigin:string;
  dispatch:ReturnType<typeof createSupplierOriginalDispatcher>;
+ close?:()=>void;
 }>;
+export type SyntheticSupplierOriginalRuntime=SupplierOriginalRuntime;
 const fields={
  reserve:['originalId','billId','billRevision','recoveryEpoch','operationId','contentType','byteSize'],
- verify:['originalId','operationId'],status:['originalId'],preview:['originalId'],
+ verify:['originalId','operationId'],status:['originalId'],preview:['originalId'],original:['originalId'],
 } as const;
 export const supplierOriginalFailure=(status=400)=>privateJsonResponse({error:'SUPPLIER_ORIGINAL_REQUEST_UNCONFIRMED'},status);
 function check(value:unknown):asserts value{if(!value)throw Error('SUPPLIER_ORIGINAL_REQUEST_UNCONFIRMED');}
 
 export function createSupplierBillOriginalHttp(config:Config,provider:Parameters<typeof createSessionLifecycle>[1],
  tokens:Parameters<typeof createSessionLifecycle>[2],financeConnectionString:string,runtime:SyntheticSupplierOriginalRuntime){
- check(config.environment==='test'&&uuid(config.businessId));
+ check((config.environment==='test'||productionCapability(config,'supplierOriginals'))&&uuid(config.businessId));
  const storage=new URL(runtime.stagingOrigin);
- check(storage.origin===runtime.stagingOrigin&&storage.hostname==='127.0.0.1'&&storage.port
-  &&['http:','https:'].includes(storage.protocol)&&typeof runtime.dispatch==='function');
+ check(storage.origin===runtime.stagingOrigin&&typeof runtime.dispatch==='function'&&(config.environment==='test'
+  ?storage.hostname==='127.0.0.1'&&storage.port&&['http:','https:'].includes(storage.protocol)
+  :/^https:\/\/[a-f0-9]{32}\.r2\.cloudflarestorage\.com$/.test(runtime.stagingOrigin)));
  const resolve=createTrustedTransport(config),csrf=createSessionCsrfVerifier(config),fileCsrf=createPrivateFileCsrfVerifier(config);
  const admit=createSessionRequestAdmission(config),directory=createSupplierOriginalDirectory(config,provider,tokens,financeConnectionString);
  const access=createSupplierOriginalAccess(directory,runtime.objects);
@@ -60,7 +65,7 @@ export function createSupplierBillOriginalHttp(config:Config,provider:Parameters
     await readFlatJsonBody(bounded,fields[action as keyof typeof fields],4096);
    const id=input.originalId;
    check(uuid(id));
-   if(action==='upload'||action==='preview'){
+   if(action==='upload'||action==='preview'||action==='original'){
     if(binary>=2)return supplierOriginalFailure(429);
     binary++;held=true;
    }
@@ -92,7 +97,7 @@ export function createSupplierBillOriginalHttp(config:Config,provider:Parameters
     started=true;
     await runtime.dispatch(credential,businessId,id,input.operationId,signal);
    }
-   if(action==='preview')return await access.download(credential,businessId,id,'preview',signal);
+   if(action==='preview'||action==='original')return await access.download(credential,businessId,id,action,signal);
    const current=await directory.read(credential,businessId,id,signal);
    if(action==='status'&&exact(current,['state'])&&current.state==='absent')return privateJsonResponse({originalId:id,state:'absent'});
    const record=parseSupplierOriginalRecord(current,businessId,id);

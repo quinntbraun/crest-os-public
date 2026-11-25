@@ -48,3 +48,17 @@ it('keeps an absent lost original and blocks a new attachment or a foreign busin
 it('cannot clear a pending original replaced while its lookup waits',async()=>{const storage=memoryStorage(),store=createPendingReceiptStore(storage),record=pendingReceipt({schemaVersion:1,businessId:business,binding:context.binding,reference:original}),other=pendingReceipt({...record,reference:{...original,operationId:'99999999-9999-9999-9999-999999999999'}});store.write(record);vi.stubGlobal('fetch',vi.fn(async()=>{store.clear(record);store.write(other);return json({state:'committed',original,receipt:view});}));const client=createReceiptClient(proof,false,storage);await expect(client.recover(context)).rejects.toThrow();expect(client.pending()).toEqual(other);});
 it('keeps the publication reference when lookup is absent despite an available current receipt',async()=>{const storage=memoryStorage(),record=pendingReceipt({schemaVersion:1,businessId:business,binding:context.binding,reference:{...original,expectedRevision:'1'}});createPendingReceiptStore(storage).write(record);const phases:string[]=[];vi.stubGlobal('fetch',vi.fn(async input=>{const phase=String(input).split('/').at(-1)!;phases.push(phase);return json(phase==='operation'?{state:'absent'}:{receipt:available});}));const client=createReceiptClient(proof,false,storage);await expect(client.resume(context,view,original.operationId)).rejects.toThrow();expect(client.pending()).toEqual(record);expect(phases).toEqual(['operation','status']);});
 it('does not dispatch a reservation if its retained reference changes during the proof wait',async()=>{const storage=memoryStorage(),store=createPendingReceiptStore(storage),other=pendingReceipt({schemaVersion:1,businessId:business,binding:context.binding,reference:original}),fetcher=vi.fn();vi.stubGlobal('fetch',fetcher);const client=createReceiptClient(async()=>{store.clear(store.read()!);store.write(other);return proof();},false,storage);await expect(client.attach(attempt())).rejects.toThrow();expect(fetcher).not.toHaveBeenCalled();expect(client.pending()).toEqual(other);});
+
+it('checks the delivered digest before making a raster preview available',async()=>{
+ const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),byte=>byte.toString(16).padStart(2,'0')).join('');
+ const reply=(header?:string)=>new Response(bytes,{headers:{'content-type':'image/jpeg','cache-control':'private, no-store',
+  'x-content-type-options':'nosniff',...(header?{'x-crest-sha256':header}:{})}});
+ const fetch=vi.fn().mockImplementationOnce(()=>reply(digest)).mockImplementationOnce(()=>reply('0'.repeat(64))).mockImplementationOnce(()=>reply());
+ vi.stubGlobal('fetch',fetch);
+ const client=createReceiptClient(proof);
+ const result=await client.download(context,available,'preview');
+ expect(result.blob.type).toBe('image/jpeg');
+ expect(new Uint8Array(await result.blob.arrayBuffer())).toEqual(bytes);
+ await expect(client.download(context,available,'preview')).rejects.toThrow();
+ await expect(client.download(context,available,'preview')).rejects.toThrow();
+});

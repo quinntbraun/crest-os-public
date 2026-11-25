@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../client/authentication';
+import {FinancialAccessRecovery} from '../financial-access-recovery';
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {collectionFailureRecreditRefusal} from '../../bookkeeping/collection-failure-recredit-contract';
@@ -55,6 +57,7 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
   const [busy, setBusy] = useState(false);
   const [legacyPending,setLegacyPending]=useState(false);
   const [message, setMessage] = useState('');
+  const [signedOut,setSignedOut]=useState(false);
   const active = useRef<AbortController | null>(null);
   const status = useRef<HTMLParagraphElement>(null);
   const portions = options?.components.flatMap(component => component.availableRanges.map(item => ({
@@ -98,11 +101,12 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
     try { setPending(readPendingGroupedRecredit() !== null); setLegacyPending(readPendingCollectionFailureRecredit() !== null); }
     catch { setPending(true); setLegacyPending(true); setMessage('Crest could not read the original save reference.'); }
   }, []);
-  const suspend = useCallback(() => {
-    active.current?.abort(); active.current = null;
+  const clearPrivate = useCallback(() => {
     setFailures(null); setSelectedId(''); setDate(''); setOptions(null); setDeposit(emptyDeposit); setChoices({});
     setReceipt(null); setPending(false); setLegacyPending(false); setCanClose(false); setCloseReason(''); setBusy(false); setMessage('');
+  setSignedOut(false);
   }, []);
+  const suspend=useCallback(()=>{active.current?.abort();active.current=null;clearPrivate();},[clearPrivate]);
   useEffect(() => {
     const visibility = () => { if (document.visibilityState === 'hidden') suspend(); else refreshPending(); };
     const restored = (event: PageTransitionEvent) => { if (event.persisted) { suspend(); refreshPending(); } };
@@ -126,13 +130,12 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
     try {
       const context = await financeAccounts.context(current.signal);
       if (current.signal.aborted) return;
-      if (context.businessId !== businessId || !context.collectionFailureGroupedRecredits) {
+      if (context.businessId !== businessId || !context.collectionFailureGroupedRecredits) {clearPrivate();
         setMessage('Failed payment recovery is unavailable.'); return;
       }
+      setSignedOut(false);
       await work(context, current.signal);
-    } catch {
-      if (!current.signal.aborted) setMessage(failure);
-    } finally {
+    } catch(error){if(!current.signal.aborted){if(error instanceof AuthenticationError&&error.kind==='denied'){clearPrivate();setSignedOut(true);setMessage('Sign in again to review grouped recovered payments.');}else{setMessage(failure);}}} finally {
       if (active.current === current) { active.current = null; setBusy(false); status.current?.focus(); }
     }
   }
@@ -235,8 +238,9 @@ export function GroupedPaymentRecredit({businessId, customerId}: {businessId: st
     <section aria-label={title} aria-busy={busy}>
       <p className="field-help">Record money the bank or wallet credited back after a failed incoming payment. Review how the deposit should be split between original invoices and held funds. Choose a verified deposit with no fee.</p>
       <p role="status" tabIndex={-1} ref={status}>{message}</p>
+      {signedOut&&<FinancialAccessRecovery returnTo="customers" customerId={customerId} label="Grouped recovered payment access recovery"/>}
       {pending ? <>
-        <button type="button" className="secondary" disabled={busy} onClick={() => recover()}>Check original save</button>
+        <button type="button" disabled={busy} onClick={() => recover()}>Check original save</button>
         {canClose && <form onSubmit={event => {event.preventDefault(); recover(closeReason.trim());}}>
           <label>Reason for closing the attempt<textarea required rows={2} maxLength={1000} value={closeReason}
             onChange={event => setCloseReason(event.target.value)}/></label>

@@ -131,7 +131,21 @@ jobs:
       - name: Prove registered atomic conversion, source export and encrypted recovery
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/lead-conversion.test.mjs
       - name: Encrypted isolated database recovery drill
-        run: npm run test:recovery-db
+        run: |
+          npm run test:recovery-db
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-capture-controller.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-capture-command.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-capture-status.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-journal-context.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-funds-candidate139.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/workspace-export140.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-payables-sources.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-supplier-candidate141.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/workspace-supplier141.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-document-custody.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-scheduled-capture.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-alert-dispatch.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/operator-source-export.test.mjs
       - name: Prove proposed durable export requests and fenced lease attempts
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-jobs.test.mjs
       - name: Prove registered43 journal upgrade, full workflow matrix and independent encrypted recovery
@@ -238,11 +252,12 @@ jobs:
   browser_workflows:
     name: Browser workflows (${{ matrix.suite }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    # Preserve the original35-minute browser budget after the bounded installer.
+    timeout-minutes: 53
     strategy:
       fail-fast: false
       matrix:
-        suite: [crm, intake, commercial, amendments, schedule, field, custody, records, statement-staging, receipt-funds, payment-recovery, restored-tip, opening-worksheet, statement-matching, opening-receivables, income-statement]
+        suite: [crm, intake, commercial, amendments, schedule, field, custody, workspace-records, accounting-settings, records, statement-staging, receipt-funds, payment-recovery, restored-tip, opening-worksheet, statement-matching, opening-receivables, income-statement]
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
@@ -275,21 +290,29 @@ jobs:
           test "$(npm --version)" = "11.19.1"
           npm ci --ignore-scripts --no-fund
       - name: Verify complete browser partition
-        run: node scripts/run-browser-group.mjs --list
+        run: |
+          node scripts/run-browser-group.mjs --list
+          bash tests/integration/ci-ubuntu-package-sources.sh
       - name: Install verified database and recovery tooling
         run: |
           node scripts/install-tools.mjs
           node scripts/install-recovery-tools.mjs
       - name: Install browser dependencies with bounded Ubuntu downloads
-        timeout-minutes: 12
+        timeout-minutes: 18
         run: |
+          bash tests/integration/ci-ubuntu-browser-deps.sh
           bash scripts/install-ci-browsers.sh
       - name: Build actual product source
         run: npm run build
       - name: Run required browser group
+        timeout-minutes: 35
         env:
           CREST_BROWSER_JOB_TOTAL: ${{ strategy.job-total }}
         run: node scripts/run-browser-group.mjs ${{ matrix.suite }}
+      - name: Prove opening supplier and document evidence through genuine sign-in and phone layout
+        if: matrix.suite == 'opening-worksheet'
+        timeout-minutes: 8
+        run: node --conditions=react-server --test --test-reporter=tap --test-concurrency=1 tests/integration/opening-payables-http-auth.test.mjs tests/integration/opening-document-http-auth.test.mjs
       - name: Preserve synthetic screenshots and exact group result
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
@@ -297,6 +320,8 @@ jobs:
           name: settings-review-${{ matrix.suite }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: |
             .local/ci-browser/${{ matrix.suite }}.json
+            .local/review/opening-suppliers-*.png
+            .local/review/opening-allocations-*.png
             .local/review/settings-*.png
             .local/review/workspace-*.png
             .local/review/home-*.png
@@ -307,7 +332,14 @@ jobs:
             .local/review/completion-*.png
             .local/review/mileage-*.png
             .local/review/travel-*.png
+            .local/review/task-entry-*.png
+            .local/review/task-entry-observations-*.json
             .local/review/finance-*.png
+            .local/review/deeper-return-*.png
+            .local/review/deeper-return-*.json
+            .local/review/task-priority-*.png
+            .local/review/task-priority-*.json
+            .local/review/work-time-*.png
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
@@ -319,9 +351,11 @@ jobs:
     # obsolete runs cancel so they cannot block the newest source indefinitely.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
-    # Keep the existing75-minute deadline. The unchanged complete browser
-    # command runs in required isolated groups, not in this serial lifetime.
-    timeout-minutes: 75
+    # Full archive recovery and isolated recovery-tool rehearsal now precede
+    # document-worker journeys. Run646 reached those journeys at minute73 and
+    # was cancelled at the former75-minute job deadline. Retain every required
+    # check and individual step deadline within this bounded total lifetime.
+    timeout-minutes: 120
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
@@ -374,7 +408,9 @@ jobs:
       - name: Dependency security gate
         run: npm run audit:dependencies
       - name: Install system build dependencies
-        run: bash scripts/install-ci-ubuntu-build-deps.sh
+        run: |
+          bash tests/integration/ci-ubuntu-build-deps.sh
+          bash scripts/install-ci-ubuntu-build-deps.sh
       - name: Install checksum-pinned PDF inspector
         run: node scripts/install-pdf-tools.mjs
       - name: Build checksum-pinned HEIC decoder and separate synthetic encoder
@@ -386,6 +422,7 @@ jobs:
           npm test
           node --test tests/integration/synthetic-workspace-tls.test.mjs
           npm run test:private-files
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/receipt-worker-transport.test.mjs
           npm run test:image-validation
           npm run test:pdf-validation
           npm run test:heic-validation
@@ -438,8 +475,9 @@ jobs:
       - name: Confirmed booking original source retrieval
         run: npm run test:confirmed-booking-source
       - name: Install browser dependencies with bounded Ubuntu downloads
-        timeout-minutes: 12
+        timeout-minutes: 18
         run: |
+          bash tests/integration/ci-ubuntu-browser-deps.sh
           bash scripts/install-ci-browsers.sh
       - name: Production build and focused service workflow
         run: |
@@ -460,13 +498,39 @@ jobs:
           npm run test:image-sandbox
           npm run test:pdf-sandbox
           npm run test:heic-sandbox
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-document-worker-formats.test.mjs
           npm run test:file-intake
           node scripts/install-recovery-tools.mjs
           npm run test:object-recovery
           export CREST_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
-          npm run release:manifest
-          docker save crest-os:ci -o .local/release/crest-os-image.tar
+          mkdir -p .local/release
+          docker save "$CREST_IMAGE_ID" -o .local/release/crest-os-image.tar
           sha256sum .local/release/crest-os-image.tar > .local/release/crest-os-image.tar.sha256
+          git archive --format=tar --output=.local/release/crest-os-source.tar HEAD
+          sha256sum .local/release/crest-os-source.tar > .local/release/crest-os-source.tar.sha256
+          npm run release:manifest
+      - name: Recover the actual application archive and verify compiled identity
+        timeout-minutes: 6
+        env:
+          CREST_TEST_RECOVERY_IMAGE_MANIFEST: ${{ github.workspace }}/.local/release/build-manifest.json
+          CREST_TEST_RECOVERY_IMAGE_ARCHIVE: ${{ github.workspace }}/.local/release/crest-os-image.tar
+        run: |
+          node --conditions=react-server --test --test-reporter=tap --test-concurrency=1 tests/integration/recovery-image-identity.test.mjs | tee .local/release/recovery-image-identity.log
+          grep -Fx '# tests 4' .local/release/recovery-image-identity.log
+          grep -Fx '# pass 4' .local/release/recovery-image-identity.log
+          grep -Fx '# fail 0' .local/release/recovery-image-identity.log
+          grep -Fx '# skipped 0' .local/release/recovery-image-identity.log
+      - name: Build and rehearse isolated pinned recovery tools
+        timeout-minutes: 5
+        run: |
+          docker build --file Dockerfile.recovery --tag crest-recovery:ci --iidfile .local/release/recovery-tool-image-id.txt .
+          export CREST_TEST_RECOVERY_TOOL_IMAGE_ID="$(cat .local/release/recovery-tool-image-id.txt)"
+          export CREST_TEST_RECOVERY_AGE="$PWD/.local/tools/recovery/age/age"
+          node --test --test-reporter=tap --test-concurrency=1 tests/integration/recovery-tool-image.test.mjs tests/integration/recovery-release-large.test.mjs | tee .local/release/recovery-tool-image.log
+          grep -Fx '# tests 2' .local/release/recovery-tool-image.log
+          grep -Fx '# pass 2' .local/release/recovery-tool-image.log
+          grep -Fx '# fail 0' .local/release/recovery-tool-image.log
+          grep -Fx '# skipped 0' .local/release/recovery-tool-image.log
       - name: Signed-in custody photo journeys with isolated decoder
         timeout-minutes: 6
         shell: bash
@@ -497,10 +561,60 @@ jobs:
           CREST_SUPPLIER_DOCUMENT_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
           test -n "$CREST_SUPPLIER_DOCUMENT_IMAGE_ID"
           export CREST_SUPPLIER_DOCUMENT_IMAGE_ID
-          node --conditions=react-server --test --test-reporter=tap tests/integration/finance-supplier-payable-browser.test.mjs \
+          node --conditions=react-server --test --test-reporter=tap --test-name-pattern='^(chromium|webkit) reviews a saved supplier draft and reads recorded payables$' tests/integration/finance-supplier-payable-browser.test.mjs \
             | tee .local/supplier-isolated-decoder.log
           grep -Fx '# tests 2' .local/supplier-isolated-decoder.log
           grep -Fx '# pass 2' .local/supplier-isolated-decoder.log
+      - name: Supplier original-request re-entry with the isolated document worker
+        timeout-minutes: 8
+        shell: bash
+        env:
+          CREST_TEST_STATEMENT_MATCH_REVIEW: "1"
+          CREST_TEST_STATEMENT_MATCH_DRAFTS: "1"
+          CREST_TEST_SUPPLIER_BILL_DRAFTS: "1"
+          CREST_TEST_SUPPLIER_PAYABLE_REVIEW: "1"
+          CREST_TEST_SUPPLIER_PAYABLE_POSTING: "1"
+        run: |
+          CREST_SUPPLIER_DOCUMENT_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
+          test -n "$CREST_SUPPLIER_DOCUMENT_IMAGE_ID"
+          export CREST_SUPPLIER_DOCUMENT_IMAGE_ID
+          node --conditions=react-server --test --test-reporter=tap --test-name-pattern='original request re-entry\)$' tests/integration/finance-supplier-payable-browser.test.mjs \
+            | tee .local/supplier-original-reentry-isolated-decoder.log
+          grep -Fx '# tests 2' .local/supplier-original-reentry-isolated-decoder.log
+          grep -Fx '# pass 2' .local/supplier-original-reentry-isolated-decoder.log
+      - name: Supplier original re-entry after new sign-in with the isolated document worker
+        timeout-minutes: 8
+        shell: bash
+        env:
+          CREST_TEST_STATEMENT_MATCH_REVIEW: "1"
+          CREST_TEST_STATEMENT_MATCH_DRAFTS: "1"
+          CREST_TEST_SUPPLIER_BILL_DRAFTS: "1"
+          CREST_TEST_SUPPLIER_PAYABLE_REVIEW: "1"
+          CREST_TEST_SUPPLIER_PAYABLE_POSTING: "1"
+        run: |
+          CREST_SUPPLIER_DOCUMENT_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
+          test -n "$CREST_SUPPLIER_DOCUMENT_IMAGE_ID"
+          export CREST_SUPPLIER_DOCUMENT_IMAGE_ID
+          node --conditions=react-server --test --test-reporter=tap --test-name-pattern='original request re-entry after new sign-in' tests/integration/finance-supplier-payable-browser.test.mjs \
+            | tee .local/supplier-original-reentry-new-signin-isolated-decoder.log
+          grep -Fx '# tests 2' .local/supplier-original-reentry-new-signin-isolated-decoder.log
+          grep -Fx '# pass 2' .local/supplier-original-reentry-new-signin-isolated-decoder.log
+      - name: Private expense receipts through the isolated document worker
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          CREST_EXPENSE_RECEIPT_IMAGE_ID="$(docker image inspect --format '{{.Id}}' crest-os:ci)"
+          test -n "$CREST_EXPENSE_RECEIPT_IMAGE_ID"
+          export CREST_EXPENSE_RECEIPT_IMAGE_ID
+          node --test --test-reporter=tap --test-concurrency=1 --test-name-pattern='attaches and previews' tests/integration/finance-expense-posting-browser.test.mjs \
+            | tee .local/receipt-isolated-decoder.log
+          grep -Fx '# tests 2' .local/receipt-isolated-decoder.log
+          grep -Fx '# pass 2' .local/receipt-isolated-decoder.log
+          grep -Fx '# fail 0' .local/receipt-isolated-decoder.log
+          grep -Fx '# skipped 0' .local/receipt-isolated-decoder.log
+          grep -Fx '# SYNTHETIC_RECEIPT_WORKER_FORMATS chromium image/png,image/jpeg,application/pdf,image/heic' .local/receipt-isolated-decoder.log
+          grep -Fx '# SYNTHETIC_RECEIPT_WORKER_FORMATS webkit image/png,image/jpeg,application/pdf,image/heic' .local/receipt-isolated-decoder.log
+          cp .local/receipt-isolated-decoder.log .local/release/receipt-isolated-decoder.log
       - name: Container diagnostics
         if: failure()
         run: docker logs crest-os-smoke || true
@@ -524,6 +638,23 @@ jobs:
           include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
+      - name: Preserve configured supplier review evidence
+        # Retain configured supplier states on success as well as failure.
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: supplier-review-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            .local/review/supplier-draft-*.png
+            .local/review/supplier-draft-observations-*.json
+            .local/review/supplier-directory-*.png
+            .local/review/supplier-directory-observations-*.json
+            .local/review/supplier-register-*.png
+            .local/review/supplier-register-*.json
+            .local/review/finance-supplier-*.png
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: ignore
       - name: Preserve browser diagnostics
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -532,5 +663,10 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            .local/receipt-isolated-decoder.log
+            .local/supplier-isolated-decoder.log
+            .local/amendment53-original-schema.sql
+            .local/amendment53-restored-schema.sql
+          include-hidden-files: true
           retention-days: 3
           if-no-files-found: ignore

@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {authentication} from '../../client/authentication';
+import {authentication,AuthenticationError} from '../../client/authentication';
 import {postedFinanceExportLimit,postedFinanceExportName,postedFinanceExportPath,postedFinanceExportProfile,excessReceiptExportProfile,excessReturnExportProfile,tipReturnExportProfile,collectionFailureExportProfile,refundTransferExportProfile,directReceiptTipExportProfile,refundTransferFeeExportProfile,collectionFailureRecreditExportProfile,collectionFailureGroupedRecreditExportProfile,restoredTipExportProfile,openingWorksheetExportProfile,statementStagingExportProfile,openingReceivablesExportProfile,statementMatchDraftsExportProfile,supplierBillDraftsExportProfile,supplierPayablesExportProfile} from '../../security/posted-finance-owner-export-contract';
 
 type Phase='initial'|'ready'|'preparing'|'prepared'|'requested'|'failed';
@@ -47,7 +47,7 @@ async function verifiedArchive(response:Response,signal:AbortSignal){
  }
 }
 
-export function PostedFinanceExport(){
+export function PostedFinanceExport({onAccessDenied}:{onAccessDenied?:()=>void}={}){
  const [profile,setProfile]=useState<string|null>(null),[phase,setPhase]=useState<Phase>('initial');
  const operation=useRef<AbortController|null>(null),prepared=useRef<{url:string;timer:ReturnType<typeof setTimeout>}|null>(null);
  function discard(){
@@ -72,7 +72,12 @@ export function PostedFinanceExport(){
      setProfile(result.profile);
      setPhase('ready');
     }
-   }catch{/* The optional download stays hidden when its private route is unavailable. */}
+   }catch(error){
+    // An unavailable optional route stays hidden; ended access clears siblings.
+    if(mounted&&!current.signal.aborted&&error instanceof AuthenticationError&&error.kind==='denied'){
+     discard();setProfile(null);setPhase('initial');onAccessDenied?.();
+    }
+   }
    finally{if(operation.current===current)operation.current=null;}
   }
   function leave(){
@@ -96,7 +101,7 @@ export function PostedFinanceExport(){
    window.removeEventListener('pagehide',leave);
    window.removeEventListener('pageshow',restore);
   };
- },[]);
+ },[onAccessDenied]);
  async function prepare(){
   if(operation.current)return;
   discard();
@@ -111,7 +116,10 @@ export function PostedFinanceExport(){
    const timer=setTimeout(()=>{discard();setPhase('ready');},60000);
    prepared.current={url,timer};
    setPhase('prepared');
-  }catch{if(!current.signal.aborted)setPhase('failed');}
+  }catch(error){if(!current.signal.aborted){
+   if(error instanceof AuthenticationError&&error.kind==='denied'){discard();setProfile(null);setPhase('initial');onAccessDenied?.();}
+   else setPhase('failed');
+  }}
   finally{if(operation.current===current)operation.current=null;}
  }
  function save(){
@@ -128,14 +136,22 @@ export function PostedFinanceExport(){
   finally{anchor.remove();}
  }
  if(!profile)return null;
- return <section className="export-files" aria-label="Posted finance export" aria-busy={phase==='preparing'}>
-  <h2>Posted finance CSV</h2>
-  <p>{profile===supplierPayablesExportProfile
-   ?'Download a private ZIP with invoice, payment, refund, expense and supplier payable records, journal entries and audit history. The supplier record includes checksums for the original and preview files.'
-   :'Download a private ZIP with posted invoice, payment, refund and expense records, journal entries and source history. Use separate exports or backups for receipt files and business directories.'}</p>
-  <button type="button" disabled={phase==='preparing'} onClick={()=>void prepare()}>Prepare posted finance CSV</button>
-  {phase==='prepared'&&<button type="button" onClick={save}>Save ZIP</button>}
-  {phase==='preparing'&&<button className="secondary" type="button" onClick={()=>{discard();setPhase('ready');}}>Cancel preparation</button>}
-  <p role="status" aria-live="polite">{messages[phase]}</p>
+ return <section className="export-files export-collection export-finance" aria-label="Posted finance export" aria-busy={phase==='preparing'}>
+  <header className="export-collection-header">
+   <h2>Posted finance CSV</h2>
+   <p>{profile===supplierPayablesExportProfile
+    ?'Invoices, payments, refunds, expenses and supplier payables with journal entries and audit history. Supplier file checksums are included.'
+    :'Posted invoices, payments, refunds and expenses with journal entries and source history.'}</p>
+  </header>
+  <dl className="export-attributes"><div><dt>Format</dt><dd>CSV files in one ZIP</dd></div><div><dt>Scope</dt><dd>Available posted records</dd></div><div><dt>Date scope</dt><dd>Records included by this package; no date filter</dd></div></dl><p className="export-assurance">A financial record package is separate from a complete business export and a recoverable database backup.</p>
+  <div className="export-save-row" data-prepared={phase==='prepared'}>
+   <div>
+    {phase==='prepared'&&<strong>{postedFinanceExportName}</strong>}
+    <p className="export-status" role="status" aria-live="polite">{messages[phase]}</p>
+   </div>
+   {phase==='prepared'?<button type="button" onClick={save}>Save ZIP</button>:
+    <button type="button" disabled={phase==='preparing'} onClick={()=>void prepare()}>Prepare posted finance CSV</button>}
+   {phase==='preparing'&&<button className="secondary" type="button" onClick={()=>{discard();setPhase('ready');}}>Cancel preparation</button>}
+  </div>
  </section>;
 }

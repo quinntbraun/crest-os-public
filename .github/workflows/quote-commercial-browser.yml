@@ -39,7 +39,8 @@ concurrency:
 jobs:
   browser_feedback:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # Preserve the original25-minute test budget after the bounded installer.
+    timeout-minutes: 43
     strategy:
       fail-fast: false
       matrix:
@@ -73,14 +74,16 @@ jobs:
       - run: node scripts/install-tools.mjs
       - name: Install browser dependencies with bounded Ubuntu downloads
         if: matrix.suite != 'amendment_integrity'
-        timeout-minutes: 12
+        timeout-minutes: 18
         run: |
+          bash tests/integration/ci-ubuntu-browser-deps.sh
           bash scripts/install-ci-browsers.sh
       - if: matrix.suite != 'amendment_integrity'
         run: npm run build
       # Fast, genuine Auth/PostgreSQL/actual Next feedback. This does not replace
       # any mandatory full release/security/recovery/container gate in ci.yml.
       - if: matrix.suite == 'commercial'
+        timeout-minutes: 25
         run: node --test --test-concurrency=1 tests/integration/quote-browser-response.test.mjs tests/integration/quote-commercial-browser.test.mjs tests/integration/quote-review-browser.test.mjs
       - if: matrix.suite == 'amendment'
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/quote-amendment-acceptance-product-browser.test.mjs

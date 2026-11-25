@@ -3,10 +3,21 @@ import {createHash} from 'node:crypto';
 import {Readable} from 'node:stream';
 import {S3Client,GetObjectCommand,PutObjectCommand} from '@aws-sdk/client-s3';
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
-import {createPrivateObjectStore,PrivateObjectError,maximumFileBytes,uploadLifetimeSeconds} from '../../files/private-object-store.ts';
+import {createPrivateObjectStore,createR2ObjectClient,PrivateObjectError,maximumFileBytes,uploadLifetimeSeconds} from '../../files/private-object-store.ts';
+import type {R2ObjectConfiguration} from '../../files/private-object-store.ts';
 import {parseReceiptReservation,parseReceiptCandidate} from './receipt-contract.ts';
 import type {ReceiptReservation,ReceiptCandidate} from './receipt-contract.ts';
 export class ReceiptStorageError extends Error{constructor(){super('RECEIPT_STORAGE_UNCONFIRMED');this.name='ReceiptStorageError';}}
+// Same immutable/read-verified receipt mechanics as the explicit SDK seam below.
+// Production fixes the provider endpoint; staging bytes are relayed by the app.
+export function createR2ReceiptObjectStore(config:R2ObjectConfiguration){
+ let client:S3Client|undefined;
+ try{
+  client=createR2ObjectClient(config);
+  const owned=client;
+  return Object.freeze({objects:createReceiptObjectStore(owned,config.bucket),stagingOrigin:`https://${config.accountId}.r2.cloudflarestorage.com`,close:()=>owned.destroy()});
+ }catch{client?.destroy();throw new ReceiptStorageError();}
+}
 class ReceiptUpload{#url:string;readonly contentType:string;constructor(url:string,type:string){this.#url=url;this.contentType=type;Object.freeze(this);}forUpload(){return {url:this.#url,method:'PUT' as const,headers:{'content-type':this.contentType},expiresInSeconds:uploadLifetimeSeconds};}toJSON():never{throw new ReceiptStorageError();}}
 class ReceiptBytes{#bytes:Buffer;constructor(bytes:Buffer){this.#bytes=Buffer.from(bytes);Object.freeze(this);}forResponse(){return Buffer.from(this.#bytes);}toJSON():never{throw new ReceiptStorageError();}}
 // Explicit trusted SDK seam; no ambient credentials, browser bucket URL, delete,

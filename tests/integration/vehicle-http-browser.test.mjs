@@ -1,23 +1,27 @@
+import {reviewCrmSaveFeedback} from '../support/crm-save-feedback.mjs';
+import {reviewRecordRecovery} from '../support/record-recovery-layout.mjs';
 // Genuine HTTPS + compiled Next/Node + real disposable Auth/PG. No traces,
 // HAR, video, storageState exports or credential-bearing failure artifacts.
 import assert from 'node:assert/strict';
 import {before,after,test} from 'node:test';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
-import {readFile,chmod} from 'node:fs/promises';
-import {join} from 'node:path';
+import {setTimeout as delay} from 'node:timers/promises';
 import {createServer} from 'node:net';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {URI,TOTP} from 'otpauth';
+import {browserTestTls} from '../support/browser-test-tls.mjs';
 import {migrationSandbox} from '../support/migration-sandbox.mjs';
 import {installProviderSchema} from '../support/provider-schema.mjs';
 import {startRealAuthService,authResult} from '../support/real-auth-service.mjs';
+import {sessionAdmissionDiagnostic} from '../support/session-admission-diagnostic.mjs';
+import {dispatchVehicleInputBurst,installVehicleInputDiagnostic,observeVehicleRequests,vehicleInputDiagnostic} from '../support/vehicle-input-diagnostic.mjs';
+import {gateEditorFocusFrames,releaseEditorFocusFrames} from '../support/editor-focus-frame.mjs';
 
 let sandbox,client,service,app,origin,fixture,actor,business,login,loginOwned=false;
 const sessionName='__Host-crest_session';
 before(async()=>{
-  assert.equal(process.platform,'linux','the disposable container/HTTPS fixture requires Linux CI');
+  assert(['linux','win32'].includes(process.platform),'supported disposable HTTPS/Auth fixture required');
   process.env.NODE_ENV='production';
   sandbox=await migrationSandbox();const target=await sandbox.database();client=await sandbox.connect(target);
   await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(client,target);await sandbox.apply(target);
@@ -25,13 +29,14 @@ before(async()=>{
   assert.match(login,/^crest_probe_[a-f0-9]{16}$/);assert.match(password,/^[a-f0-9]{64}$/);
   await sandbox.admin.query(`CREATE ROLE ${login} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);loginOwned=true;
   await sandbox.admin.query(`GRANT crest_web TO ${login}`);const database=new URL(target);database.username=login;database.password=password;
-  service=await startRealAuthService(target);
+  service=await startRealAuthService(target,{diagnostic:true});
   const email=`synthetic-${randomUUID()}@example.com`,secret=randomBytes(32).toString('base64url');
   const user=authResult(await service.admin.admin.createUser({email,password:secret,email_confirm:true}),'browser_provision').user;assert(user?.id,'synthetic subject required');
   const sdk=service.sdk();await sdk.initialize();authResult(await sdk.signInWithPassword({email,password:secret}),'browser_enrollment_password');
   const factor=authResult(await sdk.mfa.enroll({factorType:'totp',friendlyName:'Synthetic browser fixture'}),'browser_enroll');
   const totp=URI.parse(factor.totp.uri);assert(totp instanceof TOTP,'synthetic TOTP required');
-  authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'browser_enrollment_verify');fixture={email,password:secret,totp};
+  const nextCodeAt=(Math.floor(Date.now()/(totp.period*1000))+1)*totp.period*1000;
+  authResult(await sdk.mfa.challengeAndVerify({factorId:factor.id,code:totp.generate()}),'browser_enrollment_verify');fixture={email,password:secret,totp,nextCodeAt};
   const bootstrap=(await client.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id;
   await client.query('BEGIN');try{
     actor=(await client.query("INSERT INTO crest_private.actors(kind,display_label,auth_provider_issuer,auth_user_id,created_by,updated_by,origin) VALUES('owner','Synthetic browser owner',$1,$2,$3,$3,'manual') RETURNING id",[service.issuer,user.id,bootstrap])).rows[0].id;
@@ -39,18 +44,14 @@ before(async()=>{
     await client.query("INSERT INTO crest.memberships(business_id,actor_id,role,created_by,updated_by,origin) VALUES($1,$2,'owner',$2,$2,'manual')",[business,actor]);
     await client.query("INSERT INTO crest_private.business_recovery_authorities(business_id,created_by,updated_by,origin) VALUES($1,$2,$2,'manual')",[business,actor]);await client.query('COMMIT');
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_BROWSER_OWNER_FAILED');}
-  const keyPath=join(sandbox.workspace,'ephemeral.key'),certPath=join(sandbox.workspace,'ephemeral.pem');
-  await chmod(sandbox.workspace,0o700);
-  try{execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-noenc','-keyout',keyPath,'-out',certPath,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{stdio:'ignore',timeout:15000});}
-  catch{throw new Error('SYNTHETIC_TLS_FIXTURE_FAILED');}
-  await chmod(keyPath,0o600);
+  const tls=await browserTestTls();
   const reservation=createServer();await new Promise(resolve=>reservation.listen(0,'127.0.0.1',resolve));const port=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));origin=`https://127.0.0.1:${port}`;
   // Normal Node resolution: react-server is only a build-time marker condition.
   const {createCrestApplication,createAuthenticationRuntime}=await import('../../.local/server/application.mjs');
   const runtime=await createAuthenticationRuntime({database:{connectionString:database.toString(),environment:'test'},provider:{issuer:service.issuer,publicKey:service.publicKey,environment:'test'},
     owner:{subject:user.id,factorId:factor.id},loginKey:randomBytes(32),ingress:{kind:'direct'},activeKeyId:'synthetic',keys:[{id:'synthetic',key:randomBytes(32)}]});
   assert.throws(()=>JSON.stringify(runtime),/AUTHENTICATION_RUNTIME_PRIVATE/);
-  app=await createCrestApplication({origin,environment:'test',tls:{key:await readFile(keyPath),cert:await readFile(certPath)},authentication:runtime.forServer(),business:{businessId:business},vehicles:true});
+  app=await createCrestApplication({origin,environment:'test',tls,authentication:runtime.forServer(),business:{businessId:business},vehicles:true});
   await new Promise((resolve,reject)=>{app.server.once('error',reject);app.server.listen(port,'127.0.0.1',resolve);});
   await client.query('UPDATE crest_private.business_recovery_authorities SET writes_enabled=true,version=version+1 WHERE business_id=$1',[business]);
 });
@@ -58,6 +59,10 @@ after(async()=>{try{await app?.close();}finally{try{await service?.close();}fina
 
 async function fill(page,{trusted=false,password=fixture.password}={}){
   await page.getByLabel('Email',{exact:true}).fill(fixture.email);await page.getByLabel('Password',{exact:true}).fill(password);
+  const period=fixture.totp.period*1000,now=Date.now(),remaining=period-now%period;
+  const readyAt=Math.max(fixture.nextCodeAt,remaining<6000?now+remaining:0);
+  if(readyAt>now)await delay(readyAt-now+250);
+  fixture.nextCodeAt=(Math.floor(Date.now()/period)+1)*period;
   await page.getByLabel('Authenticator code',{exact:true}).fill(fixture.totp.generate());if(trusted)await page.getByText('Personal device options',{exact:true}).click();await page.getByLabel('Trust this personal device').setChecked(trusted);
   await page.getByRole('button',{name:'Sign in',exact:true}).click();
 }
@@ -70,39 +75,66 @@ async function send(page,route,body={},proof=null){
 const root='business/vehicles/';
 const draft=(epoch,name)=>({schemaVersion:1,operationId:randomUUID(),vehicleId:randomUUID(),expectedVersion:'0',recoveryEpoch:epoch,label:'Synthetic vehicle %_ '+name,year:-500,make:null,model:null,color:null,vin:' Raw-vin / é 001 ',plate:'00123',kind:'customer_vehicle',notes:'Synthetic \\N =evidence é 😀',archived:false,archiveReason:null});
 async function openVehicles(page){await page.bringToFront();await page.goto(origin+'/vehicles');await expect(page.getByRole('button',{name:'Add vehicle',exact:true})).toBeVisible();}
-async function findVehicle(page,label,archived=false){await page.getByLabel('Vehicle search',{exact:true}).fill(label);await page.getByLabel('Include archived vehicles',{exact:true}).setChecked(archived);await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toHaveText('Vehicle search complete.');await page.getByRole('button',{name:label+(archived?' — archived':''),exact:true}).click();await expect(page.getByRole('form',{name:'Vehicle editor',exact:true})).toBeVisible();}
+async function findVehicle(page,label,archived=false){await page.getByLabel('Vehicle search',{exact:true}).fill(label);await page.getByLabel('Include archived vehicles',{exact:true}).setChecked(archived);await page.getByRole('button',{name:'Search vehicles',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toHaveText('Vehicle search complete.');await page.getByRole('button',{name:label+(archived?' — archived':''),exact:true}).click();await page.getByRole('button',{name:'Edit vehicle',exact:true}).click();await expect(page.getByRole('form',{name:'Vehicle editor',exact:true})).toBeVisible();}
 async function vehicleEditorFlow(page,other,proof,name){
+ await installVehicleInputDiagnostic(page);const stages=[];
+ const captureStage=async stage=>{stages.push({stage,...await vehicleInputDiagnostic(page)});};
  const label='Synthetic editor vehicle '+name,save=()=>page.getByRole('button',{name:'Save vehicle',exact:true}),load=()=>page.getByRole('button',{name:'Load current vehicles',exact:true});
+ async function saveWithEvidence(){
+  try{await expect(save()).toBeEnabled();await save().click();}
+  catch(error){
+   if(error instanceof Error){
+    const state=await page.evaluate(()=>{
+     const editor=document.querySelector('form[aria-label="Vehicle editor"]'),notes=editor?.querySelector('textarea[name="notes"]'),year=editor?.querySelector('input[name="year"]');
+     const status=document.querySelector('[aria-label="Vehicle editor status"]')?.textContent??'';
+     return {visible:document.visibilityState==='visible',editorPresent:!!editor,busy:document.querySelector('[aria-label="Vehicle directory"]')?.getAttribute('aria-busy')==='true',
+      notesEditable:notes instanceof HTMLTextAreaElement&&!notes.disabled,staleNotePresent:notes instanceof HTMLTextAreaElement&&notes.value==='Stale original edit',
+      yearPreserved:year instanceof HTMLInputElement&&year.value==='-500',yearValid:year instanceof HTMLInputElement&&year.validity.valid,
+      invalidFields:editor?.querySelectorAll(':invalid').length??null,validationNotice:editor?.textContent?.includes('Review the label, year, field lengths and archive reason')??false,
+      status:status.includes('cleared')?'cleared':status.includes('paused')?'paused':status.includes('could not')?'unavailable':status.includes('Review vehicle details')?'record_loaded':'other'};
+    });
+    error.message+='\nVehicle editor flags '+JSON.stringify(state)+'\nVehicle input stages '+JSON.stringify(stages)+'\nVehicle input latest '+JSON.stringify(await vehicleInputDiagnostic(page))+'\nSession admission '+JSON.stringify(await sessionAdmissionDiagnostic({client,actor,authDiagnostics:()=>service.diagnostics()}));
+   }
+   throw error;
+  }
+ }
  await openVehicles(page);await page.getByRole('button',{name:'Add vehicle',exact:true}).click();await page.getByLabel('Vehicle label',{exact:true}).fill(label);await expect(save()).toBeEnabled();
  await expect(page.getByLabel('Year',{exact:true})).toHaveValue('');await expect(page.getByLabel('Record year',{exact:true})).toHaveCount(0);await page.getByLabel('Year',{exact:true}).fill('not-a-year');await expect(save()).toBeDisabled();await page.getByLabel('Year',{exact:true}).fill('1.5');await expect(save()).toBeDisabled();await page.getByLabel('Year',{exact:true}).fill('-500');
  await page.getByLabel('VIN',{exact:true}).fill(' Raw-VIN / é 001 ');await page.getByLabel('Plate',{exact:true}).fill('00123');await page.getByLabel('Vehicle kind',{exact:true}).selectOption('other');await page.getByLabel('Notes',{exact:true}).fill('Synthetic field to clear');await page.getByLabel('Notes',{exact:true}).fill('');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);assert(await save().evaluate(el=>el.getBoundingClientRect().height>=44));
- await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
+ await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
  const row=(await client.query('SELECT id,year,make,vin_raw,vin_normalized,plate,kind,notes,version::text FROM crest.vehicles WHERE business_id=$1 AND label=$2',[business,label])).rows[0];assert(row);assert.equal(row.year,-500);assert.equal(row.make,null);assert.equal(row.vin_raw,' Raw-VIN / é 001 ');assert.equal(row.vin_normalized,'RAWVIN001');assert.equal(row.plate,'00123');assert.equal(row.kind,'other');assert.equal(row.notes,null);assert.equal(row.version,'1');
- await load().click();await findVehicle(page,label);await page.getByLabel('Notes',{exact:true}).fill('Stale original edit');
- const context=await send(other,root+'context',{},proof),changed={...draft(context.body.recoveryEpoch,name),vehicleId:row.id,expectedVersion:'1',label,notes:'Other device retained edit'};assert.equal((await send(other,root+'save',changed,proof)).status,200);
- await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('record changed');assert.equal((await client.query('SELECT notes FROM crest.vehicles WHERE id=$1',[row.id])).rows[0].notes,changed.notes);
- await load().click();await findVehicle(page,label);await page.getByLabel('Archive vehicle',{exact:true}).check();await expect(save()).toBeDisabled();await page.getByLabel('Archive reason',{exact:true}).fill('Synthetic retained vehicle');await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
- await load().click();await findVehicle(page,label,true);await page.getByLabel('Archive vehicle',{exact:true}).uncheck();await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
- await load().click();await findVehicle(page,label);await expect(page.getByRole('region',{name:'Vehicle history',exact:true})).toContainText('Current version: 4');const actions=(await client.query("SELECT action FROM crest_private.audit_events WHERE business_id=$1 AND entity_id=$2 AND entity_kind='vehicles' ORDER BY entity_version",[business,row.id])).rows;assert.deepEqual(actions.map(r=>r.action),['create','edit','archive','reopen']);
+ await load().click();await gateEditorFocusFrames(page,'Edit vehicle');
+ try{await findVehicle(page,label);await expect(page.getByRole('heading',{name:'Edit vehicle',exact:true})).toBeFocused();await page.getByLabel('Notes',{exact:true}).focus();await releaseEditorFocusFrames(page);await expect(page.getByLabel('Notes',{exact:true})).toBeFocused();}finally{await releaseEditorFocusFrames(page);}
+ let draftRequests=0;const observeDraft=request=>{if(new URL(request.url()).pathname.startsWith('/api/'))draftRequests++;};page.on('request',observeDraft);
+ try{await dispatchVehicleInputBurst(page);await captureStage('after_input_burst');await expect(page.getByLabel('Notes',{exact:true})).toHaveValue('Synthetic same-task note');await expect(page.getByLabel('Plate',{exact:true})).toHaveValue('00123-BURST');await expect(save()).toBeEnabled();assert.equal(draftRequests,0,'same-task field changes do not save or fetch');}finally{page.off('request',observeDraft);}
+ await page.getByLabel('Plate',{exact:true}).fill('00123');await page.getByLabel('Notes',{exact:true}).fill('Stale original edit');await captureStage('after_stale_fill');
+ const context=await send(other,root+'context',{},proof);await captureStage('after_other_context');
+ const changed={...draft(context.body.recoveryEpoch,name),vehicleId:row.id,expectedVersion:'1',label,notes:'Other device retained edit'};assert.equal((await send(other,root+'save',changed,proof)).status,200);await captureStage('after_other_save');
+ await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('record changed');assert.equal((await client.query('SELECT notes FROM crest.vehicles WHERE id=$1',[row.id])).rows[0].notes,changed.notes);
+ await load().click();await findVehicle(page,label);await page.getByLabel('Archive vehicle',{exact:true}).check();await expect(save()).toBeDisabled();await page.getByLabel('Archive reason',{exact:true}).fill('Synthetic retained vehicle');await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
+ await load().click();await findVehicle(page,label,true);await page.getByLabel('Archive vehicle',{exact:true}).uncheck();await saveWithEvidence();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');
+ await load().click();await findVehicle(page,label);await page.getByText('Record history and download',{exact:true}).click();await expect(page.locator('.vehicle-history')).toContainText('Current version 4');const actions=(await client.query("SELECT action FROM crest_private.audit_events WHERE business_id=$1 AND entity_id=$2 AND entity_kind='vehicles' ORDER BY entity_version",[business,row.id])).rows;assert.deepEqual(actions.map(r=>r.action),['create','edit','archive','reopen']);
 }
 async function interruptedVehicleFlow(page,name){
  const key='crest.vehicle.pending-reference.v1',read=()=>page.evaluate(k=>JSON.parse(sessionStorage.getItem(k)),key),save=()=>page.getByRole('button',{name:'Save vehicle',exact:true}),load=()=>page.getByRole('button',{name:'Load current vehicles',exact:true});
  async function add(label){await page.getByRole('button',{name:'Add vehicle',exact:true}).click();await page.getByLabel('Vehicle label',{exact:true}).fill(label);}
  await openVehicles(page);await add('Synthetic lost vehicle response '+name);let sent,calls=0;const pattern='**/api/business/vehicles/save',lost=async route=>{sent=route.request().postDataJSON();calls++;assert.equal((await route.fetch()).status(),200);await route.abort('failed');};
- await page.route(pattern,lost);await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('save could not be confirmed');await page.unroute(pattern,lost);const original=await read();assert.equal(calls,1);assert.equal(original.reference.vehicleId,sent.vehicleId);assert.equal(original.reference.operationId,sent.operationId);assert(!JSON.stringify(original).includes(sent.label));assert.deepEqual(Object.keys(original).sort(),['binding','businessId','reference','schemaVersion']);
- await page.reload();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('A pending vehicle save was found');await page.getByRole('button',{name:'Check vehicle save status',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('original save is confirmed');assert.equal(await read(),null);
- await load().click();await add('Synthetic unchanged vehicle retry '+name);const notSent=route=>route.abort('failed');await page.route(pattern,notSent);await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('save could not be confirmed');await page.unroute(pattern,notSent);const retry=await read();await page.getByRole('button',{name:'Check vehicle save status',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('does not prove an earlier request failed');
+ await page.route(pattern,lost);await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('save could not be confirmed');await expect.poll(()=>page.evaluate(()=>{const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;})).toBe(true);await page.unroute(pattern,lost);const original=await read();await reviewCrmSaveFeedback(page,{client,business},name,'vehicle','uncertain');await reviewRecordRecovery(page,{client,business},name,'vehicle',original.reference.operationId);assert.equal(calls,1);assert.equal(original.reference.vehicleId,sent.vehicleId);assert.equal(original.reference.operationId,sent.operationId);assert(!JSON.stringify(original).includes(sent.label));assert.deepEqual(Object.keys(original).sort(),['binding','businessId','reference','schemaVersion']);
+ await page.reload();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('A pending vehicle save was found');await page.getByRole('button',{name:'Check vehicle save status',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('original save is confirmed');await reviewCrmSaveFeedback(page,{client,business},name,'vehicle','resolved');assert.equal(await read(),null);
+ await load().click();await add('Synthetic unchanged vehicle retry '+name);const notSent=route=>route.abort('failed');await page.route(pattern,notSent);await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('save could not be confirmed');await expect.poll(()=>page.evaluate(()=>{const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;})).toBe(true);await page.unroute(pattern,notSent);const retry=await read();await page.getByRole('button',{name:'Check vehicle save status',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('does not prove an earlier request failed');
  const pending=page.waitForRequest(r=>r.url().endsWith('/api/business/vehicles/save'));await page.getByRole('button',{name:'Retry original vehicle change',exact:true}).click();const retried=(await pending).postDataJSON();for(const field of ['operationId','vehicleId','expectedVersion','recoveryEpoch'])assert.equal(retried[field],retry.reference[field]);await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('Vehicle saved');assert.equal(await read(),null);
- await load().click();await add('Synthetic missing vehicle draft '+name);await page.route(pattern,notSent);await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('save could not be confirmed');await page.unroute(pattern,notSent);const unresolved=await read();await page.reload();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('A pending vehicle save was found');await page.getByRole('button',{name:'Check vehicle save status',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('original draft is no longer in memory');await expect(page.getByRole('button',{name:'Retry original vehicle change',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Add vehicle',exact:true})).toHaveCount(0);assert.deepEqual(await read(),unresolved);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,unresolved.reference.operationId])).rows[0].n,0);
+ await load().click();await add('Synthetic missing vehicle draft '+name);await page.route(pattern,notSent);await save().click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('save could not be confirmed');await expect.poll(()=>page.evaluate(()=>{const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);return event.defaultPrevented;})).toBe(true);await page.unroute(pattern,notSent);const unresolved=await read();await page.reload();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('A pending vehicle save was found');await page.getByRole('button',{name:'Check vehicle save status',exact:true}).click();await expect(page.getByRole('status',{name:'Vehicle editor status',exact:true})).toContainText('original draft is no longer in memory');await expect(page.getByRole('button',{name:'Retry original vehicle change',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Add vehicle',exact:true})).toHaveCount(0);assert.deepEqual(await read(),unresolved);assert.equal((await client.query('SELECT count(*)::int AS n FROM crest_private.operations WHERE business_id=$1 AND operation_id=$2',[business,unresolved.reference.operationId])).rows[0].n,0);
 }
 // This fixture has its own disposable runtime/admission budget; no ordinary
 // allowance, recovery fence or genuine provider authority is bypassed/reset.
 for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900}],['webkit',webkit,{width:360,height:800}]]){
  test('genuine private vehicle HTTP '+name,async t=>{
-  const browser=await engine.launch();let first,second,proof,otherProof,input,created;
+  const browser=await engine.launch();let first,second,proof,otherProof,input,created,requestDiagnostics=[];
   try{
    first=await browser.newContext({ignoreHTTPSErrors:true,viewport});second=await browser.newContext({ignoreHTTPSErrors:true,viewport});const page=await first.newPage(),other=await second.newPage();
+   requestDiagnostics=[observeVehicleRequests(page),observeVehicleRequests(other)];
+   const diagnose=async work=>{try{await work();}catch(error){if(error instanceof Error)error.message+='\nVehicle request evidence '+JSON.stringify({editor:requestDiagnostics[0].report(),other:requestDiagnostics[1].report()})+'\nSession admission '+JSON.stringify(await sessionAdmissionDiagnostic({client,actor,authDiagnostics:()=>service.diagnostics()}));throw error;}};
    await t.test('independent devices establish genuine MFA and separate durable sessions',async()=>{
     for(const [p,trusted] of [[page,false],[other,true]]){await p.goto(origin+'/sign-in');await expect(p.getByRole('status')).toHaveText('Sign in to continue.');await fill(p,{trusted});await expect(p.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();}
     const a=(await first.cookies()).find(c=>c.name===sessionName),b=(await second.cookies()).find(c=>c.name===sessionName);assert(a?.httpOnly&&a.secure&&b?.httpOnly&&b.secure&&a.value!==b.value);
@@ -125,8 +157,8 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     assert.equal(results.filter(r=>r.status===200&&r.body.state==='committed').length,1);assert.equal(results.filter(r=>r.status===409&&r.body.reason==='version'&&r.body.currentVersion==='5').length,1);
     const loser=results[0].status===409?changes[0]:changes[1];assert.deepEqual((await send(page,root+'operation',{operationId:loser.operationId},proof)).body,{state:'absent'});
    });
-   await t.test('mobile vehicle editor retains nullable evidence, unusual years, conflicts and archive history',async()=>{await vehicleEditorFlow(page,other,otherProof,name);});
-   await t.test('interrupted editor saves resolve original receipts and retain unchanged retries or blocked lost drafts',async()=>{await interruptedVehicleFlow(page,name);});
+   await t.test('mobile vehicle editor retains nullable evidence, unusual years, conflicts and archive history',async()=>{await diagnose(()=>vehicleEditorFlow(page,other,otherProof,name));});
+   await t.test('interrupted editor saves resolve original receipts and retain unchanged retries or blocked lost drafts',async()=>{await diagnose(()=>interruptedVehicleFlow(page,name));});
    await t.test('a dropped committed response resolves only the original receipt and fresh revocation blocks later reads',async()=>{
     const original={...input,operationId:randomUUID(),vehicleId:randomUUID(),expectedVersion:'0'},route='**/api/business/vehicles/save';let calls=0,droppedStatus;
     // The intervening screen loads/first saves issue fresh proofs and evict
@@ -142,6 +174,6 @@ for(const [name,engine,viewport] of [['chromium',chromium,{width:1280,height:900
     const cookie=(await second.cookies()).find(c=>c.name===sessionName);await client.query('UPDATE crest_private.app_sessions SET revoked_at=clock_timestamp(),version=version+1 WHERE token_hash=$1',[createHash('sha256').update(cookie.value,'ascii').digest()]);
     const denied=await send(other,root+'history',{vehicleId:input.vehicleId,afterVersion:'0',pageSize:20},otherProof);assert.notEqual(denied.status,200);assert(!JSON.stringify(denied.body).includes(input.label));
    });
-  }finally{await first?.close();await second?.close();await browser.close();}
+  }finally{for(const diagnostic of requestDiagnostics)diagnostic.stop();await first?.close();await second?.close();await browser.close();}
  });
 }

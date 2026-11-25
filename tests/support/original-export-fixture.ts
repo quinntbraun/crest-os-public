@@ -1,0 +1,12 @@
+import {createHash,randomUUID} from 'node:crypto';
+import {sourceExportDownloadFixture} from './source-export-download-fixture';
+import {parseSourceExportDownloadFile} from '../../src/security/source-export-download-contract';
+export function originalExportFixture(count=3){
+ const base=sourceExportDownloadFixture(),header={...base.header,schemaVersion:1 as const,profile:'crest.current-business-source-bundle.v1' as const,sourceSchemaVersion:136 as const},contents=new Map<string,Uint8Array<ArrayBuffer>>(),ids=Array.from({length:count+1},()=>randomUUID()).sort();
+ const attachments=ids.map((attachmentId,i)=>{
+  const kind=(['expense_receipt','supplier_document','condition_photo'] as const)[i%3]!,objectId=kind==='condition_photo'?randomUUID():attachmentId,bytes=new TextEncoder().encode('Original '+attachmentId),sha256=createHash('sha256').update(bytes).digest('hex');contents.set(attachmentId,bytes);
+  return{attachmentId,kind,status:i===count?'reserved':'available',sourceTable:{expense_receipt:'crest.expense_receipt_revisions',supplier_document:'crest.supplier_bill_original_intents',condition_photo:'crest.custody_photo_attempts'}[kind],mediaType:'image/png',byteSize:bytes.byteLength,recordedAt:'2099-01-01T00:00:00.000001Z',references:kind==='expense_receipt'?{expenseId:randomUUID(),expenseRevision:'1',receiptRevision:'2'}:kind==='supplier_document'?{billId:randomUUID(),billRevision:'1',documentReference:'INV-1'}:{jobId:randomUUID(),jobVehicleId:randomUUID(),vehicleId:randomUUID(),caseId:null,pickupCollectionId:null,returnCollectionId:null,arrivalVersionId:null},original:i===count?null:{objectId,path:`attachments/${attachmentId}/${objectId}.png`,mediaType:'image/png',byteSize:bytes.byteLength,sha256},preview:i===count?null:{objectId,path:`previews/${attachmentId}/${objectId}.jpg`,mediaType:'image/jpeg',byteSize:4,sha256:'b'.repeat(64)},originalFilename:null,originalFilenameStatus:'not_retained_by_source',delivery:'not_delivered'};
+ });
+ const value={schemaVersion:1,profile:'crest.current-attachment-inventory.v1',businessId:base.businessId,snapshotToken:'c'.repeat(64),observedAt:base.header.completedAt,attachments,availableCount:count,pendingCount:1,originalBytesIncluded:false,originalFilenamesRetained:false,completePortableExport:false,completeBackup:false};
+ const bytes=new TextEncoder().encode(JSON.stringify(value)+'\n'),sha256=createHash('sha256').update(bytes).digest('hex');return{...base,files:base.files.map(parseSourceExportDownloadFile),header,value,bytes,sha256,contents};
+}

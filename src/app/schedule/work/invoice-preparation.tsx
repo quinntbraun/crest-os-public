@@ -1,4 +1,5 @@
 'use client';
+import {SignInLink} from '../../sign-in-link';
 
 import { useEffect, useRef, useState } from 'react';
 import { AuthenticationError } from '../../../client/authentication';
@@ -11,6 +12,7 @@ type Preparation = Awaited<ReturnType<typeof financeAccounts.invoicePreparation>
 export function InvoicePreparation({ businessId, jobId }: { businessId: string; jobId: string }) {
   const [result, setResult] = useState<Preparation | null>(null);
   const [busy, setBusy] = useState(false);
+  const [signedOut,setSignedOut]=useState(false);
   const [message, setMessage] = useState('');
   const active = useRef<AbortController | null>(null);
   const status = useRef<HTMLParagraphElement>(null);
@@ -19,7 +21,7 @@ export function InvoicePreparation({ businessId, jobId }: { businessId: string; 
     function clear() {
       active.current?.abort();
       active.current = null;
-      setResult(null);
+      setResult(null);setSignedOut(false);
       setMessage('');
       setBusy(false);
     }
@@ -40,7 +42,7 @@ export function InvoicePreparation({ businessId, jobId }: { businessId: string; 
     const controller = new AbortController();
     const { signal } = controller;
     active.current = controller;
-    setResult(null);
+    setResult(null);setSignedOut(false);
     setBusy(true);
     setMessage('Checking completed work…');
     try {
@@ -58,7 +60,8 @@ export function InvoicePreparation({ businessId, jobId }: { businessId: string; 
           : 'Crest could not find this job in your workspace.');
     } catch (error) {
       if (signal.aborted) return;
-      setMessage(error instanceof AuthenticationError && error.kind === 'denied'
+      const denied=error instanceof AuthenticationError&&error.kind==='denied';setSignedOut(denied);
+      setMessage(denied
         ? 'Sign in again to review completed work.' : 'Crest could not verify the completed work. Try again.');
     } finally {
       if (active.current === controller) {
@@ -70,12 +73,13 @@ export function InvoicePreparation({ businessId, jobId }: { businessId: string; 
   }
 
   return <section aria-label="Invoice preparation" aria-busy={busy}>
-    <h3>Invoice preparation</h3>
+    <h3 id="completed-work-invoice-review" tabIndex={-1}>Invoice preparation</h3>
     <p className="field-help">Review completed portions of the accepted work. Amounts are before invoice tax review. No invoice is issued here.</p>
     <button type="button" className="secondary" disabled={busy} onClick={() => void load()}>
       {result ? 'Reload completed work' : 'Load completed work'}
     </button>
     <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<p><SignInLink className="primary-action" returnTo="schedule">Sign in again</SignInLink></p>}
     {result?.state === 'ready' && <>
      <ul className="service-list" aria-label="Completed portions">
       {result.lines.map(line => <li key={line.outcomeId}>

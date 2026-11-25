@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../security/production-capabilities.ts';
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
 import {createRequestProtection} from '../security/request-protection.ts';
@@ -14,11 +16,11 @@ const prefix='/api/business/quotes/review/';
 const common=['schemaVersion','operationId','recoveryEpoch','familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','expectedContentVersion','expectedHash'] as const;
 const fields={read:['familyId','revisionId'],submit:common,approve:[...common,'approvalId','extremeAcknowledged'],operation:['operationId']} as const;
 type Route=keyof typeof fields;
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;productionCapabilities?:ProductionCapabilities};
 export function quoteReviewFailureResponse(status:400|404|405|503=400){const response=privateJsonResponse({error:'QUOTE_REVIEW_REQUEST_FAILED'},status);if(status===405)response.headers.set('Allow','POST');return response;}
 // Construction stays closed until the separate review release/source gates.
 export function createQuoteReviewHttp(config:Configuration,provider:Parameters<typeof createQuoteReviewDirectory>[1],tokens:Parameters<typeof createQuoteReviewDirectory>[2],enabled=false){
- if(!quoteId(config.businessId)||typeof enabled!=='boolean')throw Error('QUOTE_REVIEW_HTTP_CONFIGURATION_REQUIRED');
+ if(!quoteId(config.businessId)||typeof enabled!=='boolean'||enabled&&config.environment==='production'&&!productionCapability(config,'quoteReview'))throw Error('QUOTE_REVIEW_HTTP_CONFIGURATION_REQUIRED');
  const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=enabled?createQuoteReviewDirectory(config,provider,tokens):undefined;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{
   let submitted=false,workStarted=false;

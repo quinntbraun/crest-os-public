@@ -29,16 +29,18 @@ DPkg::Lock::Timeout "30";
 EOF
 chmod 644 "$config"
 for archive in https://archive.ubuntu.com/ubuntu https://us.archive.ubuntu.com/ubuntu; do
-  sed "s|^$mirror_uri$|URIs: $archive|" "$runner_sources" > "$sources"
+  bash scripts/ci-ubuntu-package-sources.sh "$runner_sources" "$archive" > "$sources"
   chmod 644 "$sources"
   if grep -q 'mirror+file:' "$sources"; then
     echo 'Unresolved Ubuntu archive mirror' >&2
     exit 1
   fi
-  if sudo timeout --kill-after=10s 210s env APT_CONFIG="$config" \
+  if sudo timeout --kill-after=10s 480s env APT_CONFIG="$config" \
     "$node_bin" "$playwright_cli" install-deps chromium webkit; then
     exit 0
+  else
+    status=$?
   fi
-  echo "Browser dependencies could not be installed from $archive" >&2
+  echo "Browser dependencies could not be installed from $archive (exit $status; deadline 480s)" >&2
 done
 exit 1

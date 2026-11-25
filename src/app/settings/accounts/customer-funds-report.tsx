@@ -1,17 +1,21 @@
 'use client';
 
 import {useEffect,useRef,useState} from 'react';
+import {AuthenticationError} from '../../../client/authentication';
 import type {parseCustomerFundsReport} from '../../../bookkeeping/customer-funds-report-contract';
 import {expenseDollars} from '../../../bookkeeping/expenses/expense-contract';
 import {downloadFinanceHistory,financeAccounts} from '../../../client/finance-accounts';
 import styles from './screen.module.css';
+import {FinancialReportHeader} from './financial-report-header';
+import {ReportReadingSummary} from './report-reading-summary';
 
 const dateFormat=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
 const displayDate=(date:string)=>dateFormat.format(new Date(date+'T12:00:00Z'));
 const usd=(cents:string)=>'$'+expenseDollars(cents);
 
-export function CustomerFundsReport({businessId,includesExcess=false,includesRefundTransfers=false}:{businessId:string;includesExcess?:boolean;includesRefundTransfers?:boolean}){
-  const [through,setThrough]=useState('');
+export function CustomerFundsReport({businessId,includesExcess=false,includesRefundTransfers=false,initialThrough='',onThroughChange,onAccessDenied}:{businessId:string;includesExcess?:boolean;includesRefundTransfers?:boolean;
+  initialThrough?:string;onThroughChange?:(value:string)=>void;onAccessDenied?:()=>void}){
+  const [through,setThrough]=useState(initialThrough);
   const [report,setReport]=useState<ReturnType<typeof parseCustomerFundsReport>|null>(null);
   const [status,setStatus]=useState('');
   const [busy,setBusy]=useState(false);
@@ -20,7 +24,6 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
   function clear(){
     active.current?.abort();
     active.current=null;
-    setThrough('');
     setReport(null);
     setStatus('');
     setBusy(false);
@@ -52,8 +55,12 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
       if(signal.aborted)return;
       setReport(result);
       setStatus(result.lotCount==='0'?'No posted customer funds were held on this date.':'Customer funds matched the ledger.');
-    }catch{
-      if(!signal.aborted)setStatus('Crest could not verify customer funds. Check the date and connection, then try again.');
+    }catch(error){
+      if(!signal.aborted){
+        const denied=error instanceof AuthenticationError&&error.kind==='denied';
+        if(denied)onAccessDenied?.();
+        setStatus(denied?'Sign in again to review customer funds.':'Crest could not verify customer funds. Check the date and connection, then try again.');
+      }
     }finally{
       if(active.current===controller){active.current=null;setBusy(false);}
     }
@@ -69,21 +76,25 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
     ]);
   }
 
-  return <details className="review-card" onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
+  return <details className="review-card" open onToggle={event=>{if(event.target===event.currentTarget&&!event.currentTarget.open)clear();}}>
     <summary onClick={event=>{if(event.currentTarget.closest('details')?.open)clear();}}>{includesRefundTransfers?'Available customer funds':'Customer funds held'}</summary>
     <section aria-label="Customer funds held" aria-busy={busy}>
       <p className="field-help">Fictional funds held from {includesExcess?'payments and payment corrections':'payment corrections'}, checked against account 2000.
        {includesRefundTransfers&&' Funds set aside for returned refunds appear in the trial balance under Refunds still due.'}</p>
+      <ReportReadingSummary snapshot={report} loading={busy&&!report}>{report&&<FinancialReportHeader period={<>Customer funds · As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></>}
+          timeZone={report.timeZone} observedAt={report.observedAt} scopeLabel="Posted customer funds"
+          coverage={report.truncated?'Details and CSV list the first 100 entries by date. Total held includes all posted customer funds.':'Details and CSV cover the listed customer funds.'}
+          details={<p className={styles.reportAmount}><span>Total held</span> <strong>{usd(report.totalCents)}</strong></p>}
+          action={report.rows.length>0&&<button className="secondary" type="button" onClick={download}>Download listed funds (CSV)</button>}/>}</ReportReadingSummary>
       <form onSubmit={event=>{event.preventDefault();void load();}}>
         <label>Through date (optional)<input type="date" min="1900-01-01" value={through} disabled={busy}
-          onChange={event=>{setThrough(event.target.value);setReport(null);setStatus('');}}/></label>
+          onChange={event=>{setThrough(event.target.value);onThroughChange?.(event.target.value);setReport(null);setStatus('');}}/></label>
         <p className="field-help">Leave blank for today in the workspace time zone.</p>
         <button className="secondary" type="submit" disabled={busy}>Load customer funds</button>
       </form>
       <p role="status">{status}</p>
       {report&&<>
-        <p>As of <time dateTime={report.throughOn}>{displayDate(report.throughOn)}</time></p>
-        <dl className={styles.amountBreakdown}><dt>Total held</dt><dd>{usd(report.totalCents)}</dd></dl>
+
         {report.rows.length>0&&<details>
           <summary>Held funds by customer ({report.rows.length} of {report.lotCount} entries)</summary>
           {report.truncated&&<p className="field-help">Showing the first 100 entries by date. The total includes all posted customer funds.</p>}
@@ -93,7 +104,6 @@ export function CustomerFundsReport({businessId,includesExcess=false,includesRef
               <strong>{usd(row.heldCents)}</strong>
             </li>)}
           </ul>
-          <button className="secondary" type="button" onClick={download}>Download listed funds (CSV)</button>
         </details>}
       </>}
     </section>

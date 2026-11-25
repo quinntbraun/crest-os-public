@@ -1,12 +1,13 @@
 'use client';
 
-import {useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import type {FormEvent} from 'react';
 import {authentication} from '../../client/authentication';
 import type {FinanceAccountContext} from '../../client/finance-accounts';
 import {fileTypes} from '../../files/validation-contract';
 import {exactCustomerObject as exact} from '../../customer/customer-contract';
 import type {SupplierBillDraftRevision} from '../../bookkeeping/expenses/supplier-bill-draft-contract';
+import {downloadSupplierOriginal} from '../../client/supplier-original-file';
 
 type Intent={originalId:string;reserveId:string;verifyId:string;file:File;type:string;retryUpload:boolean};
 const prefix='/api/business/supplier-original/';
@@ -89,7 +90,7 @@ export function SupplierOriginalUpload({context,bill,lockDraft,onAvailable,disab
   </form>
   <p role="status">{status}</p>
   {pending&&<>
-   <button type="button" className="secondary" disabled={busy} onClick={()=>void attempt(pending,true)}>Check original upload</button>
+   <button type="button" disabled={busy} onClick={()=>void attempt(pending,true)}>Check original upload</button>
    <button type="button" className="secondary" disabled={busy} onClick={()=>void attempt(pending)}>Retry original upload</button>
    <button type="button" className="secondary" disabled={busy} onClick={()=>{
     setPending(null);setFile(null);resetSelection(value=>value+1);lockDraft(false);setStatus('Choose another original bill file.');
@@ -99,12 +100,19 @@ export function SupplierOriginalUpload({context,bill,lockDraft,onAvailable,disab
 }
 
 export function SupplierOriginalPreview({id}:{id:string}){
+ return <SupplierOriginalFileSession key={id} id={id}/>;
+}
+function SupplierOriginalFileSession({id}:{id:string}){
  const active=useRef<AbortController|null>(null),resource=useRef<string|null>(null);
  const [url,setUrl]=useState(''),[status,setStatus]=useState(''),[busy,setBusy]=useState(false);
- useEffect(()=>()=>{
-  active.current?.abort();
-  if(resource.current)URL.revokeObjectURL(resource.current);
- },[]);
+ const original=useRef<{url:string;name:string;expiresAt:number;timer:ReturnType<typeof setTimeout>}|null>(null),[prepared,setPrepared]=useState<{name:string;byteSize:number}|null>(null);
+ const clearOriginal=useCallback(()=>{if(original.current){clearTimeout(original.current.timer);URL.revokeObjectURL(original.current.url);original.current=null;}setPrepared(null);},[]);
+ useEffect(()=>{
+  const clear=()=>{active.current?.abort();active.current=null;clearOriginal();if(resource.current){URL.revokeObjectURL(resource.current);resource.current=null;}setUrl('');setBusy(false);setStatus('Check sign-in and prepare the file again after returning.');};
+  const visibility=()=>{if(document.visibilityState==='hidden')clear();};
+  document.addEventListener('visibilitychange',visibility);window.addEventListener('pagehide',clear);
+  return()=>{active.current?.abort();if(resource.current)URL.revokeObjectURL(resource.current);clearOriginal();document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pagehide',clear);};
+ },[clearOriginal]);
  async function load(){
   if(active.current)return;
   const request=new AbortController(),{signal}=request;active.current=request;setBusy(true);setStatus('Loading the verified preview…');
@@ -123,9 +131,25 @@ export function SupplierOriginalPreview({id}:{id:string}){
   }catch{if(!signal.aborted)setStatus('The verified preview could not be opened.');}
   finally{if(active.current===request){active.current=null;setBusy(false);}}
  }
+ async function prepareOriginal(){
+  if(active.current)return;clearOriginal();const request=new AbortController(),{signal}=request;active.current=request;setBusy(true);setStatus('Checking sign-in and the original file…');let file:Awaited<ReturnType<typeof downloadSupplierOriginal>>|undefined;
+  try{
+   const proof=await authentication.session(signal);file=await downloadSupplierOriginal(id,proof,signal);signal.throwIfAborted();
+   const objectUrl=URL.createObjectURL(new Blob([file.bytes],{type:file.mediaType})),expiresAt=Date.now()+60000;
+   const timer=setTimeout(()=>{if(original.current?.url===objectUrl){clearOriginal();setStatus('The prepared original expired. Prepare it again to save.');}},60000);
+   original.current={url:objectUrl,name:file.fileName,expiresAt,timer};setPrepared({name:file.fileName,byteSize:file.bytes.byteLength});setStatus('Original file checked. Save it within one minute.');
+  }catch{clearOriginal();if(!signal.aborted)setStatus('The original file could not be verified. Check sign-in and try again.');}
+  finally{file?.bytes.fill(0);if(active.current===request){active.current=null;setBusy(false);}}
+ }
+ function saveOriginal(){
+  const value=original.current;if(!value||busy||Date.now()>=value.expiresAt){clearOriginal();return;}
+  const link=document.createElement('a');link.href=value.url;link.download=value.name;link.rel='noopener';link.referrerPolicy='no-referrer';link.hidden=true;document.body.append(link);
+  try{link.click();setStatus('Save requested. Check your browser downloads for the original file.');}finally{link.remove();}
+ }
  return <div>
-  <button type="button" className="secondary" disabled={busy} onClick={()=>void load()}>View verified bill preview</button>
+  <div className="export-actions"><button type="button" className="secondary" disabled={busy} onClick={()=>void load()}>View verified bill preview</button><button type="button" className="secondary" disabled={busy} onClick={()=>void prepareOriginal()}>Prepare original file</button></div>
   <p role="status">{status}</p>
+  {prepared&&<div className="export-save-row supplier-original-file" data-prepared="true"><div><p><strong>{prepared.name}</strong><br/>{prepared.byteSize.toLocaleString('en-US')} bytes · ready for up to one minute</p></div><button type="button" disabled={busy} onClick={saveOriginal}>Save original file</button></div>}
   {url&&<img src={url} alt="Verified supplier bill preview" className="supplier-original-preview"/>}
  </div>;
 }

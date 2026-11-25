@@ -1,0 +1,26 @@
+// Exclusive immutable reservation/acknowledgement files in a private Linux
+// operator spool. No resumption, stale-lock takeover, deletion or success ping.
+import {open,lstat,mkdir} from 'node:fs/promises';
+import {join,isAbsolute} from 'node:path';
+import {randomUUID} from 'node:crypto';
+import type {RecoveryObjectSlot,RecoveryObjectDestinationReceipt} from './recovery-object-destination.ts';
+export type RecoveryObjectApplyHeader=Readonly<{operationId:string;pointId:string;startedAt:string;destinations:Readonly<Record<RecoveryObjectSlot,string>>}>;
+export type RecoveryObjectReservation=Readonly<{id:string;reservedAt:string;slot:RecoveryObjectSlot;binding:string;key:string;byteSize:number;sha256:string}>;
+export type RecoveryObjectApplyJournal=Readonly<{view:()=>Readonly<{header:RecoveryObjectApplyHeader;reviewRequired:boolean;completeBackup:false}>;reserve:(input:Omit<RecoveryObjectReservation,'id'|'reservedAt'>)=>Promise<RecoveryObjectReservation>;acknowledge:(reservation:RecoveryObjectReservation,receipt:RecoveryObjectDestinationReceipt)=>Promise<void>;uncertain:(reservation:RecoveryObjectReservation)=>Promise<void>;finish:()=>Promise<void>}>;
+export class RecoveryObjectJournalError extends Error{constructor(){super('RECOVERY_OBJECT_JOURNAL_REVIEW_REQUIRED');this.name='RecoveryObjectJournalError';}}
+function require(value:unknown):asserts value{if(!value)throw new RecoveryObjectJournalError();}
+const uuid=(value:string)=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value),digest=(value:string)=>/^[a-f0-9]{64}$/.test(value),slots=['expense_receipt','supplier_document','condition_photo','quarantine'] as const;
+export async function createRecoveryObjectApplyJournal(parent:string,input:RecoveryObjectApplyHeader):Promise<RecoveryObjectApplyJournal>{
+ try{
+  require(process.platform==='linux'&&isAbsolute(parent)&&uuid(input.operationId)&&uuid(input.pointId)&&typeof input.startedAt==='string'&&Number.isFinite(Date.parse(input.startedAt))&&new Date(input.startedAt).toISOString()===input.startedAt&&Object.keys(input.destinations).sort().join(',')===[...slots].sort().join(',')&&slots.every(slot=>digest(input.destinations[slot]))&&new Set(Object.values(input.destinations)).size===4);const root=await lstat(parent);require(root.isDirectory()&&(root.mode&0o077)===0&&root.uid===process.getuid!());const header=Object.freeze({...input,destinations:Object.freeze({...input.destinations})}),directory=join(parent,'restore-objects-'+input.operationId);await mkdir(directory,{mode:0o700});let pending:RecoveryObjectReservation|undefined,review=false,finished=false,busy=false,objects=0;const reservedKeys=new Set<string>();
+  async function syncDirectory(path:string){const file=await open(path,'r');try{await file.sync();}finally{await file.close();}}
+  async function record(name:string,value:unknown){const bytes=Buffer.from(JSON.stringify(value)+'\n');require(bytes.length<=16384);const file=await open(join(directory,name),'wx',0o600);try{await file.writeFile(bytes);await file.sync();}finally{await file.close();}await syncDirectory(directory);}
+  await syncDirectory(parent);await record('started.json',{profile:'crest.object-restore-attempt.v1',header,completeBackup:false});
+  return Object.freeze({view:()=>Object.freeze({header,reviewRequired:review||!!pending,completeBackup:false as const}),
+   async reserve(value){require(!busy&&!review&&!pending&&!finished&&objects<100000&&slots.includes(value.slot)&&value.binding===header.destinations[value.slot]&&typeof value.key==='string'&&value.key.length<=512&&!/\p{Cc}/u.test(value.key)&&Number.isSafeInteger(value.byteSize)&&value.byteSize>=0&&value.byteSize<=26214400&&digest(value.sha256)&&!reservedKeys.has(value.binding+':'+value.key));busy=true;try{const reservation=Object.freeze({...value,id:randomUUID(),reservedAt:new Date().toISOString()});await record(reservation.id+'.reserved.json',reservation);pending=reservation;reservedKeys.add(reservation.binding+':'+reservation.key);objects++;return reservation;}catch{review=true;throw new RecoveryObjectJournalError();}finally{busy=false;}},
+   async acknowledge(reservation,receipt){require(!busy&&!review&&!finished&&pending===reservation&&receipt.binding===reservation.binding&&receipt.key===reservation.key&&receipt.byteSize===reservation.byteSize&&receipt.sha256===reservation.sha256);busy=true;try{await record(reservation.id+'.verified.json',{reservationId:reservation.id,verifiedAt:new Date().toISOString(),receipt});pending=undefined;}catch{review=true;throw new RecoveryObjectJournalError();}finally{busy=false;}},
+   async uncertain(reservation){require(!busy&&!finished&&pending===reservation);busy=true;review=true;try{await record(reservation.id+'.uncertain.json',{reservationId:reservation.id,observedAt:new Date().toISOString(),reviewRequired:true});}finally{busy=false;}},
+   async finish(){require(!busy&&!review&&!pending&&!finished);busy=true;try{await record('objects-verified.json',{operationId:header.operationId,pointId:header.pointId,finishedAt:new Date().toISOString(),objectCount:objects,completeBackup:false});finished=true;}catch{review=true;throw new RecoveryObjectJournalError();}finally{busy=false;}}
+  });
+ }catch{throw new RecoveryObjectJournalError();}
+}

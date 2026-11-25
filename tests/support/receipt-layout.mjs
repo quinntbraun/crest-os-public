@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+import AxeBuilder from '@axe-core/playwright';
+export async function openReceiptDownloads(scope,index=1){const row=scope.getByRole('region',{name:'Receipt '+index,exact:true}),details=row.locator('details.receipt-downloads');if(!await details.evaluate(node=>node.open))await details.locator('summary').click();}
+export async function captureExpenseState(page,name,state){const viewport=page.viewportSize();await mkdir('.local/review',{recursive:true});try{for(const width of [390,1440]){await page.setViewportSize({width,height:900});await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations,[]);await page.screenshot({path:'.local/review/expense-workspace-'+state+'-'+name+'-'+width+'.png',fullPage:true});}}finally{await page.setViewportSize(viewport);}}

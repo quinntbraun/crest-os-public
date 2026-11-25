@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from '../security/production-capabilities.ts';
 import {customerUuid,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {sessionDatabase} from '../security/session-database.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
@@ -22,17 +24,18 @@ const completeSql='SELECT crest_commands.complete_job($1::bytea,$2::uuid,$3::uui
 const originalSql='SELECT crest_commands.lookup_scheduling_original($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::jsonb) AS result';
 
 export function createCompletionDirectory(
- config:SessionDatabaseConfiguration,
+ config:SessionDatabaseConfiguration&ProductionCapabilityConfiguration,
  provider:ReturnType<typeof createProviderBoundary>,
  tokens:Awaited<ReturnType<typeof createProviderTokenStore>>
 ) {
- if(config.environment!=='test')throw new CompletionDirectoryError('COMPLETION_CONFIGURATION_REQUIRED');
+ if(config.environment!=='test'&&!productionCapability(config,'jobCompletion'))throw new CompletionDirectoryError('COMPLETION_CONFIGURATION_REQUIRED');
  const database=sessionDatabase(config);
  const sessions=createSessionLifecycle(config,provider,tokens);
  async function authorized<T>(
   credential:string,businessId:string,signal:AbortSignal,
   work:(args:unknown[],actorId:string,bounded:AbortSignal)=>Promise<T>
  ) {
+  if(config.environment==='production'&&!productionCapability({...config,businessId},'jobCompletion'))throw new CompletionDirectoryError('COMPLETION_REQUEST_FAILED');
   const bounded=AbortSignal.any([signal,AbortSignal.timeout(35000)]);
   bounded.throwIfAborted();
   const hash=sessionCredentialHash(credential);

@@ -600,6 +600,116 @@
       "version": "20270113180000",
       "file": "20270113180000_record_job_history.sql",
       "sha256": "8fd6865c260f1b85d1b894e0d5dd51dadf5f802ef24e5a531b21426edf3492e1"
+    },
+    {
+      "version": "20270114180000",
+      "file": "20270114180000_customer_profile.sql",
+      "sha256": "4c9c3ac08e5c121f0af03bb9bbb9322501839f78af8ceaa65fee31c8efaa99c9"
+    },
+    {
+      "version": "20270115180000",
+      "file": "20270115180000_invoice_outstanding.sql",
+      "sha256": "a31c29b9e597c130ef8d14831b0edf6473e920e45aa024ba15caecaefeb91f30"
+    },
+    {
+      "version": "20270116180000",
+      "file": "20270116180000_finance_mapping_recording_history.sql",
+      "sha256": "a655e25d1c0a030e7babd4766b1726353abcdcfecfe6b00bcffe4a3450f3c2d0"
+    },
+    {
+      "version": "20270117180000",
+      "file": "20270117180000_finance_history_recording.sql",
+      "sha256": "80e002a2bd865e06ad95717e04dff462900ed368aaca7a484f9622125bae8c17"
+    },
+    {
+      "version": "20270118180000",
+      "file": "20270118180000_google_calendar_shared_admission.sql",
+      "sha256": "c3076759d7d1e040324b71e3da1796eb114bf9994b5eebd6a5415bbfb88d9981"
+    },
+    {
+      "version": "20270119180000",
+      "file": "20270119180000_google_calendar_disconnect_runtime.sql",
+      "sha256": "8da3f7cad081511f8408acf5565a42c3069d0c3da0413acd55f34d250801c265"
+    },
+    {
+      "version": "20270120180000",
+      "file": "20270120180000_google_calendar_unsent_restart.sql",
+      "sha256": "dbb42995d4b94d090049ac005d49aaf23cc831623696677a43af2a9c289b1a73"
+    },
+    {
+      "version": "20270121180000",
+      "file": "20270121180000_google_calendar_initial_identity.sql",
+      "sha256": "bbdafca2ff343ebb91e2cfd0cf0cf88925de141a6afe2b060c8ba20e6be8411f"
+    },
+    {
+      "version": "20270122180000",
+      "file": "20270122180000_google_calendar_verified_reconnect.sql",
+      "sha256": "80c801adb6662440017553c806b154ee238171a5328ce8a85640655818f61ac2"
+    },
+    {
+      "version": "20270123180000",
+      "file": "20270123180000_google_calendar_reconnect_result.sql",
+      "sha256": "72ba0c621e8e6687278d5e3ac16527608b0e8d457b17e6338fa138ea601469c9"
+    },
+    {
+      "version": "20270124180000",
+      "file": "20270124180000_google_calendar_current_source.sql",
+      "sha256": "b09d20b9454b3f036dae711681b38f1c2cc187cbe3bc0c67d1b14fd4b7272a9c"
+    },
+    {
+      "version": "20270125180000",
+      "file": "20270125180000_export_migration_metadata.sql",
+      "sha256": "1fdac8b0d46df10d526a636b140c0263ba3d5dd126ce80d28ad42722de5eff77"
+    },
+    {
+      "version": "20270126180000",
+      "file": "20270126180000_current_business_source.sql",
+      "sha256": "3f18ef277257168fad004bd7a9551fee2fa2f2c863698be15a1ac1b4ce578e25"
+    },
+    {
+      "version": "20270127180000",
+      "file": "20270127180000_current_source_export_jobs.sql",
+      "sha256": "1c4e38684b7bddac84da52ea3852c250d5fd8f912416457b1dda6d70305d4ece"
+    },
+    {
+      "version": "20270128180000",
+      "file": "20270128180000_provider_source_export.sql",
+      "sha256": "750e803bafcc4eba3300d16f64aba9e63b2c6f3029ca0bb0383c0ef7d2153cbb"
+    },
+    {
+      "version": "20270129180000",
+      "file": "20270129180000_source_export_original_membership.sql",
+      "sha256": "1bca73d8af8b8b842f0c92beb1a56fee5f2be366571a6798ac7c948a2c53635a"
+    },
+    {
+      "version": "20270130180000",
+      "file": "20270130180000_source_export_original_typed_reader.sql",
+      "sha256": "812b7f9f63a7f577cb554fd4c69223efba3429968dcb0cf4e11483ad5e312d0c"
+    },
+    {
+      "version": "20270131180000",
+      "file": "20270131180000_recovery_backup_reader.sql",
+      "sha256": "5751224fb82987c1e38546818c4f645c4149b6713cea9ab6827a86d57064fb28"
+    },
+    {
+      "version": "20270205183000",
+      "file": "20270205183000_fictional_opening_funds_sources.sql",
+      "sha256": "dc1f24a26ff12e0b599f779faf5d9c733c9f297b327fff40ca8031c9acfe9136"
+    },
+    {
+      "version": "20270206183000",
+      "file": "20270206183000_opening_funds_workspace_export.sql",
+      "sha256": "365b1bc6fec419a131f757da79a44211ec42d92fed472a716ff299f96e583b75"
+    },
+    {
+      "version": "20270217183000",
+      "file": "20270217183000_fictional_opening_supplier_sources.sql",
+      "sha256": "ab087b772c825b2c99521941444df8f94ba31cd727b69a5d85e1d4a3b852c6e8"
+    },
+    {
+      "version": "20270218185000",
+      "file": "20270218185000_opening_document_workspace.sql",
+      "sha256": "dd77400ae479eee8777c4d0a8dfdb3eb15f6d458c9e171e32822c4581e143a7f"
     }
   ]
 }

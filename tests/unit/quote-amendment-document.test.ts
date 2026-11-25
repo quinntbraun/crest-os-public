@@ -17,7 +17,7 @@ it('shows an accepted comparison as accepted while preserving earlier values and
 });
 it('shows exact accepted/proposed amounts and honest unaccepted status without exposing actions or private source identities',async()=>{
  const {input,f}=fixture();input.proposedContent.lines=[{...input.proposedContent.lines[0]!,grossCents:'27001'},input.proposedContent.lines[1]!];const result=await prepareQuoteAmendmentComparison(input),html=render(result.customer);
- for(const label of ['Increase of $20.01','$550.00','$570.01','version 1','version 2','remains in effect until this change is separately accepted','records no invoice, payment or refund','<details','<summary','Accepted work','Proposed work'])expect(html).toContain(label);
+ for(const label of ['Increase of $20.01','$550.00','$570.01','Version 1','Version 2','data-change="changed"','Job-wide scope','$250.00','$270.01','remains in effect until this change is separately accepted','records no invoice, payment or refund','<details','<summary','Accepted work','Proposed work'])expect(html).toContain(label);
  for(const privateValue of [f.input.internalNotes!,f.business,f.family.id,input.parent.agreementId,input.parent.revisionId,...f.input.lines.map(row=>row.id)])expect(html).not.toContain(privateValue);
  expect(html).not.toMatch(/<(button|input|form|script)\b/);
  expect(()=>{

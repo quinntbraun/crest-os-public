@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilities} from '../security/production-capabilities.ts';
 import {createHash} from 'node:crypto';
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
@@ -15,11 +17,12 @@ import {parseQuoteCancellationEdit} from './quote-cancellation-edit-contract.ts'
 const prefix='/api/business/quotes/';
 const fields={context:[],list:['search','afterId','pageSize'],history:['familyId','revisionId','afterVersion','pageSize'],operation:['operationId'],save:['schemaVersion','operationId','recoveryEpoch','familyId','revisionId','expectedFamilyVersion','expectedRevisionVersion','content']} as const;
 type Route=keyof typeof fields;
-type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string};
+type Configuration=SessionDatabaseConfiguration&{origin:string;ingress:IngressConfiguration;businessId:string;productionCapabilities?:ProductionCapabilities};
 export function quoteFailureResponse(status:400|404|405|503=400){const r=privateJsonResponse({error:'QUOTE_REQUEST_FAILED'},status);if(status===405)r.headers.set('Allow','POST');return r;}
 // Default closed construction. Source/recovery/adoption must precede wiring.
 export function createQuoteHttp(config:Configuration,provider:Parameters<typeof createQuoteDirectory>[1],tokens:Parameters<typeof createQuoteDirectory>[2],enabled=false,reviewAvailable=false,commercialAvailable=false,amendmentAcceptanceAvailable=false){
- if(!quoteId(config.businessId)||(typeof enabled!=='boolean'||typeof reviewAvailable!=='boolean'||typeof commercialAvailable!=='boolean'||reviewAvailable&&!enabled||commercialAvailable&&!reviewAvailable||typeof amendmentAcceptanceAvailable!=='boolean'||amendmentAcceptanceAvailable&&(!commercialAvailable||config.environment!=='test')))throw Error('QUOTE_HTTP_CONFIGURATION_REQUIRED');
+ if(!quoteId(config.businessId)||(typeof enabled!=='boolean'||typeof reviewAvailable!=='boolean'||typeof commercialAvailable!=='boolean'||reviewAvailable&&!enabled||commercialAvailable&&!reviewAvailable||typeof amendmentAcceptanceAvailable!=='boolean'||amendmentAcceptanceAvailable&&(!commercialAvailable||config.environment!=='test'&&!productionCapability(config,'quoteAmendmentAcceptance'))))throw Error('QUOTE_HTTP_CONFIGURATION_REQUIRED');
+ if(config.environment==='production'&&(enabled&&!productionCapability(config,'quotes')||reviewAvailable&&!productionCapability(config,'quoteReview')||commercialAvailable&&!productionCapability(config,'quoteCommercial')))throw Error('QUOTE_HTTP_CONFIGURATION_REQUIRED');
  const businessId=config.businessId,resolve=createTrustedTransport(config),protect=createRequestProtection(config),csrf=createSessionCsrfVerifier(config),admit=createSessionRequestAdmission(config);
  const directory=enabled?createQuoteDirectory(config,provider,tokens):undefined,context=enabled?createBusinessSettingsContextReader(config,provider,tokens):undefined;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>):Promise<Response>=>{

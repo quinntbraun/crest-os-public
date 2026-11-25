@@ -1,4 +1,6 @@
 import 'server-only';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from '../security/production-capabilities.ts';
 import {exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {sessionDatabase} from '../security/session-database.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
@@ -23,12 +25,13 @@ const originalSql='SELECT crest_commands.lookup_scheduling_original($1::bytea,$2
 const historySql='SELECT crest_commands.read_mileage_history($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::bigint,$11::bigint,$12::integer) AS result';
 const tripsSql='SELECT crest_commands.read_job_mileage_trips($1::bytea,$2::uuid,$3::uuid,$4::text,$5::uuid,$6::uuid,$7::timestamptz,$8::uuid,$9::uuid,$10::timestamptz,$11::uuid,$12::integer) AS result';
 
-export function createMileageDirectory(config:SessionDatabaseConfiguration,provider:ReturnType<typeof createProviderBoundary>,
+export function createMileageDirectory(config:SessionDatabaseConfiguration&ProductionCapabilityConfiguration,provider:ReturnType<typeof createProviderBoundary>,
  tokens:Awaited<ReturnType<typeof createProviderTokenStore>>){
- if(config.environment!=='test')throw new MileageDirectoryError('MILEAGE_CONFIGURATION_REQUIRED');
+ if(config.environment!=='test'&&!productionCapability(config,'jobMileage'))throw new MileageDirectoryError('MILEAGE_CONFIGURATION_REQUIRED');
  const database=sessionDatabase(config),sessions=createSessionLifecycle(config,provider,tokens);
  async function authorized<T>(credential:string,businessId:string,signal:AbortSignal,
   work:(args:unknown[],actorId:string,bounded:AbortSignal)=>Promise<T>){
+  if(config.environment==='production'&&!productionCapability({...config,businessId},'jobMileage'))throw new MileageDirectoryError('MILEAGE_REQUEST_FAILED');
   const bounded=AbortSignal.any([signal,AbortSignal.timeout(35000)]);
   bounded.throwIfAborted();
   const hash=sessionCredentialHash(credential);

@@ -1,4 +1,8 @@
 'use client';
+import {SignInLink} from "../sign-in-link";
+
+import {ScheduleLink} from './navigation';
+
 
 import {useEffect,useId,useRef,useState} from 'react';
 import {authentication,AuthenticationError} from '../../client/authentication';
@@ -111,7 +115,7 @@ function DepartureForm({resources,choices,busy,timezone,more,save,worksiteVehicl
     {choices.vehicles.map(row=><option key={row.id} value={row.id}>{row.label}</option>)}
    </select>
    {choices.hasMore&&<button type="button" className="secondary" onClick={more}>Load more driving vehicles</button>}
-   {!choices.vehicles.length&&<p><a href="/vehicles">Save an active driving vehicle</a>, then reload pickup travel.</p>}
+   {!choices.vehicles.length&&<p><ScheduleLink href="/vehicles">Save an active driving vehicle</ScheduleLink>, then reload pickup travel.</p>}
    <label htmlFor={id+'-origin'}>Where are you leaving from?</label>
    <input id={id+'-origin'} required maxLength={2000} autoComplete="off" value={origin} onChange={event=>setOrigin(event.target.value)}/>
    <details><summary>Arrival estimate and notes</summary>
@@ -223,7 +227,11 @@ export function PickupTrips({resources,canChange,workAvailable}:{resources:Saved
    active.signal.throwIfAborted();
    setChoices({...next,vehicles:[...choices.vehicles,...next.vehicles]});
    setView({...view,busy:false,message:'More driving vehicles loaded.'});
-  }catch{if(!active.signal.aborted)setView({...view,busy:false,message:'Additional vehicles could not be loaded. Try again.'});}
+  }catch(error){if(!active.signal.aborted){
+   if(error instanceof AuthenticationError&&error.kind==='denied'){
+    setChoices(noChoices);setView({...initial,signedOut:true,message:'Sign in again to review pickup travel.'});
+   }else setView({...view,busy:false,message:'Additional vehicles could not be loaded. Try again.'});
+  }}
   finally{if(running.current===active){running.current=null;status.current?.focus();}}
  }
  async function save(body:PickupTripBody){
@@ -273,6 +281,13 @@ export function PickupTrips({resources,canChange,workAvailable}:{resources:Saved
    setView({...initial,page,message:savedMessage});
   }catch(error){
    if(active.signal.aborted)return;
+   if(error instanceof AuthenticationError&&error.kind==='denied'){
+    setChoices(noChoices);
+    setView({...initial,signedOut:true,pending:retained!==null,message:retained?
+     'The pickup save could not be confirmed. Sign in again and review the original save.':confirmed?
+     savedMessage+' Sign in again to review its history.':'Sign in again to review pickup travel. No trip was submitted.'});
+    return;
+   }
    if(retained&&error instanceof SchedulingClientError&&['input','not_submitted','recovery','limited'].includes(error.kind)){
     try{pendingStore.clear(retained);retained=null;}catch{/* The stored reference remains available for review. */}
    }
@@ -286,13 +301,13 @@ export function PickupTrips({resources,canChange,workAvailable}:{resources:Saved
  return <details ref={panel} onToggle={event=>{if(!event.currentTarget.open)clear();}}>
   <summary>Pickup travel</summary>
   <p role="status" ref={status} tabIndex={-1}>{view.message}</p>
-  {view.signedOut&&<p><a href="/sign-in">Sign in</a></p>}
+  {view.signedOut&&<p><SignInLink className="primary-action" returnTo="schedule">Sign in</SignInLink></p>}
   <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>{view.page?'Reload pickup travel':'Load pickup travel'}</button>
-  {view.pending&&<p><a href={'/save-review?kind='+pickupTripKind}>Open Save review</a></p>}
+  {view.pending&&<p><ScheduleLink href={'/save-review?kind='+pickupTripKind}>Open Save review</ScheduleLink></p>}
   {view.page&&!view.pending&&canChange&&activeLeg&&<ArrivalForm key={activeLeg.legId} busy={view.busy}
    canArrive={view.page.jobState==='scheduled'||activeLeg.purpose==='return_to_customer'} purpose={activeLeg.purpose} save={body=>void save(body)}/>}
   {view.page?.worksiteReady===true&&workAvailable&&canChange&&!view.pending&&!activeLeg&&
-   <p><a className="primary-action" href={'/schedule/work?job='+encodeURIComponent(jobId)}>Start Work</a></p>}
+   <p><ScheduleLink className="primary-action" href={'/schedule/work?job='+encodeURIComponent(jobId)}>Start Work</ScheduleLink></p>}
   {view.page&&!view.pending&&canChange&&!activeLeg&&view.page.jobState==='scheduled'&&view.page.worksiteReady!==true&&
    <DepartureForm key={view.page.trips[0]?.legVersionId??'planned'} resources={resources} choices={choices}
     worksiteVehicleIds={worksiteVehicleIds} busy={view.busy} timezone={timezone}

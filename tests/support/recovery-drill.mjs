@@ -1,3 +1,5 @@
+import {normalizedSchema,legacyPolicyOrderMatches} from './recovery-schema-comparison.mjs';
+import {rememberRecoverySchema,recoverySchemaDifference} from './recovery-schema-diagnostic.mjs';
 // Bounded, synthetic-only recovery machinery. No production escape flag or
 // runtime/vault credentials. Dumps are trusted executable SQL, never user uploads.
 import assert from 'node:assert/strict';
@@ -39,13 +41,18 @@ const root=fileURLToPath(new URL('../../',import.meta.url));
 const pins=JSON.parse(await readFile(join(root,'release/toolchain.json'),'utf8'));
 const registry=JSON.parse(await readFile(join(root,'supabase/migration-checksums.json'),'utf8'));
 const currentCoverage=JSON.parse(await readFile(join(root,'planning/SECURITY_EXPORT_COVERAGE.json'),'utf8'));
+// Historical restores retain the reviewed pre125 inventory. New current
+// tables must never leak into an old snapshot through a mutable root manifest.
+const historicalCoverageBytes=await readFile(join(root,'tests/support/registered124-export-coverage.json'));
+assert.equal(hash(historicalCoverageBytes),'9058743988e62abe733a19f987ca635cbe255853d548690fbb1b4802806331a6');
+const historicalCoverage=JSON.parse(historicalCoverageBytes);assert.equal(historicalCoverage.migrationCount,124);
 const registryHash=hash(await readFile(join(root,'supabase/migration-checksums.json')));
 const supplierPayableTables=new Set(['crest.supplier_bill_original_intents','crest.supplier_bill_originals','crest.supplier_payables','crest.supplier_payable_settlements']);
 const draftDecisionTables=new Set(['crest.legacy_contact_decision_sources','crest.legacy_contact_decisions']);
 const draftApprovalTable='crest.legacy_contact_approvals';
 const currentDraftTables=new Set(['crest.legacy_contact_batches','crest.legacy_contact_batch_rows',...draftDecisionTables,draftApprovalTable]);
 const registeredApplicationTables=new Set(["crest.legacy_contact_external_identities","crest.legacy_contact_applications","crest.legacy_contact_application_rows","crest_private.legacy_contact_apply_requests"]);
-const coverage115={...currentCoverage,migrationCount:115,tables:currentCoverage.tables.filter(row=>!registeredApplicationTables.has(row.table))};
+const coverage115={...historicalCoverage,migrationCount:115,tables:historicalCoverage.tables.filter(row=>!registeredApplicationTables.has(row.table))};
 const priorPayableCoverage={...coverage115,migrationCount:108,tables:coverage115.tables.filter(row=>!supplierPayableTables.has(row.table)&&!currentDraftTables.has(row.table))
  .map(row=>({...row,required:row.required.filter(column=>column!=='supplier_payable_id'&&column!=='supplier_payable_settlement_id')}))};
 const priorSupplierDraftCoverage={...priorPayableCoverage,tables:priorPayableCoverage.tables.filter(row=>row.table!=='crest.supplier_bill_draft_revisions')};
@@ -81,14 +88,14 @@ assert.equal(hash(legacy113Bytes),'636c8554f06001790da3780b301144e0cd49e54b6aa6d
 assert.deepEqual(registry.migrations.slice(0,113),legacy113.migrations);
 const legacy113Profile=Object.freeze({schemaVersion:113,registrySha256:hash(legacy113Bytes)});
 const legacy113Snapshot={profile:legacy113Profile,versions:legacy113.migrations.map(row=>row.version),
- coverage:{...currentCoverage,migrationCount:113,tables:coverage115.tables.filter(row=>!draftDecisionTables.has(row.table)&&row.table!==draftApprovalTable)}};
+ coverage:{...historicalCoverage,migrationCount:113,tables:coverage115.tables.filter(row=>!draftDecisionTables.has(row.table)&&row.table!==draftApprovalTable)}};
 const legacy114Bytes=await readFile(join(root,'tests/support/registered114-migration-checksums.json'));
 const legacy114=JSON.parse(legacy114Bytes);
 assert.equal(hash(legacy114Bytes),'ff3313b1854b6b4c6b71446499f857a9302f805e9662d9b277efac4d38b885cf');
 assert.deepEqual(registry.migrations.slice(0,114),legacy114.migrations);
 const legacy114Profile=Object.freeze({schemaVersion:114,registrySha256:hash(legacy114Bytes)});
 const legacy114Snapshot={profile:legacy114Profile,versions:legacy114.migrations.map(row=>row.version),
- coverage:{...currentCoverage,migrationCount:114,tables:coverage115.tables.filter(row=>row.table!==draftApprovalTable)}};
+ coverage:{...historicalCoverage,migrationCount:114,tables:coverage115.tables.filter(row=>row.table!==draftApprovalTable)}};
 const legacy104Bytes=await readFile(join(root,'tests/support/registered104-migration-checksums.json'));
 const legacy104=JSON.parse(legacy104Bytes);
 assert.equal(hash(legacy104Bytes),'8084ff6ebd02d9d416ee4c2d2f38ea4188c16fe2495a8939f9492bda9e5ea757');
@@ -306,25 +313,68 @@ const legacy116=JSON.parse(legacy116Bytes);
 assert.equal(hash(legacy116Bytes),'cb46eed71c1d1b50db650f684e7fdaab80eb1f81fe856ca89778be98cf15e82b');
 assert.deepEqual(registry.migrations.slice(0,116),legacy116.migrations);
 const legacy116Profile=Object.freeze({schemaVersion:116,registrySha256:hash(legacy116Bytes)});
-const legacy116Snapshot={profile:legacy116Profile,versions:legacy116.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:116}};
+const legacy116Snapshot={profile:legacy116Profile,versions:legacy116.migrations.map(row=>row.version),coverage:{...historicalCoverage,migrationCount:116}};
 const legacy117Bytes=await readFile(join(root,'tests/support/registered117-migration-checksums.json'));
 const legacy117=JSON.parse(legacy117Bytes);
 assert.equal(hash(legacy117Bytes),'d8588c86ea2d74580c12c1fe9b71aa0701eae9ca9dd50513d8939518d07f8cd4');
 assert.deepEqual(registry.migrations.slice(0,117),legacy117.migrations);
 const legacy117Profile=Object.freeze({schemaVersion:117,registrySha256:hash(legacy117Bytes)});
-const legacy117Snapshot={profile:legacy117Profile,versions:legacy117.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:117}};
+const legacy117Snapshot={profile:legacy117Profile,versions:legacy117.migrations.map(row=>row.version),coverage:{...historicalCoverage,migrationCount:117}};
 const legacy118Bytes=await readFile(join(root,'tests/support/registered118-migration-checksums.json'));
 const legacy118=JSON.parse(legacy118Bytes);
 assert.equal(hash(legacy118Bytes),'6d0b8b6a8d3b98a24b43f2335296c4de5b3e937ade3c972e1a2b80716ae55197');
 assert.deepEqual(registry.migrations.slice(0,118),legacy118.migrations);
 const legacy118Profile=Object.freeze({schemaVersion:118,registrySha256:hash(legacy118Bytes)});
-const legacy118Snapshot={profile:legacy118Profile,versions:legacy118.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:118}};
+const legacy118Snapshot={profile:legacy118Profile,versions:legacy118.migrations.map(row=>row.version),coverage:{...historicalCoverage,migrationCount:118}};
 const legacy119Bytes=await readFile(join(root,'tests/support/registered119-migration-checksums.json'));
 const legacy119=JSON.parse(legacy119Bytes);
 assert.equal(hash(legacy119Bytes),'cda4700579ee103af4a8e5664d885ae5b392d2570c1359975562223f48aaeff0');
 assert.deepEqual(registry.migrations.slice(0,119),legacy119.migrations);
 const legacy119Profile=Object.freeze({schemaVersion:119,registrySha256:hash(legacy119Bytes)});
-const legacy119Snapshot={profile:legacy119Profile,versions:legacy119.migrations.map(row=>row.version),coverage:{...currentCoverage,migrationCount:119}};
+const legacy119Snapshot={profile:legacy119Profile,versions:legacy119.migrations.map(row=>row.version),coverage:{...historicalCoverage,migrationCount:119}};
+const legacy120Bytes=await readFile(join(root,'tests/support/registered120-migration-checksums.json'));
+const legacy120=JSON.parse(legacy120Bytes);
+assert.equal(hash(legacy120Bytes),'397f83b17c84525b8f15ec05f7e7c9215c3f618692fdd420a11739e6d6428007');
+assert.deepEqual(registry.migrations.slice(0,120),legacy120.migrations);
+const legacy120Profile=Object.freeze({schemaVersion:120,registrySha256:hash(legacy120Bytes)});
+const legacy120Snapshot={profile:legacy120Profile,versions:legacy120.migrations.map(row=>row.version),coverage:{...historicalCoverage,migrationCount:120}};
+const legacy121Bytes=await readFile(join(root,'tests/support/registered121-migration-checksums.json'));
+const legacy121=JSON.parse(legacy121Bytes);
+assert.equal(hash(legacy121Bytes),'a191fb766f88caf79a6c2eecd3459d001357e519da875117acf9549368d4f167');
+assert.deepEqual(registry.migrations.slice(0,121),legacy121.migrations);
+const legacy121CoverageBytes=await readFile(join(root,'tests/support/registered121-export-coverage.json'));
+assert.equal(hash(legacy121CoverageBytes),'1ce3baedfffa812a252249f770b31809e469995b20b3b36cd7f8f971d64e8aa0');
+const legacy121Coverage=JSON.parse(legacy121CoverageBytes);assert.equal(legacy121Coverage.migrationCount,121);
+const legacy121Profile=Object.freeze({schemaVersion:121,registrySha256:hash(legacy121Bytes)});
+const legacy121Snapshot={profile:legacy121Profile,versions:legacy121.migrations.map(row=>row.version),coverage:legacy121Coverage};
+const legacy122Bytes=await readFile(join(root,'tests/support/registered122-migration-checksums.json'));
+const legacy122=JSON.parse(legacy122Bytes);assert.equal(hash(legacy122Bytes),'b058f60826c57db95730b9b601572fea9db1f77340473debc6ee758527c04e3e');
+assert.deepEqual(registry.migrations.slice(0,122),legacy122.migrations);
+const legacy122CoverageBytes=await readFile(join(root,'tests/support/registered122-export-coverage.json'));
+assert.equal(hash(legacy122CoverageBytes),'d5d40657d1a76bfcc1fb9c369b8992469215b1823c1d2fcc6e1d98e8d55a34b4');
+const legacy122Coverage=JSON.parse(legacy122CoverageBytes);assert.equal(legacy122Coverage.migrationCount,122);
+const legacy122Profile=Object.freeze({schemaVersion:122,registrySha256:hash(legacy122Bytes)});
+const legacy122Snapshot={profile:legacy122Profile,versions:legacy122.migrations.map(row=>row.version),coverage:legacy122Coverage};
+const legacy123Bytes=await readFile(join(root,'tests/support/registered123-migration-checksums.json'));
+const legacy123=JSON.parse(legacy123Bytes);assert.equal(hash(legacy123Bytes),'aa6bb0581e624d755c845be9fee880ea5d918c4fb2e4145ca4fff977625ec33d');
+assert.deepEqual(registry.migrations.slice(0,123),legacy123.migrations);
+const legacy123CoverageBytes=await readFile(join(root,'tests/support/registered123-export-coverage.json'));
+assert.equal(hash(legacy123CoverageBytes),'e3a1c45b70a1d0e3ef6c1bdd71f921a7ea680184855ef0356cd43e3c97651999');
+const legacy123Coverage=JSON.parse(legacy123CoverageBytes);assert.equal(legacy123Coverage.migrationCount,123);
+const legacy123Profile=Object.freeze({schemaVersion:123,registrySha256:hash(legacy123Bytes)});
+const legacy123Snapshot={profile:legacy123Profile,versions:legacy123.migrations.map(row=>row.version),coverage:legacy123Coverage};
+const legacy124Bytes=await readFile(join(root,'tests/support/registered124-migration-checksums.json'));
+const legacy124=JSON.parse(legacy124Bytes);assert.equal(hash(legacy124Bytes),'cc75057edc7e00a04d929c999b90c18577ff9a02bbfda4f185aa99dbe59b8962');
+assert.deepEqual(registry.migrations.slice(0,124),legacy124.migrations);
+const legacy124Profile=Object.freeze({schemaVersion:124,registrySha256:hash(legacy124Bytes)});
+const legacy124Snapshot={profile:legacy124Profile,versions:legacy124.migrations.map(row=>row.version),coverage:historicalCoverage};
+
+
+const legacy137Bytes=await readFile(join(root,'tests/support/registered137-migration-checksums.json'));
+assert.equal(hash(legacy137Bytes),'398e9694c8a827df8af8e9a8abc5e1b0770bb3057ff8b59ac85ba3e26976fe85');const legacy137=JSON.parse(legacy137Bytes);assert.equal(legacy137.migrations.length,137);assert.deepEqual(registry.migrations.slice(0,137),legacy137.migrations);
+const legacy137CoverageBytes=await readFile(join(root,'tests/support/registered137-export-coverage.json'));assert.equal(hash(legacy137CoverageBytes),'58623c380da145ed77bf5d05137ce323eef0d70af81523b15cb5d9068f9b96db');const legacy137Coverage=JSON.parse(legacy137CoverageBytes);assert.equal(legacy137Coverage.migrationCount,137);
+const legacy137Profile=Object.freeze({schemaVersion:137,registrySha256:hash(legacy137Bytes)}),legacy137Snapshot={profile:legacy137Profile,versions:legacy137.migrations.map(row=>row.version),coverage:legacy137Coverage};
+
 const contactCandidateFiles=['legacy-contact-external-identities.sql','legacy-contact-application.sql','legacy-contact-application-source.sql'];
 const contactCandidateSources=await Promise.all(contactCandidateFiles.map(async file=>({file,sha256:hash(await readFile(join(root,'planning/proposals',file)))})));
 const contactCandidateTables={
@@ -405,27 +455,7 @@ export async function inventory(client){
   }
   return result;
 }
-export function normalizedSchema(bytes,policyRoleSets=[]){
-  // PG17's psql restriction nonce is intentionally random; retain every other
-  // schema byte except the presentation order of verified Crest policy roles.
-  let sql=bytes.toString().replace(/^\\(?:un)?restrict [A-Za-z0-9]+\r?$/gm,'');
-  for(const {schemaName,tableName,policyName,roles} of policyRoleSets){
-    if(!roles.every(role=>/^crest_[a-z_]+$/.test(role)))continue;
-    assert(['crest','crest_private'].includes(schemaName));
-    assert([tableName,policyName].every(name=>/^[a-z_][a-z0-9_]*$/.test(name)));
-    const header=`-- Name: ${tableName} ${policyName}; Type: POLICY; Schema: ${schemaName}; Owner: crest_[a-z_]+`;
-    const statement=`CREATE POLICY ${policyName} ON ${schemaName}\\.${tableName}(?: AS RESTRICTIVE)?(?: FOR (?:SELECT|INSERT|UPDATE|DELETE))? TO `;
-    const line=new RegExp(`^(${header}\\n--\\n\\n${statement})(crest_[a-z_]+(?:, crest_[a-z_]+)+)(?= USING \\(| WITH CHECK \\(|;)`,'gm');
-    let found=0;
-    sql=sql.replace(line,(_match,prefix,listed)=>{
-      assert.deepEqual(listed.split(', ').sort(),roles);
-      found++;
-      return prefix+roles.join(', ');
-    });
-    assert.equal(found,1,'dump must contain the exact policy entry');
-  }
-  return sql;
-}
+export {normalizedSchema} from './recovery-schema-comparison.mjs';
 async function multiRolePolicySets(client){
   const {rows}=await client.query(`SELECT n.nspname AS "schemaName", c.relname AS "tableName", p.polname AS "policyName",
     ARRAY(SELECT CASE WHEN member.oid=0 THEN 'PUBLIC' ELSE r.rolname::text END
@@ -437,10 +467,11 @@ async function multiRolePolicySets(client){
   for(const row of rows)assert(row.roles.every(role=>typeof role==='string'));
   return rows;
 }
-export async function roleDefinitions(client){
+export async function roleDefinitions(client,allowBackupReader=false){
   const roles=(await client.query("SELECT rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolbypassrls,rolconnlimit,rolconfig FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' ORDER BY rolname")).rows;
   assert(roles.length>0);
-  for(const r of roles)assert(!r.rolsuper&&!r.rolinherit&&!r.rolcreaterole&&!r.rolcreatedb&&!r.rolcanlogin&&!r.rolreplication&&!r.rolbypassrls&&r.rolconnlimit===-1&&r.rolconfig===null,'unexpected source role authority');
+  assert.equal(typeof allowBackupReader,'boolean');if(allowBackupReader)assert.equal(roles.filter(r=>r.rolname==='crest_backup_reader').length,1);
+  for(const r of roles)assert(!r.rolsuper&&!r.rolinherit&&!r.rolcreaterole&&!r.rolcreatedb&&!r.rolcanlogin&&!r.rolreplication&&r.rolbypassrls===(allowBackupReader&&r.rolname==='crest_backup_reader')&&r.rolconnlimit===-1&&r.rolconfig===null,'unexpected source role authority');
   const links=(await client.query("SELECT 1 FROM pg_auth_members m JOIN pg_roles a ON a.oid=m.roleid JOIN pg_roles b ON b.oid=m.member WHERE a.rolname ~ '^crest_[a-z_]+$' AND b.rolname ~ '^crest_[a-z_]+$'")).rows;
   assert.equal(links.length,0,'unreviewed internal role membership');return roles;
 }
@@ -1268,7 +1299,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
       ||profile===legacy101Profile
       ||profile===legacy102Profile||profile===legacy103Profile||profile===legacy104Profile||profile===legacy105Profile||profile===legacy106Profile
       ||profile===legacy107Profile||profile===legacy108Profile||profile===legacy113Profile||profile===legacy114Profile
-      ||profile===legacy115Profile||profile===legacy116Profile||profile===legacy117Profile||profile===legacy118Profile||profile===legacy119Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
+      ||profile===legacy115Profile||profile===legacy116Profile||profile===legacy117Profile||profile===legacy118Profile||profile===legacy119Profile||profile===legacy120Profile||profile===legacy121Profile||profile===legacy122Profile||profile===legacy123Profile||profile===legacy124Profile||profile===legacy137Profile||profile===contactApplicationCandidate.profile||profile===contactQueueCandidate.profile
       ||profile.schemaVersion===81&&profile.heldUnapplicationMigrationSha256
       ||profile.schemaVersion===82&&profile.heldFundApplicationMigrationSha256
       ||profile.schemaVersion===83&&profile.heldTipMigrationSha256
@@ -1303,7 +1334,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
     }
     // Coverage has passed. Pending-object/source refusal belongs to snapshot
     // capture, rather than being misreported as a schema-coverage failure.
-    stage='snapshot';const rows=await inventory(client),roles=await roleDefinitions(client);
+    stage='snapshot';const rows=await inventory(client),roles=await roleDefinitions(client,profile===currentProfile&&[138,139,140,141,142].includes(profile.schemaVersion));
     // PG stores a policy's role set in OID order. Preserve the relative role
     // creation order from schema53 so a multi-role policy deparses byte-exact after
     // restore; do not normalize away policy or permission differences.
@@ -1321,7 +1352,7 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
     stage='objects';const objectArchive=objectCapture?{inventory:objects,receipt:await objectCapture.capture(objects)}:null;
     const manifest={formatVersion:1,scope:'synthetic_database_drill',completeBackup:false,...profile,
       databaseImage:pins.testDatabaseImage,snapshot,roles,...(roleCreationOrder?{roleCreationOrder}:{}),rows,
-      ...(schemaPolicyRoles?{schemaPolicyRoles}:{}),schemaSha256:hash(normalizedSchema(schema,schemaPolicyRoles)),
+      ...(schemaPolicyRoles?{schemaPolicyRoles}:{}),schemaSha256:rememberRecoverySchema(normalizedSchema(schema,schemaPolicyRoles)),
       dump:{bytes:dump.length,sha256:hash(dump)},objectArchive,excluded:['runtime_login_credentials',...(objectArchive?[]:['external_objects']),'application_image','independent_vault','production_configuration','production_recovery_authority']};
     // The backup side receives a public recipient only. No private identity.
     stage='encryption';const receipt={formatVersion:1,dump:await seal(join(directory,'database.age'),dump,recipient),
@@ -1331,6 +1362,14 @@ async function backupWithProfile(profile,client,url,directory,recipient,duringSn
   }catch{await client.query('ROLLBACK');throw new Error('SYNTHETIC_RECOVERY_BACKUP_FAILED:'+stage);}
 }
 export async function restoreDatabase(...args){return restoreWithProfile(currentProfile,...args);}
+export async function backupLegacy121Database(client,url,directory,recipient,duringSnapshot,objectCapture){
+ return backupWithProfile(legacy121Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy121Snapshot);
+}
+export async function restoreLegacy121Database(...args){return restoreWithProfile(legacy121Profile,...args);}
+export async function backupLegacySupplierPayableDatabase(client,url,directory,recipient,duringSnapshot,objectCapture){
+ return backupWithProfile(legacy120Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy120Snapshot);
+}
+export async function restoreLegacySupplierPayableDatabase(...args){return restoreWithProfile(legacy120Profile,...args);}
 export async function backupLegacyLeadMatchDatabase(client,url,directory,recipient){
  return backupWithProfile(legacy119Profile,client,url,directory,recipient,undefined,undefined,legacy119Snapshot);
 }
@@ -1471,18 +1510,38 @@ async function restoreWithProfile(profile,directory,identity,url,restoreObjects)
     }
     for(const r of orderedRoles){
       assert.match(r.rolname,/^crest_[a-z_]+$/);
-      assert(!r.rolsuper&&!r.rolinherit&&!r.rolcreaterole&&!r.rolcreatedb&&!r.rolcanlogin&&!r.rolreplication&&!r.rolbypassrls&&r.rolconnlimit===-1&&r.rolconfig===null);
+      const backupReader=profile===currentProfile&&[138,139,140,141,142].includes(profile.schemaVersion)&&r.rolname==='crest_backup_reader';
+      assert(!r.rolsuper&&!r.rolinherit&&!r.rolcreaterole&&!r.rolcreatedb&&!r.rolcanlogin&&!r.rolreplication&&r.rolbypassrls===backupReader&&r.rolconnlimit===-1&&r.rolconfig===null);
       // Restore only closed migration roles; fresh runtime credentials are separate.
       if(!(await client.query('SELECT 1 FROM pg_roles WHERE rolname=$1',[r.rolname])).rowCount)
-        await client.query(`CREATE ROLE "${r.rolname}" NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`);
+        await client.query(`CREATE ROLE "${r.rolname}" NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION ${backupReader?'BYPASSRLS':'NOBYPASSRLS'}`);
     }
-    assert.deepEqual(await roleDefinitions(client),manifest.roles);
+    assert.deepEqual(await roleDefinitions(client,profile===currentProfile&&[138,139,140,141,142].includes(profile.schemaVersion)),manifest.roles);
     stage='restore';await postgresTool('pg_restore',url,['--exit-on-error','--single-transaction'],dump);
     stage='rows';assert.deepEqual(await inventory(client),manifest.rows,'restored row content differs');
     stage='schema';
     const policyRoleSets=profile.schemaVersion>=55?await multiRolePolicySets(client):undefined;
     if(policyRoleSets)assert.deepEqual(policyRoleSets,manifest.schemaPolicyRoles,'restored policy role sets differ');
-    assert.equal(hash(normalizedSchema(await postgresTool('pg_dump',url,['--schema-only']),policyRoleSets)),manifest.schemaSha256,'restored schema/grants differ');
+    const restoredSchema=normalizedSchema(await postgresTool('pg_dump',url,['--schema-only']),policyRoleSets),restoredDigest=hash(restoredSchema);
+    if(restoredDigest!==manifest.schemaSha256){
+      let roleOrderMatches=null;
+      try{if(manifest.roleCreationOrder){const order=(await client.query("SELECT rolname FROM pg_roles WHERE rolname ~ '^crest_[a-z_]+$' ORDER BY oid")).rows.map(row=>row.rolname);roleOrderMatches=JSON.stringify(order)===JSON.stringify(manifest.roleCreationOrder);}}catch{/* Preserve the original schema refusal even when diagnostic metadata is unavailable. */}
+      let legacyPresentation=null,legacyPresentationVerified=false;
+      if(profile.schemaVersion===53||profile.schemaVersion===54){
+        try{
+          const originalSchema=normalizedSchema(await run('docker',['run','--pull=never','--rm','--interactive','--network','none','--read-only','--cap-drop','ALL',pins.testDatabaseImage,'pg_restore','--schema-only','--file=-'],{input:dump}));
+          const roles=await multiRolePolicySets(client);
+          legacyPresentationVerified=legacyPolicyOrderMatches(originalSchema,restoredSchema,manifest.schemaSha256,roles);
+          legacyPresentation={authenticatedArchiveSchemaMatchesManifest:true,exactAfterVerifiedPolicyRoleOrdering:legacyPresentationVerified};
+        }catch{/* Diagnostic failure never changes the original strict schema refusal. */}
+      }
+      if(legacyPresentationVerified){
+        console.log('SYNTHETIC_RECOVERY_LEGACY_POLICY_ORDER_VERIFIED '+JSON.stringify({schemaVersion:profile.schemaVersion,authenticatedSchemaDigest:manifest.schemaSha256}));
+      }else{
+        console.error('SYNTHETIC_RECOVERY_SCHEMA_DIAGNOSTIC '+JSON.stringify({...recoverySchemaDifference(manifest.schemaSha256,restoredSchema,{schemaVersion:profile.schemaVersion,roleOrderMatches}),legacyPresentation}));
+        assert.equal(restoredDigest,manifest.schemaSha256,'restored schema/grants differ');
+      }
+    }
     return manifest;
   }catch{throw new Error('SYNTHETIC_RECOVERY_RESTORE_FAILED:'+stage);}finally{await client.end();}
 }
@@ -1506,3 +1565,20 @@ export async function recoveryCluster(){
     },async close(){for(const c of clients)await c.end();if(owned){await run('docker',['rm','--force','--volumes',name]);owned=false;}}};
   }catch{for(const c of clients)await c.end().catch(()=>{});if(owned)await run('docker',['rm','--force','--volumes',name]);throw new Error('SYNTHETIC_RECOVERY_CLUSTER_FAILED');}
 }
+
+export async function backupLegacy122Database(client,url,directory,recipient,duringSnapshot,objectCapture){
+ return backupWithProfile(legacy122Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy122Snapshot);
+}
+export async function restoreLegacy122Database(...args){return restoreWithProfile(legacy122Profile,...args);}
+
+export async function backupLegacy123Database(client,url,directory,recipient,duringSnapshot,objectCapture){
+ return backupWithProfile(legacy123Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy123Snapshot);
+}
+export async function restoreLegacy123Database(...args){return restoreWithProfile(legacy123Profile,...args);}
+export async function backupLegacy124Database(client,url,directory,recipient,duringSnapshot,objectCapture){
+ return backupWithProfile(legacy124Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy124Snapshot);
+}
+export async function restoreLegacy124Database(...args){return restoreWithProfile(legacy124Profile,...args);}
+
+export async function backupLegacy137Database(client,url,directory,recipient,duringSnapshot,objectCapture){return backupWithProfile(legacy137Profile,client,url,directory,recipient,duringSnapshot,objectCapture,legacy137Snapshot);}
+export async function restoreLegacy137Database(...args){return restoreWithProfile(legacy137Profile,...args);}

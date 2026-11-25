@@ -7,6 +7,7 @@ import type {Proof} from './authentication';
 import {legacyMatchBodyLimit,legacyMatchCounts,parseLegacyHintRequest} from '../customer/legacy-contact-match-contract';
 import {exactCustomerObject as exact,customerUuid as uuid,customerVersion as version,customerInstant,parseCustomerDraft,parseCustomer,requireCustomer as check} from '../customer/customer-contract';
 import type {CustomerDraft} from '../customer/customer-contract';
+import {parseCustomerProfile,parseCustomerProfileRequest} from '../customer/customer-profile-contract';
 export type CustomerReference=Readonly<{operationId:string;customerId:string;expectedVersion:string;recoveryEpoch:string}>;
 export type CustomerSave=CustomerReference&Readonly<{schemaVersion:1;draft:CustomerDraft}>;
 export type CustomerContext=Readonly<{schemaVersion:1;businessId:string}&({writeState:'ready';recoveryEpoch:string}|{writeState:'paused';recoveryEpoch:null})>;
@@ -18,7 +19,7 @@ function committed(value:unknown,businessId:string,ref:CustomerReference){
   const r=value.receipt;check(r.schemaVersion===1&&r.businessId===businessId&&r.customerId===ref.customerId&&version(r.customerVersion)&&BigInt(r.customerVersion)===BigInt(ref.expectedVersion)+1n&&uuid(r.auditEventId));
   return Object.freeze({state:'committed' as const,operationId:ref.operationId,recoveryEpoch:ref.recoveryEpoch,receipt:Object.freeze({schemaVersion:1 as const,businessId,customerId:ref.customerId,customerVersion:r.customerVersion,auditEventId:r.auditEventId})});
 }
-async function post(route:LegacyBatchRoute|'legacy-matches'|'context'|'list'|'save'|'history'|'operation',body:object,proof:Proof,external:AbortSignal){
+async function post(route:LegacyBatchRoute|'legacy-matches'|'context'|'list'|'save'|'history'|'profile'|'operation',body:object,proof:Proof,external:AbortSignal){
   try{
     check(typeof proof?.csrfToken==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(proof.csrfToken)&&Number.isSafeInteger(proof.expiresAt)&&proof.expiresAt>Date.now());
     const signal=AbortSignal.any([external,AbortSignal.timeout(40000)]);if(signal.aborted)throw new Error();
@@ -38,6 +39,7 @@ async function post(route:LegacyBatchRoute|'legacy-matches'|'context'|'list'|'sa
     }
     return {value,status:response.status,binding:response.headers.get('x-crest-edit-binding'),recordJobHistoryAvailable:route==='context'&&response.headers.get('x-crest-record-job-history')==='1',reviewHistoryAvailable:route==='context'&&response.headers.get('x-crest-review-history')==='1',
       maintenanceFollowUpAvailable:route==='context'&&response.headers.get('x-crest-maintenance-follow-up')==='1',
+      customerProfileAvailable:route==='context'&&response.headers.get('x-crest-customer-profile')==='1',
       legacyContactBatchesAvailable:route==='context'&&response.headers.get('x-crest-legacy-contact-batches')==='1',
       legacyContactEffectsAvailable:route==='context'&&response.headers.get('x-crest-legacy-contact-effects')==='1',
       legacyContactTargetsAvailable:route==='context'&&response.headers.get('x-crest-legacy-contact-targets')==='1',
@@ -159,7 +161,7 @@ export async function customerLegacyMatches(businessId:string,input:unknown,proo
 // authority, retry loop or automatic operation-ID/epoch replacement.
 export const customers=Object.freeze({
   async context(proof:Proof,signal:AbortSignal){
-    try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&uuid(v.businessId)&&(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as CustomerContext,binding:r.binding,...r.recordJobHistoryAvailable?{recordJobHistoryAvailable:true as const}:{},...r.reviewHistoryAvailable?{reviewHistoryAvailable:true as const}:{},
+    try{const r=await post('context',{},proof,signal),v=r.value;check(r.status===200&&typeof r.binding==='string'&&/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(r.binding)&&exact(v,['schemaVersion','businessId','writeState','recoveryEpoch'])&&v.schemaVersion===1&&uuid(v.businessId)&&(v.writeState==='ready'&&uuid(v.recoveryEpoch)||v.writeState==='paused'&&v.recoveryEpoch===null));return Object.freeze({context:Object.freeze({...v}) as CustomerContext,binding:r.binding,...r.customerProfileAvailable?{customerProfileAvailable:true as const}:{},...r.recordJobHistoryAvailable?{recordJobHistoryAvailable:true as const}:{},...r.reviewHistoryAvailable?{reviewHistoryAvailable:true as const}:{},
       ...r.maintenanceFollowUpAvailable?{maintenanceFollowUpAvailable:true as const}:{},
       ...r.legacyContactBatchesAvailable?{legacyContactBatchesAvailable:true as const}:{},
       ...r.legacyContactEffectsAvailable?{legacyContactEffectsAvailable:true as const}:{},
@@ -190,6 +192,14 @@ export const customers=Object.freeze({
       check(r.status===200&&exact(v,['schemaVersion','businessId','customers','hasMore'])&&v.schemaVersion===1&&v.businessId===businessId&&Array.isArray(v.customers)&&v.customers.length<=pinned.pageSize&&typeof v.hasMore==='boolean');
       const rows=Array.from(v.customers,c=>parseCustomer(c,businessId));let previous=pinned.afterId;for(const row of rows){check((previous===null||row.id>previous)&&(pinned.includeArchived||row.archived_at===null));previous=row.id;}check(!v.hasMore||rows.length===pinned.pageSize);return Object.freeze({customers:Object.freeze(rows),hasMore:v.hasMore});
     }catch(e){throw e instanceof CustomerClientError?e:new CustomerClientError('unavailable');}
+  },
+  async profile(businessId:string,input:ReturnType<typeof parseCustomerProfileRequest>,proof:Proof,signal:AbortSignal){
+    try{
+      const request=parseCustomerProfileRequest(input);
+      const response=await post('profile',request,proof,signal);
+      check(response.status===200&&!signal.aborted);
+      return parseCustomerProfile(response.value,businessId,request);
+    }catch(error){throw error instanceof CustomerClientError?error:new CustomerClientError('unavailable');}
   },
   async history(businessId:string,input:{customerId:string;afterVersion:string;pageSize:number},proof:Proof,signal:AbortSignal){
     try{check(uuid(businessId)&&exact(input,['customerId','afterVersion','pageSize'])&&uuid(input.customerId)&&version(input.afterVersion,true)&&Number.isSafeInteger(input.pageSize)&&input.pageSize>=1&&input.pageSize<=20);const pinned=Object.freeze({...input}),r=await post('history',pinned,proof,signal),v=r.value;check(r.status===200);if(exact(v,['state'])&&v.state==='absent')return Object.freeze({state:'absent' as const});

@@ -3,6 +3,7 @@ import { recordedBalanceSheet } from '../../../bookkeeping/recorded-balance-shee
 import type { parseFictionalTrialBalance } from '../../../bookkeeping/trial-balance-contract';
 import { downloadFinanceHistory } from '../../../client/finance-accounts';
 import styles from './screen.module.css';
+import {FinancialReportHeader} from './financial-report-header';
 
 const usd = (cents: bigint) => cents < 0n ? '-$' + expenseDollars(String(-cents)) : '$' + expenseDollars(String(cents));
 const coverage = 'Fictional posted records only. Opening balances, reconciliation and some costs are incomplete.';
@@ -40,9 +41,11 @@ export function RecordedBalanceSheet({ balance, journalBusy, selectJournalAccoun
     <summary>Balance sheet</summary>
     <section aria-label="Recorded balance sheet">
       <h3>Recorded balance sheet</h3>
-      <p>Through {balance.throughOn} · USD · {balance.timeZone}</p>
-      <p>{reportBasis}. {coverage}</p>
-      {balance.coverageStart && <p>First included posting {balance.coverageStart}.</p>}
+      <FinancialReportHeader period={<>Balance sheet · Through <time dateTime={balance.throughOn}>{balance.throughOn}</time></>}
+        timeZone={balance.timeZone} observedAt={balance.observedAt} scopeLabel="Coverage incomplete"
+        coverage={coverage} basis={reportBasis}
+        details={balance.coverageStart&&<p className="field-help">First included posting {balance.coverageStart}.</p>}
+        action={<button type="button" className="secondary" onClick={download}>Download balance sheet CSV</button>}/>
       <p className="field-help">Same snapshot as the trial balance. Select an account to review its journal entries.</p>
       <div className={styles.balanceScroll} role="region" aria-label="Balance sheet accounts" tabIndex={0}>
         <table className={styles.balanceTable}>
@@ -51,7 +54,11 @@ export function RecordedBalanceSheet({ balance, journalBusy, selectJournalAccoun
             <tr><th colSpan={2} scope="rowgroup">{label}</th></tr>
             {lines.map(row => <tr key={row.accountId}>
               <th scope="row">
-                <button type="button" className="secondary" disabled={journalBusy} onClick={() => selectJournalAccount(row.accountId)}>
+                <button type="button" className="secondary" disabled={journalBusy} onClick={event => {
+                  const disclosure=event.currentTarget.closest('details');
+                  if(disclosure)disclosure.open=false;
+                  selectJournalAccount(row.accountId);
+                }}>
                   {row.code} · {row.name}
                 </button>
                 {!row.active && <small>Archived</small>}
@@ -67,7 +74,6 @@ export function RecordedBalanceSheet({ balance, journalBusy, selectJournalAccoun
           </tfoot>
         </table>
       </div>
-      <button type="button" className="secondary" onClick={download}>Download balance sheet CSV</button>
     </section>
   </details>;
 }

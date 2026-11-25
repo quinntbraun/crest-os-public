@@ -34,6 +34,10 @@ test('sample review self-hosts only the two licensed fonts without exposing file
  for(const path of ['/fonts/unknown.woff2','/fonts/%2e%2e/.local/owner-review/preserved-sample.json','/fonts/IBMPlexSans-Regular.woff2?file=.env'])assert.equal((await fetch(app.origin+path)).status,404);
 });
 const customer=(label='Test customer (sample)')=>({schemaVersion:1,operationId:randomUUID(),customerId:randomUUID(),expectedVersion:'0',recoveryEpoch:context.recoveryEpoch,displayName:label,phone:null,email:null,contactPreference:null,outreachOptOut:false,notes:null,customerSince:null,archived:false,archiveReason:null});
+test('sample customer reload accepts finite saved navigation and refuses arbitrary queries',async()=>{
+ const id=randomUUID();for(const query of ['customer='+id+'&view=history','customer='+id+'&view=overview&include=archived','customer='+id+'&view=vehicles&focusVehicle='+randomUUID()]){const response=await fetch(app.origin+'/customers?'+query);assert.equal(response.status,200);assert(response.headers.get('cache-control').includes('no-store'));assert((await response.text()).includes('review-root'));}
+ for(const query of ['file=.env','customer=invalid','customer='+id+'&customer='+id,'view=unknown','include=lost','customer='+id+'&view=history&focusVehicle='+randomUUID()])assert.equal((await fetch(app.origin+'/customers?'+query)).status,404);
+});
 test('sample HTTP save/reopen/edit preserves exact receipts and refuses stale or conflicting originals',async()=>{
  const original=customer(),first=await post('/api/business/customers/save',original);assert.equal(first.status,200);assert.equal(first.value.receipt.customerVersion,'1');
  const replay=await post('/api/business/customers/save',original);assert.deepEqual(replay.value,first.value);

@@ -4,7 +4,11 @@ import {useEffect,useRef} from 'react';
 import type {FormEvent} from 'react';
 import {moneyChannelKinds,moneyChannelScopes,moneyChannelScope,moneyChannelOpeningStates} from '../../../../bookkeeping/finance-money-channel-contract';
 import type {MoneyChannel,MoneyChannelKind,MoneyChannelScope} from '../../../../bookkeeping/finance-money-channel-contract';
+import {customerDate} from '../../../../customer/customer-contract';
 import styles from '../screen.module.css';
+
+const dateFormat=new Intl.DateTimeFormat('en-US',{dateStyle:'medium',timeZone:'UTC'});
+const dateLabel=(date:string)=>dateFormat.format(new Date(date+'T00:00:00Z'));
 
 export type ChannelEditorFields={
  kind:MoneyChannelKind|'';scope:MoneyChannelScope|'';accountId:string;provider:string;suffix:string;label:string;date:string;
@@ -14,13 +18,15 @@ export type ChannelEditorFields={
 type Choices={rows:readonly {id:string;code:string;name:string}[];hasMore:boolean};
 
 export function MoneyChannelEditor({record,fields,choices,busy,canSave,change,findAccounts,save,cancel}:{
- record:MoneyChannel|null;fields:ChannelEditorFields;choices:Choices|null;busy:boolean;canSave:boolean;
+ record:(MoneyChannel&{accountCode:string})|null;fields:ChannelEditorFields;choices:Choices|null;busy:boolean;canSave:boolean;
  change:(fields:Partial<ChannelEditorFields>)=>void;findAccounts:(more:boolean)=>void;save:(event:FormEvent)=>void;cancel:()=>void;
 }){
  const heading=useRef<HTMLHeadingElement>(null);
  useEffect(()=>{heading.current?.focus();},[]);
  const kind=fields.kind,external=kind==='bank'||kind==='wallet',knownOpening=fields.openingState!=='unknown';
- return <form onSubmit={save}>
+ const selectedAccount=choices?.rows.find(account=>account.id===fields.accountId);
+ const destination=record?.accountCode??(selectedAccount?selectedAccount.code+' · '+selectedAccount.name:null);
+ return <form className="mapping-summary-card" onSubmit={save}>
   <h2 ref={heading} className="editor-heading" tabIndex={-1}>{record?'Review '+record.label:'Add money channel'}</h2>
   {!record&&<>
    <div className={styles.lookupFields}>
@@ -78,6 +84,7 @@ export function MoneyChannelEditor({record,fields,choices,busy,canSave,change,fi
   <label htmlFor="channel-date">Effective from</label>
   <input id="channel-date" type="date" value={fields.date} required disabled={busy}
    onChange={event=>change({date:event.target.value})}/>
+  {record&&<p className="field-help">Choose a date after the latest saved review on {dateLabel(record.effectiveFrom)}.</p>}
   <details open={knownOpening?true:undefined}>
    <summary>Ownership and opening evidence</summary>
    {fields.scope==='mixed_personal'&&<p className="field-help">Record only Crest’s share of funds held by the owner.</p>}
@@ -115,6 +122,26 @@ export function MoneyChannelEditor({record,fields,choices,busy,canSave,change,fi
   <label htmlFor="channel-reason">Reason for review</label>
   <textarea id="channel-reason" rows={2} maxLength={1000} value={fields.reason} required disabled={busy}
    onChange={event=>change({reason:event.target.value})}/>
+  <section className="mapping-rule-comparison channel-review-comparison" aria-label="Review effective channel settings">
+   {record&&<section aria-label="Latest saved channel">
+    <h3>Latest saved review</h3>
+    <dl>
+     <dt>Channel</dt><dd>{record.label}</dd>
+     <dt>Destination account</dt><dd>{record.accountCode}</dd>
+     <dt>Status and date</dt><dd>{record.active?'Open':'Closed'} from {dateLabel(record.effectiveFrom)}</dd>
+     <dt>Opening status</dt><dd>{moneyChannelOpeningStates[record.openingState]}</dd>
+    </dl>
+   </section>}
+   <section aria-label="Proposed channel review">
+    <h3>{record?'Proposed review':'New channel review'}</h3>
+    <dl>
+     <dt>Channel</dt><dd>{fields.label.trim()||'Enter a channel name'}</dd>
+     <dt>Destination account</dt><dd>{destination??'Choose a linked account'}</dd>
+     <dt>Status and date</dt><dd>{fields.active?'Open':'Closed'}{customerDate(fields.date)?' from '+dateLabel(fields.date):' · Choose an effective date'}</dd>
+     <dt>Opening status</dt><dd>{moneyChannelOpeningStates[fields.openingState]}</dd>
+    </dl>
+   </section>
+  </section>
   <div className={styles.actions}>
    <button type="submit" disabled={busy||!canSave}>Save channel review</button>
    <button type="button" className="secondary" disabled={busy} onClick={cancel}>Cancel</button>

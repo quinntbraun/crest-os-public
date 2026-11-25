@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
+import {randomUUID} from 'node:crypto';
 import {mkdir,readFile} from 'node:fs/promises';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import {workTimeFailureDiagnostic} from '../support/work-time-diagnostic.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
 
 for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' reloads and exports saved active and paused work time',{timeout:300000},async()=>{
@@ -34,13 +36,26 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   },fixture.bookingRequest),200);
   await page.goto(time);
   await expect(view.getByText('No work intervals have been recorded for this job.')).toBeVisible();
-  await page.goto(work);
-  await page.getByLabel('What is happening?').selectOption('direct_arrive');
+  const openWork=view.getByRole('link',{name:'Open work status',exact:true}),beforeEmpty=fixture.requests.length;
+  await expect(openWork).toHaveAttribute('href','/schedule/work?job='+job);
+  await mkdir('.local/review',{recursive:true});
+  for(const width of [360,390,430,1440]){
+   await page.setViewportSize({width,height:900});await openWork.focus();
+   assert(await openWork.evaluate(node=>{const box=node.getBoundingClientRect(),x=box.x+box.width/2,y=box.y+box.height/2;return box.height>=44&&y>=0&&y<innerHeight&&node.contains(document.elementFromPoint(x,y));}));
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(row=>row.id),[]);
+   await page.screenshot({path:'.local/review/work-time-empty-'+name+'-'+width+'.png',fullPage:true});
+  }
+  assert.equal(fixture.requests.length,beforeEmpty,'Inspecting the empty work-time next step makes no request');
+  await page.setViewportSize({width:390,height:844});await openWork.click();
+  await expect(page.getByRole('heading',{name:'Work status',exact:true})).toBeVisible();
+  await expect(page).toHaveURL(work);
+  await page.getByText('Other ways to start',{exact:true}).click();await page.getByRole('button',{name:'Already here — start without recorded travel',exact:true}).click();
   await page.getByLabel('Why was travel not recorded?').fill('Synthetic arrival without trip');
   await page.getByRole('button',{name:'Start work without recorded travel'}).click();
   await expect(page.getByText('Confirmed saved version 2.',{exact:true})).toBeVisible();
   await page.goto(work);
-  await page.getByRole('link',{name:'Review recorded work time'}).click();
+  await page.getByText('More actions',{exact:true}).click();await page.getByRole('link',{name:'Review recorded work time'}).click();
   await expect(view.getByText(/Work is in progress/)).toBeVisible();
   await page.goto(work);
   const reason='=Synthetic equipment check';
@@ -49,17 +64,29 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await expect(page.getByText('Confirmed saved version 3.',{exact:true})).toBeVisible();
   await page.goto(time);
   await expect(view.getByText(/Work is paused/)).toBeVisible();
-  await view.getByText('Saved intervals (2)',{exact:true}).click();
-  await expect(view.getByText(reason,{exact:true})).toBeVisible();
-  await view.getByText('Earlier versions (1)',{exact:true}).click();
-  await expect(view.getByText(/Open when recorded/)).toBeVisible();
+  const ledger=view.getByRole('region',{name:'Saved intervals',exact:true});
+  await expect(ledger.getByRole('heading',{name:'Saved intervals (2)',exact:true})).toBeVisible();
+  await expect(ledger.locator('.work-time-interval')).toHaveCount(2);
+  await expect(ledger.getByText('At last read',{exact:true})).toBeVisible();
+  await expect(ledger.getByText('Still open',{exact:true})).toBeVisible();
+  await expect(page.getByRole('link',{name:'Saved job and history',exact:true})).toHaveAttribute('href','/schedule?job='+job);
+  await expect(ledger.locator('.work-time-interval > .work-time-reason').filter({hasText:reason})).toBeVisible();
+  const retained=ledger.locator('.work-time-interval').first().locator('.work-interval-history');
+  const inspectionRequests=fixture.requests.length;
+  await retained.getByText('Retained versions (2)',{exact:true}).click();
+  await expect(retained.locator('.work-history-facts').getByText('Open when recorded',{exact:true})).toBeVisible();
+  await expect(retained.getByText('Not closed in this version',{exact:true})).toBeVisible();
+  await expect(retained.getByRole('region',{name:'Changes in interval version 2',exact:true})).toContainText('Not recorded');
+  await expect(view.getByRole('region',{name:'Work totals',exact:true})).toContainText('Open durations are measured only to the read time above.');
+  assert.equal(fixture.requests.length,inspectionRequests,'Inspecting interval history makes no API request');
   await mkdir('.local/review',{recursive:true});
-  for(const width of [360,390,768,1440]){
+  for(const width of [360,390,768,1100,1440]){
    await page.setViewportSize({width,height:900});
    await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-   assert.deepEqual((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations.map(row=>row.id),[]);
+   assert.deepEqual((await new AxeBuilder({page}).analyze()).violations.map(row=>row.id),[]);
    await page.screenshot({path:'.local/review/field-work-time-'+name+'-'+width+'.png',fullPage:true});
+   await page.screenshot({path:'.local/review/work-time-ledger-'+name+'-'+width+'.png',animations:'disabled'});
   }
   const getDownload=async(label)=>{
    const event=page.waitForEvent('download');
@@ -89,5 +116,28 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   await context.setOffline(false);
   await view.getByRole('button',{name:'Refresh totals'}).click();
   await expect(status).toHaveText('Saved work time loaded.');
- }finally{await browser?.close();await fixture.close();}
+  // Exercise local-day grouping with a controlled cross-midnight read after the native workflow.
+  const midnightRoute='**/api/business/scheduling/work-time';
+  const dates=[
+   {startedAt:'2026-10-01T03:59:15.000000Z',endedAt:'2026-10-01T04:00:15.000000Z',kind:'active',pauseReason:null},
+   {startedAt:'2026-10-01T04:01:15.000000Z',endedAt:'2026-10-01T04:01:35.000000Z',kind:'pause',pauseReason:'Synthetic split day'}
+  ];
+  const intervalVersions=dates.map(row=>{
+   const id=randomUUID();
+   return {...row,intervalId:id,versionId:id,sequence:'1',recordReason:'Synthetic time import',changeKind:'record',replacesVersionId:null,recordedAt:row.endedAt};
+  });
+  await page.route(midnightRoute,async route=>{
+   const response=await route.fetch();
+   assert.equal(response.status(),200);
+   await route.fulfill({response,json:{...await response.json(),jobState:'completed',intervalVersions}});
+  });
+  await view.getByRole('button',{name:'Refresh totals'}).click();
+  await expect(ledger.locator('.work-time-day h3')).toHaveText(['Wednesday, September 30, 2026','Thursday, October 1, 2026']);
+  const crossMidnight=ledger.locator('.work-time-interval').first();
+  await expect(crossMidnight).toContainText('Oct 1, 2026');
+  await expect(crossMidnight.locator('.work-time-interval-head strong')).toHaveText('1m 0s');
+  await expect(ledger.locator('.work-time-interval').last().locator('.work-time-interval-head strong')).toHaveText('20s');
+  await expect(view.getByLabel('Work totals')).toContainText('Unrecorded gap');
+  await page.unroute(midnightRoute);
+ }catch(error){await workTimeFailureDiagnostic(fixture,name,null);throw error;}finally{await browser?.close();await fixture.close();}
 });

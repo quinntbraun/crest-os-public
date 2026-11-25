@@ -5,6 +5,15 @@ export type CalendarMode='day'|'week'|'month'|'custom';
 export type CalendarRange=Readonly<{fromDate:string;throughDate:string}>;
 const dayMs=86400000;
 function date(day:string){if(!customerDate(day))throw Error('CALENDAR_DATE_REQUIRED');return new Date(day+'T12:00:00Z');}
+const calendarDayLabel=new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'long',month:'long',day:'numeric',year:'numeric'});
+const calendarShortDate=new Intl.DateTimeFormat('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'});
+export function calendarRangeLabel(range:CalendarRange,mode:CalendarMode){
+ const first=date(range.fromDate);
+ if(mode==='month')return monthLabel.format(first);
+ if(range.fromDate===range.throughDate)return calendarDayLabel.format(first);
+ return calendarShortDate.formatRange(first,date(range.throughDate));
+}
+const monthLabel=new Intl.DateTimeFormat('en-US',{timeZone:'UTC',month:'long',year:'numeric'});
 function label(value:Date){const result=value.toISOString().slice(0,10);if(!customerDate(result))throw Error('CALENDAR_DATE_REQUIRED');return result;}
 export function shiftCalendarDay(day:string,amount:number){if(!Number.isSafeInteger(amount)||Math.abs(amount)>93)throw Error('CALENDAR_DATE_REQUIRED');return label(new Date(date(day).getTime()+amount*dayMs));}
 export function calendarRange(anchor:string,mode:Exclude<CalendarMode,'custom'>):CalendarRange{

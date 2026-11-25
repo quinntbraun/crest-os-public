@@ -1,0 +1,15 @@
+[Unit]
+Description=Crest recovery candidate capture (not a completed backup)
+ConditionPathExists=%h/.config/crest-recovery/capture-staging-authorized
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/bin/sh %h/.local/libexec/crest-recovery/run-capture.sh
+Restart=no
+TimeoutStartSec=2h
+TimeoutStopSec=90s
+KillMode=mixed
+StandardOutput=journal
+StandardError=journal
+# Do not add SuccessExitStatus=2. A staged candidate is not a healthy backup.

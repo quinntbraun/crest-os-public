@@ -69,3 +69,16 @@ for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' 
   const unused=await captureQuoteResponse(page,paths[0]);await unused.cancel();await assert.rejects(unused.outcome,/QUOTE_CAPTURE_CANCELLED/);assert.equal(requests.length,3,'Cancelling an unused observer must not send a command.');
  }finally{await Promise.allSettled(captures.map(capture=>capture.cancel()));await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });
+
+for(const [name,engine]of [['chromium',chromium],['webkit',webkit]])test(name+' preserves actual follow-up bytes and no-store headers across navigation',async()=>{
+ const path='/api/business/leads/follow-ups',requests=[],body={followUps:[{label:'Synthetic 雪 é'}],hasMore:false};
+ const server=createServer(async(request,outgoing)=>{
+  if(request.url===path){let raw='';for await(const part of request)raw+=part;requests.push(JSON.parse(raw));outgoing.writeHead(200,{'content-type':'application/json','cache-control':'private, no-store'});outgoing.end(JSON.stringify(body));return;}
+  outgoing.writeHead(200,{'content-type':'text/html'});outgoing.end(`<!doctype html><html lang="en"><title>Synthetic follow-ups</title><button id="open">Open</button><script>document.getElementById('open').onclick=async()=>{const r=await fetch('${path}',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pageSize:8})});sessionStorage.setItem('received',JSON.stringify(await r.json()));location.assign('/after');};</script></html>`);
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser,capture;
+ try{browser=await engine.launch();const page=await browser.newPage(),origin='http://127.0.0.1:'+server.address().port;await page.goto(origin);
+  capture=await captureQuoteResponse(page,path,{includeHeaders:true});await page.getByRole('button',{name:'Open',exact:true}).click();const observed=await capture.outcome;await page.waitForURL(origin+'/after');
+  assert.equal(observed.status,200);assert.match(observed.headers['cache-control'],/no-store/i);assert.deepEqual(observed.body,body);assert.deepEqual(observed.requestBody,{pageSize:8});assert.deepEqual(requests,[{pageSize:8}]);assert.deepEqual(await page.evaluate(()=>JSON.parse(sessionStorage.getItem('received'))),body);
+ }finally{await capture?.cancel();await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});

@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {FinancialAccessRecovery} from '../../financial-access-recovery';
 
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {calculateInvoiceCreditReview,parseInvoiceCreditInput} from '../../../bookkeeping/invoice-credit-contract';
@@ -24,6 +26,7 @@ export function InvoiceCredit({businessId,customerId,invoiceId}:{businessId:stri
   const [canPost,setCanPost]=useState(false);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [signedOut,setSignedOut]=useState(false);
   const request=useRef<AbortController|null>(null);
   const status=useRef<HTMLParagraphElement>(null);
   const line=review?.lines.find(item=>item.invoiceItemId===itemId);
@@ -42,11 +45,12 @@ export function InvoiceCredit({businessId,customerId,invoiceId}:{businessId:stri
   const clearReview=useCallback(()=>{
     setReview(null);setItemId('');setAmount('');setReason('');
   },[]);
-  const suspend=useCallback(()=>{
-    request.current?.abort();request.current=null;
+  const clearPrivate=useCallback(()=>{
     setDate('');clearReview();setCloseReason('');setReceipt(null);
     setPending(false);setClosable(false);setCanPost(false);setBusy(false);setMessage('');
+  setSignedOut(false);
   },[clearReview]);
+  const suspend=useCallback(()=>{request.current?.abort();request.current=null;clearPrivate();},[clearPrivate]);
   useEffect(()=>{
     const hidden=()=>{if(document.visibilityState==='hidden')suspend();};
     document.addEventListener('visibilitychange',hidden);
@@ -65,12 +69,13 @@ export function InvoiceCredit({businessId,customerId,invoiceId}:{businessId:stri
     try{
       const context=await financeAccounts.context(signal);
       if(signal.aborted)return;
-      if(!context.invoiceCredits||context.businessId!==businessId){
+      if(!context.invoiceCredits||context.businessId!==businessId){clearPrivate();
         setMessage('Invoice credits are unavailable in this workspace.');return;
       }
+      setSignedOut(false);
       setCanPost(context.writeState==='ready');
       await action(context,signal);
-    }catch{if(!signal.aborted)setMessage(failure);}
+    }catch(error){if(!signal.aborted){if(error instanceof AuthenticationError&&error.kind==='denied'){clearPrivate();setSignedOut(true);setMessage('Sign in again to review invoice credits.');}else{setMessage(failure);}}}
     finally{if(request.current===controller){request.current=null;setBusy(false);status.current?.focus();}}
   }
 
@@ -150,6 +155,7 @@ export function InvoiceCredit({businessId,customerId,invoiceId}:{businessId:stri
         {pending?'Check original credit':'Load credit options'}
       </button>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<FinancialAccessRecovery returnTo="schedule" label="Invoice credit access recovery"/>}
       {pending&&closable&&<form onSubmit={event=>{event.preventDefault();if(financeAccountReviewReason(closeReason.trim()))load(closeReason.trim());}}>
         <label>Reason for closing the attempt<input required maxLength={1000} value={closeReason} disabled={busy}
           onChange={event=>setCloseReason(event.target.value)}/></label>

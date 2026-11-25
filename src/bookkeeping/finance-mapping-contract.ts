@@ -1,4 +1,4 @@
-import {customerDate,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract.ts';
+import {customerDate,customerInstant,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract.ts';
 import {financeAccountCode,financeAccountReviewReason,parseFinanceAccountIdentity,requireFinanceAccount as check} from './finance-account-contract.ts';
 
 export const fixedFinanceMappingLabels={
@@ -132,4 +132,19 @@ export function parseFinanceMappingAt(value:unknown,purpose:FinanceMappingPurpos
   &&(effectiveUntil===null||customerDate(effectiveUntil)&&date<effectiveUntil));
  const identity=parseFinanceAccountIdentity({code:mapping.accountCode,accountType,normalSide,controlKind,reportRole});
  return {...mapping,...identity,effectiveUntil,currency};
+}
+
+export type FinanceMappingRecording=Readonly<{recordedAt:string;actorId:string}>;
+export type FinanceMappingHistoryData={rows:(Revision&{recording?:FinanceMappingRecording})[];hasMore:boolean};
+export function parseFinanceMappingHistoryEvidence(value:unknown,businessId:string,purpose:FinanceMappingPurpose,before:string|null){
+ check(exact(value,['schemaVersion','businessId','purpose','rows','hasMore'])&&value.schemaVersion===2&&Array.isArray(value.rows)&&value.rows.length<=25);
+ const recordings:FinanceMappingRecording[]=[];
+ const rows=value.rows.map(row=>{
+  check(exact(row,[...revisionFields,'recording'])&&exact(row.recording,['recordedAt','actorId']));
+  const {recording,...base}=row;const {recordedAt,actorId}=recording;
+  check(customerInstant(recordedAt)&&customerUuid(actorId));
+  recordings.push(Object.freeze({recordedAt,actorId}));return base;
+ });
+ const history=parseFinanceMappingHistory({...value,schemaVersion:1,rows},businessId,purpose,before);
+ return {...history,rows:history.rows.map((row,index)=>Object.freeze({...row,recording:recordings[index]!}))};
 }

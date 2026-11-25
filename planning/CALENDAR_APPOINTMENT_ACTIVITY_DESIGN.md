@@ -1,0 +1,31 @@
+# Calendar selected-appointment activity
+
+November 19, 2026. Advances R34/D19 without changing consent, projection, dispatch or business commands. These findings remain partial: the current API exposes one selected appointment, and the original audit also calls for a bounded recent-appointment/activity directory. A single current-state row is not a chronological event history or that complete directory.
+
+## Implemented
+
+The selected appointment now appears as a compact activity row beneath the existing connection identity summary. Its explicit label distinguishes Waiting, In progress, Synced or Removed in the fictional calendar, Unconfirmed, Reconnect, Needs review, Disconnected and Not queued. A failed status read is labelled Check failed; it does not claim Google delivery failed. Checking and unverified states are separate. The prominent fictional/no-events disclaimer remains above the row.
+
+Appointment version stays with the current status. Last-success time and confirmed/current version evidence are in a native keyboard-operable Sync evidence disclosure. The safe Check Calendar status and Open saved job actions sit with the row, align in a desktop action column when the actual component is wide enough, and wrap on phones. Explicit list semantics are retained with the marker-free presentation. Text labels carry state meaning independently of colour.
+
+Checking clears the previous status and confirmation evidence, disables the check button and shows the existing busy state. A failed read leaves no old success timestamp or evidence disclosure visible. The original manual retry, visibility/pagehide clearing, abort handling and original read request remain. Expanding evidence only changes native presentation; it does not perform a business read or write. No API endpoint, database migration, grant, dependency, live connection, event delivery or financial behavior changed.
+
+## Executed evidence
+
+Final owned run `.local/design-calendar-activity-fonts-verified` passed both original parent cases, 2/2 with no failures, cancellations or skips. Each case executes Chromium and WebKit, covering four signed-in engine/scenario contexts: default pending and automatic fictional publication. All original genuine MFA, saved consent, minimal/optional disclosure, exact worker request, pending-reference recovery, failed read, retry/reload and cross-origin assertions remain.
+
+The final production build, types and changed-file lint passed before browser execution. All 2,469 tracked working-source hashes and the diff identity remained stable through the final browser run, and owned cluster cleanup completed. Its 62 runtime-bounded captures are retained, plus four font-state JSON records copied into its `font-evidence` directory. Phone waiting, desktop fictional confirmation and evidence layouts were visually inspected. The earlier `.local/design-calendar-activity-verified` run also passed 2/2 with 62 separately retained captures on its own earlier source; it is not represented as final-source evidence.
+
+New checks verify one honestly selected current-state row; explicit waiting/fictional-confirmed labels; the no-Google-events disclaimer; native evidence open/close and retained summary focus; actual unchanged jobs, consent, dispatch-send/result and private audit rows; and zero business requests while opening/closing evidence. A held genuine job-status read proves Checking, disabled action and absent old timestamp before the real response continues. An aborted read proves Check failed and absent previous evidence before successful retry and reload.
+
+Waiting and fictional-confirmed layouts have full Axe and no-overflow checks at 360, 390, 768, 1100 and 1440 pixels. Failed reads have full Axe/overflow/captures at 390 and 1440; held Checking and expanded evidence have phone captures. Visual checks now await font readiness and verify actual computed root/body font family plus loaded 400/600 IBM Plex Sans faces in both engines and both scenarios. This is bounded rendered-font evidence, not every-route startup or physical-device font acceptance; no font asset was replaced based on an image alone.
+
+After final browser comparison/cleanup, full lint and all 9,005 unit cases in 383 files passed with local-network access. The first restricted production build recorded EPERM while creating a generated `_global-error` directory; the unchanged source built successfully with the required local permissions. That failed log is retained and was not treated as a passed build.
+
+## Remaining work and release status
+
+Implement the original bounded recent-appointment/activity directory using authorized actual source and explicit contracts; do not fabricate records or turn a current status into history. Other real integration states, loading/denied/stale/recovery variants, long values, zoom, exact delivered-build and physical-iPhone acceptance remain. R34/D19 stay partial and the audit stays 34/70 main local changes addressed (48.6%); this refinement does not close their full requirements.
+
+Published quote/recovery source `40481a44463b250b30eb07a1768c7f0be83b5539`, Phase 1 run `44477596051`, remains under verification. Accounting-settings job `135401791574` failed before building/running its browser group: both unchanged 210-second signed Ubuntu browser-dependency installation attempts expired. The first archive was still fetching libraries near its bound; the second stopped progressing after requesting the 15MB universe index. The full cause is unproven. Its missing-artifact result is secondary; no accounting UI assertion executed in that job. Other live jobs must be preserved through their actual terminal results. No timeout, package-signature requirement, mandatory group or release gate was relaxed. Investigate or perform a justified bounded same-source infrastructure retry after the full run is terminal, rather than declaring the dependency problem fixed.
+
+These Calendar changes are locally verified and await publication after preserving the current live verification. Installed schema 109 is unchanged. The full audit and unfinished approved V1 goal remain active; actual Crest use, native files, populated upgrades, recoverability, owner setup and device/release gates remain. $0 new spending.

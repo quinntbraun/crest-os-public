@@ -1,6 +1,7 @@
 'use client';
+import {SignInLink} from '../../sign-in-link';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AuthenticationError } from '../../../client/authentication';
 import {
   clearPendingInvoiceDraft, downloadFinanceHistory, financeAccounts, readPendingInvoiceDraft, readPendingInvoiceIssue, retainPendingInvoiceDraft,
@@ -47,15 +48,14 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
   const [reviewable, setReviewable] = useState(false);
   const [retirementReason, setRetirementReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [signedOut,setSignedOut]=useState(false);
   const [message, setMessage] = useState('');
   const request = useRef<AbortController | null>(null);
   const status = useRef<HTMLParagraphElement>(null);
 
-  function suspend() {
-    request.current?.abort();
-    request.current = null;
+  const clearPrivate = useCallback(() => {
     setPage(null); setDraft(null); setScope(null); setDue(''); setOutcomes([]); setCancelReason('');
-    setEditing(false); setCurrent(false); setCanChange(false); setIssueTaxAvailable(false); setBusy(false); setMessage('');
+    setEditing(false); setCurrent(false); setCanChange(false); setIssueTaxAvailable(false);  setMessage('');
     setIssuedDraft(null);
     setOpenedInvoice(null);
     setDirectReceipts(false);
@@ -64,9 +64,17 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
     setHeldTips(false);
     setInvoiceCredits(false);
     setPaidInvoiceCredits(false);
-    setServiceRefunds(false);
+    setServiceRefunds(false);setExcessReturns(false);setTipReturns(false);setCollectionFailures(false);setRefundTransfers(false);
     setReviewable(false); setRetirementReason('');
-  }
+    setSignedOut(false);
+  }, []);
+
+  const suspend = useCallback(() => {
+    request.current?.abort();
+    request.current = null;
+    clearPrivate();
+    setBusy(false);
+  }, [clearPrivate]);
 
   useEffect(() => {
     function hidden() { if (document.visibilityState === 'hidden') suspend(); }
@@ -77,7 +85,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
       window.removeEventListener('pagehide', suspend);
       document.removeEventListener('visibilitychange', hidden);
     };
-  }, [jobId, businessId]);
+  }, [jobId, businessId, suspend]);
 
   async function run(action: (context:FinanceAccountContext, signal:AbortSignal) => Promise<void>, closeReason?:string) {
     if (request.current) return;
@@ -90,10 +98,10 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
       const context = await financeAccounts.context(signal);
       if (signal.aborted) return;
       if (context.businessId !== businessId || !context.invoiceDrafts) {
-        setMessage('Invoice drafts are unavailable for this workspace.');
+        clearPrivate();setMessage('Invoice drafts are unavailable for this workspace.');
         return;
       }
-      setCanChange(context.writeState === 'ready');
+      setSignedOut(false);setCanChange(context.writeState === 'ready');
       setIssueTaxAvailable(context.invoiceIssueTaxReview);
       setDirectReceipts(context.directReceipts===true);
       setPaymentCorrections(context.paymentCorrections===true);
@@ -142,10 +150,9 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
       await action(context, signal);
     } catch (error) {
       if (signal.aborted) return;
-      setCanChange(false); setIssueTaxAvailable(false);
-      setPage(null); setDraft(null); setScope(null); setDue(''); setOutcomes([]); setCancelReason('');
-      setEditing(false); setCurrent(false);
+      clearPrivate();
       try { setPending(readPendingInvoiceDraft() !== null); } catch { setPending(true); }
+      setSignedOut(error instanceof AuthenticationError&&error.kind==='denied');
       setMessage(error instanceof AuthenticationError && error.kind === 'denied'
         ? 'Sign in again to review invoice drafts.'
         : 'Crest could not verify this request. Check saved drafts before trying again.');
@@ -197,6 +204,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
     void run(async (context,signal) => {
       if (signal.aborted) return;
       if(context.writeState!=='ready'){setMessage('Draft changes are paused.');return;}
+      setOpenedInvoice(null); setIssuedDraft(null);
       setDraft(saved); setDue(saved?.receipt.dueOn ?? ''); setOutcomes(saved?.lines.map(line=>line.outcomeId) ?? []);
       setScope(null); setCancelReason(''); setEditing(true); setMessage('');
     });
@@ -251,6 +259,20 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
     ]);
   }
 
+  const draftEvidence=draft&&<>
+        <h4>{issuedDraft===draft.receipt.draftId ? 'Draft history' : draft.receipt.state === 'cancelled' ? 'Cancelled draft' : 'Saved draft'}</h4>
+        <p>Revision {draft.receipt.revision}{draft.receipt.dueOn ? ' · Due '+formatDue(draft.receipt.dueOn) : ''}</p>
+        {draft.receipt.reason && <p>{draft.receipt.reason}</p>}
+        {draft.lines.length === 0 && <p className="field-help">No completed portions saved yet.</p>}
+        {draft.lines.length > 0 && <ul className="service-list">{draft.lines.map(line=><li key={line.outcomeId}>
+          {line.description} · {quoteMoney(line.inclusiveCents)}
+        </li>)}</ul>}
+        <button type="button" className="secondary" onClick={()=>download(draft)}>Download draft (CSV)</button>
+        {BigInt(draft.receipt.revision)>1n && <button type="button" className="secondary" disabled={busy}
+          onClick={()=>open(draft.receipt.draftId,String(BigInt(draft.receipt.revision)-1n))}>Previous revision</button>}
+        {!current && <button type="button" className="secondary" disabled={busy} onClick={()=>open(draft.receipt.draftId)}>Open current revision</button>}
+  </>;
+
   return <details onToggle={event=>{if(!event.currentTarget.open)suspend();}}>
     <summary>Invoice drafts</summary>
     <section aria-label="Invoice drafts" aria-busy={busy}>
@@ -259,6 +281,7 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
         {pending ? 'Check interrupted draft save' : 'Load saved drafts'}
       </button>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<p><SignInLink className="primary-action" returnTo="schedule">Sign in again</SignInLink></p>}
       {pending && reviewable && <form onSubmit={event=>{event.preventDefault();closeInterruptedDraft();}}>
         <label>Reason for closing the interrupted attempt
           <input required maxLength={1000} value={retirementReason} onChange={event=>setRetirementReason(event.target.value)} disabled={busy}/>
@@ -277,7 +300,9 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
         {page.hasMore && <button type="button" className="secondary" disabled={busy} onClick={()=>load(page.rows.at(-1)?.draftId)}>
           Load more drafts
         </button>}
-        {canPrepare && canChange && !editing && !pending && <button type="button" className="primary-action" disabled={busy} onClick={()=>edit(null)}>New invoice draft</button>}
+        {canPrepare && canChange && !editing && !pending && <button type="button"
+          className={openedInvoice||issuedDraft!==null&&issuedDraft===draft?.receipt.draftId?'secondary invoice-new-draft':'primary-action'}
+          disabled={busy} onClick={()=>edit(null)}>New invoice draft</button>}
       </>}
       {editing && !pending && <form onSubmit={event=>{
         event.preventDefault();save({dueOn:due || null,outcomes,cancelReason:null});
@@ -298,27 +323,17 @@ export function InvoiceDrafts({ businessId, jobId, canPrepare }: { businessId:st
         <button type="button" className="secondary" disabled={busy} onClick={()=>{setEditing(false);setScope(null);}}>Close editor</button>
       </form>}
       {!editing && draft && <section aria-label="Saved draft">
-        {openedInvoice && <section aria-label="Issued invoice"><IssuedInvoiceDetails invoice={openedInvoice}
+        {openedInvoice && <section aria-label="Issued invoice"><IssuedInvoiceDetails invoice={openedInvoice} businessId={businessId}
           receiptBusinessId={directReceipts?businessId:undefined} paymentCorrections={paymentCorrections}
           fundApplications={fundApplications} heldTips={heldTips} invoiceCredits={invoiceCredits} paidInvoiceCredits={paidInvoiceCredits} serviceRefunds={serviceRefunds}
           excessReturns={excessReturns} tipReturns={tipReturns} collectionFailures={collectionFailures} refundTransfers={refundTransfers}/></section>}
-        <h4>{issuedDraft===draft.receipt.draftId ? 'Draft history' : draft.receipt.state === 'cancelled' ? 'Cancelled draft' : 'Saved draft'}</h4>
-        <p>Revision {draft.receipt.revision}{draft.receipt.dueOn ? ' · Due '+formatDue(draft.receipt.dueOn) : ''}</p>
-        {draft.receipt.reason && <p>{draft.receipt.reason}</p>}
-        {draft.lines.length === 0 && <p className="field-help">No completed portions saved yet.</p>}
-        {draft.lines.length > 0 && <ul className="service-list">{draft.lines.map(line=><li key={line.outcomeId}>
-          {line.description} · {quoteMoney(line.inclusiveCents)}
-        </li>)}</ul>}
-        <button type="button" className="secondary" onClick={()=>download(draft)}>Download draft (CSV)</button>
-        {BigInt(draft.receipt.revision)>1n && <button type="button" className="secondary" disabled={busy}
-          onClick={()=>open(draft.receipt.draftId,String(BigInt(draft.receipt.revision)-1n))}>Previous revision</button>}
-        {!current && <button type="button" className="secondary" disabled={busy} onClick={()=>open(draft.receipt.draftId)}>Open current revision</button>}
         {current && issueTaxAvailable && !pending && !openedInvoice && draft.receipt.state === 'draft' && draft.lines.length > 0 &&
           <InvoiceIssueTaxReview key={draft.receipt.draftId+':'+draft.receipt.revision} businessId={businessId} jobId={jobId}
             draftId={draft.receipt.draftId} revision={draft.receipt.revision} lines={draft.lines}
             directReceipts={directReceipts} paymentCorrections={paymentCorrections} fundApplications={fundApplications} heldTips={heldTips}
             invoiceCredits={invoiceCredits} paidInvoiceCredits={paidInvoiceCredits} serviceRefunds={serviceRefunds} excessReturns={excessReturns} tipReturns={tipReturns} collectionFailures={collectionFailures} refundTransfers={refundTransfers}
             onIssued={()=>setIssuedDraft(draft.receipt.draftId)}/>}
+        {issuedDraft===draft.receipt.draftId||openedInvoice?<details className="invoice-draft-evidence"><summary>Review draft history</summary>{draftEvidence}</details>:draftEvidence}
         {current && canChange && !pending && issuedDraft!==draft.receipt.draftId && draft.receipt.state === 'draft' && <>
           {canPrepare && <button type="button" className="secondary" disabled={busy} onClick={()=>edit(draft)}>Edit draft</button>}
           <details>

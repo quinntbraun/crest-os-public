@@ -19,6 +19,6 @@ export function AmendmentCancellationCreator({view,controller}:{view:QuoteAmendm
     <div className="amendment-actions"><button type="submit" disabled={!view.canSaveCancellation}>Save cancellation proposal</button><button type="button" className="secondary" onClick={()=>controller.current?.discardCancellation()}>Discard unsaved proposal</button></div>
    </fieldset>
   </form>
-  <p className="field-help">Record actual sharing only after the proposal is approved and shared with the customer. Customer acceptance remains unfinished; saving, approving or sharing this Draft does not itself cancel accepted work.</p>
+  <p className="field-help">Record actual sharing only after the proposal is approved and shared with the customer. Record the customer’s separate acceptance after sharing. Handle visit changes and any credits or refunds through their own workflows.</p>
  </section>;
 }

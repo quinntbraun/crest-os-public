@@ -1,4 +1,8 @@
 'use client';
+import {SignInLink} from "../../sign-in-link";
+
+import {ScheduleLink} from '../navigation';
+
 
 import {useEffect,useId,useRef,useState} from 'react';
 import {authentication,AuthenticationError} from '../../../client/authentication';
@@ -143,14 +147,15 @@ export function PickupPolicySettings({businessId,timezone,canWrite}:{businessId:
    <p className="field-help">Changes apply to future Pickup + Return bookings. Enable the service separately in Service arrangements.</p>
    <p ref={status} role="status" tabIndex={-1}>{view.message}</p>
    <button type="button" className="secondary" disabled={view.busy} onClick={()=>void load()}>{view.page?'Reload pickup policy':'Load pickup policy'}</button>
-   {view.signedOut&&<p><a href="/sign-in">Sign in</a></p>}
-   {view.pending&&<p><a href={'/save-review?kind='+pickupPolicyKind}>Open Save review</a></p>}
+   {view.signedOut&&<p><SignInLink returnTo="arrangements">Sign in</SignInLink></p>}
+   {view.pending&&<p><ScheduleLink href={'/save-review?kind='+pickupPolicyKind}>Open Save review</ScheduleLink></p>}
    {view.page&&!view.pending&&canWrite&&(editing?
     <><PolicyForm key={current?.id??'initial'} policy={current} busy={view.busy} save={save}/>
     <button type="button" className="secondary" disabled={view.busy} onClick={()=>setEditing(false)}>Cancel policy edit</button></>:
     <button type="button" disabled={view.busy} onClick={()=>setEditing(true)}>{current?'Edit pickup policy':'Create pickup policy'}</button>)}
    {current&&<dl className="customer-values">
     <dt>Current policy</dt><dd>Version {current.sequence}</dd>
+    <dt>Recorded</dt><dd><time dateTime={current.recordedAt}>{format.format(new Date(current.recordedAt))}</time></dd>
     <dt>Condition photos</dt><dd>{current.conditionPhotoRequired?'Verified photo required':'Missing photo requires a reason'}</dd>
     <dt>Acknowledgement</dt><dd>{current.acknowledgementText??'None configured'}</dd>
    </dl>}

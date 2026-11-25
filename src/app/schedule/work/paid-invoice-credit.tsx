@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {FinancialAccessRecovery} from '../../financial-access-recovery';
 
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {financeAccountReviewReason} from '../../../bookkeeping/finance-account-contract';
@@ -33,6 +35,7 @@ export function PaidInvoiceCredit({businessId,customerId,invoiceId}:{businessId:
   const [writable,setWritable]=useState(false);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [signedOut,setSignedOut]=useState(false);
   const request=useRef<AbortController|null>(null);
   const status=useRef<HTMLParagraphElement>(null);
   const lines=review?.credit.lines.filter(item=>item.availableRange)??[];
@@ -48,11 +51,12 @@ export function PaidInvoiceCredit({businessId,customerId,invoiceId}:{businessId:
   const validReason=financeAccountReviewReason(reason.trim());
 
   const clearReview=useCallback(()=>{setReview(null);setLineId('');setAmount('');setReason('');setSelectedRange('');},[]);
-  const clearScreen=useCallback(()=>{
-    request.current?.abort();request.current=null;
+  const clearPrivate=useCallback(()=>{
     setDate('');setPayments(null);setAllocationId('');clearReview();setReceipt(null);setCloseReason('');
     setPending(false);setClosable(false);setWritable(false);setBusy(false);setMessage('');
+  setSignedOut(false);
   },[clearReview]);
+  const clearScreen=useCallback(()=>{request.current?.abort();request.current=null;clearPrivate();},[clearPrivate]);
   useEffect(()=>{
     const hidden=()=>{if(document.visibilityState==='hidden')clearScreen();};
     document.addEventListener('visibilitychange',hidden);
@@ -71,10 +75,11 @@ export function PaidInvoiceCredit({businessId,customerId,invoiceId}:{businessId:
     try{
       const context=await financeAccounts.context(signal);
       if(signal.aborted)return;
-      if(!context.paidInvoiceCredits||context.businessId!==businessId){setMessage('Paid invoice credits are unavailable.');return;}
+      if(!context.paidInvoiceCredits||context.businessId!==businessId){clearPrivate();setMessage('Paid invoice credits are unavailable.');return;}
+      setSignedOut(false);
       setWritable(context.writeState==='ready');
       await action(context,signal);
-    }catch{if(!signal.aborted)setMessage(failure);}
+    }catch(error){if(!signal.aborted){if(error instanceof AuthenticationError&&error.kind==='denied'){clearPrivate();setSignedOut(true);setMessage('Sign in again to review paid invoice credits.');}else{setMessage(failure);}}}
     finally{if(request.current===controller){request.current=null;setBusy(false);status.current?.focus();}}
   }
 
@@ -168,6 +173,7 @@ export function PaidInvoiceCredit({businessId,customerId,invoiceId}:{businessId:
         {pending?'Check original paid invoice credit':'Load applied payments'}
       </button>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<FinancialAccessRecovery returnTo="schedule" label="Paid invoice credit access recovery"/>}
       {pending&&closable&&<form onSubmit={event=>{event.preventDefault();if(financeAccountReviewReason(closeReason.trim()))load(closeReason.trim());}}>
         <label>Reason for closing the attempt<input required maxLength={1000} value={closeReason} disabled={busy}
           onChange={event=>setCloseReason(event.target.value)}/></label>

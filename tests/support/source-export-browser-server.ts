@@ -11,6 +11,9 @@ export {createSessionLifecycle} from '../../src/security/session-lifecycle.ts';
 export {sessionDatabase,createLegacyContactImportDispatcher} from '../../src/security/session-database.ts';
 export {sessionCredentialHash} from '../../src/security/session-credential.ts';
 export {createSourceExportDatabaseJournal} from '../../src/security/source-export-database-journal.ts';
+export {createCurrentBusinessSourceCollector} from '../../src/security/business-foundation-collector.ts';
+export {createCurrentBusinessExportWorker} from '../../src/security/business-source-export-worker.ts';
+export {bindCurrentSourceExportJournalWorker} from '../../src/security/source-export-journal-worker-port.ts';
 export {custodyFixture} from './source-export-custody-fixture.mjs';
 
 export {createCrestApplication} from '../../src/server/application.ts';
@@ -22,4 +25,10 @@ export {createDropoffPhotoDispatcherDirectory} from '../../src/operations/dropof
 export {createDropoffPhotoDispatch} from '../../src/operations/dropoff-photo-workflow.ts';
 export {validateImage} from '../../src/files/image-validation.ts';
 export {createLocalSandboxValidator} from '../../src/files/local-sandbox-validator.ts';
+export {createOpeningDocumentDispatcher} from '../../src/bookkeeping/opening-document-directory.ts';
 export {createSupplierOriginalDispatcher} from '../../src/bookkeeping/expenses/supplier-bill-original-directory.ts';
+
+export {createReceiptDirectory} from '../../src/bookkeeping/expenses/receipt-directory.ts';
+export {createReceiptWorkflow} from '../../src/bookkeeping/expenses/receipt-workflow.ts';
+
+export {createSourceExportExecutionAccess,consumeSourceExportExecutionAdmission} from '../../src/security/source-export-execution-access.ts';

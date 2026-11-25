@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync,spawn } from 'node:child_process';
-import {classifyAuthServiceError,classifyAuthBridgeError} from './real-auth-diagnostics.mjs';
+import {classifyAuthServiceError,classifyAuthBridgeError,authBridgeObservation} from './real-auth-diagnostics.mjs';
 import { randomBytes,randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -33,7 +33,9 @@ export async function startRealAuthService(target,{jwtExpiry=3600,diagnostic=fal
   const reservation=createServer();const port=await listen(reservation);await close(reservation);
   const upstream=`http://127.0.0.1:${port}`;
   const publicKey=`sb_publishable_${randomBytes(24).toString('base64url')}`;
-  const bridge=createServer((request,response)=>{void (async()=>{
+  const requestDiagnostics=[];
+  const rememberReply=event=>{if(requestDiagnostics.length===64)requestDiagnostics.shift();requestDiagnostics.push(event);};
+  const bridge=createServer((request,response)=>{const startedAt=Date.now();void (async()=>{
     const publicJwks=request.url==='/auth/v1/.well-known/jwks.json'&&request.method==='GET';
     if(!request.url?.startsWith('/auth/v1/')||!publicJwks&&request.headers.apikey!==publicKey) {response.writeHead(404);response.end();return;}
     const chunks=[];let size=0;
@@ -45,6 +47,7 @@ export async function startRealAuthService(target,{jwtExpiry=3600,diagnostic=fal
     // Enrollment returns a large SVG QR code. Only this test bridge accepts1MiB;
     // the production boundary excludes enrollment and keeps its128KiB limit.
     const data=Buffer.from(await result.arrayBuffer());if(data.length>1024*1024)throw new Error();
+    if(diagnostic)rememberReply(authBridgeObservation({path:request.url,method:request.method,status:result.status,date:result.headers.get('date'),startedAt,finishedAt:Date.now(),body:data}));
     response.writeHead(result.status,{'content-type':result.headers.get('content-type')??'application/json'});response.end(data);
   })().catch(error=>{if(diagnostic)retain(classifyAuthBridgeError(error));if(!response.headersSent)response.writeHead(503);response.end();});});
   const bridgePort=await listen(bridge);const issuer=`http://127.0.0.1:${bridgePort}/auth/v1`;
@@ -96,7 +99,7 @@ export async function startRealAuthService(target,{jwtExpiry=3600,diagnostic=fal
     await waitHealthy();
     startStage='admin_client';const adminJwt=await new SignJWT({role:'service_role',aud:'authenticated',iss:issuer}).setProtectedHeader({alg:'ES256',kid,typ:'JWT'}).setIssuedAt().setExpirationTime('1h').sign(privateKey);
     const admin=makeSdk(adminJwt);await admin.initialize();
-    return {issuer,publicKey,admin,sdk:makeSdk,close:cleanup,diagnostics:()=>Object.freeze([...diagnostics]),
+    return {issuer,publicKey,admin,sdk:makeSdk,close:cleanup,diagnostics:()=>Object.freeze([...diagnostics]),requestDiagnostics:()=>Object.freeze([...requestDiagnostics]),
       async stop(){docker(['stop','--time','5',container]);},async restart(){docker(['start',container]);await waitHealthy();}};
   } catch {
     await cleanup();

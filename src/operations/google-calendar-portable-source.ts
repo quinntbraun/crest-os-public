@@ -6,7 +6,7 @@ import { customerInstant as instant, customerUuid as uuid, customerVersion as ve
 import { readSourceExportCsv } from '../security/source-export-csv-reader.ts';
 import { calendarEventEtag } from './google-calendar-reconciliation.ts';
 
-const columns = {
+const legacyColumns = {
   destinations: ['id','business_id','provider_calendar_id','created_by','operation_id','created_at'],
   consents: ['id','business_id','destination_id','generation','previous_generation','recovery_epoch','state',
     'client_name','service_label','work_address','created_by','operation_id','created_at'],
@@ -24,11 +24,20 @@ const columns = {
   creation_intents: ['id','business_id','attempt_id','actor_id','recovery_epoch','correlation_marker','confirmed_at'],
   creation_results: ['id','business_id','attempt_id','recorded_at','outcome','provider_calendar_id'],
 } as const;
+const addedColumns={
+  creation_abandonments:['id','business_id','attempt_id','actor_id','app_session_id','recovery_epoch','operation_id','abandoned_at'],
+  account_bindings:['id','business_id','destination_id','client_id','provider_issuer','credential_id','source_attempt','recovery_epoch','actor_id','bound_at'],
+  reconnection_stagings:['id','business_id','attempt_id','destination_id','credential_id','generation','recovery_epoch','actor_id','app_session_id','provider_issuer','staged_at'],
+  credential_metadata:['id','business_id','destination_id','connection_generation','recovery_epoch','client_id','scope','version','source_exchange','created_at','updated_at'],
+  code_exchange_metadata:['id','business_id','attempt_id','app_session_id','actor_id','recovery_epoch','client_id','generation','destination_id','admitted_at','deadline'],
+} as const;
+const columns={...legacyColumns,...addedColumns};
 
-const groupNames = Object.keys(columns) as (keyof typeof columns)[];
-type Group = typeof groupNames[number];
+const groupNames = Object.keys(legacyColumns) as (keyof typeof legacyColumns)[];
+const currentGroupNames=Object.keys(columns) as (keyof typeof columns)[];
+type Group = keyof typeof columns;
 type Row = Readonly<Record<string, string | null>> & { readonly id: string };
-type Groups = Readonly<Record<Group, readonly Row[]>>;
+type Groups = Readonly<Record<keyof typeof legacyColumns, readonly Row[]>&Partial<Record<keyof typeof addedColumns,readonly Row[]>>>;
 const maximumRows = 1000;
 const maxBytes = 4 * 1024 * 1024;
 const timestamp = /(?:_at|_until)$|^deadline$/;
@@ -58,6 +67,10 @@ function fieldValid(name: string, value: unknown) {
   if (name === 'provider_calendar_id') return /^[A-Za-z0-9][A-Za-z0-9._+-]{0,254}@group\.calendar\.google\.com$/.test(value);
   if (name === 'prior_etag' || name === 'provider_etag') return calendarEventEtag(value);
   if (name === 'request_sha256') return hash(value);
+  if(name==='client_id')return /^[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/.test(value)&&value.length<=200;
+  if(name==='provider_issuer')return value==='https://accounts.google.com';
+  if(name==='scope')return value==='https://www.googleapis.com/auth/calendar.app.created';
+  if(name==='version')return version(value);
   if (timestamp.test(name)) return instant(value);
   if (versionField.test(name)) return version(value);
   if (booleanFields.includes(name)) return value === 'true' || value === 'false';
@@ -67,12 +80,12 @@ function fieldValid(name: string, value: unknown) {
 
 function row(value: unknown, group: Group, businessId: string): Row {
   requireSource(exact(value, columns[group]) && uuid(value.id) && value.business_id === businessId &&
-    columns[group].every(field => fieldValid(field, value[field])));
+    columns[group].every(field => group==='code_exchange_metadata'&&field==='generation'?version(value[field],true):group==='code_exchange_metadata'&&field==='destination_id'&&value[field]===null?true:fieldValid(field, value[field])));
   return value as Row;
 }
 
 function verifyLinks(groups: Groups) {
-  const lookup = (group: Group) => new Map(groups[group].map(item => [item.id, item]));
+  const lookup = (group: Group) => {const records=groups[group];requireSource(records);return new Map(records.map(item => [item.id, item]));};
   const destinations = lookup('destinations'), mappings = lookup('mappings'), outbox = lookup('outbox');
   const leases = lookup('dispatch_leases'), disconnects = lookup('disconnects'), creation = lookup('creation_intents');
   const consents = new Map(groups.consents.map(item => [item.destination_id + ':' + item.generation, item]));
@@ -107,15 +120,29 @@ function verifyLinks(groups: Groups) {
   requireSource(groups.creation_intents.every(item => item.id === item.attempt_id) && groups.creation_results.every(item =>
     item.id === item.attempt_id && creation.has(item.id) && admits.has(item.id) &&
     ['created','review','uncertain'].includes(item.outcome!) && (item.outcome === 'created') === (item.provider_calendar_id !== null)));
+  if(groups.credential_metadata){
+    const credentials=lookup('credential_metadata'),exchanges=lookup('code_exchange_metadata'),bindings=lookup('account_bindings'),abandoned=lookup('creation_abandonments');
+    requireSource(groups.code_exchange_metadata!.every(item=>item.id===item.attempt_id&&(item.destination_id===null||destinations.has(item.destination_id!))&&(item.generation==='0'||item.destination_id!==null)));
+    requireSource(groups.credential_metadata.every(item=>{
+      const exchange=exchanges.get(item.source_exchange!);
+      return !!exchange&&destinations.has(item.destination_id!)&&shared(item,exchange,'recovery_epoch','client_id')&&
+        BigInt(item.connection_generation!)===BigInt(exchange.generation!)+1n&&
+        (exchange.destination_id===null?item.connection_generation==='1':exchange.destination_id===item.destination_id);
+    }));
+    requireSource(groups.account_bindings!.every(item=>item.id===item.destination_id&&shared(item,credentials.get(item.credential_id!),'destination_id','client_id','recovery_epoch')&&creation.has(item.source_attempt!)&&credentials.get(item.credential_id!)?.source_exchange===item.source_attempt&&groups.creation_results.some(result=>result.id===item.source_attempt&&result.outcome==='created'&&result.provider_calendar_id===destinations.get(item.destination_id!)?.provider_calendar_id)));
+    requireSource(groups.creation_abandonments!.every(item=>item.id===item.attempt_id&&creation.has(item.id)&&!exchanges.has(item.id)&&!admits.has(item.id)&&!groups.creation_results.some(result=>result.attempt_id===item.id)));
+    requireSource(groups.reconnection_stagings!.every(item=>item.id===item.attempt_id&&bindings.has(item.destination_id!)&&shared(item,credentials.get(item.credential_id!),'destination_id','recovery_epoch')&&credentials.get(item.credential_id!)?.source_exchange===item.id&&credentials.get(item.credential_id!)?.connection_generation===item.generation&&shared(item,exchanges.get(item.id),'destination_id','recovery_epoch','actor_id','app_session_id')&&BigInt(item.generation!)===BigInt(exchanges.get(item.id)!.generation!)+1n&&!abandoned.has(item.id)));
+  }
 }
 
-function source(value: unknown, businessId: string) {
-  requireSource(uuid(businessId) && exact(value, ['schemaVersion','businessId','groups','snapshotToken']) && value.schemaVersion === 1 &&
-    value.businessId === businessId && hash(value.snapshotToken) && exact(value.groups, groupNames));
+function source(value: unknown, businessId: string,formatVersion:1|2) {
+  const names=formatVersion===2?currentGroupNames:groupNames;
+  requireSource(uuid(businessId) && exact(value, ['schemaVersion','businessId','groups','snapshotToken']) && value.schemaVersion === formatVersion &&
+    value.businessId === businessId && hash(value.snapshotToken) && exact(value.groups, names));
   const raw = value.groups;
   const groups = {} as Record<Group, readonly Row[]>;
   let total = 0;
-  for (const group of groupNames) {
+  for (const group of names) {
     const values = raw[group];
     requireSource(Array.isArray(values) && (total += values.length) <= maximumRows);
     const rows = values.map(value => row(value, group, businessId));
@@ -155,10 +182,11 @@ const relations = 'http://schemas.openxmlformats.org/officeDocument/2006/relatio
 const relationNs = 'http://schemas.openxmlformats.org/package/2006/relationships';
 const declarations = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
 
-function workbook(groups: Groups) {
+function workbook(groups: Groups,names:readonly Group[]) {
   const worksheet = (group: Group) => {
     const fields = columns[group];
-    const values = [fields, ...groups[group].map(item => fields.map(field => item[field] ?? null))];
+    const records=groups[group];requireSource(records);
+    const values = [fields, ...records.map(item => fields.map(field => item[field] ?? null))];
     const rows = values.map((values, rowIndex) => '<row r="' + (rowIndex + 1) + '">' + values.map((value, columnIndex) =>
       value === null ? '' : '<c r="' + String.fromCharCode(65 + columnIndex) + (rowIndex + 1) +
         '" t="inlineStr"><is><t xml:space="preserve">' + xml(value) + '</t></is></c>').join('') + '</row>');
@@ -174,41 +202,42 @@ function workbook(groups: Groups) {
     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
     '<Default Extension="xml" ContentType="application/xml"/>' +
     '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
-    groupNames.map((_, index) => '<Override PartName="/xl/worksheets/sheet' + (index + 1) +
+    names.map((_, index) => '<Override PartName="/xl/worksheets/sheet' + (index + 1) +
       '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') + '</Types>');
   add('_rels/.rels', declarations + '<Relationships xmlns="' + relationNs + '">' + relation(1, 'officeDocument', 'xl/workbook.xml') + '</Relationships>');
   add('xl/workbook.xml', declarations + '<workbook xmlns="' + ns + '" xmlns:r="' + relations +
-    '"><bookViews><workbookView/></bookViews><sheets>' + groupNames.map((name, index) =>
+    '"><bookViews><workbookView/></bookViews><sheets>' + names.map((name, index) =>
       '<sheet name="' + xml(name.replaceAll('_', ' ')) + '" sheetId="' + (index + 1) + '" r:id="rId' + (index + 1) + '"/>').join('') +
     '</sheets></workbook>');
   add('xl/_rels/workbook.xml.rels', declarations + '<Relationships xmlns="' + relationNs + '">' +
-    groupNames.map((_, index) => relation(index + 1, 'worksheet', 'worksheets/sheet' + (index + 1) + '.xml')).join('') + '</Relationships>');
-  groupNames.forEach((group, index) => add('xl/worksheets/sheet' + (index + 1) + '.xml', worksheet(group)));
+    names.map((_, index) => relation(index + 1, 'worksheet', 'worksheets/sheet' + (index + 1) + '.xml')).join('') + '</Relationships>');
+  names.forEach((group, index) => add('xl/worksheets/sheet' + (index + 1) + '.xml', worksheet(group)));
   return zipSync(parts, { level: 6, mtime: new Date('2000-01-01T00:00:00Z') });
 }
 
 export async function captureGoogleCalendarPortableSource(businessId: string,
-  query: (statement: string, args: unknown[]) => Promise<unknown[]>) {
+  query: (statement: string, args: unknown[]) => Promise<unknown[]>,formatVersion:1|2=1) {
   requireSource(uuid(businessId));
-  const result = await query('SELECT crest_commands.google_calendar_source_snapshot($1::uuid) AS result', [businessId]);
+  requireSource(formatVersion===1||formatVersion===2);const names=formatVersion===2?currentGroupNames:groupNames;
+  const result = await query(formatVersion===2?'SELECT crest_commands.google_calendar_source_snapshot_v2($1::uuid) AS result':'SELECT crest_commands.google_calendar_source_snapshot($1::uuid) AS result', [businessId]);
   requireSource(Array.isArray(result) && result.length === 1 && exact(result[0], ['result']) &&
     Buffer.byteLength(JSON.stringify(result)) <= maxBytes);
-  const { groups, snapshotToken } = source(result[0].result, businessId);
+  const { groups, snapshotToken } = source(result[0].result, businessId,formatVersion);
   const files: Record<string, Uint8Array> = {};
   const escapeMap: Record<string, unknown> = {};
-  for (const group of groupNames) {
-    const { csv, escapes } = formatCsv(group, groups[group]);
+  for (const group of names) {
+    const records=groups[group];requireSource(records);const { csv, escapes } = formatCsv(group, records);
     files[group + '.csv'] = strToU8(csv);
     escapeMap[group] = escapes;
   }
   files['calendar_escape_map.json'] = strToU8(JSON.stringify(escapeMap) + '\n');
-  files['calendar_dictionary.json'] = strToU8(JSON.stringify({ schemaVersion: 1, columns,
+  files['calendar_dictionary.json'] = strToU8(JSON.stringify({ schemaVersion: formatVersion, columns:formatVersion===2?columns:legacyColumns,
     csv: 'UTF-8 RFC4180 CRLF. All non-null columns are exact text; \\N denotes null. Remove only marked leading apostrophes, then unescape paired backslashes.',
     workbook: 'Each sheet mirrors its CSV and stores exact text. Blank cells denote null.',
     scope: 'Destination, consent, mapping, appointment and redacted attempt history. Provider secrets and raw provider payloads are excluded.' }) + '\n');
-  files['calendar.xlsx'] = workbook(groups);
+  files['calendar.xlsx'] = workbook(groups,names);
   requireSource(Object.values(files).reduce((n, bytes) => n + bytes.byteLength, 0) <= maxBytes);
-  const manifest = JSON.stringify({ schemaVersion: 1, scope: 'crest.google-calendar-portable-source.v1', businessId, snapshotToken,
+  const manifest = JSON.stringify({ schemaVersion: formatVersion, scope: 'crest.google-calendar-portable-source.v'+formatVersion, businessId, snapshotToken,
     completePortableExport: false, completeBackup: false, parts: Object.entries(files).map(([name, bytes]) =>
       ({ name, bytes: bytes.byteLength, sha256: digest(bytes) })) }) + '\n';
   return { manifest, files };

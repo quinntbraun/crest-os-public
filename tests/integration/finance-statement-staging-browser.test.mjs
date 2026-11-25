@@ -13,6 +13,7 @@ const route='/api/business/finance-accounts/statement-staging-';
 const matching=process.env.CREST_TEST_STATEMENT_MATCH_REVIEW==='1';
 const savedMatching=process.env.CREST_TEST_STATEMENT_MATCH_DRAFTS==='1';
 const supplierBills=process.env.CREST_TEST_SUPPLIER_BILL_DRAFTS==='1';
+const payableReview=matching&&savedMatching&&supplierBills&&process.env.CREST_TEST_SUPPLIER_PAYABLE_REVIEW==='1';
 for(const engine of [chromium,webkit]){
  test(engine.name()+' genuine owner stages a fictional statement and recovers an interrupted save',{timeout:300000},async()=>{
   const previous=process.env.CREST_TEST_DATABASE_URL,cluster=previous?null:await recoveryCluster();
@@ -38,36 +39,109 @@ for(const engine of [chromium,webkit]){
 
    async function load(){
     await page.goto(fixture.origin+'/settings/accounts');
-    await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+    await page.getByRole('button',{name:'Setup',exact:true}).click();
     return page.getByRole('region',{name:'Fictional bank statement staging'});
    }
-   const form=await load();
+   async function captureChannelState(phase,target){
+    const viewport=page.viewportSize(),before=await facts();let requests=0;
+    const observe=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))requests++;};
+    page.on('request',observe);
+    try{
+     await mkdir('.local/review',{recursive:true});
+     for(const width of [360,390,1440]){
+      await page.setViewportSize({width,height:900});await target.scrollIntoViewIfNeeded();
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+      await page.screenshot({path:`.local/review/finance-statement-channel-${phase}-${engine.name()}-${width}.png`});
+     }
+     assert.equal(requests,0);assert.deepEqual(await facts(),before);
+    }finally{page.off('request',observe);await page.setViewportSize(viewport);}
+   }
+   let releaseRead,readStarted=false;const heldRead=new Promise(resolve=>{releaseRead=resolve;});
+   await page.route('**/api/business/finance-accounts/channel-list',async request=>{
+    readStarted=true;await heldRead;await request.abort('failed');
+   },{times:1});
+   const form=page.getByRole('region',{name:'Fictional bank statement staging'});
+   try{
+    await load();
+    const loading=form.getByText('Loading dedicated money accounts…',{exact:true});
+    await expect(loading).toBeVisible();await expect(form.getByLabel('Dedicated money account')).toHaveCount(0);
+    // The component can render loading before its authenticated request starts.
+    // Establish the held original read before counting inspection traffic.
+    await expect.poll(()=>readStarted).toBe(true);
+    await captureChannelState('loading',loading);
+   }finally{releaseRead();}
+   await expect(form.getByRole('alert')).toHaveText('Dedicated accounts could not be loaded.');
+   const checkAccess=form.getByRole('link',{name:'Check accounting access',exact:true});
+   await expect(checkAccess).toHaveAttribute('href','/settings/accounts');
+   await captureChannelState('failed',form.getByRole('alert'));
+   await checkAccess.press('Enter');
+   await page.getByRole('button',{name:'Setup',exact:true}).click();
    const channel=form.getByLabel('Dedicated money account');
    await expect(channel.getByRole('option',{name:'Fictional checking (1234)'})).toHaveCount(1);
-   await channel.selectOption({label:'Fictional checking (1234)'});
    const file=Buffer.from('fictional-provider-statement-bytes');
+   async function fillStatement(closing,rows){
+   await channel.selectOption({label:'Fictional checking (1234)'});
    await form.getByLabel('Fictional source file for checksum').setInputFiles({name:'fictional-statement.txt',mimeType:'text/plain',buffer:file});
    await form.getByLabel('Statement start date').fill('2026-01-01');
    await form.getByLabel('Statement end date').fill('2026-01-31');
    await form.getByLabel('Opening balance (USD)',{exact:true}).fill('12.00');
-   await form.getByLabel('Closing balance (USD)',{exact:true}).fill('14.00');
+   await form.getByLabel('Closing balance (USD)',{exact:true}).fill(closing);
    await form.getByLabel('Provider statement date convention').fill('Fictional bank posting date');
    await form.getByLabel('Completeness review').fill('Fictional full-period statement reviewed');
-   await form.getByLabel('Statement rows',{exact:true}).fill('2026-02-01, 3.25\n2026-01-04, -0.75');
+   await form.getByLabel('Statement rows',{exact:true}).fill(rows);
+   }
+   const comparisonValue=(region,label)=>region.locator('dl > div').filter({has:page.getByText(label,{exact:true})}).locator('dd');
+   await fillStatement('14.50','2026-02-01, 3.25\n2026-01-04, -0.75');
    await form.getByRole('button',{name:'Review statement'}).click();
    await expect(form.getByRole('status')).toContainText('Check the statement dates');
    await form.getByLabel('Statement rows',{exact:true}).fill('2026-01-01, 3.25\n2026-01-04, -0.75');
    await form.getByRole('button',{name:'Review statement'}).click();
-   await expect(form.getByText('Statement difference −$0.50.',{exact:false})).toBeVisible();
-   const hash=createHash('sha256').update(file).digest('hex');
-   await expect(form.getByText(hash,{exact:true})).toBeVisible();
+   const comparison=form.getByRole('region',{name:'Statement balance review',exact:true});
+   await expect(comparisonValue(comparison,'Statement difference')).toHaveText('$0.00');
+   await expect(comparison.getByText('Rows match the stated balances',{exact:true})).toBeVisible();
+   await expect(comparison).toContainText('Staging does not reconcile the account.');
    await mkdir('.local/review',{recursive:true});
-   for(const width of [360,390,768,1440]){
+   for(const width of [390,1440]){
+    await page.setViewportSize({width,height:900});
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+    await comparison.screenshot({path:`.local/review/finance-statement-balanced-${engine.name()}-${width}.png`});
+   }
+   await form.getByRole('button',{name:'Discard review',exact:true}).click();
+   await fillStatement('14.00','2026-01-01, 3.25\n2026-01-04, -0.75');
+   await form.getByRole('button',{name:'Review statement',exact:true}).click();
+   for(const [label,amount]of [['Opening balance','$12.00'],['Signed row total','$2.50'],['Calculated closing','$14.50'],['Statement closing','$14.00'],['Statement difference','−$0.50']])
+    await expect(comparisonValue(comparison,label)).toHaveText(amount);
+   await expect(comparison.getByText('Difference needs review',{exact:true})).toBeVisible();
+   const hash=createHash('sha256').update(file).digest('hex');
+   const evidence=form.locator('details.statement-evidence');assert.equal(await evidence.evaluate(element=>element.open),false);
+   async function facts(){const result={};for(const table of ['statement_imports','statement_import_rows','journal_entries','journal_lines'])
+    result[table]=(await fixture.client.query('SELECT to_jsonb(r)::text AS value FROM crest.'+table+' r WHERE business_id=$1 ORDER BY to_jsonb(r)::text COLLATE "C"',[fixture.business])).rows;
+    result.audit=(await fixture.client.query('SELECT to_jsonb(a)::text AS value FROM crest_private.audit_events a WHERE business_id=$1 ORDER BY to_jsonb(a)::text COLLATE "C"',[fixture.business])).rows;return result;}
+   async function inspectEvidence(workspace){
+    const before=await facts();let requests=0;const observe=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))requests++;};page.on('request',observe);
+    try{
+     const details=workspace.locator('details.statement-evidence');await details.locator(':scope > summary').press('Enter');
+     await expect(details.getByText(hash,{exact:true})).toBeVisible();
+     await expect(details.getByText('Fictional bank posting date',{exact:true})).toBeVisible();
+     await expect(details.getByText('Fictional full-period statement reviewed',{exact:true})).toBeVisible();
+     await details.locator(':scope > summary').press('Enter');
+     assert.equal(requests,0);assert.deepEqual(await facts(),before);
+    }finally{page.off('request',observe);}
+   }
+   await inspectEvidence(form);
+   await form.getByText('Review entered rows',{exact:true}).press('Enter');
+   await expect(form.getByText('2026-01-01 $3.25',{exact:true})).toBeVisible();
+   await expect(form.getByText('2026-01-04 −$0.75',{exact:true})).toBeVisible();
+   await form.getByText('Review entered rows',{exact:true}).press('Enter');
+   for(const width of [360,390,768,1100,1440]){
     await page.setViewportSize({width,height:900});
     await form.scrollIntoViewIfNeeded();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
     await page.screenshot({path:`.local/review/finance-statement-staging-${engine.name()}-${width}.png`});
+    await comparison.screenshot({path:`.local/review/finance-statement-comparison-${engine.name()}-${width}.png`});
    }
    let recorded;
    await page.route('**'+route+'save',async request=>{
@@ -82,21 +156,74 @@ for(const engine of [chromium,webkit]){
    await form.getByRole('button',{name:'Stage reviewed statement'}).click();
    await expect(form.getByRole('status')).toContainText('The save could not be confirmed');
    assert.equal(recorded,200);
+   const originalReference=form.locator('details.statement-original-reference');
+   assert.equal(await originalReference.evaluate(node=>node.open),false);
+   assert(await form.evaluate(node=>{
+    const check=[...node.querySelectorAll('button')].find(button=>button.textContent==='Check original save');
+    const review=node.querySelector('.statement-comparison');
+    return Boolean(check&&review&&(check.compareDocumentPosition(review)&Node.DOCUMENT_POSITION_FOLLOWING));
+   }),'The original-save check must precede the long retained review');
+   const beforeReference=await facts();let referenceRequests=0;
+   const observeReference=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))referenceRequests++;};
+   page.on('request',observeReference);
+   try{
+    const pending=await page.evaluate(key=>JSON.parse(sessionStorage.getItem(key)),'crest.statement-stage.original.v1.'+fixture.business);
+    await originalReference.locator('summary').press('Enter');
+    await expect(originalReference.getByText([pending.operationId,pending.recoveryEpoch,pending.statementId].join('.'),{exact:true})).toBeVisible();
+    await originalReference.locator('summary').press('Enter');
+    await expect(originalReference.locator('summary')).toBeFocused();
+    assert.equal(referenceRequests,0);assert.deepEqual(await facts(),beforeReference);
+   }finally{page.off('request',observeReference);}
+   const uncertainViewport=page.viewportSize();
+   try{
+    for(const width of [390,1440]){
+     await page.setViewportSize({width,height:900});
+     await page.screenshot({path:`.local/review/finance-statement-uncertain-${engine.name()}-${width}.png`,fullPage:true});
+    }
+   }finally{await page.setViewportSize(uncertainViewport);}
    const key='crest.statement-stage.original.v1.'+fixture.business;
    const saved=await page.evaluate(key=>JSON.parse(sessionStorage.getItem(key)),key);
    assert.deepEqual(Object.keys(saved).sort(),['operationId','recoveryEpoch','statementId']);
    const reopened=await load();
    await reopened.getByRole('button',{name:'Check original save'}).click();
    await expect(reopened.getByRole('status')).toContainText('Statement staged. 2 rows retained with a statement difference of −$0.50.');
+   await expect(reopened.getByRole('status')).toBeFocused();
    assert.equal(await page.evaluate(key=>sessionStorage.getItem(key),key),null);
    const reference=[saved.operationId,saved.recoveryEpoch,saved.statementId].join('.');
+   await inspectEvidence(reopened);
+   await reopened.getByText('Statement evidence',{exact:true}).press('Enter');
    await expect(reopened.getByText(reference,{exact:true})).toBeVisible();
+   await reopened.getByText('Statement evidence',{exact:true}).press('Enter');
    await page.reload();
-   await page.getByRole('button',{name:'Load accounts',exact:true}).click();
+   await page.getByRole('button',{name:'Setup',exact:true}).click();
    await reopened.getByText('Check a saved statement',{exact:true}).click();
    await reopened.getByLabel('Statement save reference',{exact:true}).fill(reference);
    await reopened.getByRole('button',{name:'Check saved statement'}).click();
    await expect(reopened.getByRole('status')).toContainText('Statement staged. 2 rows retained');
+   await expect(reopened.getByRole('status')).toBeFocused();
+   const retained=reopened.getByRole('region',{name:'Staged statement balances',exact:true});
+   await expect(comparisonValue(retained,'Calculated closing')).toHaveText('$14.50');
+   await expect(comparisonValue(retained,'Statement difference')).toHaveText('−$0.50');
+   await inspectEvidence(reopened);
+   for(const width of [360,390,768,1100,1440]){
+    await page.setViewportSize({width,height:900});
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    assert.deepEqual((await new AxeBuilder({page}).analyze()).violations,[]);
+    await retained.screenshot({path:`.local/review/finance-statement-retained-${engine.name()}-${width}.png`});
+    await page.screenshot({path:`.local/review/finance-statement-saved-workspace-${engine.name()}-${width}.png`});
+   }
+   const nextReview=reopened.locator('details.statement-entry');assert.equal(await nextReview.evaluate(element=>element.open),false);
+   const beforeNextReview=await facts();let nextReviewRequests=0;const trackNextReview=request=>{if(new URL(request.url()).pathname.startsWith('/api/business/'))nextReviewRequests++;};page.on('request',trackNextReview);
+   try{
+    await nextReview.locator(':scope > summary').press('Enter');
+    await expect(retained).toBeVisible();
+    await reopened.getByLabel('Opening balance (USD)',{exact:true}).fill('6.78');
+    await nextReview.locator(':scope > summary').press('Enter');
+    await nextReview.locator(':scope > summary').press('Enter');
+    await expect(reopened.getByLabel('Opening balance (USD)',{exact:true})).toHaveValue('6.78');
+    await nextReview.locator(':scope > summary').press('Enter');
+    assert.equal(nextReviewRequests,0);assert.deepEqual(await facts(),beforeNextReview);
+   }finally{page.off('request',trackNextReview);}
    if(matching){
     await reopened.getByText('Review statement matches',{exact:true}).click();
     const matchReview=reopened.getByRole('region',{name:'Statement match review',exact:true});
@@ -121,14 +248,35 @@ for(const engine of [chromium,webkit]){
    const download=await downloadPromise;
    const {['manifest.json']:manifest,['export_delivery.json']:delivery,...source}=unzipSync(await readFile(await download.path()));
    const verified=verifyFinanceSourceExport(strFromU8(manifest),Object.entries(source).map(([name,bytes])=>({name,content:strFromU8(bytes)})),fixture.business);
-   assert.equal(verified.profile,supplierBills?'crest.posted-finance-source.v22':savedMatching?'crest.posted-finance-source.v21':matching?'crest.posted-finance-source.v20':'crest.posted-finance-source.v19');
-   assert.equal(JSON.parse(strFromU8(delivery)).sourceSchemaVersion,supplierBills?108:savedMatching?107:matching?106:103);
+   assert.equal(verified.profile,payableReview?'crest.posted-finance-source.v23':supplierBills?'crest.posted-finance-source.v22':savedMatching?'crest.posted-finance-source.v21':matching?'crest.posted-finance-source.v20':'crest.posted-finance-source.v19');
+   assert.equal(JSON.parse(strFromU8(delivery)).sourceSchemaVersion,payableReview?109:supplierBills?108:savedMatching?107:matching?106:103);
    if(supplierBills)assert.deepEqual(JSON.parse(strFromU8(source['supplier_bill_draft_source.json'])).revisions,[]);
    if(savedMatching)assert.deepEqual(JSON.parse(strFromU8(source['statement_match_draft_source.json'])).revisions,[]);
    const [statement]=JSON.parse(strFromU8(source['statement_staging_source.json'])).batches;
    assert.deepEqual([statement.id,statement.operationId,statement.fileSha256,statement.statementDifferenceCents],
     [saved.statementId,saved.operationId,hash,'-50']);
    assert(!JSON.stringify(statement).includes(file.toString()));
+   // Produce an empty eligible-account view through the genuine reviewed command,
+   // after retaining all original statement/export checks above.
+   await page.goto(fixture.origin+'/settings/accounts/channels');
+   const channels=page.getByRole('region',{name:'Money channel reviews',exact:true});
+   await channels.getByRole('button',{name:'Load channels',exact:true}).click();
+   await channels.getByRole('button',{name:/^Fictional checking Account 1000/}).click();
+   await channels.getByRole('button',{name:'Edit review',exact:true}).click();
+   await channels.getByLabel('Effective from',{exact:true}).fill('2026-02-01');
+   await channels.getByLabel('Review record status',{exact:true}).selectOption('closed');
+   await channels.getByLabel('Reason for review',{exact:true}).fill('Fictional review closed this money channel');
+   await channels.getByRole('button',{name:'Save channel review',exact:true}).click();
+   await expect(channels.getByRole('status')).toHaveText('Channel review saved.');
+   await load();
+   const empty=form.getByText('No active dedicated bank or wallet account is available.',{exact:true});
+   await expect(empty).toBeVisible();await expect(form.getByLabel('Dedicated money account')).toHaveCount(0);
+   await expect(form.getByText('Loading dedicated money accounts…',{exact:true})).toHaveCount(0);
+   const reviewChannels=form.getByRole('link',{name:'Review money channels',exact:true});
+   await expect(reviewChannels).toHaveAttribute('href','/settings/accounts/channels');
+   await captureChannelState('empty',empty);
+   await reviewChannels.press('Enter');
+   await expect(page.getByRole('region',{name:'Money channel reviews',exact:true})).toBeVisible();
   }finally{
    try{await browser?.close();}finally{
     try{await fixture?.close();}finally{

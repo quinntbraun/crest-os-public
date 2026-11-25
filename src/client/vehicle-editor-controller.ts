@@ -12,7 +12,7 @@ import type {PendingVehicle,createPendingVehicleStore} from './pending-vehicle-e
 
 type Snapshot=Awaited<ReturnType<typeof vehicles.context>>;
 type History=Extract<Awaited<ReturnType<typeof vehicles.history>>,{state:'found'}>;
-export type VehicleEditorView=Readonly<{businessId:string|null;phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Vehicle[];hasMore:boolean;search:string;includeArchived:boolean;selected:Vehicle|null;draft:VehicleDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean;recordJobHistoryAvailable?:true}>;
+export type VehicleEditorView=Readonly<{businessId:string|null;phase:'loading'|'ready'|'pending'|'review'|'unavailable'|'blocked';message:string;busy:boolean;rows:readonly Vehicle[];hasMore:boolean;search:string;includeArchived:boolean;selected:Vehicle|null;draft:VehicleDraft|null;draftIssue:string;history:History|null;canSave:boolean;canRetry:boolean;reference:string;writesPaused:boolean;saveConfirmed?:true;recordJobHistoryAvailable?:true}>;
 export const initialVehicleEditorView:VehicleEditorView=Object.freeze({businessId:null,phase:'loading',message:'Checking vehicle access…',busy:true,rows:Object.freeze([]),hasMore:false,search:'',includeArchived:false,selected:null,draft:null,draftIssue:'',history:null,canSave:false,canRetry:false,reference:'',writesPaused:true});
 export const emptyVehicleDraft:VehicleDraft=Object.freeze({label:'',year:null,make:null,model:null,color:null,vin:null,plate:null,kind:'customer_vehicle',notes:null,archived:false,archiveReason:null});
 
@@ -20,8 +20,8 @@ type Dependencies={store:ReturnType<typeof createPendingVehicleStore>;change:(vi
 export function createVehicleEditorController(deps:Dependencies){
   const api=deps.api??vehicles,session=deps.session??authentication.session,id=deps.id??(()=>crypto.randomUUID());
   let alive=true,active:AbortController|null=null,proof:Proof|null=null,snapshot:Snapshot|null=null,pending:PendingVehicle|null=null,original:VehicleSave|null=null;
-  let phase:VehicleEditorView['phase']='loading',message=initialVehicleEditorView.message,rows:readonly Vehicle[]=[],hasMore=false,search='',includeArchived=false,selected:Vehicle|null=null,draft:VehicleDraft|null=null,history:History|null=null,canRetry=false;
-  const clearPrivate=()=>{proof=null;snapshot=null;rows=[];hasMore=false;search='';includeArchived=false;selected=null;draft=null;history=null;original=null;canRetry=false;};
+  let phase:VehicleEditorView['phase']='loading',message=initialVehicleEditorView.message,rows:readonly Vehicle[]=[],hasMore=false,search='',includeArchived=false,selected:Vehicle|null=null,draft:VehicleDraft|null=null,history:History|null=null,canRetry=false,saveConfirmed=false;
+  const clearPrivate=()=>{proof=null;snapshot=null;rows=[];hasMore=false;search='';includeArchived=false;selected=null;draft=null;history=null;original=null;canRetry=false;saveConfirmed=false;};
   function draftIssue(){if(draft===null)return '';try{parseVehicleDraft(draft);}catch{return 'Review the label, year, field lengths and archive reason before saving.';}
     // UUIDs have a fixed wire length. Match the actual flat JSON input and
     // exact current version before creating IDs, a reference or a request.
@@ -29,7 +29,7 @@ export function createVehicleEditorController(deps:Dependencies){
     return new TextEncoder().encode(JSON.stringify(body)).byteLength>8192?'This draft is too large to send. Shorten the vehicle details or notes before saving.':'';
   }
   const view=():VehicleEditorView=>Object.freeze({businessId:phase==='ready'?snapshot?.context.businessId??null:null,phase,message,busy:!!active,rows:phase==='ready'?rows:Object.freeze([]),hasMore:phase==='ready'&&hasMore,search:phase==='ready'?search:'',includeArchived:phase==='ready'&&includeArchived,selected:phase==='ready'?selected:null,draft:phase==='ready'?draft:null,draftIssue:phase==='ready'?draftIssue():'',history:phase==='ready'?history:null,
-    canSave:!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&draft!==null&&draftIssue()===''&&(!selected||JSON.stringify(draft)!==JSON.stringify(draftFromVehicle(selected))),canRetry:!active&&canRetry,
+    canSave:!active&&phase==='ready'&&snapshot?.context.writeState==='ready'&&draft!==null&&draftIssue()===''&&(!selected||JSON.stringify(draft)!==JSON.stringify(draftFromVehicle(selected))),canRetry:!active&&canRetry,...phase==='review'&&!active&&saveConfirmed?{saveConfirmed:true as const}:{},
     reference:phase==='pending'&&snapshot?.context.businessId===pending?.businessId?pending?.reference.operationId??'':'',writesPaused:snapshot?.context.writeState!=='ready',
     ...phase==='ready'&&snapshot?.recordJobHistoryAvailable?{recordJobHistoryAvailable:true as const}:{}});
   const emit=()=>{if(alive)deps.change(view());};
@@ -38,13 +38,14 @@ export function createVehicleEditorController(deps:Dependencies){
   const retain=(text:string)=>{phase='pending';message=text;canRetry=false;rows=[];selected=null;draft=null;history=null;search='';hasMore=false;};
   const eligible=()=>!!pending&&!!original&&!!snapshot&&snapshot.context.businessId===pending.businessId&&snapshot.binding===pending.binding&&snapshot.context.writeState==='ready'&&snapshot.context.recoveryEpoch===pending.reference.recoveryEpoch&&(['operationId','vehicleId','expectedVersion','recoveryEpoch'] as const).every(key=>original![key]===pending!.reference[key]);
   async function run(work:(signal:AbortSignal)=>Promise<void>,failure:(error:unknown)=>void){
-    if(!alive||active)return;const controller=new AbortController();active=controller;emit();
+    if(!alive||active)return;saveConfirmed=false;const controller=new AbortController();active=controller;emit();
     try{await work(controller.signal);}catch(error){if(alive&&active===controller&&!controller.signal.aborted)failure(error);}finally{if(active===controller){active=null;emit();}}
   }
-  const load=()=>run(async signal=>{
+  const load=(includeAll=false)=>run(async signal=>{
+    if(typeof includeAll!=='boolean')throw new Error();
     clearPrivate();phase='loading';message='Checking vehicle access…';emit();pending=deps.store.read();await fresh(signal);
     if(pending){if(pending.businessId!==snapshot!.context.businessId){phase='blocked';message='A pending save belongs to a different business. Its reference has been kept for review.';return;}retain('A pending vehicle save was found. Check its status before another edit.');return;}
-    const result=await api.list(snapshot!.context.businessId,{search:'',afterId:null,includeArchived:false,pageSize:25},proof!,signal);live(signal);rows=result.vehicles;hasMore=result.hasMore;phase='ready';message=snapshot!.context.writeState==='ready'?'Choose a vehicle or add a new vehicle.':'Vehicle changes are paused. Current records remain available for review.';
+    const result=await api.list(snapshot!.context.businessId,{search:'',afterId:null,includeArchived:includeAll,pageSize:25},proof!,signal);live(signal);rows=result.vehicles;hasMore=result.hasMore;includeArchived=includeAll;phase='ready';message=snapshot!.context.writeState==='ready'?'Choose a vehicle or add a new vehicle.':'Vehicle changes are paused. Current records remain available for review.';
   },error=>{clearPrivate();phase=error instanceof PendingVehicleError?'blocked':'unavailable';message=error instanceof PendingVehicleError?'The pending-save reference cannot be read. Editing is blocked to protect it.':'Vehicle access could not be verified. Sign in or check again; any pending reference has been kept.';});
   const query=(text:string,archived:boolean,more=false)=>{
     if(phase!=='ready'||!snapshot||!proof||typeof text!=='string'||[...text].length>200||typeof archived!=='boolean'||more&&(!hasMore||text!==search||archived!==includeArchived))return Promise.resolve();
@@ -63,7 +64,7 @@ export function createVehicleEditorController(deps:Dependencies){
     if(!pending)throw new Error();
     if(result.state==='conflict'&&result.reason==='operation'){retain('The save reference conflicts with the recorded request. Keep it for review; no replacement will be sent.');original=null;return;}
     try{deps.store.clear(pending);}catch{retain(result.state==='committed'?'Save confirmed, but its reference could not be cleared. Check save status before another edit.':'No change was saved, but its reference could not be cleared. Check save status before another edit.');return;}
-    pending=null;clearPrivate();phase='review';message=result.state==='committed'?(lookup?'The original save is confirmed. Load current vehicles to review the recorded result.':'Vehicle saved. Load current vehicles before another edit.'):'The record changed or the vehicle ID is already in use. Load current vehicles and review before starting a new edit.';
+    pending=null;clearPrivate();phase='review';saveConfirmed=result.state==='committed';message=result.state==='committed'?(lookup?'The original save is confirmed. Load current vehicles to review the recorded result.':'Vehicle saved. Load current vehicles before another edit.'):'The record changed or the vehicle ID is already in use. Load current vehicles and review before starting a new edit.';
   }
   const check=()=>run(async signal=>{
     pending=deps.store.read();if(!pending)throw new PendingVehicleError();retain('Checking the original vehicle save…');emit();await fresh(signal);

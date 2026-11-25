@@ -15,6 +15,14 @@ beforeEach(()=>{
  mock.query.mockImplementation(async()=>{mock.events.push('query');return{state:'created',result:f.committed};});
  mock.transaction.mockImplementation(async(work,signal)=>{mock.events.push('begin');try{const value=await work(mock.query,signal);mock.events.push('commit');return value;}catch(error){mock.events.push('rollback');throw error;}});
 });
+it.each([138,140] as const)('binds current execution admission to committed schema %s only',async schema=>{
+ f.original.reference.profile='crest.current-business-source-bundle.v1';f.original.reference.sourceSchemaVersion=schema;f.job.profile=f.original.reference.profile;f.job.source_schema_version=schema;
+ await expect(factory().request(credential,f.original,signal())).rejects.toThrow('SOURCE_EXPORT_EXECUTION_INPUT_REQUIRED');expect(mock.events).toEqual([]);
+ const current=createSourceExportExecutionAccess({connectionString:'unused-by-unit-fixture',environment:'test'},{} as never,{} as never,f.businessId,f.original.reference.appReleaseId,true,schema);
+ await expect(current.request(credential,{...f.original,reference:{...f.original.reference,sourceSchemaVersion:134}},signal())).rejects.toThrow('SOURCE_EXPORT_EXECUTION_INPUT_REQUIRED');expect(mock.events).toEqual([]);
+ const value=await current.request(credential,f.original,signal());expect(mock.query.mock.calls[0]![0]).toContain(schema===140?'request_current_source_export_v6_for_execution':'request_current_source_export_v5_for_execution');expect(consumeSourceExportExecutionAdmission(value,signal()).job.source_schema_version).toBe(schema);
+ mock.query.mockResolvedValueOnce({state:'recorded',result:f.committed});const replay=await current.request(credential,f.original,signal());expect(()=>consumeSourceExportExecutionAdmission(replay,signal())).toThrow('SOURCE_EXPORT_EXECUTION_ADMISSION_CONSUMED');
+});
 it('mints one private scheduling attempt only after the new request transaction commits',async()=>{
  const value=await factory().request(credential,f.original,signal());expect(value.state).toBe('created');expect(value.forServer()).toEqual(f.committed);expect(mock.events).toEqual(['provider','begin','query','commit']);
  expect(consumeSourceExportExecutionAdmission(value,signal())).toEqual({command:f.original,job:f.job});expect(()=>consumeSourceExportExecutionAdmission(value,signal())).toThrow('SOURCE_EXPORT_EXECUTION_ADMISSION_CONSUMED');expect(()=>JSON.stringify(value)).toThrow('SOURCE_EXPORT_EXECUTION_PRIVATE');

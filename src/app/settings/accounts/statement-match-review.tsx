@@ -142,7 +142,7 @@ export function StatementMatchReview({context,statementId,format,parse}:{
       </select>
       <label htmlFor={id+'-amount'}>Signed amount to allocate (USD)</label>
       <input id={id+'-amount'} name="amount" inputMode="decimal" required maxLength={21}/>
-      <button type="submit">Add proposed match</button>
+      <button type="submit" className={context.statementMatchDrafts&&context.writeState==='ready'&&changed?'secondary':undefined}>Add proposed match</button>
      </>}
     </fieldset></form>}
     {matches.length>0&&<ul>{matches.map((match,index)=>{

@@ -1,6 +1,11 @@
 'use client';
+import {SignInLink} from '../../sign-in-link';
+import {ScheduleLink} from '../navigation';
 
-import { useEffect, useId, useRef, useState } from 'react';
+
+import {DocumentBrand} from '../../document-brand';
+import { AuthenticationError } from '../../../client/authentication';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { clearPendingInvoiceIssue, downloadFinanceHistory, financeAccounts, readPendingInvoiceIssue,
   retainPendingInvoiceIssue } from '../../../client/finance-accounts';
 import type { FinanceAccountContext } from '../../../client/finance-accounts';
@@ -18,6 +23,7 @@ import { ExcessReturn } from './excess-return';
 import { TipReturn } from './tip-return';
 import { CollectionFailure } from './collection-failure';
 import { RefundTransferAdjustment } from './refund-transfer-adjustment';
+import { InvoiceOutstanding } from './invoice-outstanding';
 
 type Readiness = Awaited<ReturnType<typeof financeAccounts.reviewInvoiceIssueTax>>;
 type Review = Readiness['tax'];
@@ -60,8 +66,8 @@ function IssueLineStatus({ line }: { line: Line }) {
   return <p>{lineMessages[line.state]}</p>;
 }
 
-export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,excessReturns,tipReturns,collectionFailures,refundTransfers }: {
-  invoice:IssuedInvoice;receiptBusinessId:string|undefined;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;
+export function IssuedInvoiceDetails({ invoice,businessId,receiptBusinessId,paymentCorrections,fundApplications,heldTips,invoiceCredits,paidInvoiceCredits,serviceRefunds,excessReturns,tipReturns,collectionFailures,refundTransfers }: {
+  invoice:IssuedInvoice;businessId:string;receiptBusinessId:string|undefined;paymentCorrections?:boolean;fundApplications?:boolean;heldTips?:boolean;
   invoiceCredits?:boolean;paidInvoiceCredits?:boolean;serviceRefunds?:boolean;excessReturns?:boolean;tipReturns?:boolean;collectionFailures?:boolean;refundTransfers?:boolean;
 }) {
   const tax = invoice.lines.reduce((sum,line)=>sum+BigInt(line.taxCents),0n);
@@ -69,10 +75,13 @@ export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrecti
   const showAdjustments=paymentCorrections||collectionFailures||invoiceCredits||paidInvoiceCredits;
   const showRefunds=serviceRefunds||excessReturns||tipReturns||refundTransfers;
   return <div className="issued-invoice-details">
+    <article className="issued-invoice-document" aria-labelledby={actionsId+'-document'}>
+    <DocumentBrand/>
     <header className="issued-invoice-heading">
-      <h4>Invoice {invoice.invoiceNumber}</h4>
-      <p><span>Total</span> <strong>{quoteMoney(invoice.totalCents)}</strong></p>
+      <div><p className="invoice-document-state">Issued · {invoice.currency}</p><h4 id={actionsId+'-document'}>Invoice {invoice.invoiceNumber}</h4></div>
+      <p className="invoice-document-amount"><span>Original total</span> <strong>{quoteMoney(invoice.totalCents)}</strong></p>
     </header>
+    <InvoiceOutstanding key={businessId+':'+invoice.invoiceId} businessId={businessId} invoice={invoice}/>
     <dl className="customer-values">
       <dt>Customer</dt><dd>{invoice.customer.displayName}</dd>
       <dt>Issued</dt><dd>{formatDate(invoice.issuedOn)}</dd>
@@ -86,12 +95,13 @@ export function IssuedInvoiceDetails({ invoice,receiptBusinessId,paymentCorrecti
       ...invoice.lines.map(line=>[invoice.invoiceNumber,invoice.customer.displayName,invoice.issuedOn,invoice.dueOn,invoice.currency,
         line.description,line.grossInclusiveCents,line.discountInclusiveCents,line.netCents,line.taxCents,line.inclusiveCents]),
     ])}>Download invoice (CSV)</button>
+    </article>
     {receiptBusinessId&&<>
-      {(showAdjustments||showRefunds)&&<nav className="invoice-action-links" aria-label="Invoice actions">
-        <a href={'#'+actionsId+'-payments'}>Payments</a>
-        {showAdjustments&&<a href={'#'+actionsId+'-adjustments'}>Corrections and credits</a>}
-        {showRefunds&&<a href={'#'+actionsId+'-refunds'}>Refunds</a>}
-      </nav>}
+      <nav className="invoice-action-links" aria-label="Invoice actions">
+        <ScheduleLink href={'#'+actionsId+'-payments'}>Payments</ScheduleLink>
+        {showAdjustments&&<ScheduleLink href={'#'+actionsId+'-adjustments'}>Corrections and credits</ScheduleLink>}
+        {showRefunds&&<ScheduleLink href={'#'+actionsId+'-refunds'}>Refunds</ScheduleLink>}
+      </nav>
       <section className="invoice-action-section" aria-labelledby={actionsId+'-payments'}>
         <h5 id={actionsId+'-payments'} tabIndex={-1}>Payments</h5>
         <DirectReceipt key={invoice.invoiceId} businessId={receiptBusinessId} customerId={invoice.customer.id} invoiceId={invoice.invoiceId}/>
@@ -150,12 +160,11 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
   const [closeReason, setCloseReason] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [signedOut,setSignedOut]=useState(false),[accessLost,setAccessLost]=useState(false);
   const active = useRef<AbortController | null>(null);
   const status = useRef<HTMLParagraphElement>(null);
 
-  function clear() {
-    active.current?.abort();
-    active.current = null;
+  const clearPrivate = useCallback(() => {
     setJurisdictions({});
     setChoices({});
     setResult(null);
@@ -167,8 +176,15 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
     setAbsentIssue(false);
     setCloseReason('');
     setMessage('');
+    setSignedOut(false);setAccessLost(false);
+  }, []);
+
+  const clear = useCallback(() => {
+    active.current?.abort();
+    active.current = null;
+    clearPrivate();
     setBusy(false);
-  }
+  }, [clearPrivate]);
 
   useEffect(() => {
     const hidden = () => { if (document.visibilityState === 'hidden') clear(); };
@@ -179,7 +195,7 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
       document.removeEventListener('visibilitychange', hidden);
       window.removeEventListener('pagehide', clear);
     };
-  }, []);
+  }, [clear]);
 
   async function run(action: (context: FinanceAccountContext, signal: AbortSignal) => Promise<void>,
     workingMessage: string, failureMessage: string) {
@@ -193,12 +209,15 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
       const context = await financeAccounts.context(signal);
       if (signal.aborted) return;
       if (context.businessId !== businessId || !context.invoiceIssueTaxReview) {
-        setMessage('Invoice tax review is unavailable for this workspace.');
+        clearPrivate();setAccessLost(true);setMessage('Invoice tax review is unavailable for this workspace.');
         return;
       }
-      await action(context, signal);
-    } catch {
-      if (!signal.aborted) setMessage(failureMessage);
+      setSignedOut(false);setAccessLost(false);await action(context, signal);
+    } catch (error) {
+      if (!signal.aborted) {
+        if(error instanceof AuthenticationError&&error.kind==='denied'){clearPrivate();setAccessLost(true);setSignedOut(true);setMessage('Sign in again to review invoice tax.');}
+        else setMessage(failureMessage);
+      }
     } finally {
       if (active.current === controller) {
         active.current = null;
@@ -328,14 +347,14 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
   return <details onToggle={event => { if (!event.currentTarget.open) clear(); }}>
     <summary>Review invoice tax</summary>
     {issued ? <section aria-label="Issued invoice">
-      <IssuedInvoiceDetails invoice={issued} receiptBusinessId={directReceipts?businessId:undefined}
+      <IssuedInvoiceDetails invoice={issued} businessId={businessId} receiptBusinessId={directReceipts?businessId:undefined}
         paymentCorrections={paymentCorrections===true} fundApplications={fundApplications===true} heldTips={heldTips===true}
         invoiceCredits={invoiceCredits===true} paidInvoiceCredits={paidInvoiceCredits===true} serviceRefunds={serviceRefunds===true}
         excessReturns={excessReturns===true} tipReturns={tipReturns===true} collectionFailures={collectionFailures===true} refundTransfers={refundTransfers===true}/>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
     </section> : <form aria-label="Invoice tax review" aria-busy={busy} onSubmit={event => { event.preventDefault(); void review(); }}>
       <p className="field-help">Check for saved jurisdiction suggestions. Then choose the approved jurisdiction for each completed portion.</p>
-      {lines.map((line, index) => <fieldset key={line.outcomeId}>
+      {!accessLost&&lines.map((line, index) => <fieldset key={line.outcomeId}>
         <legend>{line.description} · {quoteMoney(line.inclusiveCents)}</legend>
         {line.serviceId !== null && <>
           <label>Jurisdiction for portion {index + 1}
@@ -361,6 +380,7 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
       </fieldset>)}
       <button type="submit" className="secondary" disabled={busy}>{pendingIssue?'Check original issue':'Check invoice tax'}</button>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<p><SignInLink className="primary-action" returnTo="schedule">Sign in again</SignInLink></p>}
       {absentIssue && <details>
         <summary>Close the original attempt</summary>
         <label>Reason for closing<input maxLength={1000} value={closeReason} disabled={busy}
@@ -376,7 +396,7 @@ export function InvoiceIssueTaxReview({ businessId, jobId, draftId, revision, li
       {!!accounts?.missing.length && <>
         <p>Account mappings needed</p>
         <ul>{accounts.missing.map(purpose => <li key={purpose}>{accountNames[purpose]}</li>)}</ul>
-        <a href="/settings/accounts/mappings/manage">Manage dated account mappings</a>
+        <ScheduleLink href="/settings/accounts/mappings/manage">Manage dated account mappings</ScheduleLink>
       </>}
       {!!accounts?.jurisdictions.length && <>
         <p>Tax payable mappings to review</p>

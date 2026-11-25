@@ -11,10 +11,17 @@
 !public/**
 !scripts/
 !scripts/build-server.mjs
+!scripts/server-build-identity.mjs
+!Dockerfile
+!supabase/
+!supabase/migrations/
+!supabase/migrations/**
+!supabase/migration-checksums.json
 !scripts/install-pdf-tools.mjs
 !scripts/fetch-release-asset.mjs
 !scripts/install-heic-tools.mjs
 !release/
 !release/toolchain.json
+!release/compatibility.json
 !release/third-party/
 !release/third-party/**

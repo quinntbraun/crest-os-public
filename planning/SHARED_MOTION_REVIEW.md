@@ -1,0 +1,17 @@
+# Shared motion system review
+
+The original S11 finish standard is implemented by the existing shared system: 160 ms control feedback (140 ms for the history disclosure), 200 ms panel entry, stable decorative loading and quiet confirmed-save styling. Today now uses the shared panel duration/easing rather than its older 160 ms entry. Controls remain immediately available; only real pending work disables them. There is no animated financial value, fake completion percentage or minimum loading time.
+
+The complete source review covers all **17 transition/animation declarations and both keyframes** in application CSS, including the global reduced-motion override, accounting notice module, general controls, calendar controls, menu, search dialog, Today, job-change and booking panels, history disclosure, shared skeleton, booking/job-change outcomes and CRM outcomes. The skeleton's 1.6-second background sweep and 160 ms decorative delay do not delay controls. Reduced motion removes animation and transitions globally. No JavaScript animation or financial counter mechanism appears in the inspected application/client sources.
+
+## Executed rendering scope
+
+`.local/design-motion-review/current-render/proof.json` retains source hashes and **12 actual-CSS rendering matrices / 180 element observations / 12 hashed captures**: Chromium and WebKit, 360/390/1440 pixels, normal/reduced motion. Synthetic elements exercise every distinct motion rule. Computed styles verify 160/140 ms controls, 200 ms panels without entry delay, the decorative skeleton, zero reduced-motion durations, immediately focusable controls, equal layout dimensions and equal neutral/confirmed notice geometry. The financial amount remains unchanged and unanimated. The accounting CSS module is exercised in isolation, without claiming an authenticated accounting workflow.
+
+The initial isolated probe compared transformed menu drawing bounds and found a 0.000015-pixel floating-point difference. The retained failure records both values. The probe now records those drawing bounds separately and compares exact layout dimensions; application source was unchanged. This does not alter any product assertion or timing.
+
+Actual synthetic loading/save workflow evidence is separately recorded in DIRECTORY_LOADING_CONTINUITY.md, CRM_LOADING_SAVE_FEEDBACK.md, FINANCIAL_SAVE_FEEDBACK_DESIGN.md and the booking design notes. The original eight workspace journeys also pass on the new application source. This finishes the main shared motion implementation/review for S11, not final audit sign-off. Missing workflow-state coverage belongs in the still-open shared state inventory; accepted-release, installed, owner and physical-device motion checks remain required.
+
+## Action-priority source review
+
+A separate source inspection finds 147 explicit forms. Only three contain more than one apparent primary candidate: travel review, cancellation review and work-time correction. In all three, the details controls are hidden when the confirmation appears. Remaining prominent maintenance-looking controls are either the main lookup task (tax/account/date selection/search) or an explicit unavailable/pending/review recovery action; retry/discard controls remain secondary. The genuine cancellation commit retains destructive styling. This source inspection is useful S04 evidence, not a claim that every configured task region has received fresh rendered acceptance.

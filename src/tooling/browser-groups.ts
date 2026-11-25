@@ -10,7 +10,15 @@ export const browserGroups = Object.freeze({
   field: group('field-work-product-browser','work-completion-product-browser','mileage-product-browser','support-trip-product-browser','trip-interruption-product-browser','unfulfilled-cancellation-product-browser','job-work-time-product-browser','job-work-boundary-product-browser','maintenance-reminders-product-browser'),
   custody: group('dropoff-custody-product-browser','dropoff-policy-revision-browser','pickup-trip-product-browser','pickup-custody-photo-browser','pickup-worksite-product-browser'),
   'statement-staging': group('finance-statement-staging-browser'),
-  records: group('source-export-browser','source-export-product-browser','workspace-journey-browser','owner-expenses-product-browser','finance-account-settings-browser','finance-mapping-settings-browser','finance-tax-profiles-browser','finance-expense-category-browser','finance-money-channel-browser','finance-invoice-issue-product-browser','finance-expense-posting-browser','google-calendar-settings-product-browser')
+  'workspace-records': group('source-export-browser','source-export-product-browser','workspace-journey-browser','owner-expenses-product-browser','task-entry-layout-browser'),
+  'accounting-settings': group('finance-account-settings-browser','finance-mapping-settings-browser','finance-tax-profiles-browser','finance-expense-category-browser','finance-money-channel-browser','opening-funds-http-auth'),
+  records: group('finance-invoice-issue-product-browser','finance-expense-posting-browser','google-calendar-settings-product-browser')
+});
+export const recordBrowserGroupNames=Object.freeze(['workspace-records','accounting-settings','records']);
+export const recordBrowserViews=Object.freeze({
+  'workspace-records':Object.freeze(['workspace-menu']),
+  'accounting-settings':Object.freeze(['finance-account-settings-recovery','finance-mapping-history','finance-mapping-manage','finance-tax-approval','finance-tax-history','finance-tax-preview','finance-category-approval','finance-category-history','finance-channel-opening','finance-channel-history']),
+  records:Object.freeze(['finance-invoice-issue-product','finance-direct-receipt','finance-expense-posting','finance-trial-balance','finance-balance-sheet','finance-payment-correction','finance-fund-application','finance-held-tip','finance-invoice-credit','finance-paid-invoice-credit','finance-service-refund','finance-posted-export','settings-calendar-synced','settings-calendar-pending']),
 });
 export type BrowserGroup = keyof typeof browserGroups;
 const invoiceJourney = 'tests/integration/finance-invoice-issue-product-browser.test.mjs';

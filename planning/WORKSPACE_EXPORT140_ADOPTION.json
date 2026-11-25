@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 140,
+  "registeredSourceOnly": true,
+  "reason": "Include retained opening deposits in scoped owner exports while preserving prior requests, audit history and recovery identities.",
+  "migration": {
+    "version": "20270206183000",
+    "file": "supabase/migrations/20270206183000_opening_funds_workspace_export.sql",
+    "sha256": "365b1bc6fec419a131f757da79a44211ec42d92fed472a716ff299f96e583b75",
+    "registrySha256": "823ffc623e93cc0f2c6122b6a04a47b5b1c776dbd6d9c0f779211869f5e75234"
+  },
+  "previousRegistry": {
+    "file": "tests/support/registered139-migration-checksums.json",
+    "sha256": "1925b449bd75ebe9dd3a9a01b55f7eb0f33f993a88dfca5b96b55b4fbc0f7a7a"
+  },
+  "previousCoverage": {
+    "file": "tests/support/registered139-security-export-coverage.json",
+    "sha256": "5afb9c3a5c5cdfde18d5571d1d3a6cb1eb3e0b10e298a31689bf5058b31d88ab"
+  },
+  "previousCompatibility": {
+    "file": "tests/support/registered139-compatibility.json",
+    "sha256": "96fe4b06b98ab439ccf3c4dbfdea2d81c4788cf1e51956a8c7b15a63d5b65dbc"
+  },
+  "sourceCount": 192,
+  "businessSourceCount": 170,
+  "ownerDatabaseApplied": false,
+  "productionDatabaseApplied": false,
+  "productionActivation": "blocked",
+  "openingBalancesApproved": false,
+  "openingJournalPosted": false,
+  "completePortableExport": false,
+  "completeBackup": false,
+  "requiredAcceptance": [
+    "Registered140 upgrade and owner export with exact reviewed SQL",
+    "Restricted192-source operator delivery and fixed140 routine/schema identities",
+    "Historical138/139 capture and recovery remain independently pinned",
+    "Encrypted coordinated restore with populated records, originals and financial controls",
+    "Exact-source hosted release, genuine MFA/device checks and independent off-host recovery"
+  ]
+}

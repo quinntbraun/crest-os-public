@@ -1,0 +1,19 @@
+import {afterEach,expect,it,vi} from 'vitest';
+import {randomBytes,randomUUID} from 'node:crypto';
+import {parseSourceExportCatalogueBatch,parseSourceExportDownloadCatalogue} from '../../src/security/source-export-download-contract';
+import {createSourceExportDownloadClient} from '../../src/client/source-export-downloads';
+import {sourceExportDownloadFixture} from '../support/source-export-download-fixture';
+function fixture(){
+ const f=sourceExportDownloadFixture(),files=Array.from({length:23},(_,i)=>({ordinal:i+1,partId:randomUUID(),fileName:i===22?'source_manifest.json':'current_file_'+String(i).padStart(4,'0')+'.txt',contentType:i===22?'application/json':'text/plain; charset=utf-8',bytes:32,sha256:i===22?'9'.repeat(64):'a'.repeat(64)})),header={...f.header,profile:'crest.current-business-source-bundle.v1',sourceSchemaVersion:137,fileCount:23,totalBytes:736,manifestSha256:'9'.repeat(64)},request={exportJobId:f.jobId,generationId:f.generationId,afterOrdinal:0};
+ const page=(at:number)=>({...header,files:files.slice(at,at+5),nextOrdinal:at+5<files.length?at+5:null}),batch={profile:'crest.source-export-catalogue-batch.v1',schemaVersion:1,pages:[0,5,10,15].map(page)};return{...f,header,request,batch,page};
+}
+afterEach(()=>vi.unstubAllGlobals());
+it('verifies four unchanged five-entry pages against one pinned generation and preserves the final partial page',()=>{const f=fixture(),pages=parseSourceExportCatalogueBatch(f.batch,f.businessId,f.request,f.header);expect(pages).toHaveLength(4);expect(pages.at(-1)!.nextOrdinal).toBe(20);expect(parseSourceExportCatalogueBatch({...f.batch,pages:[f.page(20)]},f.businessId,{...f.request,afterOrdinal:20},f.header)[0]!.nextOrdinal).toBeNull();});
+it.each(['null generation','too many','gap','generation','business','duplicate','order','short batch'])('refuses %s before returning a usable batch',async issue=>{
+ const f=fixture(),value=structuredClone(f.batch),request={...f.request} as {exportJobId:string;generationId:string|null;afterOrdinal:number};if(issue==='null generation')request.generationId=null;if(issue==='too many')value.pages.push(f.page(20));if(issue==='gap')value.pages[1]!.files[0]!.ordinal++;if(issue==='generation')value.pages[1]!.generationId=randomUUID();if(issue==='business')value.pages[1]!.businessId=randomUUID();if(issue==='duplicate')value.pages[1]!.files[0]!.partId=value.pages[0]!.files[0]!.partId;if(issue==='order')value.pages[1]!.files[0]!.fileName='aaa.txt';if(issue==='short batch')value.pages.pop();expect(()=>parseSourceExportCatalogueBatch(value,f.businessId,request,f.header)).toThrow();
+});
+it('uses a distinct private endpoint and validates all pages before returning metadata while retaining the small JSON byte bound',async()=>{
+ const f=fixture(),fetch=vi.fn<typeof globalThis.fetch>().mockResolvedValueOnce(new Response(JSON.stringify(f.batch),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));vi.stubGlobal('fetch',fetch);const client=createSourceExportDownloadClient(f.businessId),proof={csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000},signal=new AbortController().signal;
+ expect(await client.catalogueBatch!(f.request,proof,signal,f.header)).toEqual(f.batch.pages.map((page,i)=>parseSourceExportDownloadCatalogue(page,f.businessId,{...f.request,afterOrdinal:i*5})));expect(fetch.mock.calls[0]![0]).toBe('/api/business/exports/downloads-batch');expect(fetch.mock.calls[0]![1]).toMatchObject({method:'POST',credentials:'same-origin',redirect:'error',cache:'no-store'});
+ fetch.mockResolvedValueOnce(new Response(' '.repeat(16385),{headers:{'content-type':'application/json','cache-control':'private, no-store'}}));await expect(client.catalogueBatch!(f.request,proof,signal,f.header)).rejects.toThrow('SOURCE_EXPORT_DOWNLOAD_FAILED');
+});

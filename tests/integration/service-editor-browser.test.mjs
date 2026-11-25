@@ -7,27 +7,87 @@ import {randomUUID} from 'node:crypto';
 import {chromium,webkit,expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {reviewDirectoryIntroduction} from '../support/directory-introduction.mjs';
 
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+' genuine retained service editor journey',async t=>{
  const f=await sourceExportBrowserFixture({product:true,catalog:true});let browser;
  try{
   browser=await engine.launch();const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:844}}),page=await context.newPage();let saved;
   const status=()=>page.getByRole('status',{name:'Service status',exact:true});
-  const reopen=async()=>{await page.getByRole('button',{name:'Load current services',exact:true}).click();await page.getByRole('button',{name:/Synthetic scope/}).click();};
+  const openService=()=>page.getByRole('button',{name:/Synthetic scope/}).click();
+  const edit=()=>page.getByRole('button',{name:'Edit service',exact:true}).click();
+  const reopen=async()=>{await page.getByRole('button',{name:'Load current services',exact:true}).click();await openService();};
   await t.test('genuine sign-in, empty state and keyboard entry',async()=>{
    await page.goto(f.origin+'/services');await expect(status()).toContainText('could not be verified');await expect(page.getByRole('button',{name:'Add service',exact:true})).toHaveCount(0);
    await page.getByRole('link',{name:'Sign in to view services',exact:true}).click();const credentials=f.credentials();await page.getByLabel('Email',{exact:true}).fill(credentials.email);await page.getByLabel('Password',{exact:true}).fill(credentials.password);await page.getByLabel('Authenticator code',{exact:true}).fill(credentials.code);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Session verified',exact:true})).toBeVisible();
    const cookie=(await context.cookies()).find(c=>c.name==='__Host-crest_session');assert(cookie?.secure&&cookie.httpOnly);
    await page.goto(f.origin+'/services');await expect(status()).toContainText('Choose a service');await expect(page.getByText('No services match this search.',{exact:false})).toBeVisible();
+   await reviewDirectoryIntroduction(page,{kind:'service',engine:name,state:'empty'});
    await page.getByRole('button',{name:'Add service',exact:true}).click();await expect(page.getByRole('heading',{name:'New service',exact:true})).toBeFocused();
   });
   await t.test('validated scope, exact cents and duration persist through save and refresh',async()=>{
    await page.getByLabel('Service code',{exact:true}).fill('synthetic-'+randomUUID());await page.getByLabel('Service name',{exact:true}).fill('Synthetic scope — snow 雪 and long working detail');await page.getByLabel('What is included',{exact:true}).fill(('Vacuum and interior surfaces.\n').repeat(30));await page.getByLabel('What is excluded',{exact:true}).fill('No paint correction.');await page.getByText('Internal guidance and timing (optional)',{exact:true}).click();await page.getByLabel('Internal notes',{exact:true}).fill('Synthetic internal guidance; never a quoted amount.');await page.getByLabel('Starting guidance (USD)',{exact:true}).fill('123.45');await page.getByLabel('Upper guidance (USD)',{exact:true}).fill('100.00');await expect(page.getByRole('button',{name:'Save service',exact:true})).toBeDisabled();await page.getByLabel('Upper guidance (USD)',{exact:true}).fill('234.56');await page.getByLabel('Estimated minutes',{exact:true}).fill('90');await page.getByLabel('Additional seconds (0–59)',{exact:true}).fill('30');await page.getByRole('button',{name:'Save service',exact:true}).click();await expect(status()).toContainText('Service saved');
-   await reopen();await page.reload();await expect(status()).toContainText('Choose a service');await page.getByRole('button',{name:/Synthetic scope/}).click();await expect(page.getByLabel('Service name',{exact:true})).toHaveValue('Synthetic scope — snow 雪 and long working detail');await expect(page.getByRole('button',{name:'Save service',exact:true})).toBeDisabled();
+   await reopen();
+   await page.reload();
+   await expect(status()).toContainText('Choose a service');
+   await reviewDirectoryIntroduction(page,{kind:'service',engine:name,state:'unselected'});
+   const row=page.getByRole('button',{name:/Synthetic scope/});
+   await expect(row).toContainText('$123.45–$234.56');
+   await expect(row).toContainText('Available on new quotes');
+   await expect(row.locator('time')).toHaveAttribute('datetime',/T.*Z$/);
+   await openService();
+   const profile=page.getByRole('heading',{name:'Synthetic scope — snow 雪 and long working detail',level:2,exact:true});
+   await expect(profile).toBeFocused();
+   await expect(page.getByRole('form',{name:'Service editor',exact:true})).toHaveCount(0);
+   await page.getByText('Pricing and timing',{exact:true}).click();
+   await expect(page.locator('.service-saved-facts')).toContainText('90 min 30 sec');
+   await page.getByText('Saved quote scope',{exact:true}).click();
+   const preview=page.getByRole('region',{name:'Quote scope preview',exact:true});
+   await expect(preview).toContainText('No paint correction.');
+   await expect(preview).not.toContainText('Synthetic internal guidance');
+   await expect(preview).not.toContainText('123.45');
    const requested=page.waitForEvent('download');await page.getByRole('button',{name:'Download saved service (JSON)',exact:true}).click();const file=await requested;saved=JSON.parse(await readFile(await file.path(),'utf8'));assert.equal(saved.completeCrestExport,false);assert.equal(saved.completeBackup,false);assert.equal(saved.unsavedDraftIncluded,false);assert.equal(saved.record.version,'1');assert.equal(saved.content.range_low_cents,'12345');assert.equal(saved.content.range_high_cents,'23456');assert.equal(saved.content.estimated_seconds,'5430');assert.equal(saved.history.length,1);assert.equal(saved.historyHasMore,false);
+   await mkdir('.local/review',{recursive:true});
+   for(const width of [390,1440]){
+    await page.setViewportSize({width,height:900});
+    await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
+    await page.screenshot({path:'.local/review/service-catalog-profile-'+name+'-'+width+'.png'});
+   }
+   await page.setViewportSize({width:390,height:844});
   });
   await t.test('responsive layout, contrast, touch controls and visible keyboard focus',async()=>{
-   await mkdir('.local/review',{recursive:true});for(const width of [360,390,768,1440]){await page.setViewportSize({width,height:width<768?844:1000});await page.evaluate(()=>scrollTo(0,0));await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:'.local/review/service-editor-'+name+'-'+width+'.png'});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);const styles=await page.getByLabel('Service name',{exact:true}).evaluate(e=>({font:getComputedStyle(e).fontSize,height:e.getBoundingClientRect().height}));assert(Number.parseFloat(styles.font)>=16);assert(styles.height>=44);if(width===1440){const layout=await page.evaluate(()=>{const list=document.querySelector('.service-directory-panel').getBoundingClientRect(),editor=document.querySelector('.service-definition-panel').getBoundingClientRect();return {listTop:list.top,editorTop:editor.top,listRight:list.right,editorLeft:editor.left};});assert(Math.abs(layout.listTop-layout.editorTop)<1);assert(layout.listRight<layout.editorLeft);}}
+   await edit();
+   await expect(page.getByLabel('Service name',{exact:true})).toHaveValue('Synthetic scope — snow 雪 and long working detail');
+   await expect(page.getByRole('button',{name:'Save service',exact:true})).toBeDisabled();
+   const editor=page.getByRole('form',{name:'Service editor',exact:true});
+   const preview=page.getByRole('region',{name:'Quote scope preview',exact:true});
+   await page.getByLabel('Service name',{exact:true}).fill('Temporary quote preview label');
+   await page.getByLabel('What is included',{exact:true}).fill('Vacuum carpets and floor mats.\nClean interior surfaces.');
+   const modes=page.getByRole('navigation',{name:'Service editor views'});
+   await modes.getByRole('button',{name:'Quote preview',exact:true}).press('Enter');
+   await expect(modes.getByRole('button',{name:'Quote preview',exact:true})).toHaveAttribute('aria-pressed','true');
+   for(const width of [360,390]){
+    await page.setViewportSize({width,height:844});
+    const rows=await modes.getByRole('button').evaluateAll(buttons=>buttons.map(button=>button.getBoundingClientRect().top));
+    assert.equal(new Set(rows).size,1);
+   }
+   await expect(preview.getByRole('heading',{name:'Quote scope preview',exact:true})).toBeFocused();
+   await expect(preview).toContainText('Temporary quote preview label');
+   await expect(preview).not.toContainText('123.45');
+   await expect(preview).not.toContainText('Synthetic internal guidance');
+   await expect(editor).toBeHidden();
+   await mkdir('.local/review',{recursive:true});
+   await page.evaluate(()=>scrollTo(0,0));
+   await page.screenshot({path:'.local/review/service-quote-preview-'+name+'-390.png',animations:'disabled'});
+   await page.getByRole('button',{name:'Back to services',exact:true}).click();
+   await expect(page.getByRole('button',{name:/Synthetic scope/})).toBeFocused();
+   await page.getByRole('button',{name:'Return to open service',exact:true}).press('Enter');
+   await expect(preview.getByRole('heading',{name:'Quote scope preview',exact:true})).toBeFocused();
+   await page.getByRole('button',{name:'Service details',exact:true}).press('Enter');
+   await expect(page.getByLabel('Service name',{exact:true})).toHaveValue('Temporary quote preview label');
+   await page.getByLabel('Service name',{exact:true}).fill('Synthetic scope — snow 雪 and long working detail');
+   await page.getByLabel('What is included',{exact:true}).fill(('Vacuum and interior surfaces.\n').repeat(30));
+   await mkdir('.local/review',{recursive:true});for(const width of [360,390,768,1440]){await page.setViewportSize({width,height:width<768?844:1000});await page.evaluate(()=>scrollTo(0,0));await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:'.local/review/service-editor-'+name+'-'+width+'.png'});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);const styles=await page.getByLabel('Service name',{exact:true}).evaluate(e=>({font:getComputedStyle(e).fontSize,height:e.getBoundingClientRect().height}));assert(Number.parseFloat(styles.font)>=16);assert(styles.height>=44);if(width===1440){const layout=await page.evaluate(()=>{const list=document.querySelector('.service-directory-panel').getBoundingClientRect(),profile=document.querySelector('.service-profile').getBoundingClientRect(),editor=document.querySelector('.service-edit-form').getBoundingClientRect(),preview=document.querySelector('.service-quote-preview').getBoundingClientRect();return {listTop:list.top,profileTop:profile.top,listRight:list.right,editorRight:editor.right,editorLeft:editor.left,previewLeft:preview.left};});assert(Math.abs(layout.listTop-layout.profileTop)<1);assert(layout.listRight<layout.editorLeft);assert(layout.editorRight<layout.previewLeft);}}
    assert(await page.getByLabel('Active — available for future selection',{exact:true}).evaluate(e=>e.closest('label').getBoundingClientRect().height>=44));
    await page.setViewportSize({width:390,height:844});await page.getByRole('heading',{name:'Edit service',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:'.local/review/service-editor-form-'+name+'-390.png'});
    const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();assert.deepEqual(result.violations,[]);
@@ -39,12 +99,67 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]])test(name+'
    await page.getByRole('button',{name:'Save service',exact:true}).click();await expect(status()).toContainText('record changed');await reopen();await expect(page.getByRole('region',{name:'Saved history',exact:true})).toContainText('Revision 1');await expect(page.getByRole('region',{name:'Saved history',exact:true})).toContainText('Revision 2');
   });
   await t.test('lost acknowledgment resolves the exact original without a duplicate service',async()=>{
-   await page.getByLabel('Service name',{exact:true}).fill('Synthetic scope after uncertain response');let posts=0;await page.route('**/api/business/services/save',async route=>{posts++;await route.fetch();await route.abort();});await page.getByRole('button',{name:'Save service',exact:true}).click();await expect(status()).toContainText('could not be confirmed');await page.unroute('**/api/business/services/save');await page.getByRole('button',{name:'Check original save',exact:true}).click();await expect(status()).toContainText('original save is confirmed');assert.equal(posts,1);await reopen();await expect(page.getByLabel('Service name',{exact:true})).toHaveValue('Synthetic scope after uncertain response');
+   await edit();
+   await page.getByLabel('Service name',{exact:true}).fill('Synthetic scope after uncertain response');let posts=0;await page.route('**/api/business/services/save',async route=>{posts++;await route.fetch();await route.abort();});await page.getByRole('button',{name:'Save service',exact:true}).click();await expect(status()).toContainText('could not be confirmed');await page.unroute('**/api/business/services/save');await page.getByRole('button',{name:'Check original save',exact:true}).click();await expect(status()).toContainText('original save is confirmed');assert.equal(posts,1);await reopen();await expect(page.getByRole('heading',{name:'Synthetic scope after uncertain response',level:2,exact:true})).toBeVisible();
    const rows=(await f.client.query('SELECT version::text AS version FROM crest.services WHERE business_id=$1',[f.business])).rows;assert.deepEqual(rows,[{version:'3'}]);
   });
   await t.test('canceling draft abandonment, history-preserving deactivation and back navigation',async()=>{
-   await page.getByLabel('Service name',{exact:true}).fill('Unsaved private scope');page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('button',{name:'Reload saved services',exact:true}).click();await expect(page.getByLabel('Service name',{exact:true})).toHaveValue('Unsaved private scope');page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Reload saved services',exact:true}).click();await page.getByRole('button',{name:/Synthetic scope/}).click();await page.getByLabel('Active — available for future selection',{exact:true}).uncheck();await page.getByRole('button',{name:'Save service',exact:true}).click();await expect(status()).toContainText('Service saved');await page.getByRole('button',{name:'Load current services',exact:true}).click();await expect(page.getByRole('button',{name:/Synthetic scope/})).toHaveCount(0);await page.getByLabel('Include inactive services',{exact:true}).check();await page.getByRole('button',{name:'Search',exact:true}).click();await page.getByRole('button',{name:/Synthetic scope/}).click();await expect(page.getByRole('region',{name:'Saved history',exact:true})).toContainText('Revision 4 · archive');
-   await page.goto(f.origin+'/customers');await page.goBack();await expect(status()).toContainText(/Choose a service|cleared/);await expect(page.getByLabel('Service name',{exact:true})).toHaveCount(0);if(await page.getByRole('button',{name:'Load current services',exact:true}).isVisible())await page.getByRole('button',{name:'Load current services',exact:true}).click();
+   const responses=[];
+   const observeResponse=response=>{const path=new URL(response.url()).pathname;if(path==='/api/auth/session'||path.startsWith('/api/business/services/')){responses.push({path,status:response.status()});if(responses.length>32)responses.shift();}};
+   page.on('response',observeResponse);
+   try{
+   await edit();
+   await page.getByLabel('Service name',{exact:true}).fill('Unsaved private scope');
+   await page.getByRole('button',{name:'Back to services',exact:true}).click();
+   page.once('dialog',dialog=>dialog.dismiss());
+   await page.getByRole('button',{name:'Reload saved services',exact:true}).click();
+   await page.getByRole('button',{name:'Return to open service',exact:true}).press('Enter');
+   await expect(page.getByLabel('Service name',{exact:true})).toHaveValue('Unsaved private scope');
+   await page.getByRole('button',{name:'Back to services',exact:true}).click();
+   page.once('dialog',dialog=>dialog.accept());
+   await page.getByRole('button',{name:'Reload saved services',exact:true}).click();
+   await openService();await edit();
+   await page.getByLabel('Active — available for future selection',{exact:true}).uncheck();await page.getByRole('button',{name:'Save service',exact:true}).click();await expect(status()).toContainText('Service saved');await page.getByRole('button',{name:'Load current services',exact:true}).click();await expect(page.getByRole('button',{name:/Synthetic scope/})).toHaveCount(0);await page.getByLabel('Include inactive services',{exact:true}).check();await page.getByRole('button',{name:'Search',exact:true}).click();await page.getByRole('button',{name:/Synthetic scope/}).click();await expect(page.getByRole('region',{name:'Saved history',exact:true})).toContainText('Revision 4 · Made inactive');
+   const selectedService=new URL(page.url()).searchParams.get('service');assert(selectedService);
+   const navigationTrace=[];
+   const navigationSnapshot=tag=>{const url=new URL(page.url());return {tag,path:url.pathname,hasService:url.searchParams.has('service'),sameService:url.searchParams.get('service')===selectedService};};
+   const observeNavigation=frame=>{if(frame===page.mainFrame()){navigationTrace.push(navigationSnapshot('frame'));if(navigationTrace.length>16)navigationTrace.shift();}};
+   navigationTrace.push(navigationSnapshot('before-leaving'));page.on('framenavigated',observeNavigation);
+   const returnedReads=[],observeReturn=response=>{if(new URL(response.url()).pathname==='/api/business/services/history')returnedReads.push(response.status());};
+   await page.goto(f.origin+'/customers');page.on('response',observeReturn);
+   try{
+    await page.goBack();
+    // Back can return before the destination document commits. Wait for the
+    // existing service-ready condition before checking the same exact pointer.
+    await expect(status()).toContainText(/cleared|Review service details and retained history before saving/);
+    try{assert.equal(new URL(page.url()).searchParams.get('service'),selectedService);}
+    catch(error){
+     navigationTrace.push(navigationSnapshot('checked-service-return'));
+     t.diagnostic('Service return navigation '+JSON.stringify({engine:name,navigationTrace}));throw error;
+    }
+    await expect(page.getByLabel('Service name',{exact:true})).toHaveCount(0);
+    if((await status().textContent()).includes('Review service details')){
+     assert.deepEqual(returnedReads,[200],'A freshly restored profile requires one genuine checked history read');
+     await expect(page.locator('.service-profile')).toContainText('Revision 4');
+     await expect(page.locator('.service-profile .service-availability')).toHaveText('Inactive');
+     await expect(page.getByRole('button',{name:'Edit service',exact:true})).toBeEnabled();
+    }else{
+     await expect(page.locator('.service-profile')).toHaveCount(0);
+     await page.getByRole('button',{name:'Load current services',exact:true}).click();
+     await expect(page.getByRole('button',{name:'Reopen selected service',exact:true})).toBeVisible();
+     await expect(page.getByLabel('Include inactive services',{exact:true})).toBeChecked();
+    }
+   }finally{page.off('response',observeReturn);page.off('framenavigated',observeNavigation);}
+   }catch(error){
+    const admissions=await f.client.query(`SELECT a.bucket,count(*)::int AS recent FROM crest_private.session_request_admissions a
+     JOIN crest_private.app_sessions s ON s.id=a.session_id
+     WHERE s.actor_id IN(SELECT m.actor_id FROM crest.memberships m WHERE m.business_id=$1)
+       AND a.admitted_at>clock_timestamp()-interval '1 minute' GROUP BY a.bucket`,[f.business]).then(result=>result.rows).catch(()=>null);
+    const message=await status().textContent().catch(()=>null);
+    t.diagnostic('Service failure state '+JSON.stringify({engine:name,path:new URL(page.url()).pathname,message,responses,admissions}));
+    await page.screenshot({path:'.local/review/service-return-failure-'+name+'.png',fullPage:true}).catch(()=>{});
+    throw error;
+   }finally{page.off('response',observeResponse);}
   });
  }finally{await browser?.close();await f.close();}
 });

@@ -1,4 +1,8 @@
 import {customerUuid as uuid,customerInstant as instant} from '../customer/customer-contract.ts';
+import {sourceExportProfileMatches} from './source-export-profile.ts';
+import type {SourceExportProfileBinding} from './source-export-profile.ts';
+export const sourceExportCatalogueBatchPath='/api/business/exports/downloads-batch';
+export const sourceExportCatalogueBatchPages=4;
 export class SourceExportDownloadError extends Error{constructor(){super('SOURCE_EXPORT_DOWNLOAD_REVIEW_REQUIRED');this.name='SourceExportDownloadError';}}
 function require(v:unknown):asserts v{if(!v)throw new SourceExportDownloadError();}
 export function downloadObject(input:unknown,keys:readonly string[]){
@@ -12,9 +16,9 @@ export function parseSourceExportDownloadPartRequest(input:unknown){const v=down
 export const downloadHeaderKeys=Object.freeze(['schemaVersion','businessId','exportJobId','generationId','profile','appReleaseId','sourceSchemaVersion','completedAt','expiresAt','fileCount','totalBytes','manifestSha256'] as const);
 export function parseSourceExportDownloadHeader(input:unknown,businessId:string,exportJobId:string,generationId:string|null){
  const v=downloadObject(input,downloadHeaderKeys);require(v.schemaVersion===1&&uuid(businessId)&&v.businessId===businessId&&uuid(exportJobId)&&v.exportJobId===exportJobId&&uuid(v.generationId)&&(generationId===null||v.generationId===generationId));
- require(v.profile==='crest.business-source-journal-bundle.v1'&&v.sourceSchemaVersion===43&&typeof v.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(v.appReleaseId)&&hash(v.manifestSha256)&&integer(v.fileCount,2,1024)&&integer(v.totalBytes,v.fileCount,67108864));
+ require(sourceExportProfileMatches(v.profile,v.sourceSchemaVersion)&&typeof v.appReleaseId==='string'&&/^[a-f0-9]{40}$/.test(v.appReleaseId)&&hash(v.manifestSha256)&&integer(v.fileCount,2,1024)&&integer(v.totalBytes,v.fileCount,67108864));
  require(stamp(v.completedAt)&&stamp(v.expiresAt)&&Date.parse(v.expiresAt)-Date.parse(v.completedAt)===604800000&&v.completedAt.slice(19)===v.expiresAt.slice(19));
- return Object.freeze({schemaVersion:1 as const,businessId,exportJobId,generationId:v.generationId as string,profile:'crest.business-source-journal-bundle.v1' as const,appReleaseId:v.appReleaseId,sourceSchemaVersion:43 as const,completedAt:v.completedAt,expiresAt:v.expiresAt,fileCount:v.fileCount,totalBytes:v.totalBytes,manifestSha256:v.manifestSha256});
+ return Object.freeze({schemaVersion:1 as const,businessId,exportJobId,generationId:v.generationId as string,profile:v.profile as SourceExportProfileBinding['profile'],appReleaseId:v.appReleaseId,sourceSchemaVersion:v.sourceSchemaVersion as SourceExportProfileBinding['sourceSchemaVersion'],completedAt:v.completedAt,expiresAt:v.expiresAt,fileCount:v.fileCount,totalBytes:v.totalBytes,manifestSha256:v.manifestSha256});
 }
 export function parseSourceExportDownloadFile(input:unknown){
  const v=downloadObject(input,['ordinal','partId','fileName','contentType','bytes','sha256']);require(integer(v.ordinal,1,1024)&&uuid(v.partId)&&typeof v.fileName==='string'&&/^[a-z][a-z0-9_]{0,79}\.(csv|json|txt)$/.test(v.fileName)&&integer(v.bytes,1,8388608)&&hash(v.sha256));
@@ -28,4 +32,16 @@ export function parseSourceExportDownloadCatalogue(input:unknown,businessId:stri
  const names=new Set<string>(),ids=new Set<string>(),files=Array.from({length:count},(_,i)=>{const field=d[String(i)];require(field?.enumerable&&Object.hasOwn(field,'value'));const file=parseSourceExportDownloadFile(field.value);require(file.ordinal===request.afterOrdinal+i+1&&!names.has(file.fileName)&&!ids.has(file.partId)&&file.bytes<=header.totalBytes);names.add(file.fileName);ids.add(file.partId);return file;});
  require(files.reduce((n,f)=>n+f.bytes,0)<=header.totalBytes);const end=request.afterOrdinal+files.length;require(v.nextOrdinal===(end<header.fileCount?end:null));
  return Object.freeze({...header,files:Object.freeze(files),nextOrdinal:v.nextOrdinal as number|null});
+}
+export function parseSourceExportCatalogueBatch(input:unknown,businessId:string,expected:unknown,pinned?:unknown){
+ const request=parseSourceExportDownloadPageRequest(expected),v=downloadObject(input,['profile','schemaVersion','pages']);require(request.generationId!==null&&v.profile==='crest.source-export-catalogue-batch.v1'&&v.schemaVersion===1&&Array.isArray(v.pages)&&v.pages.length>=1&&v.pages.length<=sourceExportCatalogueBatchPages);
+ const fields=Object.getOwnPropertyDescriptors(v.pages),count=v.pages.length;require(Reflect.ownKeys(fields).length===count+1);
+ let cursor=request,pin=pinned===undefined?undefined:parseSourceExportDownloadHeader(pinned,businessId,request.exportJobId,request.generationId),previous='';const pages:ReturnType<typeof parseSourceExportDownloadCatalogue>[]=[],ids=new Set<string>();
+ for(let i=0;i<count;i++){
+  const field=fields[String(i)];require(field?.enumerable&&Object.hasOwn(field,'value'));const page=parseSourceExportDownloadCatalogue(field.value,businessId,cursor),header=parseSourceExportDownloadHeader(Object.fromEntries(downloadHeaderKeys.map(key=>[key,page[key]])),businessId,request.exportJobId,request.generationId);
+  require(header.profile==='crest.current-business-source-bundle.v1'&&(!pin||JSON.stringify(pin)===JSON.stringify(header)));pin=header;
+  for(const file of page.files){require(!ids.has(file.partId)&&(!previous||file.fileName>previous));ids.add(file.partId);previous=file.fileName;}
+  pages.push(page);if(page.nextOrdinal===null){require(i===count-1);break;}require(i<count-1||count===sourceExportCatalogueBatchPages);cursor={...request,afterOrdinal:page.nextOrdinal};
+ }
+ return Object.freeze(pages);
 }

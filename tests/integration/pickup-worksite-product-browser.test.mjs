@@ -8,6 +8,7 @@ import AxeBuilder from '@axe-core/playwright';
 import {chromium,expect,webkit} from '@playwright/test';
 import {recoveryCluster} from '../support/recovery-drill.mjs';
 import {sourceExportBrowserFixture} from '../support/source-export-browser-fixture.mjs';
+import {assertActiveWorkLayout} from '../support/field-work-layout.mjs';
 
 const location=locationText=>({schemaVersion:1,kind:'manual',locationText,instructions:null});
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
@@ -141,6 +142,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    await expect(startWork).toBeVisible();
    for(const width of [360,390,768,1440]){
     await page.setViewportSize({width,height:900});
+    await page.evaluate(()=>window.scrollTo(0,0));
+    await assertActiveWorkLayout(page,width,'Scheduled');
     await startWork.scrollIntoViewIfNeeded();
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     const audit=await new AxeBuilder({page}).include('[aria-label="Pickup work status"]').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
@@ -158,8 +161,8 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    await page.getByRole('button',{name:'Check original work action',exact:true}).click();
    await expect(status).toContainText('Work status saved.');
    await page.reload();
-   await expect(work.getByText('In progress · Saved version 2',{exact:true})).toBeVisible();
-   await expect(work.getByRole('link',{name:'Cancel if no work was completed'})).toBeVisible();
+   await expect(work.locator('.field-visit-state strong')).toHaveText('In progress');await expect(work.locator('.field-visit-state')).toContainText('Version 2');
+   await work.getByText('More actions',{exact:true}).click();await expect(work.getByRole('link',{name:'Cancel if no work was completed'})).toBeVisible();
    await work.getByRole('link',{name:'Review and end job',exact:true}).click();
    const completion=page.getByRole('region',{name:'Job completion',exact:true});
    await completion.getByRole('button',{name:'Mark all items fulfilled',exact:true}).click();
@@ -279,7 +282,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    await queueSummary.click();
    await loadQueue.click();
    await openReturn.focus();await page.keyboard.press('Enter');
-   await expect(page).toHaveURL(fixture.origin+jobPath+'&vehicle='+jobVehicleId);
+   await expect(page).toHaveURL(fixture.origin+jobPath+'&vehicle='+jobVehicleId+'&'+new URLSearchParams({plannerFrom:'2026-12-01',plannerThrough:'2026-12-03',plannerView:'custom',plannerCalendar:'closed',plannerRange:'open'}));
    const selectedVehicle=page.locator('summary').filter({hasText:/^Synthetic lifecycle sedan$/});
    await expect(selectedVehicle).toBeFocused();
    assert(await selectedVehicle.evaluate(summary=>summary.parentElement.open));

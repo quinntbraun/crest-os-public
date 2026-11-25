@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { googleCalendarConsent, googleCalendarConsentReferenceStore } from '../../client/google-calendar-consent';
 import type { CalendarConsentContext, CalendarConsentReference } from '../../client/google-calendar-consent';
 import styles from './google-calendar-consent.module.css';
+import {AuthenticationError} from '../../client/authentication';
 
 const minimal = { clientName: false, serviceLabel: false, workAddress: false };
 const fields = [
@@ -34,15 +35,15 @@ function store(context: CalendarConsentContext) {
   return googleCalendarConsentReferenceStore(context, window.sessionStorage);
 }
 
-export function GoogleCalendarConsentPanel({ context, saved = false, simulated = false }:
-  { context: CalendarConsentContext | null; saved?: boolean; simulated?: boolean }) {
+export function GoogleCalendarConsentPanel({ context, saved = false, simulated = false, onConsentSaved, onAccessDenied }:
+  { context: CalendarConsentContext | null; saved?: boolean; simulated?: boolean; onConsentSaved?: () => void; onAccessDenied?: () => void }) {
   if (!context) return null;
   // A new setup/session fence gets a new in-memory review and no stale fields.
   return <StagedCalendarConsent key={context.destinationId + context.credentialId + context.recoveryEpoch}
-    context={context} saved={saved} simulated={simulated}/>;
+    context={context} saved={saved} simulated={simulated} onConsentSaved={onConsentSaved} onAccessDenied={onAccessDenied}/>;
 }
 
-function StagedCalendarConsent({ context, saved, simulated }: { context: CalendarConsentContext; saved: boolean; simulated: boolean }) {
+function StagedCalendarConsent({ context, saved, simulated, onConsentSaved, onAccessDenied }: { context: CalendarConsentContext; saved: boolean; simulated: boolean; onConsentSaved: (() => void) | undefined; onAccessDenied: (() => void) | undefined }) {
   const { destinationId, credentialId, recoveryEpoch } = context;
   const id = useId();
   const [state, setState] = useState<State>({ step: 'loading', message: 'Checking for an interrupted setup…' });
@@ -52,6 +53,9 @@ function StagedCalendarConsent({ context, saved, simulated }: { context: Calenda
   const active = useRef<AbortController | null>(null);
   const completed = useRef<Completion | null>(null);
   const status = useRef<HTMLParagraphElement>(null);
+  const reviewHeading = useRef<HTMLHeadingElement>(null);
+  const reviewTrigger = useRef<HTMLButtonElement>(null);
+  const returnToTrigger = useRef(false);
   const acknowledgements = simulated ? simulatedReviewLabels : reviewLabels;
 
   useEffect(() => {
@@ -96,6 +100,14 @@ function StagedCalendarConsent({ context, saved, simulated }: { context: Calenda
     };
   }, [destinationId, credentialId, recoveryEpoch, saved]);
 
+  useLayoutEffect(() => {
+    if (state.step === 'review') reviewHeading.current?.focus();
+    if (state.step === 'select' && returnToTrigger.current) {
+      returnToTrigger.current = false;
+      reviewTrigger.current?.focus();
+    }
+  }, [state.step]);
+
   const previewExpiresAt = state.step === 'review' ? state.preview.expiresAt : null;
   useEffect(() => {
     if (previewExpiresAt === null) return;
@@ -107,21 +119,31 @@ function StagedCalendarConsent({ context, saved, simulated }: { context: Calenda
     return () => window.clearTimeout(timer);
   }, [previewExpiresAt]);
 
-  async function run<T>(request: (signal: AbortSignal) => Promise<T>, settle: (result: T) => void, failed: () => void) {
+  async function run<T>(request: (signal: AbortSignal) => Promise<T>, settle: (result: T) => void, failed: () => void, focusStatusAfterSuccess = true) {
     if (active.current) return;
     const controller = new AbortController();
     active.current = controller;
     setBusy(true);
+    let succeeded = false;
     try {
       const result = await request(controller.signal);
-      if (active.current === controller && !controller.signal.aborted) settle(result);
-    } catch {
-      if (active.current === controller && !controller.signal.aborted) failed();
+      if (active.current === controller && !controller.signal.aborted) {
+        settle(result);
+        succeeded = true;
+      }
+    } catch (error) {
+      if (active.current === controller && !controller.signal.aborted) {
+        if(error instanceof AuthenticationError&&error.kind==='denied'){
+          setSelected(minimal);setReviewed(unreviewed);completed.current=null;
+          setState({step:'blocked',message:'Sign in again to review Calendar consent.'});
+          onAccessDenied?.();
+        }else failed();
+      }
     } finally {
       if (active.current === controller) {
         active.current = null;
         setBusy(false);
-        status.current?.focus();
+        if (!succeeded || focusStatusAfterSuccess) status.current?.focus();
       }
     }
   }
@@ -134,7 +156,7 @@ function StagedCalendarConsent({ context, saved, simulated }: { context: Calenda
         setReviewed(unreviewed);
         setState({ step: 'review', message: 'Event preview ready.', preview: result });
       },
-      () => setState({ step: 'select', message: 'Crest could not load the preview. Check your connection or sign in again.' }));
+      () => setState({ step: 'select', message: 'Crest could not load the preview. Check your connection or sign in again.' }), false);
   }
 
   function resolved(reference: CalendarConsentReference, step: 'active' | 'changed') {
@@ -144,6 +166,7 @@ function StagedCalendarConsent({ context, saved, simulated }: { context: Calenda
       'The original consent was saved and the connection has changed. Open the current Calendar settings to review it.';
     completed.current = { step, message: cleared ? message : message + ' This tab could not clear the recovery reference.' };
     setState(completed.current);
+    if (step === 'active') onConsentSaved?.();
   }
 
   function confirm() {
@@ -180,7 +203,7 @@ function StagedCalendarConsent({ context, saved, simulated }: { context: Calenda
     }, () => setState({ step: 'pending', reference, message: 'Crest could not check the original consent. Keep this tab open and try the status check again.' }));
   }
 
-  return <section className={'notice ' + styles.panel} aria-labelledby={id + '-heading'} aria-busy={busy}>
+  return <section className={'notice ' + styles.panel} aria-labelledby={id + '-heading'} aria-busy={busy} data-calendar-consent-state={state.step}>
     <h2 id={id + '-heading'}>Google Calendar</h2>
     <p className="field-help">{simulated ? 'Review how confirmed appointments would appear in Crest Jobs.' :
       'Send confirmed appointments to Crest Jobs. Your Crest schedule stays the source of truth.'}</p>
@@ -200,10 +223,10 @@ function StagedCalendarConsent({ context, saved, simulated }: { context: Calenda
           </label>)}
         </fieldset>
       </details>
-      <button type="submit" disabled={busy}>Review shared event</button>
+      <button ref={reviewTrigger} type="submit" disabled={busy}>Review shared event</button>
     </form>}
     {state.step === 'review' && <form onSubmit={event => { event.preventDefault(); confirm(); }}>
-      <h3>Review what Google receives</h3>
+      <h3 ref={reviewHeading} className={styles.reviewHeading} tabIndex={-1}>Review what Google receives</h3>
       <dl className={styles.preview}>
         <dt>Calendar</dt><dd>{state.preview.calendarName}</dd>
         <dt>Google account</dt><dd>{state.preview.googleOwner}</dd>
@@ -229,12 +252,13 @@ function StagedCalendarConsent({ context, saved, simulated }: { context: Calenda
       <div className={styles.actions}>
         <button type="submit" disabled={busy || !acknowledgements.every(([key]) => reviewed[key])}>Save Calendar consent</button>
         <button type="button" className="secondary" disabled={busy} onClick={() => {
+          returnToTrigger.current = true;
           setReviewed(unreviewed);
           setState({ step: 'select', message: '' });
         }}>Change shared details</button>
       </div>
     </form>}
-    {state.step === 'pending' && <button type="button" className="secondary" disabled={busy} onClick={check}>Check save status</button>}
+    {state.step === 'pending' && <button type="button" disabled={busy} onClick={check}>Check save status</button>}
   </section>;
 }
 

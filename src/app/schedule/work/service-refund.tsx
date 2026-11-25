@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {FinancialAccessRecovery} from '../../financial-access-recovery';
 
 import {useCallback,useEffect,useId,useRef,useState} from 'react';
 import {financeAccountReviewReason} from '../../../bookkeeping/finance-account-contract';
@@ -19,15 +21,18 @@ export function ServiceRefund({businessId,customerId,invoiceId}:{businessId:stri
   const [form,setForm]=useState(empty),[credits,setCredits]=useState<Credits>([]),[review,setReview]=useState<Review|null>(null);
   const [pending,setPending]=useState(false),[closable,setClosable]=useState(false),[closeReason,setCloseReason]=useState('');
   const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[receipt,setReceipt]=useState<Receipt|null>(null);
+  const [signedOut,setSignedOut]=useState(false);
   const active=useRef<AbortController|null>(null),status=useRef<HTMLParagraphElement>(null);
   const channelField=useId();
   const cents=readCents(form.amount),ranges=review?.availableRanges.filter(part=>cents>0n&&rangeSize(part)>=cents)??[];
   const range=ranges.length===1?ranges[0]:ranges.find(part=>part.firstCent===form.part);
   const channel=review?.channels.find(item=>item.channelId===form.channel);
-  const suspend=useCallback(()=>{
-    active.current?.abort();active.current=null;setForm(empty);setCredits([]);setReview(null);
+  const clearPrivate=useCallback(()=>{
+    setForm(empty);setCredits([]);setReview(null);
     setPending(false);setClosable(false);setCloseReason('');setReceipt(null);setMessage('');setBusy(false);
+  setSignedOut(false);
   },[]);
+  const suspend=useCallback(()=>{active.current?.abort();active.current=null;clearPrivate();},[clearPrivate]);
   useEffect(()=>{
     const hidden=()=>{if(document.visibilityState==='hidden')suspend();};
     document.addEventListener('visibilitychange',hidden);window.addEventListener('pagehide',suspend);
@@ -42,9 +47,10 @@ export function ServiceRefund({businessId,customerId,invoiceId}:{businessId:stri
       try{
         const context=await financeAccounts.context(signal);
         if(signal.aborted)return;
-        if(!context.serviceRefunds||context.businessId!==businessId){setMessage('Refund recording is unavailable.');return;}
+        if(!context.serviceRefunds||context.businessId!==businessId){clearPrivate();setMessage('Refund recording is unavailable.');return;}
+      setSignedOut(false);
         await action(context,signal);
-      }catch{if(!signal.aborted)setMessage(failure);}
+      }catch(error){if(!signal.aborted){if(error instanceof AuthenticationError&&error.kind==='denied'){clearPrivate();setSignedOut(true);setMessage('Sign in again to review service refunds.');}else{setMessage(failure);}}}
       finally{if(active.current===controller){active.current=null;setBusy(false);status.current?.focus();}}
     })();
   }
@@ -131,6 +137,7 @@ export function ServiceRefund({businessId,customerId,invoiceId}:{businessId:stri
     <p className="field-help">Use this after the refund has settled in the bank or wallet. Crest records the outflow against the original credit.</p>
     <button className="secondary" type="button" disabled={busy} onClick={()=>load()}>{pending?'Check original refund':'Load available credits'}</button>
     <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<FinancialAccessRecovery returnTo="schedule" label="Service refund access recovery"/>}
     {pending&&closable&&<form onSubmit={event=>{event.preventDefault();if(financeAccountReviewReason(closeReason.trim()))load(closeReason.trim());}}>
       <label>Reason for closing this attempt<textarea required maxLength={1000} rows={2} value={closeReason} onChange={event=>setCloseReason(event.target.value)}/></label>
       <button className="secondary" type="submit" disabled={busy||!financeAccountReviewReason(closeReason.trim())}>Close original attempt</button>

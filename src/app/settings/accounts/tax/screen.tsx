@@ -1,4 +1,8 @@
 'use client';
+import {SignInLink} from "../../../sign-in-link";
+
+import {FinanceHistoryComparison,previousLoadedFinanceVersion} from '../history-comparison';
+import {FinanceHistoryRecordedTime,FinanceHistoryRecordingFacts} from '../history-recording';
 
 import {useCallback,useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import type {FormEvent,RefObject} from 'react';
@@ -11,6 +15,7 @@ import {quoteDollarsInput,quoteMoney} from '../../../../commercial/quote-pricing
 import {customerDate} from '../../../../customer/customer-contract';
 import styles from '../screen.module.css';
 import {TaxApprovalEditor} from './approval';
+import type {TaxApprovalTaskState} from './approval';
 
 type History=Awaited<ReturnType<typeof financeAccounts.taxHistory>>;
 type Preview=Awaited<ReturnType<typeof financeAccounts.taxPreview>>;
@@ -36,15 +41,17 @@ export function FinanceTaxProfilesScreen(){
  const [date,setDate]=useState(''),[gross,setGross]=useState(''),[discount,setDiscount]=useState('');
  const [history,setHistory]=useState<History|null>(null),[preview,setPreview]=useState<Preview|null>(null);
  const [message,setMessage]=useState(initialMessage),[busy,setBusy]=useState(false),[signedOut,setSignedOut]=useState(false);
+ const [approvalTask,setApprovalTask]=useState<TaxApprovalTaskState>('idle');
  const mounted=useSyncExternalStore(subscribeToHydration,()=>true,()=>false);
  const active=useRef<AbortController|null>(null),status=useRef<HTMLParagraphElement>(null);
  const serviceSelect=useRef<HTMLSelectElement>(null),historyHeading=useRef<HTMLHeadingElement>(null),resultHeading=useRef<HTMLHeadingElement>(null);
  const nextFocus=useRef<RefObject<HTMLElement|null>|null>(null);
- const controlsDisabled=!mounted||busy;
+ const controlsDisabled=!mounted||busy||approvalTask==='busy';
+ const selectionDisabled=controlsDisabled||approvalTask!=='idle';
 
  const clearPrivate=useCallback(()=>{
   active.current?.abort();active.current=null;nextFocus.current=null;
-  setJurisdiction('');setApplicability('');setServiceId('');setSearch('');setServicePage(null);
+  setApprovalTask('idle');setJurisdiction('');setApplicability('');setServiceId('');setSearch('');setServicePage(null);
   setDate('');setGross('');setDiscount('');setHistory(null);setPreview(null);setSignedOut(false);setBusy(false);setMessage(initialMessage);
  },[]);
  useEffect(()=>{
@@ -128,7 +135,7 @@ export function FinanceTaxProfilesScreen(){
  function checkAmount(event:FormEvent){
   event.preventDefault();
   if(!scope||!amount||!customerDate(date)||active.current)return;
-  setHistory(null);setPreview(null);
+  setPreview(null);
   void run(async(context,signal)=>{
    const result=await financeAccounts.taxPreview(context,scope,date,amount.grossCents,amount.discountCents,signal);
    if(signal.aborted)return;
@@ -140,26 +147,33 @@ export function FinanceTaxProfilesScreen(){
  }
  function download(){
   if(!history?.rows.length||active.current)return;
+  const recordingAvailable=history.rows.every(row=>row.recording!==undefined);
   downloadFinanceHistory('crest-tax-profile-history.csv',[
    ['Jurisdiction','Applies to','Service ID','Version','Effective from','Treatment','Rate (decimal)',
-    'Verification evidence','Approval reason','Reviewer ID','Audit event ID'],
+    'Verification evidence','Approval reason','Reviewer ID','Audit event ID',...(recordingAvailable?['Recorded in Crest (UTC)','Recorded by reference']:[])],
    ...history.rows.map(row=>[row.jurisdiction,row.applicability,row.serviceId??'',row.version,row.effectiveFrom,
-    financeTaxTreatmentLabels[row.treatment],row.rate??'',row.verificationEvidence??'',row.reason,row.reviewedBy,row.auditEventId])
+    financeTaxTreatmentLabels[row.treatment],row.rate??'',row.verificationEvidence??'',row.reason,row.reviewedBy,row.auditEventId,...(recordingAvailable?[row.recording!.recordedAt,row.recording!.actorId]:[])])
   ]);
  }
 
- return <section className={styles.workspace} aria-label="Tax profile review" aria-busy={busy}>
+ const applicabilityLabel=applicability==='tip'?'Tip':servicePage?.services.find(({service})=>service.id===serviceId)?.content.name??'Service';
+ return <section className={`${styles.workspace} ${styles.taxWorkspace}`} aria-label="Tax profile review" aria-busy={busy}>
   <p role="status" ref={status} tabIndex={-1}>{message}</p>
-  {signedOut&&<a href="/sign-in">Sign in again</a>}
+  {signedOut&&<SignInLink returnTo="tax-profiles">Sign in again</SignInLink>}
+  <div className={styles.taxWorkbench}>
+  <div className={styles.taxMain}>
+  <section className={styles.taxSelection} aria-labelledby="tax-selection-heading">
+   <h2 id="tax-selection-heading">Choose what to review</h2>
+   <p className="field-help">Review one jurisdiction and service or tip at a time. A selection does not establish its tax treatment.</p>
   <div className={styles.lookupFields}>
    <div>
     <label htmlFor="tax-jurisdiction">Jurisdiction</label>
-    <input id="tax-jurisdiction" value={jurisdiction} maxLength={200} disabled={controlsDisabled}
+    <input id="tax-jurisdiction" value={jurisdiction} maxLength={200} disabled={selectionDisabled}
      onChange={event=>{setJurisdiction(event.target.value);resetResults();}}/>
    </div>
    <div>
     <label htmlFor="tax-applicability">Applies to</label>
-    <select id="tax-applicability" value={applicability} disabled={controlsDisabled}
+    <select id="tax-applicability" value={applicability} disabled={selectionDisabled}
      onChange={event=>{
       const value=event.target.value;
       if(value===''||value==='tip'||value==='service'){
@@ -174,15 +188,15 @@ export function FinanceTaxProfilesScreen(){
   </div>
   {applicability==='service'&&<section aria-label="Find a service">
    <label htmlFor="tax-service-search">Service name or code</label>
-   <input id="tax-service-search" type="search" value={search} maxLength={200} disabled={controlsDisabled}
+   <input id="tax-service-search" type="search" value={search} maxLength={200} disabled={selectionDisabled}
     onChange={event=>{setSearch(event.target.value);setServicePage(null);setServiceId('');resetResults();}}/>
    <div className={styles.actions}>
-    <button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>loadServices()}>Find services</button>
-    {servicePage?.hasMore&&<button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>loadServices(true)}>More services</button>}
+    <button type="button" className="secondary" disabled={selectionDisabled} onClick={()=>loadServices()}>Find services</button>
+    {servicePage?.hasMore&&<button type="button" className="secondary" disabled={selectionDisabled} onClick={()=>loadServices(true)}>More services</button>}
    </div>
    {!!servicePage?.services.length&&<>
     <label htmlFor="tax-service">Service</label>
-    <select id="tax-service" ref={serviceSelect} value={serviceId} disabled={controlsDisabled}
+    <select id="tax-service" ref={serviceSelect} value={serviceId} disabled={selectionDisabled}
      onChange={event=>{setServiceId(event.target.value);resetResults();}}>
      <option value="">Choose a service</option>
      {servicePage.services.map(({service,content})=><option key={service.id} value={service.id}>
@@ -194,12 +208,16 @@ export function FinanceTaxProfilesScreen(){
   <div className={styles.actions}>
    <button type="button" className="secondary" disabled={controlsDisabled||!scope} onClick={()=>readHistory()}>View approval history</button>
   </div>
-  <details>
+  {scope&&<p className={styles.taxScope}><strong>{scope.jurisdiction}</strong><span>{applicabilityLabel}</span></p>}
+  {approvalTask!=='idle'&&<p className="field-help">Finish or cancel the approval draft, or review the interrupted approval, before changing this selection.</p>}
+  </section>
+  <details className={styles.taxDisclosure}>
    <summary>Manage fictional approvals</summary>
-   <TaxApprovalEditor key={JSON.stringify(scope)} scope={scope} disabled={controlsDisabled} onSaved={resetResults}/>
+   <TaxApprovalEditor key={JSON.stringify(scope)} scope={scope} applicabilityLabel={applicabilityLabel} disabled={controlsDisabled} onSaved={resetResults} onTaskStateChange={setApprovalTask}/>
   </details>
-  <details>
+  <details className={styles.taxDisclosure}>
    <summary>Check an amount</summary>
+   <p className="field-help">Read-only preview in USD. This does not post a transaction or approve a tax profile.</p>
    <form onSubmit={checkAmount}>
     <label htmlFor="tax-date">Effective date</label>
     <input id="tax-date" type="date" value={date} disabled={controlsDisabled}
@@ -214,30 +232,72 @@ export function FinanceTaxProfilesScreen(){
      <button type="submit" disabled={controlsDisabled||!scope||!customerDate(date)||!amount}>Check tax</button>
     </div>
    </form>
-  </details>
-  {preview?.profile&&<section aria-label="Tax calculation result">
+  {preview?.profile&&<section className="mapping-summary-card" aria-label="Tax calculation result">
    <h2 ref={resultHeading} className="editor-heading" tabIndex={-1}>{financeTaxTreatmentLabels[preview.profile.treatment]}</h2>
+   <dl className={`mapping-rule-lookup ${styles.taxFacts}`}>
+    <div><dt>Jurisdiction</dt><dd>{preview.profile.jurisdiction}</dd></div>
+    <div><dt>Applies to</dt><dd>{applicabilityLabel}</dd></div>
+    <div><dt>Preview on</dt><dd><time dateTime={date}>{dateLabel(date)}</time></dd></div>
+   </dl>
    <p>Version {preview.profile.version} · Effective {dateLabel(preview.profile.effectiveFrom)}</p>
+   {preview.profile.rate!==null&&<p>Verified decimal rate: {preview.profile.rate}. The entered amount includes tax; the discount is deducted before the net and included tax are calculated.</p>}
    {preview.state==='ready'&&<dl className={styles.amountBreakdown}>
     <dt>Total after discount</dt><dd>{quoteMoney(preview.components.inclusiveCents)}</dd>
     <dt>Net amount</dt><dd>{quoteMoney(preview.components.netCents)}</dd>
     <dt>Tax included</dt><dd>{quoteMoney(preview.components.taxCents)}</dd>
    </dl>}
+   {preview.state==='ready'&&<details>
+    <summary>Calculation method</summary>
+    <dl className={styles.amountBreakdown}>
+     <dt>Amount entered</dt><dd>{quoteMoney(preview.components.grossInclusiveCents)}</dd>
+     <dt>Discount entered</dt><dd>{quoteMoney(preview.components.discountInclusiveCents)}</dd>
+    </dl>
+    {preview.profile.treatment==='inclusive_single'
+     ?<p>The amount after discount includes tax. Net amount is that total divided by one plus the verified decimal rate. Net amount is rounded to the nearest cent, with half cents rounded up. Included tax is the total after discount minus the rounded net amount.</p>
+     :<p>The saved profile is verified non-taxable. The net amount equals the amount after discount and included tax is zero.</p>}
+    <p className="field-help">This calculation uses only the saved profile shown above and the entered date and amounts.</p>
+   </details>}
   </section>}
-  {!!history?.rows.length&&<section aria-label="Saved tax profile history">
+  {preview&&!preview.profile&&<section className="mapping-summary-card" aria-label="No tax treatment on this date">
+   <h2>No verified treatment for this date</h2>
+   <p>{jurisdiction.trim()} · {applicabilityLabel} · {dateLabel(date)}</p>
+  </section>}
+  </details>
+  </div>
+  <aside className={styles.taxHistory}>
+  {history&&<section className="mapping-summary-card" aria-label="Saved tax profile history">
    <h2 ref={historyHeading} className="editor-heading" tabIndex={-1}>Approval history</h2>
+   <p>{scope?.jurisdiction} · {applicabilityLabel}</p>
+   {!history.rows.length&&<p>No saved approvals for this selection. Tax treatment remains unverified.</p>}
+   {!!history.rows.length&&<p className="field-help">{history.rows.length} loaded approval{history.rows.length===1?'':'s'}. {history.hasMore?'Earlier approvals remain to be loaded.':'All earlier approvals loaded.'} Effective dates belong to this selection.</p>}
    <div className={styles.actions}>
-    <button type="button" className="secondary" disabled={controlsDisabled} onClick={download}>Download loaded history (CSV)</button>
+    <button type="button" className="secondary" disabled={controlsDisabled||!history.rows.length} onClick={download}>Download loaded history (CSV)</button>
    </div>
-   <ol className="service-list">
-    {history.rows.map(row=><li key={row.id}>
-     <strong>Version {row.version} · {financeTaxTreatmentLabels[row.treatment]}</strong>
-     <p>Effective {dateLabel(row.effectiveFrom)}{row.rate===null?'':' · Decimal rate '+row.rate}</p>
+   <ol className="mapping-history-list">
+    {history.rows.map((row,index)=>{const previous=previousLoadedFinanceVersion(history.rows,row);return <li key={row.id}>
+     <details><summary>
+      <strong>Version {row.version} · {financeTaxTreatmentLabels[row.treatment]}</strong>
+      <FinanceHistoryRecordedTime recording={row.recording} inline/>
+      <span>Effective {dateLabel(row.effectiveFrom)}{row.rate===null?'':' · Decimal rate '+row.rate}</span>
+      <span>{index>0?'Before '+dateLabel(history.rows[index-1]!.effectiveFrom)+' (exclusive)':'Newest loaded approval'}</span>
+     </summary>
      <p>{row.reason}</p>
-     {row.verificationEvidence&&<details><summary>Verification evidence</summary><p>{row.verificationEvidence}</p></details>}
-    </li>)}
+     {row.verificationEvidence&&<><p><strong>Verification evidence</strong></p><p>{row.verificationEvidence}</p></>}
+     <FinanceHistoryRecordingFacts recording={row.recording} auditEventId={row.auditEventId}/>
+     <FinanceHistoryComparison version={row.version} previousVersion={previous?.version} fields={previous?[
+      {label:'Effective from',before:dateLabel(previous.effectiveFrom),after:dateLabel(row.effectiveFrom)},
+      {label:'Treatment',before:financeTaxTreatmentLabels[previous.treatment],after:financeTaxTreatmentLabels[row.treatment]},
+      {label:'Decimal rate',before:previous.rate??'Not recorded',after:row.rate??'Not recorded'},
+      {label:'Verification evidence',before:previous.verificationEvidence??'Not recorded',after:row.verificationEvidence??'Not recorded'},
+      {label:'Reason',before:previous.reason,after:row.reason},
+     ]:[]}/>
+     </details>
+    </li>;})}
    </ol>
    {history.hasMore&&<button type="button" className="secondary" disabled={controlsDisabled} onClick={()=>readHistory(true)}>Load earlier approvals</button>}
   </section>}
+  {!history&&<section className={styles.taxHistoryIntro} aria-label="Tax history guidance"><h2>Approval history</h2><p>Choose a selection, then view its saved approvals and effective dates here.</p><p className="field-help">History is retained when a later approval is saved.</p></section>}
+  </aside>
+  </div>
  </section>;
 }

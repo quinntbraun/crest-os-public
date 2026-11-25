@@ -1,0 +1,21 @@
+import {it,expect,vi} from 'vitest';
+import {unzipSync,strFromU8} from 'fflate';
+vi.mock('server-only',()=>({}));
+import {formatCurrentBusinessPortableSource} from '../../src/security/current-business-portable-source';
+import {workbookColumn} from '../../src/security/current-business-source-workbook';
+import {currentBusinessSourceInventory} from '../../src/security/current-business-source-inventory';
+import type {CurrentBusinessRows} from '../../src/security/current-business-source';
+it('delivers safe exact-text Excel cells and explicit CSV references for oversized values',()=>{
+ const businessId='11111111-1111-4111-8111-111111111111';
+ const sources=currentBusinessSourceInventory.map(source=>({...source,primaryKey:[source.columns.includes('id')?'id':'business_id'],types:Object.fromEntries(source.columns.map(column=>[column,'text'])),rows:[] as Record<string,string|null>[]}));
+ const first=sources[0]!,row=Object.fromEntries(first.columns.map(column=>[column,null])) as Record<string,string|null>;
+ row.id=businessId;row.legal_name='=HYPERLINK("https://example.com")\r_x0001_\u0001<&';row.currency='9007199254740993';row.timezone='';row.status='x'.repeat(32768);first.rows.push(row);
+ const capture={schemaVersion:1,profile:'crest.current-business-rows.v1',businessId,snapshotToken:'a'.repeat(64),observedAt:'2026-11-22T20:00:00.000000Z',sources,recordCount:1,completePortableExport:false,completeBackup:false} as CurrentBusinessRows;
+ const bundle=formatCurrentBusinessPortableSource(capture,{appReleaseId:'a'.repeat(40),sourceSchemaVersion:133}),parts=unzipSync(bundle.files['business_records.xlsx']!),coverage=JSON.parse(Buffer.from(bundle.files['workbook_coverage.json']!).toString());
+ expect(coverage.sheets).toHaveLength(sources.length+3);expect(new Set(coverage.sheets).size).toBe(coverage.sheets.length);expect(coverage.sheets.every((name:string)=>name.length<=31)).toBe(true);
+ expect(coverage.sidecarReferences).toMatchObject([{csv:'crest_businesses.csv',csvDataRow:1,column:'status',characters:32768}]);
+ const data=strFromU8(parts['xl/worksheets/sheet4.xml']!);expect(data).toContain('9007199254740993');expect(data).toContain('_x005F_x0001_');expect(data).toContain('&#13;');expect(data).toContain('&lt;&amp;');expect(data).toContain('Full value in crest_businesses.csv');expect(data).not.toContain('x'.repeat(32768));expect(data).toContain('<t xml:space="preserve"></t>');
+ const all=Object.values(parts).map(bytes=>strFromU8(bytes)).join('');expect(all).not.toMatch(/<f[ >]/);expect(all).not.toContain('TargetMode="External"');expect(all).toContain('autoFilter');expect(all).toContain('state="frozen"');
+ expect(workbookColumn(25)).toBe('Z');expect(workbookColumn(26)).toBe('AA');expect(workbookColumn(28)).toBe('AC');
+ expect(JSON.parse(bundle.manifest).recordCount).toBe(1);expect(JSON.parse(bundle.manifest).completePortableExport).toBe(false);
+});

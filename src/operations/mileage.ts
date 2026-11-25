@@ -28,6 +28,12 @@ function decimal(v:unknown,places:number,wholeDigits:number):string|null{
  const [whole,fraction='']=v.split('.');return whole+'.'+fraction.padEnd(places,'0');
 }
 function units(v:string){return BigInt(v.replace('.',''));}
+export function mileageDistanceUnits(value:string){
+ try{
+  const parsed=decimal(value.trim(),4,10);
+  return parsed===null?null:units(parsed);
+ }catch{return null;}
+}
 export function mileageShareFraction(percent:string){
  const value=decimal(percent.trim(),6,3);
  check(value);

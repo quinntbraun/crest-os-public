@@ -1,4 +1,6 @@
 'use client';
+import {AuthenticationError} from '../../../client/authentication';
+import {FinancialAccessRecovery} from '../../financial-access-recovery';
 
 import {useCallback,useEffect,useId,useRef,useState} from 'react';
 import {calculateHeldTipReview,parseHeldTipInput} from '../../../bookkeeping/held-tip-contract';
@@ -28,6 +30,7 @@ export function HeldTip({businessId,customerId}:{businessId:string;customerId:st
   const [canPost,setCanPost]=useState(false);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [signedOut,setSignedOut]=useState(false);
   const fieldId=useId();
   const request=useRef<AbortController|null>(null);
   const status=useRef<HTMLParagraphElement>(null);
@@ -50,11 +53,12 @@ export function HeldTip({businessId,customerId}:{businessId:string;customerId:st
   const clearAmounts=useCallback(()=>{
     setLotId('');setRangeStart('');setAmount('');setIntent('');setReason('');
   },[]);
-  const suspend=useCallback(()=>{
-    request.current?.abort();request.current=null;
+  const clearPrivate=useCallback(()=>{
     setDate('');setJurisdiction('');setReview(null);clearAmounts();setCloseReason('');
     setReceipt(null);setPending(false);setClosable(false);setCanPost(false);setBusy(false);setMessage('');
+  setSignedOut(false);
   },[clearAmounts]);
+  const suspend=useCallback(()=>{request.current?.abort();request.current=null;clearPrivate();},[clearPrivate]);
   useEffect(()=>{
     const hidden=()=>{if(document.visibilityState==='hidden')suspend();};
     document.addEventListener('visibilitychange',hidden);
@@ -73,12 +77,13 @@ export function HeldTip({businessId,customerId}:{businessId:string;customerId:st
     try{
       const context=await financeAccounts.context(signal);
       if(signal.aborted)return;
-      if(!context.heldTips||context.businessId!==businessId){
+      if(!context.heldTips||context.businessId!==businessId){clearPrivate();
         setMessage('Recording held tips is unavailable for this workspace.');return;
       }
+      setSignedOut(false);
       setCanPost(context.writeState==='ready');
       await action(context,signal);
-    }catch{if(!signal.aborted)setMessage(failure);}
+    }catch(error){if(!signal.aborted){if(error instanceof AuthenticationError&&error.kind==='denied'){clearPrivate();setSignedOut(true);setMessage('Sign in again to review held tips.');}else{setMessage(failure);}}}
     finally{if(request.current===controller){request.current=null;setBusy(false);status.current?.focus();}}
   }
 
@@ -170,6 +175,7 @@ export function HeldTip({businessId,customerId}:{businessId:string;customerId:st
         {pending?'Check original tip':jurisdiction?'Load reviewed tax treatment':'Load held funds'}
       </button>
       <p ref={status} role="status" tabIndex={-1}>{message}</p>
+      {signedOut&&<FinancialAccessRecovery returnTo="schedule" label="Held tip access recovery"/>}
       {pending&&closable&&<form onSubmit={event=>{event.preventDefault();if(closeReason.trim())load(closeReason.trim());}}>
         <label>Reason for closing the attempt<input required maxLength={1000} value={closeReason} disabled={busy}
           onChange={event=>setCloseReason(event.target.value)}/></label>

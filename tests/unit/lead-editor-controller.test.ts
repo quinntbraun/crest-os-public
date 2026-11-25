@@ -21,6 +21,45 @@ const result=(c=command())=>({state:'committed' as const,operationId:c.operation
 const reference=()=>pendingLead({schemaVersion:1,businessId:leadBusiness,binding,reference:{operationId,leadId:newLeadId,expectedVersion:'0',recoveryEpoch:epoch}});
 let memory:Map<string,string>,storage:{getItem:Mock<(key:string)=>string|null>;setItem:Mock<(key:string,value:string)=>void>;removeItem:Mock<(key:string)=>void>},store:ReturnType<typeof createPendingLeadStore>,api:{[K in keyof typeof leads]:Mock<(typeof leads)[K]>},session:Mock<typeof authentication.session>,id:Mock<()=>string>;
 const controller=()=>createLeadEditorController({conversionStore:{read:conversionRead},addressStore:createPendingLeadAddressStore(storage),vehicleStore:createPendingLeadVehicleStore(storage),store,statusStore:createPendingLeadStateStore(storage),api,session,id,change:vi.fn()});
+function historyResponse(){
+ let resolve!:(value:Awaited<ReturnType<typeof leads.history>>)=>void;
+ const promise=new Promise<Awaited<ReturnType<typeof leads.history>>>(done=>{resolve=done;});
+ return {resolve,promise};
+}
+it.each(['statusChanged','conversionChanged'] as const)('retains the same child receipt identity during %s and clears on refresh failure',async method=>{
+ const c=controller(),lead=leadFixture();await c.load();await c.open(lead.id);
+ const response=historyResponse();
+ api.history.mockImplementationOnce(()=>response.promise);
+ const refresh=c[method](lead.id);
+ await vi.waitFor(()=>expect(api.history).toHaveBeenCalledTimes(2));
+ expect(c.view()).toMatchObject({busy:true,selected:{id:lead.id},canSave:false});
+ response.resolve({state:'found',lead:leadFixture({version:'2'}),history:[],hasMore:false});await refresh;
+ expect(c.view()).toMatchObject({busy:false,selected:{id:lead.id,version:'2'}});
+ api.history.mockResolvedValueOnce({state:'absent'});await c[method](lead.id);
+ expect(c.view()).toMatchObject({selected:null,draft:null,history:null,canSave:false});
+ await c.open(lead.id);
+ api.history.mockRejectedValueOnce(new LeadClientError('unavailable'));await c[method](lead.id);
+ expect(c.view()).toMatchObject({phase:'unavailable',selected:null,draft:null,history:null,rows:[],canSave:false});
+});
+it('suspension during a confirmed child refresh removes private data and ignores the late result',async()=>{
+ const c=controller(),lead=leadFixture();await c.load();await c.open(lead.id);
+ const response=historyResponse();api.history.mockImplementationOnce(()=>response.promise);
+ const refresh=c.conversionChanged(lead.id);await vi.waitFor(()=>expect(api.history).toHaveBeenCalledTimes(2));
+ c.suspend();response.resolve({state:'found',lead,history:[],hasMore:false});await refresh;
+ expect(c.view()).toMatchObject({phase:'review',selected:null,draft:null,history:null,rows:[],canSave:false});
+});
+it('clears the directory and queue when the follow-up cursor belongs to a prior sign-in binding',async()=>{
+ const lead=leadFixture();
+ api.followUps.mockResolvedValue({schemaVersion:1,businessId:leadBusiness,observedAt:'2026-11-01T02:00:00.000000Z',hasMore:false,
+  followUps:[{id:lead.id,label:lead.label,state:lead.state,followUpAt:'2026-11-01T01:00:00.000000Z'}]});
+ const c=controller();
+ await c.load();
+ expect(c.view().followUps?.page?.followUps).toHaveLength(1);
+ api.context.mockResolvedValueOnce({...context(),binding:randomBytes(32).toString('base64url')});
+ await c.pageFollowUps();
+ expect(c.view()).toMatchObject({phase:'unavailable',rows:[],followUps:null});
+ expect(api.followUps).toHaveBeenCalledTimes(1);
+});
 it('a vehicle report reference appearing during fresh intake authority blocks a new operation and also blocks uncertain retry',async()=>{
  const vehicle=createPendingLeadVehicleStore(storage),value=pendingLeadVehicle({schemaVersion:1,businessId:leadBusiness,binding,reference:{operationId:randomUUID(),leadId:newLeadId,leadVehicleId:randomUUID(),expectedVersion:'0',recoveryEpoch:epoch}}),c=await prepared();
  api.context.mockImplementation(async()=>{vehicle.write(value);return context();});await c.save();expect(api.save).not.toHaveBeenCalled();expect(id).not.toHaveBeenCalled();expect(c.view().phase).toBe('blocked');vehicle.clear(value);api.context.mockResolvedValue(context());
@@ -51,7 +90,7 @@ it('backgrounding clears private state, cancels in-flight work and ignores a lat
 it('suspension during load prevents a late private directory response from reopening the screen',async()=>{let release:(value:{leads:ReturnType<typeof leadFixture>[];hasMore:boolean})=>void=()=>{};api.list.mockImplementation(()=>new Promise(resolve=>{release=resolve;}));const c=controller(),work=c.load();await vi.waitFor(()=>expect(api.list).toHaveBeenCalledTimes(1));c.suspend();release({leads:[leadFixture()],hasMore:false});await work;expect(c.view()).toMatchObject({phase:'review',rows:[],draft:null});});
 it('fresh access failure clears private content and preserves any unresolved reference',async()=>{store.write(reference());session.mockRejectedValue(new Error('offline'));const c=controller();await c.load();expect(c.view()).toMatchObject({phase:'unavailable',rows:[],draft:null});expect(store.read()).toEqual(reference());expect(api.context).not.toHaveBeenCalled();});
 it('searches literal raw text with explicit archive inclusion and advances only the current UUID page',async()=>{const c=controller();await c.load();api.list.mockResolvedValue({leads:[leadFixture()],hasMore:true});await c.query('001 %_ shared',true);expect(api.list.mock.calls.at(-1)![1]).toEqual({search:'001 %_ shared',includeLost:true,afterId:null,pageSize:10});api.list.mockResolvedValue({leads:[],hasMore:false});await c.query('001 %_ shared',true,true);expect(api.list.mock.calls.at(-1)![1]).toEqual({search:'001 %_ shared',includeLost:true,afterId:leadFixture().id,pageSize:10});expect(c.view()).toMatchObject({rows:[],hasMore:false,search:'001 %_ shared',includeLost:true});const n=api.list.mock.calls.length;await c.query('other',false,true);expect(api.list).toHaveBeenCalledTimes(n);});
-it('history paging retains exact versions and clears the editor if the current source changes between pages',async()=>{const c=controller();await c.load();const source=leadFixture({version:'9007199254740993'});api.history.mockResolvedValue({state:'found',lead:source,history:[{before:null,after:leadFixture({version:'20'})}],hasMore:true});await c.open(source.id);api.history.mockResolvedValue({state:'found',lead:{...source,version:'9007199254740994'},history:[],hasMore:false});await c.moreHistory();expect(api.history.mock.calls.at(-1)![1]).toEqual({leadId:source.id,afterVersion:'20',pageSize:5});expect(c.view()).toMatchObject({selected:null,draft:null,history:null,canSave:false});expect(c.view().message).toContain('lead changed');});
+it('history paging retains exact versions and clears the editor if the current source changes between pages',async()=>{const c=controller();await c.load();const source=leadFixture({version:'9007199254740993'});api.history.mockResolvedValue({state:'found',lead:source,history:[{version:'20',eventId:randomUUID(),actorId:source.updated_by,operationId:source.operation_id,at:source.updated_at,action:'edit',before:leadFixture({version:'19'}),after:leadFixture({version:'20'})}],hasMore:true});await c.open(source.id);api.history.mockResolvedValue({state:'found',lead:{...source,version:'9007199254740994'},history:[],hasMore:false});await c.moreHistory();expect(api.history.mock.calls.at(-1)![1]).toEqual({leadId:source.id,afterVersion:'20',pageSize:5});expect(c.view()).toMatchObject({selected:null,draft:null,history:null,canSave:false});expect(c.view().message).toContain('lead changed');});
 it.each(['binding','epoch','business','paused'])('reverifies %s before a first save, without claiming an uncertain operation or rewriting its context',async kind=>{const c=await prepared(),next=context();if(kind==='binding')next.binding=randomBytes(32).toString('base64url');if(kind==='epoch')next.context.recoveryEpoch=randomUUID();if(kind==='business')next.context.businessId=randomUUID();api.context.mockResolvedValue(kind==='paused'?{...next,context:{...next.context,writeState:'paused',recoveryEpoch:null}}:next);await c.save();expect(api.save).not.toHaveBeenCalled();expect(id).not.toHaveBeenCalled();expect(memory.size).toBe(0);expect(c.view()).toMatchObject({phase:'review',draft:null,rows:[],canSave:false});expect(c.view().message).toContain('No change was sent');});
 it('a failed first-save proof refresh creates no pending reference and a successful refresh uses the new proof',async()=>{const c=await prepared();session.mockRejectedValueOnce(new Error('expired'));await c.save();expect(api.save).not.toHaveBeenCalled();expect(store.read()).toBeNull();expect(c.view()).toMatchObject({phase:'unavailable',draft:null});const next=await prepared(),fresh={csrfToken:randomBytes(32).toString('base64url'),expiresAt:Date.now()+60000};session.mockResolvedValue(fresh);await next.save();expect(api.save.mock.calls.at(-1)![2]).toEqual(fresh);});
 
@@ -87,3 +126,6 @@ it('a new address reference blocks uncertain retry while retaining the original 
 });
 
 it.each(['pending','unreadable'] as const)('blocks a %s conversion reference before sibling mutation',async which=>{const c=await prepared();conversionRead.mockImplementation(()=>{if(which==='unreadable')throw new Error('reference unavailable');return {original:'conversion pending'};});await c.save();expect(c.view().canSave).toBe(false);expect(api.save).not.toHaveBeenCalled();});
+
+it("restores only the explicit directory inclusion scope after private clearing",async()=>{const c=controller();await c.load(true);expect(api.list.mock.calls.at(-1)![1]).toMatchObject({includeLost:true,search:"",afterId:null});expect(c.view()).toMatchObject({phase:"ready",includeLost:true,selected:null,draft:null});c.suspend();await c.load(true);expect(c.view()).toMatchObject({phase:"ready",includeLost:true});expect(api.save).not.toHaveBeenCalled();});
+it("does not let a restored directory flag bypass an unresolved original save",async()=>{const c=await prepared();api.save.mockRejectedValue(Error("network"));await c.save();const retained=store.read(),reads=api.list.mock.calls.length;expect(retained).not.toBeNull();await c.load(true);expect(c.view()).toMatchObject({phase:"pending",canSave:false});expect(store.read()).toEqual(retained);expect(api.list).toHaveBeenCalledTimes(reads);expect(api.lookup).not.toHaveBeenCalled();});
