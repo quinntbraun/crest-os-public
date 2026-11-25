@@ -140,6 +140,7 @@ jobs:
           node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-funds-candidate139.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/workspace-export140.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-payables-sources.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-supplier-candidate141.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-scheduled-capture.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-alert-dispatch.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/operator-source-export.test.mjs
@@ -318,6 +319,7 @@ jobs:
           path: |
             .local/ci-browser/${{ matrix.suite }}.json
             .local/review/opening-suppliers-*.png
+            .local/review/opening-allocations-*.png
             .local/review/settings-*.png
             .local/review/workspace-*.png
             .local/review/home-*.png

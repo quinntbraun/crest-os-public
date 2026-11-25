@@ -11,6 +11,10 @@ import type {OpeningPayablesReceipt} from '../../../bookkeeping/opening-payables
 import {parseOpeningReference} from '../../../bookkeeping/opening-worksheet-contract';
 import type {OpeningReceipt,OpeningReference} from '../../../bookkeeping/opening-worksheet-contract';
 import {OpeningPayablesSourceForm} from './opening-payables-source-form';
+import {OpeningAllocations} from './opening-allocations';
+import {OpeningSourceHistory} from './opening-source-history';
+import type {OpeningHistoryPage} from './opening-source-history';
+import type {OpeningSourceCursor} from '../../../bookkeeping/opening-source-history-contract';
 import type {PayableBill} from './opening-payables-source-form';
 import {dollars} from './opening-worksheet-fields';
 import styles from './screen.module.css';
@@ -23,10 +27,11 @@ export function OpeningPayables({worksheet}:{worksheet:OpeningReceipt}){
  const [editing,setEditing]=useState<{key:string;bill:PayableBill|null}|null>(null);
  const [pending,setPending]=useState<OpeningReference|null>(null);
  const [mayClose,setMayClose]=useState(false),[closeReason,setCloseReason]=useState('');
+ const [history,setHistory]=useState<OpeningHistoryPage|null>(null),[source,setSource]=useState<OpeningPayablesReceipt|null>(null),[historicalIds,setHistoricalIds]=useState<ReadonlySet<string>>(new Set());
  const request=useRef<AbortController|null>(null);
  function clear(){
   request.current?.abort();request.current=null;setSaved(undefined);setBills([]);setDirty(false);setReason('');setBusy(false);setMessage('');
-  setEditing(null);setPending(null);setMayClose(false);setCloseReason('');
+  setEditing(null);setPending(null);setMayClose(false);setCloseReason('');setHistory(null);setSource(null);setHistoricalIds(new Set());
  }
  useEffect(()=>{
   const hidden=()=>{if(document.visibilityState==='hidden')clear();};
@@ -66,6 +71,9 @@ export function OpeningPayables({worksheet}:{worksheet:OpeningReceipt}){
    setBills(next);setDirty(true);setEditing(null);setMessage('Supplier-balance added to your review. Save the schedule below to keep it.');
   }catch{setMessage('This supplier bill reference is already included. Review its original identity and amounts.');}
  }
+ function loadHistory(cursor:OpeningSourceCursor|null){void run(async(context,signal)=>{const result=await financeAccounts.readOpeningSourceHistory(context,'payables',cursor,signal);if(signal.aborted)return;setHistory(result);},'Crest could not load prior supplier reviews. Check your sign-in.');}
+ function inspectSource(id:string){void run(async(context,signal)=>{const result=await financeAccounts.readOpeningPayablesHistorical(context,id,signal);if(signal.aborted)return;setSource(result);setMessage(result?'Choose a saved bill to review for the current cutover. Its original identity will be kept.':'This saved supplier review is unavailable.');},'Crest could not read the selected supplier review.');}
+ function reuseBill(bill:PayableBill){setHistoricalIds(previous=>new Set([...previous,bill.billId]));setEditing({key:crypto.randomUUID(),bill});setMessage('Review the saved bill and its payments against the current cutover before keeping it.');}
  function save(event:FormEvent<HTMLFormElement>){
   event.preventDefault();if(saved===undefined||editing||!financeAccountReviewReason(reason.trim()))return;
   const input={schemaVersion:1 as const,bills,reason:reason.trim()};
@@ -125,13 +133,16 @@ export function OpeningPayables({worksheet}:{worksheet:OpeningReceipt}){
    <dl className={styles.openingGroup}><div><dt>{dirty?'Supplier balances under review':'Saved supplier balances'}</dt><dd>${dollars(totals.remainingCents)} USD · {totals.billCount} bills</dd></div><div><dt>Evidence still to review</dt><dd>{totals.unknownDueCount} unknown due dates · {totals.unknownTaxCount} unknown tax references</dd></div></dl>
    {saved&&<details><summary>Saved revision {saved.revision}</summary><p>{saved.evidence.reason}</p><p>Saved {saved.recordedAt.slice(0,10)}. Opening balances still need separate approval.</p><button type="button" className="secondary" disabled={busy} onClick={download}>Download saved supplier-bill evidence (JSON)</button></details>}
    {bills.length===0&&<p>No unpaid supplier bills are entered in this review. This does not verify a zero balance.</p>}
+   {!editing&&<details><summary>Reuse a bill from a saved review</summary><OpeningSourceHistory page={history} busy={busy} label="supplier bills" onLoad={loadHistory} onSelect={inspectSource}/>
+    {source&&<div><p>Source cutover {source.evidence.cutoverOn} · saved review {source.revision}. Check every amount and date for the current cutover.</p>{openingPayablesDraftFromEvidence(source.evidence).bills.map(bill=><button key={bill.billId} type="button" className="secondary" disabled={busy||bills.some(current=>current.billId===bill.billId)} onClick={()=>reuseBill(bill)}>Review saved bill {bill.externalId} · {bill.vendor}{bills.some(current=>current.billId===bill.billId)?' · already included':''}</button>)}</div>}
+   </details>}
    {bills.map((bill,index)=><div className={styles.openingGroup} key={bill.billId}>
     <h4>{bill.vendor}</h4><p>{bill.externalId} · ${dollars(bill.remainingCents)} USD still owed</p><p>{bill.purpose}</p><p>Original bill {bill.incurredOn} · ${dollars(bill.originalCents)} USD originally · {bill.reductions.length} earlier payments or credits</p>
     <p>{bill.originalDueOn?'Due '+bill.originalDueOn:'Original due date needs review'}{bill.taxEvidence?' · Original tax reference recorded':' · Original tax information unknown'}</p>
     <button type="button" className="secondary" disabled={busy||!!editing} onClick={()=>setEditing({key:crypto.randomUUID(),bill})}>Edit supplier bill {index+1}</button>
     <button type="button" className="secondary" disabled={busy||!!editing} onClick={()=>{setBills(current=>current.filter(item=>item.billId!==bill.billId));setDirty(true);setMessage('Bill removed from this review. Earlier saved versions are retained. Save the schedule to record this change.');}}>Remove supplier bill {index+1} from this review</button>
    </div>)}
-   {editing?<OpeningPayablesSourceForm key={editing.key} initial={editing.bill} identityLocked={!!saved?.evidence.bills.some(bill=>bill.billId===editing.bill?.billId)} cutoverOn={cutoverOn} busy={busy} onSave={keep} onCancel={()=>setEditing(null)} onError={setMessage}/>:<button type="button" className="secondary" disabled={busy||bills.length>=200} onClick={()=>setEditing({key:crypto.randomUUID(),bill:null})}>Add unpaid supplier bill</button>}
+   {editing?<OpeningPayablesSourceForm key={editing.key} initial={editing.bill} identityLocked={!!saved?.evidence.bills.some(bill=>bill.billId===editing.bill?.billId)||!!editing.bill&&historicalIds.has(editing.bill.billId)} cutoverOn={cutoverOn} busy={busy} onSave={keep} onCancel={()=>setEditing(null)} onError={setMessage}/>:<button type="button" className="secondary" disabled={busy||bills.length>=200} onClick={()=>setEditing({key:crypto.randomUUID(),bill:null})}>Add unpaid supplier bill</button>}
    {!editing&&<form onSubmit={save}>
     <fieldset className={styles.openingGroup} disabled={busy}><legend>Save supplier balance evidence</legend>
      {bills.length===0&&<label><input type="checkbox" required/> I intend to save this review with no unpaid supplier bills entered.</label>}
@@ -140,5 +151,6 @@ export function OpeningPayables({worksheet}:{worksheet:OpeningReceipt}){
     </fieldset>
    </form>}
   </div>}
+  {saved&&!dirty&&!editing&&!pending&&<OpeningAllocations key={saved.scheduleRevisionId} parent={saved} worksheetRevision={revision}/>}
  </details></section>;
 }

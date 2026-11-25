@@ -159,7 +159,9 @@ it('rejects a foreign-business field read before parsing a cookie or contacting 
 it('constructs explicit production finance/expense adapters without a session or any financial action',async()=>{
  const {auth,base,grant}=await configuration(),config={...base,productionCapabilities:grant};
  const connection='postgresql://crest_finance_runtime:fixture-only@database.example.com/crest';
- expect(createFinanceAccountHttp(config,connection,auth.provider,auth.tokens,financeRuntimeFeatures(financeRuntimeFeatureNames))).toBeTypeOf('function');
+ expect(()=>createFinanceAccountHttp(config,connection,auth.provider,auth.tokens,financeRuntimeFeatures(financeRuntimeFeatureNames))).toThrow('FINANCE_ACCOUNT_REVIEW_REQUIRED');
+ const productionFeatures=financeRuntimeFeatures(financeRuntimeFeatureNames.filter(name=>name!=='openingPayables'));
+ expect(createFinanceAccountHttp(config,connection,auth.provider,auth.tokens,productionFeatures)).toBeTypeOf('function');
  expect(createExpenseHttp(config,auth.provider,auth.tokens,true)).toBeTypeOf('function');
  for(const denied of [base,{...base,businessId:randomUUID(),productionCapabilities:grant}]){
   expect(()=>createFinanceAccountHttp(denied,connection,auth.provider,auth.tokens)).toThrow();

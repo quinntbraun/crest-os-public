@@ -37,6 +37,7 @@ function receipt(value:unknown,businessId:string,worksheetRevisionId?:string){
   recordedAt:value.recordedAt,evidenceSha256:value.evidenceSha256,evidence};
 }
 export type OpeningPayablesReceipt=ReturnType<typeof receipt>;
+export {receipt as parseOpeningPayablesReceipt};
 
 export function openingPayablesDraftFromEvidence(value:unknown):OpeningPayablesInput{
  const evidence=parseOpeningPayablesEvidence(value);

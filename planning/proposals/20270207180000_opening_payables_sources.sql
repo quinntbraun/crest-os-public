@@ -3,7 +3,7 @@ SET LOCAL ROLE crest_schema_owner;
 CREATE TABLE crest.opening_payables_origins (
  id uuid PRIMARY KEY,business_id uuid NOT NULL,
  source_namespace text NOT NULL CHECK(source_namespace~'^[a-z][a-z0-9_.-]{0,99}$'),
- vendor text NOT NULL CHECK(length(vendor) BETWEEN 1 AND 200 AND btrim(vendor)=vendor AND vendor!~'[[:cntrl:]]'),
+ vendor text NOT NULL CHECK(length(vendor)>=1 AND length(vendor)<=200 AND btrim(vendor)=vendor AND vendor!~'[[:cntrl:]]'),
  external_id text NOT NULL CHECK(length(external_id)>=1 AND length(external_id)<=200 AND btrim(external_id)=external_id AND external_id!~'[[:cntrl:]]'),
  operation_id uuid NOT NULL,recorded_by uuid NOT NULL,
  recorded_at timestamptz NOT NULL DEFAULT clock_timestamp() CHECK(isfinite(recorded_at)),

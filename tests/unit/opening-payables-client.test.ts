@@ -2,6 +2,7 @@ import {afterEach,expect,it,vi} from 'vitest';
 import {financeAccounts} from '../../src/client/finance-accounts';
 import type {FinanceAccountContext} from '../../src/client/finance-accounts';
 import {normalizeOpeningPayablesEvidence} from '../../src/bookkeeping/opening-payables-contract';
+import {prepareOpeningPayablesAllocations} from '../../src/bookkeeping/opening-payables-allocation';
 const auth=vi.hoisted(()=>vi.fn());
 vi.mock('../../src/client/authentication',()=>({authentication:{session:auth}}));
 const id=(n:number)=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0');
@@ -17,6 +18,14 @@ function setup(value:unknown,status=200){
 const signal=()=>new AbortController().signal;
 const save=()=>financeAccounts.saveOpeningPayablesSchedule(context,reference,worksheetRevisionId,'2026-06-01',{worksheetRevision:'2',expectedRevision:'0',input},signal());
 afterEach(()=>{vi.unstubAllGlobals();vi.resetAllMocks();});
+it('loads supported supplier schedules and parent-bound reviews above the ordinary response limit',async()=>{
+ const bill=(n:number)=>({billId:id(n+100),sourceNamespace:'legacy.bills',externalId:'BILL-'+n,vendor:'Synthetic supplier',purpose:'s'.repeat(1000),incurredOn:'2026-04-01',originalDueOn:'2026-04-30',unknownDueReason:null,originalCents:'1',remainingCents:'1',billEvidence:{reference:'Original supplier bill',sha256:'a'.repeat(64)},reductions:[],taxEvidence:null});
+ const source={schemaVersion:1 as const,bills:Array.from({length:200},(_,n)=>bill(n)),reason:'Review retained unpaid bills'},parent={...receipt(),evidence:normalizeOpeningPayablesEvidence(source,'2026-06-01')};
+ expect(Buffer.byteLength(JSON.stringify(parent))).toBeGreaterThan(196608);
+ setup({schemaVersion:1,businessId:id(1),worksheetRevisionId,schedule:parent});expect((await financeAccounts.readOpeningPayablesSchedule(context,'2',worksheetRevisionId,signal())).schedule?.evidence.totals.billCount).toBe(200);
+ const review={schemaVersion:1,businessId:id(1),allocationRevisionId:id(8),payablesRevision:parent.revision,worksheetRevisionId,revision:'1',operationId:id(2),auditEventId:id(9),recordedBy:id(7),recordedAt:parent.recordedAt,evidenceSha256:'a'.repeat(64),evidence:prepareOpeningPayablesAllocations(source,'2026-06-01',{schemaVersion:1,roots:[],reason:'No prior allocations on the selected bills'})};
+ setup({schemaVersion:1,businessId:id(1),worksheetRevisionId,schedule:review,supplierSchedule:parent});expect((await financeAccounts.readOpeningAllocationsSchedule(context,'2',worksheetRevisionId,signal())).schedule?.receipt.payablesRevision).toBe('1');
+});
 it('reads the requested worksheet privately and keeps an unsaved schedule distinct',async()=>{
  const fetch=setup({schemaVersion:1,businessId:id(1),worksheetRevisionId,schedule:null});
  expect((await financeAccounts.readOpeningPayablesSchedule(context,'2',worksheetRevisionId,signal())).schedule).toBeNull();

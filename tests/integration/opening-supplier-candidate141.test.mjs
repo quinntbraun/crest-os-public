@@ -1,0 +1,70 @@
+// Candidate-only coordinator, recovery-reader and catalog observation. No activation.
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {join} from 'node:path';
+import {randomUUID,randomBytes,createHash} from 'node:crypto';
+import pg from 'pg';
+import {migrationSandbox} from '../support/migration-sandbox.mjs';
+import {installProviderSchema} from '../support/provider-schema.mjs';
+import {createConfirmedBookingFixture} from '../support/confirmed-booking-fixture.mjs';
+import {openingSupplier141Candidate,openingSupplier141PriorRegistry} from '../support/opening-supplier141-candidate.mjs';
+import {openingSupplier141SourceInventory} from '../../src/tooling/opening-supplier141-source-inventory.ts';
+import {verifyRecoveryBackupReader} from '../../src/tooling/recovery-backup-reader.ts';
+import {withRecoveryBackupLease} from '../../src/tooling/recovery-backup-lease.ts';
+import {captureRecoveryRoutineCatalog} from '../../src/tooling/recovery-routine-catalog.ts';
+import {captureRecoverySchemaCatalog} from '../../src/tooling/recovery-schema-catalog.ts';
+import {captureRecoveryDatabaseInventory} from '../../src/tooling/recovery-database-inventory.ts';
+import {verifyExportCoverage} from '../../src/tooling/export-coverage.ts';
+import {openingSupplier141SourceProfile} from '../../src/tooling/opening-supplier141-catalog.ts';
+import {captureOpeningSupplier141CandidateSources,formatOpeningSupplier141CandidateSourceExport,captureInstanceSources140,formatInstanceSourceExport140} from '../../src/tooling/operator-source-export.ts';
+import {exerciseOpeningFundsCandidateRestore} from '../support/opening-funds-candidate-restore.mjs';
+import {buildOpeningPayablesSourceFiles} from '../../src/bookkeeping/opening-payables-source.ts';
+import {buildOpeningAllocationsSourceFiles} from '../../src/bookkeeping/opening-allocations-source.ts';
+const hash=bytes=>createHash('sha256').update(bytes).digest('hex'),document=reference=>({reference,sha256:'a'.repeat(64)});
+async function command(client,name,args){await client.query('BEGIN');try{const result=(await client.query('SELECT crest_commands.'+name+'('+args.map((_,i)=>'$'+(i+1)).join(',')+') AS value',args.map(v=>Array.isArray(v)?JSON.stringify(v):v))).rows[0].value;await client.query('COMMIT');return result;}catch(error){await client.query('ROLLBACK');throw error;}}
+
+test('candidate141 upgrades the exact140 package and observes populated supplier recovery catalogs without activation',{timeout:240000},async()=>{
+ const sandbox=await migrationSandbox();let login,reader;
+ try{
+  const root=await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url));assert.equal(hash(root),openingSupplier141PriorRegistry);
+  const target=await sandbox.database(),admin=await sandbox.connect(target);await sandbox.apply(target,await sandbox.prefix(0),true);await installProviderSchema(admin,target);assert.equal((await sandbox.apply(target,await sandbox.prefix(140))).history.length,140);
+  const candidate=await openingSupplier141Candidate(sandbox);assert.equal(candidate.parts.length,9);assert.equal(candidate.registered,false);assert.equal(candidate.registrySha256,openingSupplier141SourceProfile.migrationRegistrySha256);assert.equal(candidate.sha256,openingSupplier141SourceProfile.migrationSha256);assert.equal((await sandbox.apply(target,candidate.directory)).history.length,141);
+  const columns=(await admin.query("SELECT n.nspname||'.'||c.relname AS table,a.attname AS column FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN('crest','crest_private') AND c.relkind IN('r','p') AND a.attnum>0 AND NOT a.attisdropped")).rows;
+  assert.equal(verifyExportCoverage(candidate.coverage,columns,141).tables,196);assert.equal(openingSupplier141SourceInventory.length,196);
+  const web=await sandbox.connect(target);await web.query('SET ROLE crest_web');const bootstrap=(await admin.query("SELECT id FROM crest_private.actors WHERE system_key='security_bootstrap'")).rows[0].id,owner=await createConfirmedBookingFixture({client:admin,web,bootstrap})();
+  const finance=await sandbox.connect(target);await finance.query('SET ROLE crest_finance_preview');const auth=()=>[...owner.auth(),owner.epoch];
+  await admin.query("INSERT INTO crest_private.finance_controls(business_id,recovery_authority_id,created_by,origin) SELECT $1,id,$2,'system' FROM crest_private.business_recovery_authorities WHERE business_id=$1",[owner.business,owner.actor]);
+  const unknown={state:'unknown',evidence:null,note:'Fictional opening remains under review'},worksheet={cutoverOn:'2026-06-01',cutoverAt:'2026-06-01T00:00:00Z',source:document('Fictional cutover'),equityBasis:'Fictional opening source candidate',banks:[],controls:Object.fromEntries(['receivables','customerFunds','supplierPayables','taxLiabilities','otherLiabilities','cashAndChecks','wallets','otherAssets'].map(key=>[key,unknown]))};
+  const worksheetSaved=await command(finance,'save_fictional_opening_worksheet',[...auth(),randomUUID(),'0',worksheet]);
+  const bill={billId:randomUUID(),sourceNamespace:'synthetic.supplier_bills',externalId:'CANDIDATE-141',vendor:'Fictional supplier',purpose:'Prior supplies',incurredOn:'2026-04-01',originalDueOn:'2026-05-01',unknownDueReason:null,originalCents:'15000',remainingCents:'10000',billEvidence:document('Fictional original bill'),reductions:[{kind:'payment',reference:'PAY-141',appliedOn:'2026-05-01',amountCents:'5000',evidence:document('Fictional original payment')}],taxEvidence:null};
+  bill.originalCents='9007199254745993';bill.remainingCents='9007199254740993';
+  const billSaved=await command(finance,'save_fictional_opening_payables_schedule',[...auth(),randomUUID(),'1','0',[bill],'Fictional unpaid bill']);
+  const rootSource={rootId:randomUUID(),sourceNamespace:'synthetic.bank',externalId:'PAY-141',vendor:bill.vendor,kind:'payment',reference:'PAY-141',appliedOn:'2026-05-01',originalCents:'5000',evidence:bill.reductions[0].evidence,otherAllocatedCents:'0',otherAllocationEvidence:null};
+  const allocationSaved=await command(finance,'save_fictional_opening_allocations_schedule',[...auth(),randomUUID(),'1','1','0',[rootSource],'Fictional original payment capacity']);
+  const password=randomBytes(32).toString('hex');login='crest_supplier141_test_0'+randomBytes(8).toString('hex');await sandbox.admin.query('CREATE ROLE '+login+" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'");await sandbox.admin.query('GRANT crest_backup_reader TO '+login+' WITH INHERIT FALSE,SET TRUE');const endpoint=new URL(target);endpoint.username=login;endpoint.password=password;const makeReader=async()=>{const client=new pg.Client({connectionString:endpoint.toString(),options:'-c role=crest_backup_reader',connectionTimeoutMillis:5000,query_timeout:10000});await client.connect();return client;};reader=await makeReader();
+  const migrations=candidate.registry.migrations.map(row=>({version:row.version,name:row.file.slice(15,-4)}));assert.equal((await verifyRecoveryBackupReader(reader,migrations)).sourceSchemaVersion,141);
+  await assert.rejects(reader.query('UPDATE crest.opening_payables_origins SET vendor=vendor'),{code:'42501'});await assert.rejects(reader.query('SELECT crest_commands.read_fictional_opening_payables_schedule(NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)'),{code:'42501'});
+  const captured=await withRecoveryBackupLease(reader,owner.business,new AbortController().signal,lease=>lease.capture(async(snapshot,signal)=>({routines:await captureRecoveryRoutineCatalog(snapshot,signal),schema:await captureRecoverySchemaCatalog(snapshot,signal),inventory:(await captureRecoveryDatabaseInventory(snapshot,signal)).forRecoveryTools(),tables:(await snapshot.query("SELECT n.nspname||'.'||c.relname AS source FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN('crest','crest_private') AND c.relkind IN('r','p') ORDER BY (n.nspname||'.'||c.relname) COLLATE \"C\"")).rows.map(row=>row.source)})));
+  assert.deepEqual(captured.value.tables,openingSupplier141SourceInventory.map(row=>row.source));const supplierTables=captured.value.inventory.tables.filter(row=>row.schema==='crest'&&/^opening_(payables|allocations)_/.test(row.name));assert.equal(supplierTables.length,4);assert(supplierTables.every(row=>row.rowCount==='1'));assert.equal(captured.value.inventory.completeBackup,false);
+  assert.equal(captured.value.routines.sha256,openingSupplier141SourceProfile.routineSha256);assert.equal(captured.value.routines.routineCount,openingSupplier141SourceProfile.routineCount);assert.equal(captured.value.schema.sha256,openingSupplier141SourceProfile.schemaSha256);assert.equal(captured.value.schema.objectCount,openingSupplier141SourceProfile.schemaObjectCount);
+  const exported=await captureOpeningSupplier141CandidateSources({client:await makeReader(),leaseBusinessId:owner.business,migrations},new AbortController().signal),exportedValue=exported.forRecoveryTools(),files=formatOpeningSupplier141CandidateSourceExport(exported),manifest=JSON.parse(Buffer.from(files['instance_manifest.json']).toString());
+  assert.equal(manifest.sourceCount,196);assert.equal(manifest.sourceSchemaVersion,141);assert.equal(manifest.catalogRegistered,false);assert.equal(manifest.completeBackup,false);assert.equal(Object.keys(files).length,200);assert.throws(()=>formatInstanceSourceExport140(exported));
+  const selected=exportedValue.sources.filter(row=>/^crest\.opening_(payables|allocations)_/.test(row.source));assert.equal(selected.length,4);assert(selected.every(row=>row.rows.length===1));assert.equal(JSON.parse(selected.find(row=>row.source==='crest.opening_payables_schedule_revisions').rows[0].evidence).totals.remainingCents,'9007199254740993');
+  const references=exportedValue.foreignKeys.filter(row=>/^crest\.opening_(payables|allocations)_/.test(row.source));assert(references.length>0&&references.every(row=>row.verification==='snapshot_no_orphans'));
+  const neutral=await sandbox.connect(await sandbox.database());await neutral.query(Buffer.from(files['instance_reimport.sql']).toString());assert.equal((await neutral.query('SELECT evidence FROM crest_instance_source.crest_opening_payables_schedule_revisions')).rows[0].evidence,selected.find(row=>row.source==='crest.opening_payables_schedule_revisions').rows[0].evidence);
+  await assert.rejects(captureInstanceSources140({client:await makeReader(),leaseBusinessId:owner.business,migrations},new AbortController().signal),{message:'OPERATOR_SOURCE_EXPORT_REVIEW_REQUIRED'});
+  const signature='crest_commands.review_fictional_opening_journal_context_v4(bytea,uuid,uuid,text,uuid,uuid,timestamptz,uuid,uuid,bigint,bigint,bigint,bigint,bigint)';await admin.query('ALTER FUNCTION '+signature+' COST 101');try{await assert.rejects(captureOpeningSupplier141CandidateSources({client:await makeReader(),leaseBusinessId:owner.business,migrations},new AbortController().signal),error=>error.message==='OPERATOR_SOURCE_EXPORT_REVIEW_REQUIRED'&&error.stage==='catalog');}finally{await admin.query('ALTER FUNCTION '+signature+' COST 100');}
+  const recovery=await exerciseOpeningFundsCandidateRestore(admin,target,async restored=>{
+   await restored.query('SET ROLE crest_export');await restored.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');try{
+    const supplierSource=(await restored.query('SELECT crest_commands.opening_payables_source_snapshot_v2($1) AS value',[owner.business])).rows[0].value,allocationSource=(await restored.query('SELECT crest_commands.opening_allocations_source_snapshot_v2($1) AS value',[owner.business])).rows[0].value;
+    assert.deepEqual(supplierSource.revisions[0].receipt,billSaved.receipt);assert.deepEqual(allocationSource.revisions[0].receipt,allocationSaved.receipt);
+    const parents={worksheetCutovers:new Map([[worksheetSaved.receipt.worksheetRevisionId,'2026-06-01']])};assert.equal(Object.keys(buildOpeningPayablesSourceFiles(supplierSource,owner.business,parents)).length,9);assert.equal(Object.keys(buildOpeningAllocationsSourceFiles(allocationSource,owner.business,{...parents,payablesSchedules:new Map([[JSON.stringify([worksheetSaved.receipt.worksheetRevisionId,'1']),billSaved.receipt.evidence]])})).length,9);
+   }finally{await restored.query('ROLLBACK');await restored.query('RESET ROLE');}
+  },{schemaVersion:141});assert.equal(recovery.independentCluster,true);assert.equal(recovery.proposals.length,9);assert.equal(recovery.completeBackup,false);
+  const observations={profile:'crest.opening-supplier-candidate-observation.v1',registered:false,sourceSchemaVersion:141,migrationRegistrySha256:candidate.registrySha256,migrationSha256:candidate.sha256,routineCount:captured.value.routines.routineCount,routineSha256:captured.value.routines.sha256,schemaObjectCount:captured.value.schema.objectCount,schemaSha256:captured.value.schema.sha256,sourceCount:captured.value.tables.length,supplierTableCount:4,completePortableExport:false,completeBackup:false,postingAuthorized:false};
+  const directory=process.env.CREST_TEST_EVIDENCE_DIRECTORY??'.local/review';await mkdir(directory,{recursive:true});await writeFile(join(directory,'supplier141-observations.json'),JSON.stringify(observations,null,2)+'\n');
+  await writeFile(join(directory,'supplier141-source-recovery.json'),JSON.stringify({sourceCount:manifest.sourceCount,fileCount:Object.keys(files).length,declaredReferenceCount:references.length,recovery,completeBackup:false,registered:false},null,2)+'\n');
+  assert((await readFile(new URL('../../supabase/migration-checksums.json',import.meta.url))).equals(root));assert.equal(hash(await readFile(new URL('../support/registered140-migration-checksums.json',import.meta.url))),openingSupplier141PriorRegistry);
+ }finally{if(reader)await reader.end();if(login)await sandbox.admin.query('DROP ROLE '+login);await sandbox.close();}
+});

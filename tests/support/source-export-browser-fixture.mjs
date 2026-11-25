@@ -254,7 +254,7 @@ export async function sourceExportBrowserFixture({product=false,workspace=false,
    }
   }
   if(openingFunds){const candidate=await openingFunds139Candidate(sandbox);assert.equal((await sandbox.apply(target,candidate.directory)).history.length,139);}
-  if(openingPayables){assert.equal((await sandbox.apply(target)).history.length,140);for(const name of['20270207180000_opening_payables_sources.sql','20270208180000_opening_payables_export_history.sql'])await sandbox.applyHeldSql(client,await readFile(new URL('../../planning/proposals/'+name,import.meta.url),'utf8'));}
+  if(openingPayables){assert.equal((await sandbox.apply(target)).history.length,140);for(const name of['20270207180000_opening_payables_sources.sql','20270208180000_opening_payables_export_history.sql','20270209180000_opening_journal_payables_context.sql','20270210180000_opening_payables_allocation_review.sql','20270211180000_opening_allocation_export_history.sql','20270212180000_opening_allocation_context.sql','20270213180000_opening_allocation_private_response.sql','20270214180000_opening_supplier_source_history.sql'])await sandbox.applyHeldSql(client,await readFile(new URL('../../planning/proposals/'+name,import.meta.url),'utf8'));}
   const compiled=await buildSourceExportBrowserFixture(sandbox.workspace),runtime=await import(pathToFileURL(compiled.server).href);
   assert(typeof googleCalendar==='boolean'&&(!googleCalendar||product&&workspace&&!paidInvoiceCredits));
   assert(typeof googleCalendarAutomatic==='boolean'&&(!googleCalendarAutomatic||googleCalendar&&scheduling));

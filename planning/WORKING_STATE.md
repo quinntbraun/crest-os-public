@@ -1,5 +1,72 @@
 # Current Crest OS delivery
 
+## Latest launch checkpoint, 2026-11-25
+
+Supplier candidate141 now has pinned196-source capture/200-file neutral export
+and an actual separate-cluster encrypted database rehearsal. Full native1/1
+passes on fa39b26 (.local/opening-supplier141-source-recovery-stable), source
+stable/owned cleanup: exact large cents,11 new-source FK checks, old-profile and
+routine-drift refusals, wrong-key/corruption rejection, restored rows/closed roles/
+strict schema and regenerated private evidence packages. Required in CI. The
+initial strict restore caught redundant BETWEEN/AND grouping in two held vendor
+constraints; explicitly equivalent flat predicates fixed the source, with no
+weakened comparison. Canonical candidate package da065a95, registry9b3c6009,
+1320 routines/15855 objects (schema81758252). Frozen140 registry/coverage/compatibility
+are independently preserved; root140 stays unchanged. See OPENING_SUPPLIER141.md.
+
+Public107 is terminal: main45642581255 FAILED one production-composition unit;
+all18 browser groups, database/auth/provider, commercial45642581169 and
+expense45642581411 passed. The composition probe now explicitly requires held
+supplier production refusal and constructs only the remaining supported flags;
+17 focused production cases pass. No full107 acceptance. Newer local source is
+not yet published; no install or real-data activation. Owner174-source export,
+canonical/coordinated recovery, registered adoption and all remaining launch
+gates below remain required.
+
+Latest increment e0c4f4f closes explicit source reuse across worksheet revisions.
+Held20270214180000 adds authenticated bounded history and exact-revision reads;
+private owner pickers let the user inspect/review a prior bill and original
+allocation sources while keeping source identities locked and requiring new
+amount/date/outside-use review. No automatic carry-forward or approval.14 focused
+history/client checks and types/lint pass. Native1/1 plus genuine MFA/HTTP/Chrome
+carry-forward1/1 and actual Next/server build pass on that exact source, unchanged
+source/owned cleanup. Compiled identity96252201;390/1440 overflow/Axe/minimum220px
+phone field checks pass and screenshot inspected. Saving worksheet2 retains one
+bill origin and two payment/credit origins, with unchanged financial/period rows.
+See OPENING_PAYABLES_EVIDENCE.md for exact paths and limitations.
+
+Supplier reconciliation now has held audited storage, exact historical parent
+receipts, four private test-only HTTP routes and an owner review screen. Original
+payment/credit capacity is checked across bills in SQL and TypeScript; source
+identities stay pinned, stale reviews refuse in opening context, and original
+save recovery preserves its historical supplier revision. Two review tables,
+original operations/audits and parent evidence have private9-file neutral source
+reconstruction. Historical/full/external closure, approval and posting remain
+false. Root140 remains registered; supplier/allocation SQL is held and production
+rejects its runtime feature. No installation or real-data activation.
+
+Latest UI source d41c08c passed actual Next/server build (compiled identity
+4a44b26b) and genuine local MFA/HTTP/Chrome save/replay/retirement/old-parent
+recovery at390/1440 with Axe/overflow and minimum220px phone field width checks.
+Source stable/owned cleanup; screenshots inspected. Prior native storage,
+source reconstruction and stale-context acceptance also pass with exact scope in
+OPENING_PAYABLES_EVIDENCE.md.38 focused existing AP/client/allocation cases plus
+the added large200-bill response regression pass; types/affected lint pass.
+No physical iPhone or current release image acceptance is claimed.
+
+Public draft PR178 remains107 headcaefb6e40376e53c477e8295fc55bf86f43f48c6,
+treef15b2488781583e58bcd891162642c41687eb9ac (local1fe5bb2). Expense45642581411
+and commercial45642581169 have succeeded; main45642581255 is still live at the
+last actual observation. Its database foundation passed; some browser groups
+remain running. Preserve public head/title/body until all terminal. Newer local
+supplier reconciliation is not yet on that public head. No full-CI green claim.
+
+Next: register the coherent supplier/allocation source/catalog/recovery increment, finish remaining
+opening source classes and immutable approval/atomic P27 posting/corrections.
+Production access/provider setup, off-laptop restore/key custody/reopening,
+owner financial facts and physical phone/install checks remain. Actual Crest use
+NOT READY; V1 coding roughly80% low confidence; context sufficient; spend$0.
+
 ## Current launch checkpoint, 2026-11-25
 
 New held opening supplier AP evidence uses the existing audited schedule pattern:

@@ -2,6 +2,13 @@
   min-width: 0;
 }
 
+.openingChoice { display:flex; align-items:flex-start; gap:.75rem; min-height:3rem; padding-block:.5rem; cursor:pointer; }
+.openingChoice input[type="checkbox"] { flex:0 0 1.25rem; width:1.25rem; height:1.25rem; margin:.15rem 0 0; accent-color:var(--black); }
+.openingChoice span { min-width:0; overflow-wrap:anywhere; }
+.allocationReview .allocationDetails { padding:0; border:0; background:transparent; }
+.allocationReview .allocationForm > fieldset { padding:0; border:0; }
+.allocationReview .allocationForm > fieldset > fieldset { padding:1rem 0; border:0; border-top:1px solid var(--line); border-radius:0; }
+
 .notice:not(:empty) {
   padding: .75rem 1rem;
   border: 1px solid var(--line);

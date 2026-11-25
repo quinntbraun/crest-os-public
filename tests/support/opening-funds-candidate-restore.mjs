@@ -3,17 +3,19 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {rememberRecoverySchema,recoverySchemaDifference} from './recovery-schema-diagnostic.mjs';
-import {readFile,realpath,rm} from 'node:fs/promises';
+import {readFile,realpath,rm,mkdir,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {connect,inventory,keyPair,normalizedSchema,postgresTool,privateWorkspace,recoveryCluster,roleDefinitions,run} from './recovery-drill.mjs';
+import {openingSupplier141Parts} from './opening-supplier141-candidate.mjs';
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 export async function exerciseOpeningFundsCandidateRestore(source,url,inspect,{schemaVersion=138}={}){
- assert([138,139,140].includes(schemaVersion));
+ assert([138,139,140,141].includes(schemaVersion));
  const root=fileURLToPath(new URL('../../',import.meta.url));
  const workspace=await privateWorkspace();let cluster,restored;const age=join(root,'.local/tools/recovery/age/age'+(process.platform==='win32'?'.exe':''));
  try{
-  const proposals=[];for(const name of ['20270201180000_opening_journal_context.sql','20270202180000_opening_funds_sources.sql','20270203180000_opening_journal_funds_context.sql','20270204180000_opening_funds_export_history.sql','20270205180000_opening_funds_recovery_read.sql']){const bytes=await readFile(join(root,'planning/proposals',name));proposals.push({name,bytes:bytes.length,sha256:hash(bytes)});}
+  const proposalPaths=schemaVersion===141?openingSupplier141Parts:['20270201180000_opening_journal_context.sql','20270202180000_opening_funds_sources.sql','20270203180000_opening_journal_funds_context.sql','20270204180000_opening_funds_export_history.sql','20270205180000_opening_funds_recovery_read.sql'].map(name=>'planning/proposals/'+name);
+  const proposals=[];for(const path of proposalPaths){assert.match(path,/^planning\/proposals\/[0-9]{14}_[a-z0-9_]+\.sql$/);const bytes=await readFile(join(root,path));proposals.push({name:path.slice('planning/proposals/'.length),bytes:bytes.length,sha256:hash(bytes)});}
   const keys=await keyPair(workspace),wrong=await keyPair(workspace);let dump,rows,schema,roles,order,policies;
   await source.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');try{
    await source.query("SET LOCAL timezone='UTC';SET LOCAL datestyle='ISO, YMD';SET LOCAL bytea_output='hex'");
@@ -31,9 +33,16 @@ export async function exerciseOpeningFundsCandidateRestore(source,url,inspect,{s
   for(const name of order){assert.match(name,/^crest_[a-z_]+$/);const role=roles.find(row=>row.rolname===name);assert(role);await restored.query('CREATE ROLE "'+name+'" NOLOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION '+(role.rolbypassrls?'BYPASSRLS':'NOBYPASSRLS'));}
   await postgresTool('pg_restore',target,['--exit-on-error','--single-transaction'],plaintext);
   assert.deepEqual(await inventory(restored),rows);assert.deepEqual(await roleDefinitions(restored,true),roles);
-  const restoredSchema=normalizedSchema(await postgresTool('pg_dump',target,['--schema-only']),policies);assert.equal(hash(restoredSchema),hash(schema),JSON.stringify(recoverySchemaDifference(hash(schema),restoredSchema,{schemaVersion})));
+  const restoredSchema=normalizedSchema(await postgresTool('pg_dump',target,['--schema-only']),policies);
+  if(schemaVersion===141&&hash(restoredSchema)!==hash(schema)&&process.env.CREST_TEST_EVIDENCE_DIRECTORY){
+   // Synthetic fixture table DDL only; retained locally, never emitted to TAP.
+   const tables=sql=>new Map(sql.split(/(?=^-- Name: )/m).filter(block=>/^-- Name: [a-z_]+; Type: TABLE; Schema: crest;/m.test(block)).map(block=>[block.split('\n')[0],block]));
+   const before=tables(schema),after=tables(restoredSchema),differences=[...before].filter(([name,sql])=>after.get(name)!==sql).map(([name,sql])=>({name,before:sql,after:after.get(name)}));
+   assert(differences.length<=4&&JSON.stringify(differences).length<=131072);const directory=join(process.env.CREST_TEST_EVIDENCE_DIRECTORY,'private-diagnostics');await mkdir(directory,{recursive:true});await writeFile(join(directory,'table-definition-differences.json'),JSON.stringify(differences,null,2)+'\n');
+  }
+  assert.equal(hash(restoredSchema),hash(schema),JSON.stringify(recoverySchemaDifference(hash(schema),restoredSchema,{schemaVersion})));
   assert.equal((await restored.query('SELECT count(*)::int AS n FROM supabase_migrations.schema_migrations')).rows[0].n,schemaVersion);
   await inspect(restored);
-  return{profile:'crest.held-opening-funds-restore-rehearsal.v1',proposals,tableCount:rows.length,schemaSha256:hash(schema),dumpSha256:hash(dump),encryptedDumpBytes:cipher.length,rolesRecreated:roles.length,independentCluster:true,registered:false,completeBackup:false,productionReopenAccepted:false};
+  return{profile:schemaVersion===141?'crest.held-opening-supplier-restore-rehearsal.v1':'crest.held-opening-funds-restore-rehearsal.v1',proposals,tableCount:rows.length,schemaSha256:hash(schema),dumpSha256:hash(dump),encryptedDumpBytes:cipher.length,rolesRecreated:roles.length,independentCluster:true,registered:false,completeBackup:false,productionReopenAccepted:false};
  }finally{if(restored)await restored.end();if(cluster)await cluster.close();assert.equal(await realpath(workspace),workspace);await rm(workspace,{recursive:true,force:true,maxRetries:10,retryDelay:100});}
 }

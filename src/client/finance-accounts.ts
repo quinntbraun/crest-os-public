@@ -1,6 +1,11 @@
 import {parseFinanceAccountHistoryEvidence,parseFinanceTaxHistoryEvidence,parseMoneyChannelHistoryEvidence} from '../bookkeeping/finance-history-recording';
 import type {FinanceHistoryPage} from '../bookkeeping/finance-history-recording';
 import {authentication} from './authentication';
+import {parseOpeningSourceCursor,parseOpeningSourceHistory,parseOpeningPayablesHistorical,parseOpeningAllocationsHistorical} from '../bookkeeping/opening-source-history-contract';
+import type {OpeningSourceCursor,OpeningSourceKind} from '../bookkeeping/opening-source-history-contract';
+import {parseOpeningAllocationsStored,parseOpeningAllocationsOperation,parseOpeningAllocationsSave} from '../bookkeeping/opening-allocations-schedule-contract';
+import type {OpeningPayablesAllocationInput} from '../bookkeeping/opening-payables-allocation';
+import type {OpeningPayablesReceipt} from '../bookkeeping/opening-payables-schedule-contract';
 import {customerDate,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract';
 import {
  parseFinanceAccountHistory,parseFinanceAccountPage,parseFinanceAccountReceipt,
@@ -157,7 +162,7 @@ async function post(route:string,body:object,signal:AbortSignal,binding?:string,
   for(;;){
    const part=await reader.read();
    if(part.done)break;
-   bytes+=part.value.byteLength;check(bytes<=(route==='trial-balance'||route==='recorded-income-statement'||route==='statement-match-review'||route.startsWith('opening-worksheet-funds-')?2097152:route==='invoice-preparation'||route==='invoice-draft-read'||route==='invoice-issue-tax-review'
+   bytes+=part.value.byteLength;check(bytes<=(route.startsWith('opening-worksheet-allocations-')?4325376:route.startsWith('opening-worksheet-payables-')?2162688:route==='trial-balance'||route==='recorded-income-statement'||route==='statement-match-review'||route.startsWith('opening-worksheet-funds-')?2097152:route==='invoice-preparation'||route==='invoice-draft-read'||route==='invoice-issue-tax-review'
     ||route==='invoice-issue-prepare'||route==='invoice-issue-read'||route==='receipt-options'||route==='expense-post-options'
     ||route==='fund-application-options'||route==='held-tip-options'||route==='collection-failure-options'||route==='payment-recredit-options'||route==='grouped-payment-recredit-options'||route==='refund-transfer-options'?1048576:196608)&&!bounded.aborted);
    text+=decoder.decode(part.value,{stream:true});
@@ -410,6 +415,16 @@ export const financeAccounts={
   check(status===200||status===409);
   return parseOpeningFundsOperation(value,context.businessId,reference.operationId);
  },
+ async readOpeningSourceHistory(context:FinanceAccountContext,kind:OpeningSourceKind,cursor:OpeningSourceCursor|null,signal:AbortSignal){
+  check(context.openingPayables&&context.recoveryEpoch&&(kind==='payables'||kind==='allocations'));parseOpeningSourceCursor(cursor);
+  const {status,value}=await post('opening-worksheet-'+kind+'-history',{reviewEpoch:context.recoveryEpoch,cursor},signal,context.binding);check(status===200);return parseOpeningSourceHistory(value,context.businessId,kind);
+ },
+ async readOpeningPayablesHistorical(context:FinanceAccountContext,revisionId:string,signal:AbortSignal){
+  check(context.openingPayables&&context.recoveryEpoch&&customerUuid(revisionId));const {status,value}=await post('opening-worksheet-payables-revision',{reviewEpoch:context.recoveryEpoch,revisionId},signal,context.binding);check(status===200);return parseOpeningPayablesHistorical(value,context.businessId,revisionId);
+ },
+ async readOpeningAllocationsHistorical(context:FinanceAccountContext,revisionId:string,signal:AbortSignal){
+  check(context.openingPayables&&context.recoveryEpoch&&customerUuid(revisionId));const {status,value}=await post('opening-worksheet-allocations-revision',{reviewEpoch:context.recoveryEpoch,revisionId},signal,context.binding);check(status===200);return parseOpeningAllocationsHistorical(value,context.businessId,revisionId);
+ },
  async readOpeningPayablesSchedule(context:FinanceAccountContext,worksheetRevision:string,worksheetRevisionId:string,signal:AbortSignal){
   check(context.openingPayables&&context.recoveryEpoch&&customerVersion(worksheetRevision)&&customerUuid(worksheetRevisionId));
   const {status,value}=await post('opening-worksheet-payables-read',{reviewEpoch:context.recoveryEpoch,worksheetRevision},signal,context.binding);
@@ -439,6 +454,28 @@ export const financeAccounts={
    :await post('opening-worksheet-payables-retire',{...request,reason},signal,context.binding);
   check(status===200||status===409);
   return parseOpeningPayablesOperation(value,context.businessId,reference.operationId);
+ },
+ async readOpeningAllocationsSchedule(context:FinanceAccountContext,worksheetRevision:string,worksheetRevisionId:string,signal:AbortSignal){
+  check(context.openingPayables&&context.recoveryEpoch&&customerVersion(worksheetRevision)&&customerUuid(worksheetRevisionId));
+  const {status,value}=await post('opening-worksheet-allocations-read',{reviewEpoch:context.recoveryEpoch,worksheetRevision},signal,context.binding);
+  check(status===200);const saved=parseOpeningAllocationsStored(value,context.businessId);check(saved.worksheetRevisionId===worksheetRevisionId);return saved;
+ },
+ async saveOpeningAllocationsSchedule(context:FinanceAccountContext,reference:OpeningReference,parent:OpeningPayablesReceipt,
+  input:{worksheetRevision:string;payablesRevision:string;expectedRevision:string;input:OpeningPayablesAllocationInput},signal:AbortSignal){
+  check(context.openingPayables&&context.recoveryEpoch===reference.recoveryEpoch&&parent.businessId===context.businessId);
+  parseOpeningReference(reference);const draft=parseOpeningAllocationsSave(input,parent);
+  const {status,value}=await post('opening-worksheet-allocations-save',{reference,worksheetRevisionId:parent.worksheetRevisionId,cutoverOn:parent.evidence.cutoverOn,draft},signal,context.binding);
+  if(status===409&&exact(value,['error'])&&typeof value.error==='string'){
+   if(['OPENING_WORKSHEET_REVISION_CONFLICT','OPENING_PAYABLES_REVISION_CONFLICT','OPENING_ALLOCATIONS_REVISION_CONFLICT'].includes(value.error))return {state:'revision_conflict'} as const;
+   if(value.error.startsWith('OPENING_ALLOCATIONS_')||value.error==='OPENING_PAYABLES_ALLOCATION_REVIEW_REQUIRED')return {state:'invalid'} as const;
+  }
+  check(status===200||status===409);const parsed=parseOpeningAllocationsOperation(value,context.businessId,reference.operationId);
+  if(parsed.state==='committed')check(parsed.receipt.worksheetRevisionId===parent.worksheetRevisionId&&parsed.receipt.payablesRevision===parent.revision&&parsed.receipt.revision===String(BigInt(draft.expectedRevision)+1n));return parsed;
+ },
+ async resolveOpeningAllocationsSchedule(context:FinanceAccountContext,reference:OpeningReference,reason:string|null,signal:AbortSignal){
+  check(context.openingPayables&&context.recoveryEpoch&&(reason===null||financeAccountReviewReason(reason)));parseOpeningReference(reference);
+  const request={reference,reviewEpoch:context.recoveryEpoch};const {status,value}=reason===null?await post('opening-worksheet-allocations-lookup',request,signal,context.binding):await post('opening-worksheet-allocations-retire',{...request,reason},signal,context.binding);
+  check(status===200||status===409);return parseOpeningAllocationsOperation(value,context.businessId,reference.operationId);
  },
  async readOpeningArSchedule(context:FinanceAccountContext,worksheetRevision:string,worksheetRevisionId:string,signal:AbortSignal){
   check(context.openingArPreview&&context.recoveryEpoch&&customerVersion(worksheetRevision)&&customerUuid(worksheetRevisionId));

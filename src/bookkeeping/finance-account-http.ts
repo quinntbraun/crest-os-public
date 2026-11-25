@@ -1,5 +1,9 @@
 import {parseFinanceAccountHistoryEvidence,parseFinanceTaxHistoryEvidence,parseMoneyChannelHistoryEvidence} from './finance-history-recording.ts';
 import 'server-only';
+import {parseOpeningSourceCursor,parseOpeningSourceHistory,parseOpeningPayablesHistorical,parseOpeningAllocationsHistorical} from './opening-source-history-contract.ts';
+import {parseOpeningAllocationsStored,parseOpeningAllocationsOperation,parseOpeningAllocationsSave} from './opening-allocations-schedule-contract.ts';
+import {prepareOpeningPayablesAllocations} from './opening-payables-allocation.ts';
+import {openingPayablesDraftFromEvidence} from './opening-payables-schedule-contract.ts';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {customerDate,customerUuid,customerVersion,exactCustomerObject as exact} from '../customer/customer-contract.ts';
@@ -166,6 +170,14 @@ const fields={context:[],list:['afterCode','includeArchived'],history:['accountI
  'opening-worksheet-payables-save':['reference','worksheetRevisionId','cutoverOn','draft'],
  'opening-worksheet-payables-lookup':['reference','reviewEpoch'],
  'opening-worksheet-payables-retire':['reference','reviewEpoch','reason'],
+ 'opening-worksheet-allocations-read':['reviewEpoch','worksheetRevision'],
+ 'opening-worksheet-allocations-save':['reference','worksheetRevisionId','cutoverOn','draft'],
+ 'opening-worksheet-allocations-lookup':['reference','reviewEpoch'],
+ 'opening-worksheet-allocations-retire':['reference','reviewEpoch','reason'],
+ 'opening-worksheet-payables-history':['reviewEpoch','cursor'],
+ 'opening-worksheet-payables-revision':['reviewEpoch','revisionId'],
+ 'opening-worksheet-allocations-history':['reviewEpoch','cursor'],
+ 'opening-worksheet-allocations-revision':['reviewEpoch','revisionId'],
  'opening-worksheet-ar-preview':['reviewEpoch','preview'],
  'opening-worksheet-ar-read':['reviewEpoch','worksheetRevision'],
  'opening-worksheet-ar-save':['reference','worksheetRevisionId','draft'],
@@ -340,6 +352,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    if(route.startsWith('opening-worksheet-ar-')&&!openingArPreview)return financeAccountFailure(404);
    if(route.startsWith('opening-worksheet-funds-')&&!openingFunds)return financeAccountFailure(404);
    if(route.startsWith('opening-worksheet-payables-')&&!openingPayables)return financeAccountFailure(404);
+   if(route.startsWith('opening-worksheet-allocations-')&&!openingPayables)return financeAccountFailure(404);
    if(route.startsWith('receipt-')&&!directReceipts)return financeAccountFailure(404);
    if(route.startsWith('receipt-tip-')&&!directReceiptTips)return financeAccountFailure(404);
    if(route.startsWith('payment-correction-')&&!paymentCorrections)return financeAccountFailure(404);
@@ -363,7 +376,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
    protect.requireOrigin(request);
    const bounded=new Request(request,{signal}),cookie=readBrowserCookies(bounded.headers).session;
    check(cookie);
-   const input=route==='opening-worksheet-payables-save'?await readOpeningEvidenceJsonBody(bounded,fields[route]):await readNestedJsonBody(bounded,fields[route],route==='opening-worksheet-funds-save'?131072:route.startsWith('invoice-issue-')?131072:route==='supplier-bill-draft-save'||route==='statement-match-draft-save'||route==='statement-staging-save'||route==='opening-worksheet-save'||route==='opening-worksheet-ar-preview'||route==='opening-worksheet-ar-save'||route==='receipt-record'||route==='receipt-tip-record'||route==='expense-post-submit'||route==='collection-failure-submit'||route==='refund-transfer-submit'||route==='refund-transfer-fee-submit'||route==='grouped-payment-recredit-submit'?49152:8192,
+   const input=(route==='opening-worksheet-payables-save'||route==='opening-worksheet-allocations-save')?await readOpeningEvidenceJsonBody(bounded,fields[route]):await readNestedJsonBody(bounded,fields[route],route==='opening-worksheet-funds-save'?131072:route.startsWith('invoice-issue-')?131072:route==='supplier-bill-draft-save'||route==='statement-match-draft-save'||route==='statement-staging-save'||route==='opening-worksheet-save'||route==='opening-worksheet-ar-preview'||route==='opening-worksheet-ar-save'||route==='receipt-record'||route==='receipt-tip-record'||route==='expense-post-submit'||route==='collection-failure-submit'||route==='refund-transfer-submit'||route==='refund-transfer-fee-submit'||route==='grouped-payment-recredit-submit'?49152:8192,
     excessReceipts&&route==='receipt-record'?'fundsMappingId':undefined);
    const sessionId=await csrf(bounded,cookie,signal);
    const binding=createHash('sha256').update('crest.finance.account.edit.v1\0').update(businessId).update('\0')
@@ -647,12 +660,61 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     },signal);
     return privateJsonResponse(result.value,result.state==='conflict'?409:200);
    }
+   if(route==='opening-worksheet-payables-history'||route==='opening-worksheet-allocations-history'){
+    check(customerUuid(input.reviewEpoch));const cursor=parseOpeningSourceCursor(input.cursor),kind=route==='opening-worksheet-payables-history'?'payables':'allocations';
+    const value=await database('SELECT crest_commands.read_fictional_opening_'+kind+'_history('+authority+',$9::uuid,$10::timestamptz,$11::uuid,20) AS result',[...args,input.reviewEpoch,cursor?.recordedAt??null,cursor?.id??null],signal);
+    parseOpeningSourceHistory(value,businessId,kind);return privateJsonResponse(value as object);
+   }
+   if(route==='opening-worksheet-payables-revision'||route==='opening-worksheet-allocations-revision'){
+    check(customerUuid(input.reviewEpoch)&&customerUuid(input.revisionId));const kind=route==='opening-worksheet-payables-revision'?'payables':'allocations';
+    const value=await database('SELECT crest_commands.read_fictional_opening_'+kind+'_revision('+authority+',$9::uuid,$10::uuid) AS result',[...args,input.reviewEpoch,input.revisionId],signal);
+    if(kind==='payables')parseOpeningPayablesHistorical(value,businessId,input.revisionId);else parseOpeningAllocationsHistorical(value,businessId,input.revisionId);return privateJsonResponse(value as object);
+   }
    if(route==='opening-worksheet-payables-read'){
     check(customerUuid(input.reviewEpoch)&&customerVersion(input.worksheetRevision));
     const value=await database('SELECT crest_commands.read_fictional_opening_payables_schedule('+authority+',$9::uuid,$10::bigint) AS result',
      [...args,input.reviewEpoch,input.worksheetRevision],signal);
     parseOpeningPayablesStored(value,businessId);
     return privateJsonResponse(value as object);
+   }
+   if(route==='opening-worksheet-allocations-read'){
+    check(customerUuid(input.reviewEpoch)&&customerVersion(input.worksheetRevision));
+    const value=await database('SELECT crest_commands.read_fictional_opening_allocations_schedule_v2('+authority+',$9::uuid,$10::bigint) AS result',[...args,input.reviewEpoch,input.worksheetRevision],signal);
+    parseOpeningAllocationsStored(value,businessId);return privateJsonResponse(value as object);
+   }
+   if(route==='opening-worksheet-allocations-save'||route==='opening-worksheet-allocations-lookup'||route==='opening-worksheet-allocations-retire'){
+    const reference=parseOpeningReference(input.reference);
+    const parseResult=(value:unknown)=>{try{return parseOpeningAllocationsOperation(value,businessId,reference.operationId);}catch{throw Error('FINANCE_ACCOUNT_RESPONSE_INVALID');}};
+    if(route==='opening-worksheet-allocations-lookup'){
+     check(customerUuid(input.reviewEpoch));
+     const value=await database('SELECT crest_commands.lookup_fictional_opening_allocations_save_v2('+authority+',$9::uuid,$10::uuid,$11::uuid) AS result',[...args,input.reviewEpoch,reference.operationId,reference.recoveryEpoch],signal);
+     return privateJsonResponse(value as object,parseResult(value).state==='conflict'?409:200);
+    }
+    if(route==='opening-worksheet-allocations-retire'){
+     check(customerUuid(input.reviewEpoch)&&financeAccountReviewReason(input.reason));
+     const result=await database.commandTransaction(async query=>{
+      submitted=true;
+      const value=await query('SELECT crest_commands.retire_fictional_opening_allocations_save_v2('+authority+',$9::uuid,$10::uuid,$11::uuid,$12::text) AS result',[...args,input.reviewEpoch,reference.operationId,reference.recoveryEpoch,input.reason]);
+      const {state}=parseResult(value);check(state==='conflict'||state==='retired'||state==='committed');return {value:value as object,state};
+     },signal);return privateJsonResponse(result.value,result.state==='conflict'?409:200);
+    }
+    check(customerDate(input.cutoverOn)&&customerUuid(input.worksheetRevisionId)&&exact(input.draft,['worksheetRevision','payablesRevision','expectedRevision','input'])&&customerVersion(input.draft.worksheetRevision));
+    const draftInput=input.draft;
+    const result=await database.commandTransaction(async query=>{
+     const originalValue=await query('SELECT crest_commands.lookup_fictional_opening_allocations_save_v2('+authority+',$9::uuid,$10::uuid,$11::uuid) AS result',[...args,reference.recoveryEpoch,reference.operationId,reference.recoveryEpoch]);
+     const original=parseResult(originalValue);
+     if(original.state==='retired'||original.state==='conflict')return {value:originalValue as object,state:original.state};
+     const parent=original.state==='committed'?original.supplierSchedule:parseOpeningPayablesStored(await query('SELECT crest_commands.read_fictional_opening_payables_schedule('+authority+',$9::uuid,$10::bigint) AS result',[...args,reference.recoveryEpoch,draftInput.worksheetRevision]),businessId).schedule;
+     if(!parent||parent.revision!==draftInput.payablesRevision)throw Error('OPENING_PAYABLES_REVISION_CONFLICT');
+     check(parent.worksheetRevisionId===input.worksheetRevisionId&&parent.evidence.cutoverOn===input.cutoverOn);
+     const {worksheetRevision,payablesRevision,expectedRevision,input:draft}=parseOpeningAllocationsSave(draftInput,parent);
+     const expected=prepareOpeningPayablesAllocations(openingPayablesDraftFromEvidence(parent.evidence),parent.evidence.cutoverOn,draft);
+     submitted=true;
+     const value=await query('SELECT crest_commands.save_fictional_opening_allocations_schedule_v2('+authority+',$9::uuid,$10::uuid,$11::bigint,$12::bigint,$13::bigint,$14::jsonb,$15::text) AS result',[...args,reference.recoveryEpoch,reference.operationId,worksheetRevision,payablesRevision,expectedRevision,JSON.stringify(draft.roots),draft.reason]);
+     const parsed=parseResult(value);
+     check(parsed.state==='conflict'||parsed.state==='retired'||parsed.state==='committed'&&parsed.receipt.worksheetRevisionId===input.worksheetRevisionId&&parsed.receipt.payablesRevision===payablesRevision&&parsed.receipt.recordedBy===verified.actorId&&parsed.receipt.revision===String(BigInt(expectedRevision)+1n)&&isDeepStrictEqual(parsed.receipt.evidence,expected));
+     return {value:value as object,state:parsed.state};
+    },signal);return privateJsonResponse(result.value,result.state==='conflict'?409:200);
    }
    if(route==='opening-worksheet-payables-save'||route==='opening-worksheet-payables-lookup'||route==='opening-worksheet-payables-retire'){
     const reference=parseOpeningReference(input.reference);
@@ -1922,6 +1984,7 @@ export function createFinanceAccountHttp(config:Config,connectionString:string,
     'OPENING_RECEIVABLES_EVIDENCE_REQUIRED','OPENING_RECEIVABLES_CUSTOMER_REQUIRED',
     'OPENING_AR_EVIDENCE_REQUIRED','OPENING_AR_DATE_REQUIRED','OPENING_AR_AMOUNT_REQUIRED','OPENING_AR_DUPLICATE_EVIDENCE',
     'OPENING_AR_BALANCE_REQUIRED','OPENING_AR_REVISION_CONFLICT',
+    'OPENING_ALLOCATIONS_EVIDENCE_REQUIRED','OPENING_ALLOCATIONS_REVISION_CONFLICT','OPENING_ALLOCATIONS_ORIGIN_IDENTITY_CONFLICT','OPENING_PAYABLES_ALLOCATION_REVIEW_REQUIRED',
     'OPENING_PAYABLES_EVIDENCE_REQUIRED','OPENING_PAYABLES_DATE_REQUIRED','OPENING_PAYABLES_AMOUNT_REQUIRED','OPENING_PAYABLES_DUPLICATE_ORIGIN','OPENING_PAYABLES_REVISION_CONFLICT','OPENING_PAYABLES_ORIGIN_IDENTITY_CONFLICT',
     'OPENING_FUNDS_EVIDENCE_REQUIRED','OPENING_FUNDS_DATE_REQUIRED','OPENING_FUNDS_AMOUNT_REQUIRED',
     'OPENING_FUNDS_DUPLICATE_ORIGIN','OPENING_FUNDS_DUPLICATE_REDUCTION','OPENING_FUNDS_DUPLICATE_ITEM',
