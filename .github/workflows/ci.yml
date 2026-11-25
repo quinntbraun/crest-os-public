@@ -135,7 +135,10 @@ jobs:
           npm run test:recovery-db
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-capture-controller.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-capture-command.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-capture-status.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-journal-context.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-scheduled-capture.test.mjs
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/recovery-alert-dispatch.test.mjs
           node --conditions=react-server --test --test-concurrency=1 tests/integration/operator-source-export.test.mjs
       - name: Prove proposed durable export requests and fenced lease attempts
         run: node --conditions=react-server --test --test-concurrency=1 tests/integration/source-export-jobs.test.mjs
@@ -336,9 +339,11 @@ jobs:
     # obsolete runs cancel so they cannot block the newest source indefinitely.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
-    # Keep the existing75-minute deadline. The unchanged complete browser
-    # command runs in required isolated groups, not in this serial lifetime.
-    timeout-minutes: 75
+    # Full archive recovery and isolated recovery-tool rehearsal now precede
+    # document-worker journeys. Run646 reached those journeys at minute73 and
+    # was cancelled at the former75-minute job deadline. Retain every required
+    # check and individual step deadline within this bounded total lifetime.
+    timeout-minutes: 120
     env:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"

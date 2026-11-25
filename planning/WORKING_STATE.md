@@ -1,6 +1,191 @@
 # Current Crest OS delivery
 
-## Current launch checkpoint, 2026-11-23
+## Current launch checkpoint, 2026-11-25
+
+Held opening customer-funds storage and private history retrieval now pass
+native1/1 on e1b1edaa142638db89ab7140870e4b6fb4e7ee93, actual disposable
+PostgreSQL138 plus unregistered migration20270202180000. Proof:
+.local/opening-funds-sources-export/result.json; source stable/owned cleanup.
+Durable origin/item/customer bindings, tenant RLS, append-only revisions,
+finance/recovery/worksheet fences, original-result replay/lookup/retirement,
+deferred audit/orphan closure, balance/refund guards and complete private
+per-domain history retrieval pass without financial/period writes. Controlled
+authority only, not genuine MFA, complete backup, CSV/neutral roundtrip, full
+opening posting or139 adoption.24 units/fulltypes previously pass; original
+native failures retained/documented in OPENING_FUNDS_EVIDENCE.md. Next domain
+portable reconstruction/restore, source-context/screen integration and full P27
+approval/posting. No local runner remains live. Older preparation-only entries
+below are earlier checkpoints. Public101c remains terminal/cancelled, not accepted.
+
+## Earlier checkpoint, 2026-11-25
+
+Public101c main45189860133 is terminal/cancelled, not LIVE or fully accepted.
+Foundation137767415799 passed steps1-43, including actual image/archive recovery,
+pinned recovery tools and custody-photo checks. Step44 supplier document worker
+was cancelled at about75minutes total job time, before its own8-minute deadline;
+later original-request/expense worker checks were skipped. See
+RELEASE_101C_DEADLINE.md for exact timing and the bounded120-minute total-job
+correction. Individual deadlines/commands/required gates remain unchanged. No
+retry, merge/install, production activation or new exact-source acceptance.
+
+New customer-funds normalization retains receipt/reduction/customer-obligation
+origins, exact remaining balances and unknown versus evidenced refund ceilings.
+It is evidence preparation only, without storage, receipt, posting or refund
+authority.24 focused cases, full typechecking and targeted lint pass. Next append-only tenant-bound source storage,
+retrieval, durable identities, audit/replay and source export/recovery before
+full opening approval/posting. Current registered schema138 stays unchanged.
+Earlier live-status entries below are historical observations, not current state.
+Real use remains not ready; rough80% coding low confidence; context sufficient;
+$0 new spending. Owner account-access answer remains pending.
+
+## Prior launch checkpoint, 2026-11-23
+
+Held opening context passes expanded native1/1 on2de0100, actual PostgreSQL138
+and controlled provider authority, source unchanged/owned cleanup awaited:
+.local/opening-journal-context-bound/result.json. Saved worksheet/account/mapping
+facts compose into the nonposting planner; inactive zero inventory, cutover-date
+mapping versus later disabled mapping, changed account versions and new bank
+inventory are exercised. Ordinary-role/business/epoch/revision/timezone/isolation
+denials, shared finance fence against a competing writer and unchanged financial
+rows/138 registry pass. Earlier smaller case passes onbc90186 separately.
+Originald5edd6a RR setup failure is retained. Existing mutation authority requires
+fresh READ COMMITTED and holds business/session/recovery locks; corrected reader
+uses that contract plus a shared finance-control lock, not an RR/global snapshot.
+No original guard relaxed.33 focused units/types/targetlint pass. No139 adoption,
+approval/storage/posting/runtime route or full cutover/source-closure acceptance.
+No local runner lives after terminal26114/2465 and owned cleanup. Full typed P27
+source/approval/transaction/correction/report/export/restore remains next.
+Public101c3356835 remains fixed: all21 prerequisites and both ancillary workflows
+SUCCESS, Foundation137767415799/main45189860133 LIVE at observed step27 field/
+frozen upgrade. Whole compiled image/archive/worker acceptance still unproven.
+Owner account-access answer pending. Real use not ready; rough80% coding low
+confidence; context sufficient; $0 new spending.
+
+New held migration20270201180000 adds private opening source resolution under
+existing finance.post/fresh recovery/session authority, RR/serializable snapshot
+and shared finance-control fence. It resolves exact saved worksheet/AR revisions,
+all balance-sheet accounts including inactive entries, dated mappings and source
+boundary, refusing bank inventory/timezone drift and stale references. No table
+write, approval/posting, runtime route or139 adoption. Planner supports explicit
+inactive-zero reviews while refusing inactive nonzero legs/equity.33 focused
+cases/types/targetlint pass; native source/context/denial/concurrency fixture
+written and pending. See OPENING_JOURNAL_CONTEXT.md. Commit/freeze source before
+the actual native check. Public101c3356835 remains fixed with21 successful
+prerequisites and both ancillary successes; Foundation137767415799/main
+45189860133 LIVE at last step18 observation. Owner account question pending;
+actual Crest use not ready, rough80% coding low confidence, context sufficient,
+$0 new spend. Full P27 approval/atomic posting and complete recovery still open.
+
+New local opening-journal preparation implements P27 exact integer arithmetic,
+17 proposed source/account kind pins, explicit per-account reviews, canonical
+immutable plan hash and zero-P&L legs. Bank/customer-funds sources do not create
+duplicate cash legs; repeated whole-bank/wallet sources refuse. Unknown or absent
+reviews are never zero. Existing local-midnight worksheet precision is retained;
+intraday roster/sequence remains unsupported/in scope.29 new plus3 original
+preview cases pass32/32; full types/targetlint pass. No source authority, posting,
+complete opening, database/schema/registry change or activation. Full typed
+P27 storage/source/mapping/approval/atomic posting/correction/report/export/
+restore integration is still required. See OPENING_JOURNAL_PLAN.md; this is
+preparation, not a narrower substitute for full opening/cutover delivery.
+
+Public101c3356835 now passes ALL21 prerequisite jobs and both ancillary
+workflows. Foundation137767415799/main45189860133 remains LIVE, observed step12
+checksum-pinned HEIC decoder/encoder build. Keep publichead/title/body fixed.
+Whole release, actual application-archive identity and later document-worker
+acceptance remain unproven for101c. New host/alert/status/opening source remains
+local only. No local native runner lives. Owner account-access question pending;
+next migrated opening source/transaction binding and actual complete backup
+catalog/retention/status/delivery/backup_runs composition, full financial/security/
+reference/export and physical owner/key/off-host/phone gates. Actual Crest use
+not ready; coding roughly80% low confidence; context sufficient; $0 new spend.
+
+Capture status16/16 passes on64fa7a9:10 private record/refusal cases plus original
+6 controlled command cases, including actual command->status artifact counts.
+Tracked source stable/owned cleanup. Actual rebuilt recovery image c77f6c03 on
+00c6b47 passes build/import/tool/registry and1/1 native database encryption/
+restore plus status CLI missing-profile refusal; updated host launcher Linux
+shell syntax passes. Proofs .local/recovery-capture-status/result.json and
+.local/recovery-tool-image-{build,native}-status/result.json. No local runner
+lives after terminal96854 and both image/syntax checks. These scoped proofs do
+not establish actual provider/selected-host or complete backup acceptance.
+Public101c3356835 still matches local187e79d; newer host/alert/status source is
+local only. Last main45189860133 observation16 successful prerequisites/no
+failure,5 live groups; ancillary45189860072/45189860158 SUCCESS. Keep same
+publichead/title/body until main terminal. Next actual complete-point catalog,
+retention/status/alerts/backup_runs composition; full finance/security/reference/
+portable exports and physical owner/key/off-host/phone acceptance. Owner access
+question remains pending. Real Crest use not ready; rough80% coding low
+confidence; context sufficient; $0 new spending.
+
+New local read-only capture-status command reports actual failure/candidate/
+unfinished-or-uncertain records and bounded recent artifact journal counts,
+without cloud calls, writes, journal/lock mutation or retry permission. It keeps
+complete-point protection unknown/catalog unloaded and exit2. Recovery image
+packages it; inactive host launcher supports network-none/read-only status mode
+without staging authorization. Types/targetlint pass;10 record plus original6
+command composition cases, rebuilt image and shell syntax checks pending.
+See RECOVERY_CAPTURE_STATUS.md. Public101c3356835 remains unchanged; latest
+main45189860133 observation13 successful prerequisites/no failure,8 live groups;
+both ancillary workflows SUCCESS. Owner account-access answer still pending.
+Do not change tracked source while the next actual native check lives. Actual
+Crest use not ready; coding roughly80% low confidence; context sufficient;$0.
+
+Backup escalation/delivery journal11/11 actual Linux cases pass onf8f5c14,
+source unchanged/owned cleanup awaited (.local/recovery-alert-dispatch/result.json).
+Real private filesystem/directory fsync/lock; controlled complete-catalog and
+delivery ports, not real provider/mail/owner receipt. Combined policy/calendar
+38cases/types/targetlint pass. No local native handle live. New alert source and
+the host package remain unpublished; public101c3356835/local187e79d unchanged.
+Latest actual main45189860133 has12 successful prerequisites, including Database
+foundation137745029938, and9 live browser/auth groups with no observed failure.
+Do not replace publichead/title/body while any of its3 exact-head runs live.
+Actual final catalog, production delivery/owner monitor accounts, backup_runs/
+dashboard and complete recovery/financial/security/export/phone gates still
+remain. Owner account-access question is pending; independent work remains
+available. Actual Crest use not ready; coding roughly80% low confidence;
+context sufficient; $0 new spend.
+
+New local alert policy plus private Linux delivery journal implement adopted
+8/12/24-hour escalation, daily unresolved reminders and current-after-complete
+recovery notifications. Durable exclusive reservation precedes transport;
+unknown/missing acknowledgments never automatically resend; catalog regression,
+torn records and stopped locks refuse. Ordinary financial writes stay allowed.
+Combined38 focused cases/types/targetlint pass;11 native Linux journal cases
+pending. See RECOVERY_ALERT_DISPATCH.md. Production catalog/mail/owner address,
+independent monitor/account, backup_runs/dashboard and full completion remain
+uncomposed; no live messages or new activation. Current101c public3356835 remains
+fixed while main45189860133 and ancillary45189860072/45189860158 run; latest main
+observation5 prerequisite successes/no failure,16 live jobs. Owner account-access
+question sent while independent implementation continues. Goal remains active;
+real Crest use not ready, coding roughly80% low confidence, context sufficient,
+$0 new spending. Freeze tracked bytes during the next actual native check.
+
+Published101c33568351379c297715bd0b0965f8b7c2287ca6c8 exactly matches local
+187e79d/tree2f0a0e51fa0be5f0cc58fa724a11aaf6e046ef4b, sole parent public40e99.
+Strict all3008 tracked files/43198017 bytes scan passes with default rules,
+empty ignore file and inline allowances off. Earlier101a/b four findings are
+nonsecret relationship callback expressions; preserved redacted reports. Renamed
+the four callback variables, no rule/path exclusion. Token comparison separately
+proved initial formatting preserved all nonwhitespace tokens and string bytes.
+Metadata verified before expected-head nonforce CAS; actualref/PR/head/base and
+testmergef262e20/tree2f0a/orderedparents[ea06,3356] independently verified. PR178
+stays open/draft/unmerged. Main45189860133 has live jobs and2 successful groups
+at observation; ancillary45189860072/45189860158 live. Keep publichead/title/body
+until all terminal; no whole-release/current worker acceptance inferred.
+
+New local-only deploy/recovery package supplies an inactive rootless local
+Podman launcher and systemd user service/timer examples for the adopted UTC
+slots. Exact local image ID/private paths, persistent journals, read-only root,
+bounded resources, no pull/restart/replace/ports/socket. Candidate exit2 remains
+failure/review required; no healthy heartbeat or final marker. Linux sh -n passes
+in actual pinned recovery image; selected-host systemd/calendar/Podman/UID/TLS/
+provider/capacity/termination acceptance remains unexecuted. Nothing installed,
+created or enabled on any host. Host accounts/access and full completion gates
+still required. Next continue actual complete-point/catalog/retention/status/
+independent alert implementation, full finance/security/reconciliation/export
+and external custody/off-host/physical-phone acceptance. No merge/install/real
+data/financial/provider activation or spend. Coding roughly80% low confidence;
+actual Crest use NOT READY; context sufficient.
 
 Actual isolated recovery-tool image now builds on2de7a60, imagea8e21cb993a5200d
 (.local/recovery-tool-image-build-current/result.json). Native image rehearsal

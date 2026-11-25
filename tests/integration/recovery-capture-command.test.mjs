@@ -8,6 +8,7 @@ import {join,dirname,basename} from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
 import pg from 'pg';
 import {createRecoveryCaptureCommand} from '../../src/tooling/recovery-capture-command.ts';
+import {runRecoveryCaptureStatusCommand} from '../../src/tooling/recovery-capture-status.ts';
 import {createRecoveryAttempt,inspectRecoveryAttempt} from '../../src/tooling/recovery-attempt.ts';
 import {createRecoveryMonitorAttempt} from '../../src/tooling/recovery-monitor.ts';
 import {recoveryCaptureProfileFixture} from '../support/recovery-capture-profile-fixture.mjs';
@@ -37,6 +38,7 @@ async function fixture(options={}){
 test('command composes production settings, durable staging and failure-only monitoring without leaking credentials',async()=>{
  const f=await fixture(),receipt=await f.run();assert.equal(receipt.pointId,f.pointId);assert.equal(receipt.completeBackup,false);assert.equal(receipt.state,'candidate_review_required');assert.equal(f.counts.tools,1);assert.equal(f.counts.connected,1);assert.equal(f.counts.ended,1);assert.equal(f.counts.primaryClosed,3);assert.equal(f.counts.vaultClosed,1);assert.equal(f.signals.length,2);assert(f.signals[0].url.includes('/start?'));assert(f.signals[1].url.includes('/fail?'));assert.equal(f.signals[1].body.category,'recovery_review');
  const final=JSON.parse(await f.record('command-'+f.pointId+'.finished.json'));assert.equal(final.state,'candidate_review_required');assert.equal(final.monitorPhase,'failed');assert.equal(final.completeBackup,false);
+ const status=await runRecoveryCaptureStatusCommand([f.profileFile],new AbortController().signal);assert.equal(status.candidatesRequiringReview,1);assert.equal(status.recentAttempts[0].artifactJournal.verified,1);assert.equal(status.protectionLevel,'unknown');assert.equal(status.completeBackup,false);
  const secrets=[f.profile.databaseUrl,f.profile.monitorPingUrl,f.profile.vault.secretAccessKey,...Object.values(f.profile.sources).map(value=>value.secretAccessKey)];for(const name of await readdir(f.profile.stateDirectory)){if(!name.endsWith('.json')&&!name.endsWith('.jsonl'))continue;const text=await f.record(name);for(const secret of secrets)assert(!text.includes(secret));}
 });
 test('same explicit run ID refuses before another tool/client/provider or monitor dispatch',async()=>{

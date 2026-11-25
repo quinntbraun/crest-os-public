@@ -3,6 +3,7 @@ import {execFileSync} from 'node:child_process';
 import {readFile,lstat} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {runRecoveryCaptureCommand} from '../src/tooling/recovery-capture-command.ts';
+import {runRecoveryCaptureStatusCommand} from '../src/tooling/recovery-capture-status.ts';
 import {runRecoveryScheduledCapture} from '../src/tooling/recovery-scheduled-capture.ts';
 import {runRecoveryOwnerKitCommand} from '../src/tooling/recovery-owner-kit-command.ts';
 import {runOperatorSourceCommand} from '../src/tooling/operator-source-command.ts';
@@ -25,5 +26,6 @@ const registry=await readFile(new URL('../supabase/migration-checksums.json',imp
 assert.equal(createHash('sha256').update(registry).digest('hex'),recoveryRoutineBaseline138.migrationRegistrySha256);
 assert.equal(JSON.parse(registry).migrations.length,138);
 assert.equal(typeof runRecoveryCaptureCommand,'function');assert.equal(typeof runRecoveryScheduledCapture,'function');
+assert.equal(typeof runRecoveryCaptureStatusCommand,'function');
 assert.equal(typeof runRecoveryOwnerKitCommand,'function');assert.equal(typeof runOperatorSourceCommand,'function');
 console.log(JSON.stringify({profile:'crest.recovery-tool-image.v1',node:pin.node,postgres:'17.11',age:pin.age.version,schemaVersion:138,completeBackup:false}));

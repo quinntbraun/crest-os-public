@@ -33,6 +33,7 @@ try{
   assert.throws(()=>sql('crest_tool_restore',"INSERT INTO crest_tool_fixture.rows VALUES (2,-1,'invalid','');"));
   assert.equal(sql('crest_tool_restore',query),original);
   stage='refusal';const refusal=(()=>{try{run(process.execPath,['--conditions=react-server','scripts/recovery-scheduled-capture.mjs']);return false;}catch(error){return error.status===1&&error.stderr.toString()==='RECOVERY_SCHEDULE_REVIEW_REQUIRED\n';}})();assert(refusal);
-  console.log(JSON.stringify({profile:'crest.recovery-tool-image-roundtrip.v1',nativeDumpEncryptionRestore:true,exactBigintDecimalTextBinary:true,constraintsPreserved:true,missingProfileRefused:true,completeBackup:false}));
+  const statusRefusal=(()=>{try{run(process.execPath,['--conditions=react-server','scripts/recovery-capture-status.mjs']);return false;}catch(error){return error.status===1&&error.stderr.toString()==='RECOVERY_CAPTURE_STATUS_REVIEW_REQUIRED\n';}})();assert(statusRefusal);
+  console.log(JSON.stringify({profile:'crest.recovery-tool-image-roundtrip.v1',nativeDumpEncryptionRestore:true,exactBigintDecimalTextBinary:true,constraintsPreserved:true,missingProfileRefused:true,missingStatusProfileRefused:true,completeBackup:false}));
 }finally{await rm(directory,{recursive:true,force:true});}
 }catch{console.error('RECOVERY_IMAGE_PROBE_FAILED:'+stage);process.exitCode=1;}

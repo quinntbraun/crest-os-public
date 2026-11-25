@@ -27,7 +27,7 @@ COPY src ./src
 COPY release/toolchain.json ./release/toolchain.json
 COPY supabase/migration-checksums.json ./supabase/migration-checksums.json
 COPY release/compatibility.json ./release/compatibility.json
-COPY scripts/recovery-capture.mjs scripts/recovery-scheduled-capture.mjs scripts/recovery-owner-kit.mjs scripts/operator-source-export.mjs scripts/verify-recovery-image.mjs ./scripts/
+COPY scripts/recovery-capture.mjs scripts/recovery-capture-status.mjs scripts/recovery-scheduled-capture.mjs scripts/recovery-owner-kit.mjs scripts/operator-source-export.mjs scripts/verify-recovery-image.mjs ./scripts/
 RUN node --conditions=react-server scripts/verify-recovery-image.mjs
 USER node
 ENTRYPOINT ["node", "--conditions=react-server", "scripts/recovery-scheduled-capture.mjs"]

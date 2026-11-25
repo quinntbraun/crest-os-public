@@ -23,7 +23,7 @@ test('actual isolated recovery image dumps, encrypts and restores exact data wit
     probeId=await docker(['create','--pull=never','--interactive','--network',network,'--name','crest-tool-probe-'+suffix,'--read-only','--cap-drop=ALL','--security-opt=no-new-privileges','--pids-limit=64','--memory=256m','--tmpfs','/tmp:rw,nosuid,nodev,noexec,size=32m,mode=1777','--env','PGHOST=recovery-database','--env','PGUSER=supabase_admin','--env','PGPASSWORD','--entrypoint','node',image,'--conditions=react-server','--input-type=module'],{env:{...process.env,PGPASSWORD:password}});assert.match(probeId,/^[a-f0-9]{64}$/);
     const input=await readFile(new URL('../support/recovery-tool-image-probe.mjs',import.meta.url));
     const receipt=JSON.parse(await docker(['start','--attach','--interactive',probeId],{input}));
-    assert.equal(receipt.profile,'crest.recovery-tool-image-roundtrip.v1');assert.equal(receipt.nativeDumpEncryptionRestore,true);assert.equal(receipt.exactBigintDecimalTextBinary,true);assert.equal(receipt.constraintsPreserved,true);assert.equal(receipt.missingProfileRefused,true);assert.equal(receipt.completeBackup,false);
+    assert.equal(receipt.profile,'crest.recovery-tool-image-roundtrip.v1');assert.equal(receipt.nativeDumpEncryptionRestore,true);assert.equal(receipt.exactBigintDecimalTextBinary,true);assert.equal(receipt.constraintsPreserved,true);assert.equal(receipt.missingProfileRefused,true);assert.equal(receipt.missingStatusProfileRefused,true);assert.equal(receipt.completeBackup,false);
   }finally{
     // Only handles returned and validated by this invocation may be removed.
     if(probeId&&/^[a-f0-9]{64}$/.test(probeId))await docker(['rm','--force','--volumes',probeId]);

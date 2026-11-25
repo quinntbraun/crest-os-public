@@ -1,0 +1,13 @@
+[Unit]
+Description=Crest recovery candidate schedule (review before activation)
+ConditionPathExists=%h/.config/crest-recovery/capture-staging-authorized
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:20:00 UTC
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=true
+Unit=crest-recovery-capture.service
+
+[Install]
+WantedBy=timers.target
