@@ -33,7 +33,7 @@ it('requires real Calendar material, matching capability and distinct authentica
 });
 it('accepts the complete pickup chain only with its real photo-worker configuration',()=>{
  const input=profile(),photos={storage:{accountId:'a'.repeat(32),bucket:'crest-private-photos',accessKeyId:'fixture-only-access',secretAccessKey:'fixture-only-secret'},worker:{origin:'https://photo-worker.example.com',serverFingerprint:'b'.repeat(64),keyFile:resolve('.local/operator/client.key'),certFile:resolve('.local/operator/client.pem'),caFile:resolve('.local/operator/worker-ca.pem')}};
- const capabilities=productionCapabilityNames.filter(name=>name!=='businessExports'&&!['finance','financeExports','expenseReceipts','supplierOriginals','googleCalendar'].includes(name));
+ const capabilities=productionCapabilityNames.filter(name=>name!=='businessExports'&&!['finance','financeExports','expenseReceipts','supplierOriginals','openingDocuments','googleCalendar'].includes(name));
  expect(parseProductionProfile(JSON.stringify({...input,capabilities,photos})).forServer).toBeTypeOf('function');
  expect(()=>parseProductionProfile(JSON.stringify({...input,capabilities}))).toThrow('PRODUCTION_CONFIGURATION_REQUIRED');
 });
@@ -42,6 +42,13 @@ it('requires supplier originals together with private worker/storage and finance
  const capabilities=[...input.capabilities,'finance','supplierOriginals'],finance={connectionString:'postgresql://crest_finance_runtime:fixture-only@database.example.com/crest',features:['moneyChannels','supplierBillDrafts','supplierPayableReview']};
  const complete={...input,capabilities,finance,supplierOriginals};expect(parseProductionProfile(JSON.stringify(complete)).forServer).toBeTypeOf('function');
  for(const value of [{...input,capabilities,finance},{...input,supplierOriginals},{...complete,finance:{...finance,features:['moneyChannels','supplierBillDrafts']}}])expect(()=>parseProductionProfile(JSON.stringify(value))).toThrow('PRODUCTION_CONFIGURATION_REQUIRED');
+});
+it('requires opening documents together with their own worker, finance capability and opening worksheet',()=>{
+ const input=profile(),openingDocuments={storage:{accountId:'a'.repeat(32),bucket:'crest-private-documents',accessKeyId:'fixture-only-access',secretAccessKey:'fixture-only-secret'},worker:{origin:'https://document-worker.example.com',serverFingerprint:'b'.repeat(64),keyFile:resolve('.local/operator/client.key'),certFile:resolve('.local/operator/client.pem'),caFile:resolve('.local/operator/worker-ca.pem')}};
+ const capabilities=[...input.capabilities,'finance','openingDocuments'],finance={connectionString:'postgresql://crest_finance_runtime:fixture-only@database.example.com/crest',features:['moneyChannels','openingWorksheet']};
+ const complete={...input,capabilities,finance,openingDocuments};
+ expect(parseProductionProfile(JSON.stringify(complete)).forServer).toBeTypeOf('function');
+ for(const value of [{...input,capabilities,finance},{...input,openingDocuments},{...complete,finance:{...finance,features:['moneyChannels']}}])expect(()=>parseProductionProfile(JSON.stringify(value))).toThrow('PRODUCTION_CONFIGURATION_REQUIRED');
 });
 it('requires production photo storage/worker material together with custody dependencies',()=>{
  const input=profile(),photos={storage:{accountId:'a'.repeat(32),bucket:'crest-private-photos',accessKeyId:'fixture-only-access',secretAccessKey:'fixture-only-secret'},worker:{origin:'https://photo-worker.example.com',serverFingerprint:'b'.repeat(64),keyFile:resolve('.local/operator/client.key'),certFile:resolve('.local/operator/client.pem'),caFile:resolve('.local/operator/worker-ca.pem')}};
@@ -62,11 +69,11 @@ it('accepts explicit production configuration without exposing its private field
  expect(configured.forServer).toBeTypeOf('function');
 });
 it('accepts declared operational controls without private file or finance material',()=>{
- const input=profile();input.capabilities=productionCapabilityNames.filter(name=>name!=='businessExports'&&name!=='finance'&&name!=='financeExports'&&name!=='expenseReceipts'&&name!=='dropoffPhotos'&&name!=='supplierOriginals'&&name!=='googleCalendar'&&!['pickupPhotos','pickupRelease','pickupReturnFailure'].includes(name));
+ const input=profile();input.capabilities=productionCapabilityNames.filter(name=>name!=='businessExports'&&name!=='finance'&&name!=='financeExports'&&name!=='expenseReceipts'&&name!=='dropoffPhotos'&&name!=='supplierOriginals'&&name!=='openingDocuments'&&name!=='googleCalendar'&&!['pickupPhotos','pickupRelease','pickupReturnFailure'].includes(name));
  expect(parseProductionProfile(JSON.stringify(input)).forServer).toBeTypeOf('function');
 });
 it('accepts explicit finance connection/features while retaining private configuration',()=>{
- const input={...profile(),capabilities:productionCapabilityNames.filter(name=>name!=='businessExports'&&name!=='financeExports'&&name!=='expenseReceipts'&&name!=='dropoffPhotos'&&name!=='supplierOriginals'&&name!=='googleCalendar'&&!['pickupPhotos','pickupRelease','pickupReturnFailure'].includes(name)),finance:{connectionString:'postgresql://crest_finance_runtime:fixture-only@database.example.com/crest',features:[...financeRuntimeFeatureNames]}};
+ const input={...profile(),capabilities:productionCapabilityNames.filter(name=>name!=='businessExports'&&name!=='financeExports'&&name!=='expenseReceipts'&&name!=='dropoffPhotos'&&name!=='supplierOriginals'&&name!=='openingDocuments'&&name!=='googleCalendar'&&!['pickupPhotos','pickupRelease','pickupReturnFailure'].includes(name)),finance:{connectionString:'postgresql://crest_finance_runtime:fixture-only@database.example.com/crest',features:[...financeRuntimeFeatureNames]}};
  expect(parseProductionProfile(JSON.stringify(input)).forServer).toBeTypeOf('function');
  expect(()=>JSON.stringify(parseProductionProfile(JSON.stringify(input)))).toThrow('PRODUCTION_CONFIGURATION_REQUIRED');
 });

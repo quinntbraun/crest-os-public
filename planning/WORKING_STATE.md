@@ -2,12 +2,88 @@
 
 ## Latest launch checkpoint, 2026-11-25
 
+Public109 accounting-settings job139468280373 failed one of11 cases before
+the opening-deposit workflow started: openingFunds139Candidate admitted root
+registries only through140. Local712d7a8 adds exact reviewed141/142 registry
+hashes, retaining the frozen138 prefix and unchanged candidate139 contents;
+unknown/future registries still refuse. The exact failing genuine fixture-MFA/
+HTTP/PG/Chromium workflow now passes1/1 on712d7a8 with stable source and owned
+cleanup (.local/opening139-current-auth), including390/1440 overflow/Axe checks,
+interrupted saves, retained history, no posting and session revocation.
+The earlier110a strict snapshot at782f0af is now superseded and must not be
+published as current source. Prepare a fresh snapshot after this checkpoint.
+
+Current actual image on49ebf24 includes the production document worker:
+sha256:c9bda39118f04edce647b12c5d7acc52be26f2ef0876f9530124f8021eefaf5e.
+It runs as node, matches compiled/file release d164a84c... and keeps startup
+closed. Archive238085632 bytes,
+SHA53d23f988ae4c5ceaa581cb045bfcfad8ce8cb0a1d6fbad4de10b1ea075be2b4;
+source47636480 bytes,
+SHA8b6eafcb496c69554f0039f6d9de5a3fc20d5d4c0bbec47c639b9047e83e7cc8.
+Evidence: .local/production-document142-image/result.json; retain its image,
+manifest and source under .local/recovery-drill/case-yq38Pt.
+
+Opening document mTLS transport now drives all four actual isolated decoders.
+Local9c902aa passes10/10 checks in .local/opening-document-worker-formats:
+generated JPEG/PNG/PDF and a small HEIC test pattern extracted from the
+checksum-verified pinned libheif source archive, plus malformed refusal for each.
+The image identity matches the local build. This uses the explicit Windows
+Docker adapter, with authority/storage seams. It is not production MFA,
+SQL publication/R2 or Linux-host negative-isolation acceptance. The same case
+is now required after Linux image/PDF/HEIC sandbox checks in release CI.
+No real documents, deployment, provider activation or spending occurred.
+
+Production document composition is implemented on679e602: separate capability,
+private profile, isolated worker startup/build output, exact registered142
+compiled identity, fixed R2 origin, scoped dispatch and application cleanup.
+Existing closed SQL worker role/grants are reused; no migration or financial
+authority changes.190 focused units, types and affected lint pass. Earlier
+test-only wording below describes prior checkpoints, not the new code path.
+
+Actual Next/Node build on679e602 passes with stable source
+(.local/opening-document-production-build), release
+d164a84cb225d4466b2a977e5f438e379424aab3, source SHA
+d164a84cb225d4466b2a977e5f438e379424aab314ab0e22447abe0cc3018cf0.
+The compiled opening-document worker refuses the unaccepted release before
+reading the supplied nonexistent profile. Document SQL/custody, immutable
+originals, export and encrypted restore1/1 pass on the same source
+(.local/opening-document-production-custody), source stable/owned cleanup.
+Object/decoder seams remain explicit; this does not prove actual provider or
+Linux isolated-decoder production composition. Actual deployment/storage
+credentials, four-format Linux checks and physical/off-host acceptance remain.
+
+Public109 commercial run45688758467 is terminal failure: two browser groups
+passed; amendment_integrity failed in the generic recovery snapshot with the
+same backup-reader omission fixed locally in0f7e45c. Main45688758460 remains
+live at last direct observation; its Foundation job139468280210 has the same
+expense recovery failure. Preserve public metadata/head until it is terminal.
+
+Local follow-up cd20182 adds opening-document mutual-TLS transport and a
+purpose-bound production R2/client configuration. Thirteen configuration and
+twelve actual TLS checks pass, plus types/affected lint. Production application
+routes and worker startup remain unconnected; uploads are still test-only.
+
+Public draft109 is at95224dc128793168d72ac721289ae2ea0aadbab0 (PR178).
+Its actual merge tree and ordered base/head parents are independently verified.
+Current source scan3160 files has zero findings. Expense run45688758490 failed
+in its current-schema combined recovery rehearsal: the generic helper admitted
+the closed backup-reader role only through140. Local0f7e45c explicitly admits
+registered141/142 at capture and restore without changing role restrictions.
+The exact failing recovery case now passes on0f7e45c
+(.local/expense142-current-recovery), with source stable and owned cleanup.
+This includes encrypted database/receipt-original/preview recovery after source
+loss, pending-object refusal and revoked/paused write authority. Same-host
+fictional evidence, not off-host or production acceptance. New local commits
+remain unpublished while the other exact-public109 workflows finish; preserve
+the public head/title/body until all are terminal.
+
 Root source142 is now registered, preserving the exact five-part dd77400a...
 package and3d215728... registry. The full141 registry/coverage/compatibility bytes
 are frozen in tests/support/registered141-*; old migration SQL is unchanged.
 Registered142 has a distinct198-source/202-file operator brand/CLI and compiled
 production export selection requires its exact registry/full migration identity.
-Opening-document runtime remains test-only; no financial or owner activation.
+Opening-document production composition is now implemented as above; no
+financial or owner activation.
 See OPENING_DOCUMENT142_ADOPTION.md/JSON.
 
 Registered141→142 upgrade, actual registered CLI and branded capture, owner worker/

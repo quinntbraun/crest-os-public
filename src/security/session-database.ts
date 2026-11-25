@@ -17,6 +17,10 @@ export function supplierDocumentWorkerDatabase(config:SessionDatabaseConfigurati
   if(config.environment==='production'&&!productionCapability(config,'supplierOriginals'))throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');
   return databaseForRole(config,'crest_supplier_bill_document_worker');
 }
+export function openingDocumentWorkerDatabase(config:SessionDatabaseConfiguration&ProductionCapabilityConfiguration){
+  if(config.environment==='production'&&!productionCapability(config,'openingDocuments'))throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');
+  return databaseForRole(config,'crest_supplier_bill_document_worker');
+}
 export function financePreviewDatabase(config:SessionDatabaseConfiguration){
   if(config.environment!=='test')throw new Error('SESSION_DATABASE_CONFIGURATION_REQUIRED');
   return databaseForRole(config,'crest_finance_preview');

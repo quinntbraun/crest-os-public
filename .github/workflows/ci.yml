@@ -498,6 +498,7 @@ jobs:
           npm run test:image-sandbox
           npm run test:pdf-sandbox
           npm run test:heic-sandbox
+          node --conditions=react-server --test --test-concurrency=1 tests/integration/opening-document-worker-formats.test.mjs
           npm run test:file-intake
           node scripts/install-recovery-tools.mjs
           npm run test:object-recovery

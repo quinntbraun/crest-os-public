@@ -6,7 +6,7 @@ import {createServer} from 'node:net';
 import {request} from 'node:https';
 import {X509Certificate,randomUUID,randomBytes} from 'node:crypto';
 import {browserTestTls} from '../support/browser-test-tls.mjs';
-import {createReceiptWorkerServer,createReceiptWorkerClient,createPhotoWorkerServer,createPhotoWorkerClient,createSupplierWorkerServer,createSupplierWorkerClient} from '../../src/server/receipt-worker-transport.ts';
+import {createReceiptWorkerServer,createReceiptWorkerClient,createPhotoWorkerServer,createPhotoWorkerClient,createSupplierWorkerServer,createSupplierWorkerClient,createOpeningDocumentWorkerServer,createOpeningDocumentWorkerClient} from '../../src/server/receipt-worker-transport.ts';
 
 let serverTls,clientTls,otherTls;
 const businessId=randomUUID(),receiptId=randomUUID(),operationId=randomUUID(),credential=randomBytes(32).toString('base64url');
@@ -19,11 +19,11 @@ async function fixture(dispatch,clientFingerprint,kind='receipt'){
  // A collision fails this fixture instead of silently changing its identity.
  const reservation=createServer();await new Promise(resolve=>reservation.listen(0,'127.0.0.1',resolve));const port=reservation.address().port;
  await new Promise(resolve=>reservation.close(resolve));
- const host=`localhost:${port}`,factory={'receipt':createReceiptWorkerServer,'custody-photo':createPhotoWorkerServer,'supplier-original':createSupplierWorkerServer}[kind],worker=factory({host,businessId,storageBinding,clientFingerprint:clientFingerprint??pin(clientTls),tls:{...serverTls,ca:clientTls.cert}},dispatch);
+ const host=`localhost:${port}`,factory={'receipt':createReceiptWorkerServer,'custody-photo':createPhotoWorkerServer,'supplier-original':createSupplierWorkerServer,'opening-document':createOpeningDocumentWorkerServer}[kind],worker=factory({host,businessId,storageBinding,clientFingerprint:clientFingerprint??pin(clientTls),tls:{...serverTls,ca:clientTls.cert}},dispatch);
  await new Promise((resolve,reject)=>{worker.server.once('error',reject);worker.server.listen(port,'127.0.0.1',resolve);});
  const config={origin:`https://${host}`,businessId,storageBinding,serverFingerprint:pin(serverTls),tls:{...clientTls,ca:serverTls.cert}};
  const clients=[];let stopping;
- return {worker,config,client(patch={}){const client={'receipt':createReceiptWorkerClient,'custody-photo':createPhotoWorkerClient,'supplier-original':createSupplierWorkerClient}[kind]({...config,...patch});clients.push(client);return client;},async close(){for(const client of clients)client.close();stopping??=worker.close();await stopping;}};
+ return {worker,config,client(patch={}){const client={'receipt':createReceiptWorkerClient,'custody-photo':createPhotoWorkerClient,'supplier-original':createSupplierWorkerClient,'opening-document':createOpeningDocumentWorkerClient}[kind]({...config,...patch});clients.push(client);return client;},async close(){for(const client of clients)client.close();stopping??=worker.close();await stopping;}};
 }
 const signal=()=>AbortSignal.timeout(5000);
 test('real mutual TLS delivers only scoped identifiers and credential, then confirms the exact bounded reply',async()=>{
@@ -100,6 +100,24 @@ test('the supplier protocol delivers exact original/operation IDs over mutual TL
  const originalId=randomUUID(),calls=[],f=await fixture(async(...args)=>{calls.push(args.slice(0,4));},undefined,'supplier-original');
  try{await f.client().dispatch(credential,businessId,originalId,operationId,signal());assert.deepEqual(calls,[[credential,businessId,originalId,operationId]]);}finally{await f.close();}
 });
+test('opening-document transport authenticates a scoped dispatch and rejects cross-purpose jobs',async()=>{
+ const documentId=randomUUID(),calls=[],f=await fixture(async(...args)=>{calls.push(args.slice(0,4));},undefined,'opening-document');
+ const input={version:1,credential,businessId,storageBinding,documentId,operationId};
+ try{
+  await f.client().dispatch(credential,businessId,documentId,operationId,signal());
+  assert.deepEqual(calls,[[credential,businessId,documentId,operationId]]);
+  for(const value of [
+   {version:1,credential,businessId,storageBinding,originalId:documentId,operationId},
+   {version:1,credential,businessId,storageBinding,receiptId:documentId,operationId},
+   {...input,businessId:randomUUID()},
+   {...input,storageBinding:randomBytes(32).toString('hex')},
+   {...input,candidate:{status:'Available'}},
+  ])assert.equal((await raw(f.config,JSON.stringify(value),{},'/v1/opening-documents/verify')).status,503);
+  for(const route of ['/v1/supplier-originals/verify','/v1/receipts/verify'])assert.equal((await raw(f.config,JSON.stringify(input),{},route)).status,503);
+  assert.equal(calls.length,1);
+ }finally{await f.close();}
+});
+
 test('supplier workers reject receipt/photo payloads, wrong storage and candidate metadata',async()=>{
  let calls=0;const f=await fixture(async()=>{calls++;},undefined,'supplier-original'),input={version:1,credential,businessId,storageBinding,originalId:randomUUID(),operationId};
  try{

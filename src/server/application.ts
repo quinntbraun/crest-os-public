@@ -68,12 +68,13 @@ export async function createCrestApplication(config:NodeConfiguration){
       config.productionExpenseReceipts?.close?.();
       config.productionDropoffPhotos?.close?.();
       config.productionSupplierOriginals?.close?.();
+      config.productionOpeningDocuments?.close?.();
       server.closeAllConnections();
       await new Promise<void>(resolve=>server.close(()=>resolve()));
       await stopped;
       await app.close();
     }};
-  }catch{await config.productionSourceExports?.close();config.productionExpenseReceipts?.close?.();config.productionDropoffPhotos?.close?.();config.productionSupplierOriginals?.close?.();await app.close();throw new Error('APPLICATION_START_FAILED');}
+  }catch{await config.productionSourceExports?.close();config.productionExpenseReceipts?.close?.();config.productionDropoffPhotos?.close?.();config.productionSupplierOriginals?.close?.();config.productionOpeningDocuments?.close?.();await app.close();throw new Error('APPLICATION_START_FAILED');}
 }
 export {createCustomerAddressDirectory} from '../customer/customer-address-directory.ts';
 

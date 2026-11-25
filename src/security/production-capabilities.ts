@@ -4,7 +4,7 @@ export const productionPickupCapabilities=['pickupTrips','pickupCollection','pic
 export const productionFieldCapabilities=['fieldSessions','jobCompletion','jobMileage','supportTrips','unfulfilledCancellation','workTime','workBoundary','workStart','workEnd','mobileDeparture','reviewOutcome','reviewHistory','maintenanceFollowUp','dropoffCustody','dropoffPolicyRevision','dropoffPhotos',...productionPickupCapabilities] as const;
 export const productionPhotoWorkerBaseCapabilities=['customers','vehicles','associations','operationResolution','quotes','quoteReview','quoteCommercial','scheduling','quoteAmendments','quoteAmendmentAcceptance','fieldSessions','dropoffCustody'] as const;
 export const productionCalendarWorkerBaseCapabilities=['customers','vehicles','associations','operationResolution','quotes','quoteReview','quoteCommercial','scheduling'] as const;
-export const productionOperationCapabilities=['catalog','quotes','quoteReview','quoteCommercial','appointmentHolds','quoteAmendments','quoteAmendmentAcceptance','scheduling','recordJobHistory','customerProfiles','expenses','expenseReceipts','finance','financeExports','businessExports','supplierOriginals','googleCalendar',...productionFieldCapabilities] as const;
+export const productionOperationCapabilities=['catalog','quotes','quoteReview','quoteCommercial','appointmentHolds','quoteAmendments','quoteAmendmentAcceptance','scheduling','recordJobHistory','customerProfiles','expenses','expenseReceipts','finance','financeExports','businessExports','supplierOriginals','openingDocuments','googleCalendar',...productionFieldCapabilities] as const;
 export const productionCapabilityNames=['customers','vehicles','associations','leads','leadFollowUps','leadMatchReview','leadConversions','operationResolution',...productionOperationCapabilities] as const;
 export type ProductionCapability=typeof productionCapabilityNames[number];
 export type ProductionOperationCapability=typeof productionOperationCapabilities[number];
@@ -18,7 +18,7 @@ const dependencies:Partial<Record<ProductionCapability,readonly ProductionCapabi
  reviewOutcome:['jobCompletion'],reviewHistory:['reviewOutcome'],maintenanceFollowUp:['jobCompletion'],dropoffCustody:['fieldSessions'],dropoffPolicyRevision:['dropoffCustody'],dropoffPhotos:['dropoffCustody'],
  pickupTrips:['fieldSessions'],pickupCollection:['pickupTrips'],pickupPolicy:['pickupCollection'],pickupPhotos:['pickupPolicy','dropoffPhotos'],
  pickupWork:['pickupCollection','jobCompletion','unfulfilledCancellation'],pickupRelease:['pickupWork','pickupPhotos','operationResolution'],pickupReturnFailure:['pickupRelease'],
- expenses:['customers','operationResolution'],expenseReceipts:['expenses'],finance:['operationResolution'],financeExports:['finance'],businessExports:['operationResolution'],supplierOriginals:['finance'],
+ expenses:['customers','operationResolution'],expenseReceipts:['expenses'],finance:['operationResolution'],financeExports:['finance'],businessExports:['operationResolution'],supplierOriginals:['finance'],openingDocuments:['finance'],
  googleCalendar:['scheduling'],
 };
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;

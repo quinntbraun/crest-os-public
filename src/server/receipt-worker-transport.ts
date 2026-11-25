@@ -7,9 +7,9 @@ import type {ReceiptDispatch} from '../bookkeeping/expenses/receipt-http.ts';
 import type {DropoffPhotoScope} from '../operations/dropoff-photo-workflow.ts';
 
 const maximumBytes=1024,deadlineMs=85000;
-type WorkerKind='receipt'|'custody-photo'|'supplier-original';
-const routes:Readonly<Record<WorkerKind,string>>={'receipt':'/v1/receipts/verify','custody-photo':'/v1/custody-photos/verify','supplier-original':'/v1/supplier-originals/verify'};
-const jobIds:Readonly<Record<WorkerKind,readonly [string,string]>>={'receipt':['receiptId','operationId'],'custody-photo':['jobVehicleId','photoId'],'supplier-original':['originalId','operationId']};
+type WorkerKind='receipt'|'custody-photo'|'supplier-original'|'opening-document';
+const routes:Readonly<Record<WorkerKind,string>>={'receipt':'/v1/receipts/verify','custody-photo':'/v1/custody-photos/verify','supplier-original':'/v1/supplier-originals/verify','opening-document':'/v1/opening-documents/verify'};
+const jobIds:Readonly<Record<WorkerKind,readonly [string,string]>>={'receipt':['receiptId','operationId'],'custody-photo':['jobVehicleId','photoId'],'supplier-original':['originalId','operationId'],'opening-document':['documentId','operationId']};
 type WorkerClientConfiguration=Readonly<{origin:string;businessId:string;storageBinding:string;serverFingerprint:string;tls:TlsMaterial}>;
 type WorkerServerConfiguration=Readonly<{host:string;businessId:string;storageBinding:string;clientFingerprint:string;tls:TlsMaterial}>;
 export type CustodyPhotoDispatch=(credential:string,scope:DropoffPhotoScope,signal:AbortSignal)=>Promise<unknown>;
@@ -91,6 +91,7 @@ function createFileWorkerClient(config:WorkerClientConfiguration,kind:WorkerKind
 }
 export function createReceiptWorkerClient(config:WorkerClientConfiguration){return createFileWorkerClient(config,'receipt');}
 export function createSupplierWorkerClient(config:WorkerClientConfiguration){return createFileWorkerClient(config,'supplier-original');}
+export function createOpeningDocumentWorkerClient(config:WorkerClientConfiguration){return createFileWorkerClient(config,'opening-document');}
 export function createPhotoWorkerClient(config:WorkerClientConfiguration){
  const client=createFileWorkerClient(config,'custody-photo');
  return Object.freeze({dispatch:((credential,scope,signal)=>client.dispatch(credential,scope.businessId,scope.jobVehicleId,scope.photoId,signal)) as CustodyPhotoDispatch,close:client.close});
@@ -141,6 +142,7 @@ function createFileWorkerServer(config:WorkerServerConfiguration,dispatch:Receip
 }
 export function createReceiptWorkerServer(config:WorkerServerConfiguration,dispatch:ReceiptDispatch){return createFileWorkerServer(config,dispatch,'receipt');}
 export function createSupplierWorkerServer(config:WorkerServerConfiguration,dispatch:ReceiptDispatch){return createFileWorkerServer(config,dispatch,'supplier-original');}
+export function createOpeningDocumentWorkerServer(config:WorkerServerConfiguration,dispatch:ReceiptDispatch){return createFileWorkerServer(config,dispatch,'opening-document');}
 export function createPhotoWorkerServer(config:WorkerServerConfiguration,dispatch:CustodyPhotoDispatch){
  return createFileWorkerServer(config,async(credential,businessId,jobVehicleId,photoId,signal)=>{await dispatch(credential,Object.freeze({businessId,jobVehicleId,photoId}),signal);},'custody-photo');
 }

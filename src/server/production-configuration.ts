@@ -17,6 +17,8 @@ import {parseProductionReceiptConfiguration,openProductionReceiptRuntime} from '
 import type {ProductionReceiptConfiguration} from './production-receipt-configuration.ts';
 import {parseProductionPhotoConfiguration,openProductionPhotoRuntime} from './production-photo-configuration.ts';
 import type {ProductionPhotoConfiguration} from './production-photo-configuration.ts';
+import {parseProductionOpeningDocumentConfiguration,openProductionOpeningDocumentRuntime} from './production-opening-document-configuration.ts';
+import type {ProductionOpeningDocumentConfiguration} from './production-opening-document-configuration.ts';
 import {parseProductionSupplierConfiguration,openProductionSupplierRuntime} from './production-supplier-configuration.ts';
 import type {ProductionSupplierConfiguration} from './production-supplier-configuration.ts';
 import {parseProductionCalendarConfiguration,validateCalendarRuntimeConnection} from './production-calendar-configuration.ts';
@@ -57,10 +59,11 @@ export function parseProductionProfile(source:string){
   const hasFinance=value!==null&&typeof value==='object'&&Object.hasOwn(value,'finance');
   const hasReceipts=value!==null&&typeof value==='object'&&Object.hasOwn(value,'receipts');
   const hasPhotos=value!==null&&typeof value==='object'&&Object.hasOwn(value,'photos');
+  const hasOpeningDocuments=value!==null&&typeof value==='object'&&Object.hasOwn(value,'openingDocuments');
   const hasSupplierOriginals=value!==null&&typeof value==='object'&&Object.hasOwn(value,'supplierOriginals');
   const hasCalendar=value!==null&&typeof value==='object'&&Object.hasOwn(value,'calendar');
   const hasIngress=value!==null&&typeof value==='object'&&Object.hasOwn(value,'ingress');
-  exact(value,['schemaVersion','origin','listen','businessId','authentication',hasIngress?'ingress':'tls','capabilities',...hasFinance?['finance']:[],...hasFinanceExports?['financeExports']:[],...hasExports?['exports']:[],...hasReceipts?['receipts']:[],...hasPhotos?['photos']:[],...hasSupplierOriginals?['supplierOriginals']:[],...hasCalendar?['calendar']:[]]);
+  exact(value,['schemaVersion','origin','listen','businessId','authentication',hasIngress?'ingress':'tls','capabilities',...hasFinance?['finance']:[],...hasFinanceExports?['financeExports']:[],...hasExports?['exports']:[],...hasReceipts?['receipts']:[],...hasPhotos?['photos']:[],...hasSupplierOriginals?['supplierOriginals']:[],...hasOpeningDocuments?['openingDocuments']:[],...hasCalendar?['calendar']:[]]);
   require(value.schemaVersion===1&&text(value.origin,2048)&&typeof value.businessId==='string'&&uuid.test(value.businessId));
   const origin=new URL(value.origin);
   require(origin.origin===value.origin&&origin.protocol==='https:'&&!origin.username&&!origin.password);
@@ -93,6 +96,8 @@ export function parseProductionProfile(source:string){
   const photos=hasPhotos?parseProductionPhotoConfiguration(value.photos):undefined;
   require(enabled.includes('supplierOriginals')===hasSupplierOriginals);
   const supplierOriginals=hasSupplierOriginals?parseProductionSupplierConfiguration(value.supplierOriginals):undefined;
+  require(enabled.includes('openingDocuments')===hasOpeningDocuments);
+  const openingDocuments=hasOpeningDocuments?parseProductionOpeningDocumentConfiguration(value.openingDocuments):undefined;
   let finance:ProductionFinanceConfiguration|undefined;
   require(enabled.includes('finance')===hasFinance);
   if(hasFinance){
@@ -108,13 +113,14 @@ export function parseProductionProfile(source:string){
   const exports=hasExports?parseProductionSourceExportConfiguration(value.exports):undefined;
   if(exports){validateFinanceExportConnection(auth.databaseUrl,{connectionString:exports.connectionString},finance?.connectionString);for(const entry of exports.keys){const bytes=Buffer.from(entry.key,'base64url');require(!bytes.equals(loginKey)&&keys.every(key=>!bytes.equals(key.key))&&(!calendar||!bytes.equals(Buffer.from(calendar.calendarKeyMaterial))));}}
   if(supplierOriginals)require(finance?.features.supplierPayableReview===true);
+  if(openingDocuments)require(finance?.features.openingWorksheet===true);
   return new ProductionProfile({origin:value.origin,listen:{address:value.listen.address as string,port:value.listen.port as number},businessId:value.businessId,
    ...tls?{tls}:{},...ingress?{ingress}:{},databaseUrl:auth.databaseUrl,issuer:auth.issuer,publicKey:auth.publicKey,
-   owner:{subject:auth.owner.subject,factorId:auth.owner.factorId},loginKey,activeKeyId:auth.activeKeyId,keys,capabilities:[...enabled],...finance?{finance}:{},...financeExports?{financeExports}:{},...exports?{exports}:{},...receipts?{receipts}:{},...photos?{photos}:{},...supplierOriginals?{supplierOriginals}:{},...calendar?{calendar}:{}});
+   owner:{subject:auth.owner.subject,factorId:auth.owner.factorId},loginKey,activeKeyId:auth.activeKeyId,keys,capabilities:[...enabled],...finance?{finance}:{},...financeExports?{financeExports}:{},...exports?{exports}:{},...receipts?{receipts}:{},...photos?{photos}:{},...supplierOriginals?{supplierOriginals}:{},...openingDocuments?{openingDocuments}:{},...calendar?{calendar}:{}});
  }catch{throw new ProductionConfigurationError();}
 }
 type Profile={origin:string;listen:{address:string;port:number};businessId:string;tls?:{keyFile:string;certFile:string};ingress?:RenderIngressConfiguration;databaseUrl:string;issuer:string;publicKey:string;
- owner:{subject:string;factorId:string};loginKey:Buffer;activeKeyId:string;keys:{id:string;key:Buffer}[];capabilities:ProductionCapability[];finance?:ProductionFinanceConfiguration;financeExports?:ProductionFinanceExportConfiguration;exports?:ProductionSourceExportConfiguration;receipts?:ProductionReceiptConfiguration;photos?:ProductionPhotoConfiguration;supplierOriginals?:ProductionSupplierConfiguration;calendar?:ProductionGoogleCalendarConfiguration};
+ owner:{subject:string;factorId:string};loginKey:Buffer;activeKeyId:string;keys:{id:string;key:Buffer}[];capabilities:ProductionCapability[];finance?:ProductionFinanceConfiguration;financeExports?:ProductionFinanceExportConfiguration;exports?:ProductionSourceExportConfiguration;receipts?:ProductionReceiptConfiguration;photos?:ProductionPhotoConfiguration;supplierOriginals?:ProductionSupplierConfiguration;openingDocuments?:ProductionOpeningDocumentConfiguration;calendar?:ProductionGoogleCalendarConfiguration};
 class ProductionProfile{
  #value:Profile;
  constructor(value:Profile){this.#value=value;Object.freeze(this);}
@@ -122,16 +128,17 @@ class ProductionProfile{
  async forReceiptWorker(){return this.forIsolatedFileWorker('receipt');}
  async forPhotoWorker(){return this.forIsolatedFileWorker('custody-photo');}
  async forSupplierWorker(){return this.forIsolatedFileWorker('supplier-original');}
- private async forIsolatedFileWorker(kind:'receipt'|'custody-photo'|'supplier-original'){
+ async forOpeningDocumentWorker(){return this.forIsolatedFileWorker('opening-document');}
+ private async forIsolatedFileWorker(kind:'receipt'|'custody-photo'|'supplier-original'|'opening-document'){
   try{
    require(productionReleaseAccepted(compatibility));const value=this.#value;
    const required=kind==='receipt'?['customers','operationResolution','expenses']:kind==='custody-photo'?productionPhotoWorkerBaseCapabilities:['operationResolution'];
-   require(!value.ingress&&!value.finance&&!value.financeExports&&!value.exports&&!value.receipts&&!value.photos&&!value.supplierOriginals&&!value.calendar&&value.tls&&value.capabilities.length===required.length&&required.every(name=>value.capabilities.some(capability=>capability===name)));
+   require(!value.ingress&&!value.finance&&!value.financeExports&&!value.exports&&!value.receipts&&!value.photos&&!value.supplierOriginals&&!value.openingDocuments&&!value.calendar&&value.tls&&value.capabilities.length===required.length&&required.every(name=>value.capabilities.some(capability=>capability===name)));
    const [key,cert]=await Promise.all([readConfigurationFile(value.tls.keyFile,65536,true),readConfigurationFile(value.tls.certFile,65536,false)]);
    createSecureContext({key,cert,minVersion:'TLSv1.2'});
    const auth=(await createAuthenticationRuntime({database:{environment:'production',connectionString:value.databaseUrl},provider:{environment:'production',issuer:value.issuer,publicKey:value.publicKey},
     owner:value.owner,loginKey:value.loginKey,activeKeyId:value.activeKeyId,keys:value.keys,ingress:{kind:'direct'}})).forServer();
-   const workerCapabilities=[...value.capabilities,...kind==='receipt'?['expenseReceipts']:kind==='custody-photo'?['dropoffPhotos']:['finance','supplierOriginals']];
+   const workerCapabilities=[...value.capabilities,...kind==='receipt'?['expenseReceipts']:kind==='custody-photo'?['dropoffPhotos']:kind==='opening-document'?['finance','openingDocuments']:['finance','supplierOriginals']];
    return {configuration:{...auth.configuration,environment:'production' as const,businessId:value.businessId,productionCapabilities:createProductionCapabilities(compatibility,value.businessId,workerCapabilities)},
     provider:auth.provider,tokens:auth.tokens,tls:{key,cert},origin:value.origin,listen:{...value.listen}};
   }catch{throw new ProductionConfigurationError();}
@@ -141,6 +148,7 @@ class ProductionProfile{
   let receipts:Awaited<ReturnType<typeof openProductionReceiptRuntime>>|undefined;
   let photos:Awaited<ReturnType<typeof openProductionPhotoRuntime>>|undefined;
   let supplierOriginals:Awaited<ReturnType<typeof openProductionSupplierRuntime>>|undefined;
+  let openingDocuments:Awaited<ReturnType<typeof openProductionOpeningDocumentRuntime>>|undefined;
   try{
    require(productionReleaseAccepted(compatibility));
    const value=this.#value;
@@ -164,9 +172,10 @@ class ProductionProfile{
    if(value.receipts){receipts=await openProductionReceiptRuntime(value.receipts,value.businessId,readConfigurationFile);Object.assign(configuration,{productionExpenseReceipts:receipts});}
    if(value.photos){photos=await openProductionPhotoRuntime(value.photos,value.businessId,readConfigurationFile);Object.assign(configuration,{productionDropoffPhotos:photos});}
    if(value.supplierOriginals){supplierOriginals=await openProductionSupplierRuntime(value.supplierOriginals,value.businessId,readConfigurationFile);Object.assign(configuration,{productionSupplierOriginals:supplierOriginals});}
+   if(value.openingDocuments){openingDocuments=await openProductionOpeningDocumentRuntime(value.openingDocuments,value.businessId,readConfigurationFile);Object.assign(configuration,{productionOpeningDocuments:openingDocuments});}
    if(value.exports){require(configuration.authentication&&configuration.productionCapabilities);exports=await openProductionSourceExportRuntime(value.exports,value.businessId,configuration.authentication,configuration.productionCapabilities,value.finance?.connectionString);Object.assign(configuration,{productionSourceExports:exports});}
    return {configuration,listen:{...value.listen}};
-  }catch{await exports?.close();receipts?.close();photos?.close();supplierOriginals?.close();throw new ProductionConfigurationError();}
+  }catch{await exports?.close();receipts?.close();photos?.close();supplierOriginals?.close();openingDocuments?.close();throw new ProductionConfigurationError();}
  }
 }
 export async function readConfigurationFile(path:string,limit:number,privateFile:boolean){

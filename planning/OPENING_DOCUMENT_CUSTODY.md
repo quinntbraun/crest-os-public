@@ -322,3 +322,68 @@ worker/storage composition and isolated validator/file-format acceptance,
 remaining opening approval/posting/corrections and actual provider/off-host/
 key/device/owner cutover. No real documents, production installation, provider
 financial activation or spending occurred.
+
+Opening-document production transport now has its own mutual-TLS endpoint,
+document/operation identifiers and storage-purpose binding. The web-side R2
+configuration opens only the bounded client and object store; it holds no
+decoder or worker database login. This is infrastructure for the remaining
+production composition, not activation: the directory/HTTP application routes
+remain test-only and no production worker is yet connected.
+
+Focused configuration tests13/13, types and affected lint pass. Real TLS
+transport12/12 includes an opening-document dispatch plus rejection of supplier
+and receipt jobs, foreign business/storage, candidate metadata and wrong routes.
+The initial TLS invocation omitted CREST_ENV and stopped in setup; the corrected
+test-environment invocation passes. These checks do not prove file decoding,
+cloud credentials, production uploads or financial posting.
+
+Production composition follow-up: openingDocuments is now an explicit capability
+depending on finance, with a required private worker/storage profile and enabled
+opening worksheet. It has a separate worker entry point, build output, mutual-TLS
+route and storage-purpose binding. The existing registered closed SQL document
+worker role is reused; its opening-document factory requires openingDocuments
+authority rather than granting supplier-original startup authority. No database
+grant or schema changes are needed.
+
+Both directory and dispatcher require the bundled registered142 identity and
+exact registry. The production HTTP path accepts only the fixed R2 endpoint;
+loopback staging remains test-only. The web process receives a scoped dispatch
+client, not worker credentials or a decoder. Worker startup requires an accepted
+release, Linux, private authentication/TLS material and a pinned decoder image.
+Uncertain decoder creation/cleanup stops further dispatch. Startup failure and
+application shutdown close the document storage/client.
+
+These changes implement composition, not provider/decoder/deployment acceptance.
+The bundled release stays blocked. No real credentials, documents, financial
+posting or production activation were introduced. Focused190 tests pass after
+updating three historical configuration fixtures to omit the new optional
+document capability when they intentionally have no document runtime. Types and
+affected lint pass before the final shutdown follow-up; final build verification
+is recorded separately.
+
+Actual Next/Node build on679e602 passes with stable source at release
+d164a84cb225d4466b2a977e5f438e379424aab3
+(.local/opening-document-production-build). The emitted document worker refuses
+the unaccepted release before reading an absent profile. Actual registered142
+SQL/custody/export/encrypted restore1/1 passes on the same source
+(.local/opening-document-production-custody), source stable and owned cleanup.
+This native regression uses the declared in-memory object/decoder seams.
+No real R2/worker deployment, four-format isolated Linux acceptance, current
+release image rebuild, off-host recovery or owner installation is claimed.
+
+Follow-up actual image on49ebf24 now includes the document worker and matches
+compiled/file d164a84c... identity. Image
+sha256:c9bda39118f04edce647b12c5d7acc52be26f2ef0876f9530124f8021eefaf5e
+is non-root with closed startup. Archive/source hashes and retention path are
+in WORKING_STATE.md (.local/production-document142-image).
+
+On9c902aa, the opening-document TLS client/server reaches actual same-release
+JPEG, PNG, PDF and HEIC containers;10/10 checks pass with stable source
+(.local/opening-document-worker-formats). Each valid source retains its hash,
+length and type and returns a checked JPEG preview; each malformed format
+refuses success. HEIC uses the small upstream rainbow test pattern from the
+checksum-verified pinned libheif archive, not Crest data. The Windows operator
+adapter and fixture authority/storage are explicit. The Linux release workflow
+now requires the same case after the existing negative sandbox checks.
+This does not complete provider, genuine MFA/SQL publication over that transport,
+Linux-host acceptance, off-host recovery or installation.

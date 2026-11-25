@@ -6,6 +6,8 @@ import {createSessionRequestAdmission} from '../security/session-request-admissi
 import {createTrustedTransport} from '../security/trusted-transport.ts';
 import type {IngressConfiguration,transportFromIncomingMessage} from '../security/trusted-transport.ts';
 import type {SessionDatabaseConfiguration} from '../security/session-database.ts';
+import {productionCapability} from '../security/production-capabilities.ts';
+import type {ProductionCapabilityConfiguration} from '../security/production-capabilities.ts';
 import type {createSessionLifecycle} from '../security/session-lifecycle.ts';
 import {privateJsonResponse,readFlatJsonBody} from '../security/private-http.ts';
 import {boundedFileStream} from '../files/bounded-file-stream.ts';
@@ -15,13 +17,16 @@ import {createOpeningDocumentAccess,parseOpeningDocumentRecord} from './opening-
 import type {createReceiptObjectStore} from './expenses/receipt-object-store.ts';
 export const openingDocumentPrefix='/api/business/opening-documents/';
 export const openingDocumentFailure=(status=400)=>privateJsonResponse({error:'OPENING_DOCUMENT_REQUEST_UNCONFIRMED'},status);
-export type OpeningDocumentRuntime=Readonly<{objects:ReturnType<typeof createReceiptObjectStore>;stagingOrigin:string;dispatch:ReturnType<typeof createOpeningDocumentDispatcher>}>;
-type Config=SessionDatabaseConfiguration&Readonly<{origin:string;ingress:IngressConfiguration;businessId:string}>;
+export type OpeningDocumentRuntime=Readonly<{objects:ReturnType<typeof createReceiptObjectStore>;stagingOrigin:string;dispatch:ReturnType<typeof createOpeningDocumentDispatcher>;close?:()=>void}>;
+type Config=SessionDatabaseConfiguration&ProductionCapabilityConfiguration&Readonly<{origin:string;ingress:IngressConfiguration;businessId:string}>;
 const fields={find:['reference','sha256'],reserve:['documentId','operationId','recoveryEpoch','reference','sha256','contentType','byteSize'],verify:['documentId','operationId'],status:['documentId'],original:['documentId'],preview:['documentId']} as const;
 const describe=(record:ReturnType<typeof parseOpeningDocumentRecord>)=>privateJsonResponse({documentId:record.reservation.receiptId,reference:record.evidence.reference,sha256:record.evidence.sha256,state:record.candidate?'available':'reserved',contentType:record.reservation.declaredType,byteSize:record.reservation.byteSize});
 function require(value:unknown):asserts value{if(!value)throw Error('OPENING_DOCUMENT_REQUEST_UNCONFIRMED');}
 export function createOpeningDocumentHttp(config:Config,provider:Parameters<typeof createSessionLifecycle>[1],tokens:Parameters<typeof createSessionLifecycle>[2],financeConnectionString:string,runtime:OpeningDocumentRuntime){
- require(config.environment==='test'&&uuid(config.businessId));const storage=new URL(runtime.stagingOrigin);require(storage.origin===runtime.stagingOrigin&&storage.hostname==='127.0.0.1'&&storage.port&&['http:','https:'].includes(storage.protocol));
+ require((config.environment==='test'||productionCapability(config,'openingDocuments'))&&uuid(config.businessId));
+ const storage=new URL(runtime.stagingOrigin);require(storage.origin===runtime.stagingOrigin&&typeof runtime.dispatch==='function'&&(config.environment==='test'
+  ?storage.hostname==='127.0.0.1'&&storage.port&&['http:','https:'].includes(storage.protocol)
+  :/^https:\/\/[a-f0-9]{32}\.r2\.cloudflarestorage\.com$/.test(runtime.stagingOrigin)));
  const resolve=createTrustedTransport(config),csrf=createSessionCsrfVerifier(config),fileCsrf=createPrivateFileCsrfVerifier(config),admit=createSessionRequestAdmission(config),directory=createOpeningDocumentDirectory(config,provider,tokens,financeConnectionString),access=createOpeningDocumentAccess(directory,runtime.objects),business=config.businessId;let binary=0;
  return async(request:Request,peer:ReturnType<typeof transportFromIncomingMessage>)=>{
   let started=false,held=false;
