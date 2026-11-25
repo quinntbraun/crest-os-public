@@ -1,0 +1,7 @@
+# Release102a directory-response failure
+
+Exact public3dafa24a0e0e3494f3e221cc6638c61f38029017/main45596015259 workspace-records job139142141497 completed60 cases:59 passed,1 failed. The Chromium lead/service/address loading and first-save journey failed at directory-loading-journey.mjs:15 with Network.getResponseBody reporting no body after navigation. The equivalent WebKit case passed. All20 other main prerequisites passed. Full release acceptance is withheld; remaining workflows/guard retain their actual status.
+
+The existing helper subscribed to a browser response event and immediately requested JSON, but that still races the app's post-save navigation. The corrected helper intercepts the one actual save request, fetches its real upstream response with retries and redirects disabled, buffers its bytes, then fulfills the original request with that unchanged response/body. Status and committed-state assertions, context reverification gate, draft leave guard, first-save behavior, cleanup and both browser journeys remain. No server/product behavior, approval rule, financial/source data, test skip or increased journey timeout is introduced.
+
+Targeted lint and syntax checks pass. Local Playwright browser binaries are absent, so actual Chromium/WebKit execution for this fix remains pending in a fresh exact-source hosted run. No retry of102a or claimed browser success. Public head/title/body stay fixed until all its runs are terminal. The original failure remains available in job139142141497 logs and retained screenshots/group artifact.

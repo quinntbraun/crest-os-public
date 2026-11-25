@@ -3,7 +3,7 @@ SET LOCAL ROLE crest_schema_owner;
 CREATE TABLE crest.opening_funds_origins (
  id uuid PRIMARY KEY,business_id uuid NOT NULL,
  source_namespace text NOT NULL CHECK(source_namespace~'^[a-z][a-z0-9_.-]{0,99}$'),
- external_id text NOT NULL CHECK(length(external_id) BETWEEN 1 AND 200 AND btrim(external_id)=external_id AND external_id!~'[[:cntrl:]]'),
+ external_id text NOT NULL CHECK(length(external_id)>=1 AND length(external_id)<=200 AND btrim(external_id)=external_id AND external_id!~'[[:cntrl:]]'),
  operation_id uuid NOT NULL,recorded_by uuid NOT NULL,
  recorded_at timestamptz NOT NULL DEFAULT clock_timestamp() CHECK(isfinite(recorded_at)),
  UNIQUE(business_id,id),UNIQUE(business_id,source_namespace,external_id),

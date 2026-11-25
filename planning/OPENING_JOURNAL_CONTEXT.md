@@ -68,3 +68,9 @@ The earlier smaller native case passes separately onbc90186. Originald5edd6a
 RR setup failure is retained in .local/opening-journal-context/result.json; the
 existing fresh-read guard was honored, not relaxed. Actual full typed-source/
 approval/posting/export/restore integration and real-use gates stay open.
+
+## Saved customer-funds context v2
+
+Held migration20270203180000 depends on the existing context and customer-funds source proposals. It leaves the v1 function and document shape intact, adding a separately named v2 function with an expected customer-funds schedule revision. The original authority, READ COMMITTED and finance-control fences run first; the exact latest saved schedule belongs to the resolved worksheet. Missing schedules use revision0/null, never implied zero. Stale funds revisions refuse. The result retains the full original schedule receipt and provenance, with profile crest.opening-journal-context-candidate.v2. Unknown parent controls and all unapproved/incomplete flags remain unchanged. The combined document remains bounded at8MiB.
+
+Actual native1/1 on e224fe10e886213c825dd11de4daa73d50d402bc passes in .local/opening-funds-context/result.json (source stable, owned cleanup awaited). Registered138 plus all three held proposals, controlled authority only. A saved15000-cent receipt with5000 historically applied resolves to10000 held across two customer items. The actual saved receipt/account/mapping context composes into a10000-credit customer-funds line and10000-debit opening equity; no second bank debit or receipt appears. Full source closure, posting and approval remain false, the parent customer-funds control remains unknown and financial/period counts stay unchanged. Stale revision and ordinary-role denials pass; v1 still returns its original profile without customerFunds. Existing storage/source-history cases remain included. No139 registration, genuine MFA, posting/runtime route or independent restore is accepted.

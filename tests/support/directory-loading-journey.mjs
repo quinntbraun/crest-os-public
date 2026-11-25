@@ -10,14 +10,19 @@ async function reviewFirstSave(page,kind){
  void held.catch(()=>undefined);
  const handler=async route=>{routed=true;try{await gate;await route.continue();}catch(error){routeError=error;}finally{finished();}};
  await page.route(pattern,handler,{times:1});let failure;
- // Read immediately: a committed save may navigate before route-gate cleanup
- // finishes, after which Chromium can no longer retrieve the previous body.
- const saved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/business/'+collection+'/save').then(async response=>({status:response.status(),state:(await response.json()).state}));void saved.catch(()=>undefined);
+ // Read the real upstream body while this request is still held. Chromium's
+ // response event cannot guarantee body availability before an app navigation.
+ const savePattern='**/api/business/'+collection+'/save';let resolveSaved,rejectSaved;
+ const saved=new Promise((resolve,reject)=>{resolveSaved=resolve;rejectSaved=reject;});void saved.catch(()=>undefined);
+ const saveHandler=async route=>{try{const response=await route.fetch({maxRetries:0,maxRedirects:0,timeout:30000}),bytes=await response.body(),result={status:response.status(),state:JSON.parse(bytes.toString('utf8')).state};await route.fulfill({response,body:bytes});resolveSaved(result);}catch(error){rejectSaved(error);await route.abort('failed').catch(()=>undefined);}};
+ await page.route(savePattern,saveHandler,{times:1});
  try{
-  await page.getByRole('button',{name:'Save '+kind,exact:true}).click();await held;assert.equal(await leaveGuard(page),true,'Save reverification must protect even an unchanged blank new address');
- }catch(error){failure=error;}finally{release();if(routed)await done;await page.unroute(pattern,handler);}
- if(failure)throw failure;if(routeError)throw routeError;
- const response=await saved;assert.equal(response.status,200);assert.equal(response.state,'committed');await expect.poll(()=>leaveGuard(page)).toBe(false);
+  try{
+   await page.getByRole('button',{name:'Save '+kind,exact:true}).click();await held;assert.equal(await leaveGuard(page),true,'Save reverification must protect even an unchanged blank new address');
+  }catch(error){failure=error;}finally{release();if(routed)await done;await page.unroute(pattern,handler);}
+  if(failure)throw failure;if(routeError)throw routeError;
+  const response=await saved;assert.equal(response.status,200);assert.equal(response.state,'committed');await expect.poll(()=>leaveGuard(page)).toBe(false);
+ }finally{await page.unroute(savePattern,saveHandler);}
 }
 
 export async function reviewDirectoryLoadingJourney(page,fixture,engine){

@@ -2,6 +2,119 @@
 
 ## Current launch checkpoint, 2026-11-25
 
+Public102a workspace-records139142141497 FAILED59/60: Chromium directory
+first-save feedback helper raced response-body retrieval against navigation.
+All20 other main prerequisites passed. Foundation139158268303 was last observed
+live; full acceptance withheld. Local helper now buffers the real upstream save
+response before fulfilling it, with no retries/redirects or changed response,
+assertion, product behavior or skips. Lint/syntax pass; actual browser recheck
+requires fresh exact-source hosted runs (local browser binaries absent).
+See RELEASE_102A_DIRECTORY_RESPONSE.md. Keep public metadata/head fixed until
+all runs terminal. Candidate139 local upgrade/recovery proof remains separate.
+
+## Earlier checkpoint, 2026-11-25
+
+Coherent funds migration139 candidate passes native1/1 on180f2519,
+.local/opening-funds-candidate139/result.json, source stable/owned cleanup.
+Five byte-pinned proposal parts assemble into20270205183000 in an owned
+candidate directory; root138 registry/previous entries stay untouched. Actual
+coordinator upgrade of populated138 to139 preserves all old table inventories
+except migration history. Full new3-table column coverage, save/replay/context,
+restricted reader139 preflight, leased routine/schema/inventory capture and
+age-encrypted separate-cluster exactschema/role/row recovery/export pass.
+Controlled provider authority only. Wrapper scope boilerplate remains older138,
+but executed root test explicitly covers candidate139; see evidence document.
+No runner live. Next exact reviewed139 catalog/export/backup/restore profiles,
+frozen138 compatibility, then root registration/runtime/owner-screen integration.
+Full remaining P27 source/approval/posting/correction and launch goal retained.
+Public102a3dafa24a head/title/body remain fixed while hosted checks finish.
+Rough80% coding low confidence;realuseNOTREADY;context sufficient;$0newspend.
+
+## Earlier checkpoint, 2026-11-25
+
+Held funds backup-reader integration passes native1/1 ondf4d066,
+.local/opening-funds-backup-reader-bound/result.json, source stable/owned cleanup.
+Migration20270205180000 grants SELECT only on the3 new source tables. A real
+restricted disposable login passes existing reader preflight and captures their
+1/2/2 rows, forced RLS/owners/fingerprints through the actual recovery lease and
+snapshot/inventory mechanics. Write and export-routine execution remain denied.
+Portable/context/storage/audit and encrypted separate-cluster recovery including
+new grants pass in the same run. Original fixture result-shape failure retained.
+No local runner remains. Next coherent candidate139 assembly with reviewed
+coverage/catalog/export/restore profiles and registration acceptance; then owner
+screen integration and all remaining P27 source/approval/posting/correction/
+control/report/export/recovery/full launch scope. Current138 baselines are not
+changed or waived. Production completeBackup/realuse remain false.
+Public102a3dafa24a still fixed/live:17 main prerequisites SUCCESS/no failures,
+4 browser groups remain at latest observation. Expense passed; commercial
+previously live. Rough80% coding low confidence;context sufficient;$0newspend.
+
+## Earlier checkpoint, 2026-11-25
+
+Encrypted held-funds recovery rehearsal native1/1 passes on930a6b4,
+.local/opening-funds-restore-flat/result.json, source stable/owned cleanup.
+Actual snapshot/custom pg_dump/age encryption, wrong-key/tampered-ciphertext
+refusal, checksum before SQL, second disposable cluster/closed-role recreation,
+all source/restored table inventories and exact normalized schema/role match,
+retained receipts/exportability and web/history guards pass. Registry138 unchanged.
+Original restore mismatch traced to PostgreSQL BETWEEN predicate grouping in
+held opening_funds_origins.external_id CHECK; equivalent explicit1..200 bounds
+fix the source. Existing comparison remains strict; original failures retained.
+See OPENING_FUNDS_EVIDENCE.md. No production catalog/profile adoption, off-host
+or controlled reopen, session invalidation, complete backup or real-use acceptance.
+No local runner live. Next full export/backup candidate-profile integration,
+owner screen and remaining P27 source/approval/posting plus full launch goal.
+Public102a3dafa24a held fixed: main45596015259 live,10 prerequisite successes/no
+failures at latest observation; expense45596014858SUCCESS, commercial previously
+live. Rough80% coding low confidence;realuseNOTREADY;context sufficient;$0spend.
+
+## Earlier checkpoint, 2026-11-25
+
+New unpublished opening-funds portable package passes native1/1 on a25446a,
+.local/opening-funds-portable-bound/result.json, source stable/owned cleanup.
+Held export-history migration20270204180000 and source formatter preserve exact
+operation/audit text and bigint revisions. Ten files provide five CSV tables,
+source JSON, dictionary/escape map, manifest and neutral SQL. A separate empty
+PostgreSQL database reconstructs every exported column with internal FK checks;
+formula/quotes/backslashes, existing-target refusal, missing source/audit/parent
+and changed evidence checks pass. Existing storage/context/unchanged financial
+checks remain included. Full types/targeted lint pass. Original13977da query
+ambiguity failure preserved. Not a complete business export, encrypted backup,
+active-application restore, genuine MFA,139 adoption, posting or runtime route.
+Next integrate this domain into complete export/backup/recovery profiles before
+activation, connect the owner screen, and finish all remaining P27 sources/
+approval/posting/correction/control/reporting and full-goal launch requirements.
+Public102a3dafa24a remains fixed while exact-head main45596015259 and ancillary
+45596014788/45596014858 run. No local runner lives. Real use NOTREADY; roughly80%
+coding low confidence;context sufficient;$0new spending;owner account answer pending.
+
+## Earlier checkpoint, 2026-11-25
+
+Draft102a public3dafa24a0e0e3494f3e221cc6638c61f38029017 is published from
+localef65bb4/tree904a2988, sole public parent3356835. Strict whole-source scan
+3033 files/43388601 bytes:0 findings, empty ignores/inline allowances disabled.
+Metadata verified before nonforce expected-head ref update; actual rawcommit,
+ref/PR/base/draft, mergeb783093c tree and ordered parents independently verified.
+Actual exact-head pull_request runs45596015259(main),45596014788(commercial),
+45596014858(expense) are live.21 main prerequisite jobs observed queued/running.
+HOLD public head/title/body while live. No full-release acceptance or installation.
+
+New unpublished held contextv2 migration20270203180000 binds the exact latest
+customer-funds receipt/revision under existing authority/shared finance fences,
+retaining v1 shape and all unknown/unapproved flags. Native1/1 passes on e224fe1:
+actual saved15000 receipt minus5000 applied becomes10000 opening liability and
+equity debit, with no second bank leg. Existing storage/source/audit/identity/
+replay checks, stale funds revision, role denial and unchanged financial/period
+rows/138 registry pass. Proof .local/opening-funds-context/result.json, source
+stable/owned cleanup; controlled authority, not genuine MFA. No runner live.
+See OPENING_JOURNAL_CONTEXT.md. Next portable funds packaging/reconstruction and
+independent recovery, screen integration, full remaining P27 sources/approval/
+posting and original IDs/correction/control/report/export/restore workflows.
+Real use not ready;rough80% coding low confidence;context sufficient;$0newspend.
+Owner account-access answer pending. Earlier checkpoints follow.
+
+## Earlier checkpoint, 2026-11-25
+
 Held opening customer-funds storage and private history retrieval now pass
 native1/1 on e1b1edaa142638db89ab7140870e4b6fb4e7ee93, actual disposable
 PostgreSQL138 plus unregistered migration20270202180000. Proof:
